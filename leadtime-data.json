@@ -7,7 +7,7 @@
     "statusAntes": null,
     "ini": "2025-10-23",
     "fim": null,
-    "dataPrevista": null,
+    "dataPrevista": "2026-04-30",
     "chg": "CHG0921176",
     "impedimento": "Devido ao período de freeze do ServiceNow, a implantação não pode ocorrer na janela planejada.",
     "lt": 185
@@ -16,40 +16,40 @@
     "id": "SLOPC-29139",
     "squad": "Guardiões",
     "resumo": "SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - FRONT END",
-    "status": "Executado",
-    "statusAntes": null,
+    "status": "Concluído",
+    "statusAntes": "Executado",
     "ini": "2025-11-04",
-    "fim": null,
+    "fim": "2026-04-23",
     "dataPrevista": null,
     "chg": "CHG0920776",
     "impedimento": "Problema de infraestrutura que exige ajustes na aplicação antes da mudança de ambiente.",
-    "lt": 173
+    "lt": 170
   },
   {
     "id": "SLOPC-18909",
     "squad": "Guardiões",
     "resumo": "SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - BACKEND",
-    "status": "Executado",
-    "statusAntes": null,
+    "status": "Concluído",
+    "statusAntes": "Executado",
     "ini": "2025-11-11",
-    "fim": null,
+    "fim": "2026-04-23",
     "dataPrevista": null,
     "chg": "CHG0920776",
     "impedimento": "Problema de infraestrutura que exige ajustes na aplicação antes da mudança de ambiente.",
-    "lt": 166
+    "lt": 163
   },
   {
     "id": "SLOPC-29141",
     "squad": "Guardiões",
     "resumo": "SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - SERVICE NOW",
-    "status": "Executado",
-    "statusAntes": null,
+    "status": "Concluído",
+    "statusAntes": "Executado",
     "ini": "2025-12-03",
-    "fim": null,
+    "fim": "2026-04-23",
     "dataPrevista": null,
     "chg": "CHG0920776",
     "impedimento": "Problema de infraestrutura que exige ajustes na aplicação antes da mudança de ambiente.",
-    "lt": 144
+    "lt": 141
   },
   {
     "id": "SLOPC-33015",
