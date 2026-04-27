@@ -642,7 +642,7 @@ var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-04-26T20:30:00.000Z';
+var SEED_VERSION='2026-04-27T02:00:00.000Z';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
@@ -1050,6 +1050,48 @@ function saveToSheets(items){
 function setSyncLabel(txt){
   var el=$id('syncLbl');
   if(el) el.textContent=txt;
+}
+
+// Evita o efeito visual de "todos os cards em Épicos" antes da sincronização.
+// Em primeiro acesso/novo navegador, o dashboard aguarda Sheets/Nuvem antes de renderizar os cards.
+var _initialSyncWaiting=false;
+function showInitialSyncLoading(sourceName){
+  _initialSyncWaiting=true;
+  sourceName=sourceName||'base remota';
+  setSyncLabel('🔄 Sincronizando '+sourceName+'…');
+  var epTitle=$id('tblTitle'), epBody=$id('tblBody'), pgInfo=$id('pgInfo'), pgBts=$id('pgBts');
+  var medKpi=$id('medKpi'), medSquads=$id('medSquads'), medBody=$id('medTblBody'), medCnt=$id('medCnt');
+  var kpiRow=$id('kpiRow'), squadCards=$id('squadCards'), dList=$id('dList'), rList=$id('rList');
+  if($id('tabCtEp')) $id('tabCtEp').textContent='…';
+  if($id('tabCtMe')) $id('tabCtMe').textContent='…';
+  if(epTitle) epTitle.textContent='Carregando dados';
+  if(epBody) epBody.innerHTML='<tr><td colspan="10" class="empty" style="padding:2rem;text-align:center">🔄 Sincronizando dados antes de exibir os cards.<br>Isso evita mostrar os cards na aba errada durante o carregamento.</td></tr>';
+  if(pgInfo) pgInfo.textContent='Aguardando sincronização';
+  if(pgBts) pgBts.innerHTML='';
+  if(medKpi) medKpi.innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">🔄 Sincronizando medição…</div>';
+  if(medSquads) medSquads.innerHTML='';
+  if(medBody) medBody.innerHTML='<tr><td colspan="8" class="empty" style="padding:2rem;text-align:center">🔄 Carregando épicos medidos…</td></tr>';
+  if(medCnt) medCnt.textContent='carregando';
+  if(kpiRow) kpiRow.innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">🔄 Sincronizando dashboard…</div>';
+  if(squadCards) squadCards.innerHTML='';
+  if(dList) dList.innerHTML='<div class="empty">Sincronizando dados…</div>';
+  if(rList) rList.innerHTML='<div class="empty">Sincronizando dados…</div>';
+}
+function finishInitialSyncRender(tabToRestore){
+  _initialSyncWaiting=false;
+  clearEpicSearch(false);
+  renderDash();
+  renderMed();
+  populateSqF();
+  renderTbl();
+  updateTabCounts();
+  activateTab(normalizeTab(tabToRestore||curTab||loadTab()));
+  clearEpicSearchAfterLoad();
+}
+function fallbackInitialSyncRender(reason){
+  if(!_initialSyncWaiting) return;
+  finishInitialSyncRender(rememberTab());
+  if(reason) setSyncLabel(reason);
 }
 
 // ═══════════════════════════════════════
@@ -2394,22 +2436,22 @@ var SEED=[
   }else{
     $id('syncLbl').textContent='Atualizado: '+_n.toLocaleDateString('pt-BR')+' às '+_n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   }
-  clearEpicSearch(false);
-  renderDash();
-  renderMed();
-  populateSqF();
-  renderTbl();
-  updateTabCounts();
-
-  // ── PERSISTÊNCIA DE ABA: restaura a aba salva e força ativação visual ──
-  // Lê o valor salvo no localStorage e ativa imediatamente — antes de qualquer sync
-  curTab = normalizeTab(loadTab());
-  activateTab(curTab);
-  clearEpicSearchAfterLoad();
-
-  // ── Carrega config do JSONBin e atualiza botão ──
+  // ── Carrega config do JSONBin antes da primeira renderização ──
   jbLoadConfig();
   jbUpdateBtn();
+
+  // ── PERSISTÊNCIA DE ABA: restaura a aba salva antes de qualquer sync ──
+  curTab = normalizeTab(loadTab());
+
+  // Em primeiro acesso/novo navegador, não renderiza o SEED antes da sincronização.
+  // Isso elimina o efeito: "todos os cards aparecem em Épicos e depois se redistribuem".
+  var shouldWaitInitialRemote = !usedCache && (jbIsConfigured() || !!SHEETS_WEBAPP);
+  if(shouldWaitInitialRemote){
+    activateTab(curTab);
+    showInitialSyncLoading(jbIsConfigured()?'Nuvem':'Google Sheets');
+  }else{
+    finishInitialSyncRender(curTab);
+  }
 
   // ── Carrega dados da nuvem (JSONBin) em background ──
   if(jbIsConfigured()){
@@ -2461,7 +2503,12 @@ var SEED=[
         }
       });
 
-      saveLocal(); renderAll();
+      saveLocal();
+      if(_initialSyncWaiting){
+        finishInitialSyncRender(rememberTab());
+      }else{
+        renderAll();
+      }
       setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
   } else {
@@ -2505,7 +2552,8 @@ function _trySheets(){
   if(SHEETS_WEBAPP){
     loadFromSheets(function(err, sheetsData){
       if(err){
-        setSyncLabel('⚠️ Sheets offline — usando dados locais');
+        fallbackInitialSyncRender('⚠️ Sheets offline — usando dados locais');
+        if(!_initialSyncWaiting) setSyncLabel('⚠️ Sheets offline — usando dados locais');
         return;
       }
       function pick(remoteVal, localVal, defaultVal){
@@ -2531,9 +2579,15 @@ function _trySheets(){
       });
       applyManualCardState();
       saveLocal();
-      renderAll(rememberTab()); // mantém aba do usuário após sync
+      if(_initialSyncWaiting){
+        finishInitialSyncRender(rememberTab());
+      }else{
+        renderAll(rememberTab()); // mantém aba do usuário após sync
+      }
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
+  }else{
+    fallbackInitialSyncRender('Atualizado: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
   }
 }
 </script>
