@@ -1035,6 +1035,7 @@ function saveToSheets(items){
   fetch(SHEETS_WEBAPP, {
     method: 'POST',
     mode:   'no-cors',          // resposta opaca — OK, dados chegam mesmo assim
+    keepalive:true,             // reduz perda se o usuário der F5 logo após editar
     headers:{'Content-Type':'text/plain'},
     body:   JSON.stringify(items)
   })
@@ -1479,6 +1480,20 @@ function fc(el){
       saveTab('ep');
       toast('↩ Épico retornado para Épicos',
         '<strong>'+esc(rec.id)+'</strong> voltou para a lista de ativos como <strong>'+rec.status+'</strong>.','warn');
+    }
+    // Edição de Data Fim já existente na aba Medição.
+    // Antes, a marca local de finalização podia continuar com a data antiga
+    // e sobrescrever a nova data após F5, atualização ou sincronização.
+    else if(isValidDate(oldVal) && isValidDate(newFim)){
+      if(normalizeDateValue(oldVal)!==normalizeDateValue(newFim) || rec.status!=='Concluído'){
+        rec.status = 'Concluído';
+        forgetUnfinalizedCard(rec.id);
+        rememberFinalizedCard(rec);
+        targetTab='me';
+        saveTab('me');
+        toast('✓ Data Fim atualizada',
+          '<strong>'+esc(rec.id)+'</strong> atualizado para <strong>'+formatDate(rec.fim)+'</strong>. Lead Time: <strong>'+rec.lt+' dias</strong>.');
+      }
     }
 
     if(movedToMedicao || targetTab==='ep') clearEpicSearch(false);
