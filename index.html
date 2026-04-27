@@ -623,13 +623,13 @@ var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-04-27-v24-cloud-first';
+var SEED_VERSION='2026-04-27-v28-get-save-confirmado';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbzS1atePhUqTuC0VyNTTqThmXbRpx9Vz0-IXC_SisiT06J0eise8jIhXWhxTkO_ulvtOg/exec';
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbznppOpW4oiSJN02stWMV6qt0dMYNdtYAvqBKGkx4b8Vk7rPW3PAFUbLEFuL2WWwsAdWw/exec';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
@@ -942,20 +942,35 @@ function saveToSheets(items){
   _sheetsLastWritePayload=payload;
 
   setSyncLabel('🔄 Salvando no Google Sheets…');
-  fetch(SHEETS_WEBAPP, {
-    method: 'POST',
-    mode:   'no-cors',
-    headers:{'Content-Type':'text/plain'},
-    body:   payload
-  })
-  .then(function(){
-    setSyncLabel('✅ Sincronizado com Google Sheets');
-    setTimeout(function(){ setSyncLabel('Google Sheets ativo'); }, 3000);
-  })
-  .catch(function(){
-    setSyncLabel('⚠️ Falha ao salvar no Sheets (dados locais preservados)');
-  })
-  .finally(function(){ _sheetsWriteSyncing=false; });
+
+  // Correção crítica:
+  // POST com mode:no-cors para Apps Script é opaco e pode falhar sem avisar.
+  // Para alterações de linha, usamos GET com action=update, que já é o mesmo canal
+  // que funciona para leitura no dashboard.
+  var url = SHEETS_WEBAPP + '?action=update&t=' + Date.now() + '&payload=' + encodeURIComponent(payload);
+
+  fetch(url)
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    })
+    .then(function(json){
+      if(!json || json.ok!==true){
+        throw new Error((json&&json.error) ? json.error : 'Apps Script retornou erro ao salvar');
+      }
+      setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      // Confirma a gravação lendo novamente a fonte oficial.
+      setTimeout(function(){ _trySheets(true); }, 500);
+    })
+    .catch(function(err){
+      console.error('Erro ao salvar no Google Sheets:', err);
+      setSyncLabel('⚠️ Falha ao salvar no Sheets — confira Apps Script');
+      toast('Erro ao salvar no Google Sheets',
+        'A alteração ficou apenas localmente. Detalhe: '+esc(err.message||err), 'err');
+    })
+    .finally(function(){
+      _sheetsWriteSyncing=false;
+    });
 }
 
 function setSyncLabel(txt){
@@ -2320,7 +2335,7 @@ function _trySheets(silent){
 
 // Auto-refresh somente por Google Sheets; JSONBin não sobrescreve a base quando Sheets está ativo.
 setInterval(function(){
-  if(!SHEETS_WEBAPP || _sheetsSyncing) return;
+  if(!SHEETS_WEBAPP || _sheetsSyncing || _sheetsWriteSyncing) return;
   if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
   _trySheets(true);
 }, SHEETS_POLL_MS);
