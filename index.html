@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lead Time SALA</title>
+<title>Lead Time SALA - v18</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -135,6 +135,7 @@ html,body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',
 #pane-me table tbody tr td{background:#fcfefc}
 #pane-me table tbody tr:nth-child(even) td{background:#f6fbf7}
 #pane-me table tbody tr:hover td{background:#ecfdf5}
+#pane-me table tbody tr.med-focus td{background:#dcfce7!important;box-shadow:inset 0 0 0 9999px rgba(22,163,74,.10);transition:background .25s ease}
 
 /* ── GitHub Integration modal ── */
 .gh-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);background:var(--card);color:var(--tx3);transition:all .2s}
@@ -347,9 +348,9 @@ tr:nth-child(even):hover td{background:#f0f5ff}
   <span class="top-sync" id="syncLbl">pronto</span>
   <div class="top-gap"></div>
   <span class="top-meta">Meta: 62 dias</span>
-  <button class="tbtn" id="ghBtn" onclick="openGitHub()" title="Conectar ao GitHub para sincronizar dados com o time">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-    <span id="ghBtnLabel">GitHub</span>
+  <button class="tbtn" id="jbBtn" onclick="openJB()" title="Conectar ao JSONBin para sincronizar em tempo real com o time">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+    <span id="jbBtnLabel">☁️ Nuvem Tempo Real</span>
   </button>
   <button class="tbtn" onclick="openGS()">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
@@ -518,57 +519,41 @@ tr:nth-child(even):hover td{background:#f0f5ff}
 </div>
 
 <!-- GitHub Integration modal -->
-<div class="ov" id="ghOv" onclick="if(event.target===this)closeGitHub()">
-  <div class="mdl" style="max-width:500px">
-    <div class="mt">🐙 Conectar ao GitHub</div>
-    <div class="ms">Os dados ficam num arquivo <code>leadtime-data.json</code> no seu repositório. Todos do time abrem a mesma URL e veem os dados atualizados.</div>
+<div class="ov" id="jbOv" onclick="if(event.target===this)closeJB()">
+  <div class="mdl" style="max-width:480px">
+    <div class="mt">☁️ Sincronização em Tempo Real</div>
+    <div class="ms">Configure uma vez. O time inteiro abre o link e vê os dados atualizados automaticamente — sem conta, sem instalar nada.</div>
 
-    <div class="gh-info-box">
-      <strong>Como funciona:</strong><br>
-      1. Crie um <strong>Personal Access Token</strong> no GitHub (Settings → Developer settings → Tokens)<br>
-      2. Permissão necessária: <strong>repo → contents (read &amp; write)</strong><br>
-      3. Cole as informações abaixo e clique em Conectar<br>
-      4. Os dados sincronizam automaticamente a cada edição ✅
+    <div class="gh-info-box" style="background:#f0fdf4;border-color:#86efac;color:#14532d">
+      <strong style="color:#15803d">✅ Como funciona (só você faz isso, uma vez):</strong><br>
+      1. Acesse <strong>jsonbin.io</strong> e crie uma conta gratuita<br>
+      2. Vá em <strong>API Keys</strong> e copie sua chave<br>
+      3. Cole abaixo e clique em <strong>Ativar Nuvem</strong><br>
+      4. Compartilhe o link do dashboard com o time — pronto!
     </div>
 
-    <div class="gh-section">Credenciais</div>
-
+    <div class="gh-section">Sua chave de acesso (JSONBin)</div>
     <div class="gh-form-row">
-      <span class="gh-form-label">Personal Access Token (PAT)</span>
-      <input class="mi" id="ghToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-      <span class="gh-form-hint">⚠️ O token fica salvo apenas no seu navegador (localStorage), nunca no HTML ou no repositório.</span>
+      <span class="gh-form-label">API Key (Master Key)</span>
+      <input class="mi" id="jbKey" type="password" placeholder="$2a$10$xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+      <span class="gh-form-hint">⚠️ Fica salva apenas no <strong>seu</strong> navegador. O time não precisa de chave para visualizar.</span>
     </div>
 
-    <div class="gh-section">Repositório</div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="gh-form-row" style="margin-bottom:0">
-        <span class="gh-form-label">Owner (usuário ou org)</span>
-        <input class="mi" id="ghOwner" placeholder="ex: seu-usuario" style="margin-bottom:0">
-      </div>
-      <div class="gh-form-row" style="margin-bottom:0">
-        <span class="gh-form-label">Repositório</span>
-        <input class="mi" id="ghRepo" placeholder="ex: leadtime-sala" style="margin-bottom:0">
+    <div id="jbBinRow" style="display:none">
+      <div class="gh-section">Espaço de dados (gerado automaticamente)</div>
+      <div class="gh-form-row">
+        <span class="gh-form-label">Bin ID</span>
+        <input class="mi" id="jbBinId" placeholder="Gerado automaticamente ao conectar" readonly style="background:var(--accent-soft);color:var(--accent);font-family:monospace;font-size:11px">
+        <span class="gh-form-hint">Compartilhe este ID com quem também precisar editar os dados.</span>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-      <div class="gh-form-row" style="margin-bottom:0">
-        <span class="gh-form-label">Branch</span>
-        <input class="mi" id="ghBranch" placeholder="main" style="margin-bottom:0">
-      </div>
-      <div class="gh-form-row" style="margin-bottom:0">
-        <span class="gh-form-label">Arquivo de dados</span>
-        <input class="mi" id="ghFile" placeholder="leadtime-data.json" style="margin-bottom:0">
-      </div>
-    </div>
-
-    <div id="ghTestResult" style="display:none;margin-top:.7rem;font-size:11px;padding:8px 10px;border-radius:var(--rads)"></div>
+    <div id="jbResult" style="display:none;margin-top:.7rem;font-size:11px;padding:10px 12px;border-radius:var(--rads);line-height:1.6"></div>
 
     <div class="mf" style="margin-top:1rem">
-      <button class="mb" onclick="closeGitHub()">Cancelar</button>
-      <button class="mb" onclick="testGitHub()" id="ghTestBtn">Testar conexão</button>
-      <button class="mb p" onclick="connectGitHub()" id="ghConnectBtn">Conectar e sincronizar</button>
+      <button class="mb" onclick="closeJB()">Cancelar</button>
+      <button class="mb" id="jbTestBtn" onclick="testJB()">Testar chave</button>
+      <button class="mb p" id="jbConnectBtn" onclick="connectJB()">☁️ Ativar Nuvem</button>
     </div>
   </div>
 </div>
@@ -607,13 +592,40 @@ tr:nth-child(even):hover td{background:#f0f5ff}
 var META=62, allData=[], pg=1, PG=12, sortLT=null; // null | 'desc' | 'asc'
 var filt={s:'all',l:'all',sq:'all',dateIni:null,dateFim:null};
 var curTab='ep';
+var TAB_KEY='leadtime_sala_active_tab';
+
+// Persiste a aba ativa no localStorage
+function saveTab(id){
+  try{ localStorage.setItem(TAB_KEY, id); }catch(e){}
+}
+// Recupera a aba salva
+function loadTab(){
+  try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
+}
+// Valida e preserva a aba ativa mesmo quando os painéis são renderizados novamente.
+function normalizeTab(id){
+  return (id==='ep'||id==='me'||id==='db') ? id : 'ep';
+}
+function getActiveTab(){
+  var pane=document.querySelector('.pane.on');
+  if(pane && pane.id && pane.id.indexOf('pane-')===0){
+    return normalizeTab(pane.id.replace('pane-',''));
+  }
+  return normalizeTab(curTab || loadTab());
+}
+function rememberTab(){
+  var id=getActiveTab();
+  curTab=id;
+  saveTab(id);
+  return id;
+}
 var STORAGE_KEY='leadtime_sala_v8_data';
 var STORAGE_META='leadtime_sala_v8_meta';
 var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-04-26T12:00:00.000Z';
+var SEED_VERSION='2026-04-26T20:30:00.000Z';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
@@ -623,215 +635,216 @@ var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbzT4Cqih8dTvSjUbF_
 var _sheetsSyncing = false;
 
 // ═══════════════════════════════════════
-// GITHUB — configuração (salvo em localStorage, nunca no HTML)
+// JSONBIN — sincronização em tempo real
+// jsonbin.io: leitura pública, escrita com API Key (só você tem)
 // ═══════════════════════════════════════
-var GH={token:'',owner:'',repo:'',branch:'main',file:'leadtime-data.json',sha:''};
-var GH_CONFIG_KEY='leadtime_sala_github_v1';
-var _ghSaveTimer=null; // debounce para auto-save
+var JB_CONFIG_KEY='leadtime_sala_jsonbin_v1';
+var JB={key:'',binId:''};
+var _jbSaveTimer=null;
+var JB_API='https://api.jsonbin.io/v3';
 
-function ghLoadConfig(){
+function jbLoadConfig(){
   try{
-    var c=JSON.parse(localStorage.getItem(GH_CONFIG_KEY)||'{}');
-    if(c.token) GH.token=c.token;
-    if(c.owner) GH.owner=c.owner;
-    if(c.repo)  GH.repo=c.repo;
-    if(c.branch)GH.branch=c.branch;
-    if(c.file)  GH.file=c.file;
+    var c=JSON.parse(localStorage.getItem(JB_CONFIG_KEY)||'{}');
+    if(c.key)   JB.key=c.key;
+    if(c.binId) JB.binId=c.binId;
   }catch(e){}
 }
-function ghSaveConfig(){
-  try{ localStorage.setItem(GH_CONFIG_KEY,JSON.stringify({token:GH.token,owner:GH.owner,repo:GH.repo,branch:GH.branch,file:GH.file})); }catch(e){}
+function jbSaveConfig(){
+  try{ localStorage.setItem(JB_CONFIG_KEY,JSON.stringify({key:JB.key,binId:JB.binId})); }catch(e){}
 }
-function ghApiUrl(){
-  return 'https://api.github.com/repos/'+GH.owner+'/'+GH.repo+'/contents/'+GH.file;
-}
-function ghIsConfigured(){ return !!(GH.token&&GH.owner&&GH.repo); }
+function jbIsConfigured(){ return !!(JB.binId); }
 
-function ghUpdateBtn(){
-  var btn=$id('ghBtn'), lbl=$id('ghBtnLabel');
+function jbUpdateBtn(){
+  var btn=$id('jbBtn'), lbl=$id('jbBtnLabel');
   if(!btn||!lbl) return;
-  if(ghIsConfigured()){
+  if(jbIsConfigured()){
     btn.style.background='#dcfce7'; btn.style.borderColor='#86efac'; btn.style.color='#15803d';
-    lbl.textContent='GitHub ✓';
+    lbl.textContent='☁️ Nuvem ✓';
   } else {
     btn.style.background=''; btn.style.borderColor=''; btn.style.color='';
-    lbl.textContent='GitHub';
+    lbl.textContent='☁️ Nuvem Tempo Real';
   }
 }
 
-// ── Lê o arquivo de dados do GitHub ──
-function ghLoad(callback){
-  if(!ghIsConfigured()){ callback('não configurado'); return; }
-  setSyncLabel('🔄 Carregando do GitHub…');
-  fetch(ghApiUrl()+'?ref='+GH.branch+'&t='+Date.now(),{
-    headers:{'Authorization':'token '+GH.token,'Accept':'application/vnd.github.v3+json'}
+// ── Lê dados do JSONBin (público, sem chave) ──
+function jbLoad(callback){
+  if(!JB.binId){ callback('não configurado'); return; }
+  fetch(JB_API+'/b/'+JB.binId+'/latest',{
+    headers:{'X-JSON-Container-Precision':'true'}
   })
   .then(function(r){
-    if(r.status===404){ callback('arquivo não encontrado — será criado no primeiro save'); return; }
     if(!r.ok) throw new Error('HTTP '+r.status);
     return r.json();
   })
-  .then(function(json){
-    if(!json) return;
-    GH.sha=json.sha;
-    var decoded=decodeURIComponent(escape(atob(json.content.replace(/\n/g,''))));
-    var data=JSON.parse(decoded);
-    callback(null,Array.isArray(data)?data:(data.epicos||[]));
-  })
-  .catch(function(e){ callback(e.message||'falha'); });
+  .then(function(j){ callback(null, j.record||[]); })
+  .catch(function(e){ callback(e.message||'falha ao ler nuvem'); });
 }
 
-// ── Grava o arquivo de dados no GitHub ──
-function ghSave(msg){
-  if(!ghIsConfigured()) return;
-  clearTimeout(_ghSaveTimer);
-  setSyncLabel('🔄 Salvando no GitHub…');
-  var payload=JSON.stringify(allData,null,2);
-  var encoded=btoa(unescape(encodeURIComponent(payload)));
-  var body={message:msg||'LeadTime update · '+new Date().toISOString(),content:encoded,branch:GH.branch};
-  if(GH.sha) body.sha=GH.sha;
-  fetch(ghApiUrl(),{
+// ── Grava dados no JSONBin (requer API Key) ──
+function jbSave(){
+  if(!jbIsConfigured()||!JB.key) return;
+  clearTimeout(_jbSaveTimer);
+  setSyncLabel('🔄 Salvando na nuvem…');
+  fetch(JB_API+'/b/'+JB.binId,{
     method:'PUT',
-    headers:{'Authorization':'token '+GH.token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
-    body:JSON.stringify(body)
+    headers:{'Content-Type':'application/json','X-Master-Key':JB.key,'X-Bin-Versioning':'false'},
+    body:JSON.stringify(allData)
+  })
+  .then(function(r){
+    if(!r.ok) return r.json().then(function(e){throw new Error(e.message||'HTTP '+r.status);});
+    return r.json();
+  })
+  .then(function(){
+    setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+  })
+  .catch(function(e){
+    setSyncLabel('⚠️ Nuvem offline — salvo localmente');
+  });
+}
+
+// ── Agenda auto-save com debounce 10s ──
+function jbAutoSave(){
+  if(!jbIsConfigured()||!JB.key) return;
+  clearTimeout(_jbSaveTimer);
+  setSyncLabel('💾 Aguardando para salvar…');
+  _jbSaveTimer=setTimeout(function(){ jbSave(); },10000);
+}
+
+// ── Modal JSONBin ──
+function openJB(){
+  jbLoadConfig();
+  $id('jbKey').value=JB.key||'';
+  $id('jbBinId').value=JB.binId||'';
+  $id('jbBinRow').style.display=JB.binId?'block':'none';
+  $id('jbResult').style.display='none';
+  $id('jbOv').classList.add('on');
+}
+function closeJB(){ $id('jbOv').classList.remove('on'); }
+
+function showJBResult(type,msg){
+  var el=$id('jbResult');
+  el.style.display='block';
+  el.style.background=type==='ok'?'#dcfce7':type==='warn'?'#fefce8':'#fef2f2';
+  el.style.color=type==='ok'?'#15803d':type==='warn'?'#92400e':'#dc2626';
+  el.style.border='1px solid '+(type==='ok'?'#86efac':type==='warn'?'#fde68a':'#fecaca');
+  el.innerHTML=msg;
+}
+
+function testJB(){
+  var key=$id('jbKey').value.trim();
+  if(!key){ showJBResult('err','❌ Insira sua API Key do JSONBin.'); return; }
+  $id('jbTestBtn').textContent='Testando…'; $id('jbTestBtn').disabled=true;
+  // Tenta listar bins para validar a chave
+  fetch(JB_API+'/b',{headers:{'X-Master-Key':key}})
+  .then(function(r){
+    $id('jbTestBtn').textContent='Testar chave'; $id('jbTestBtn').disabled=false;
+    if(r.ok||r.status===200){
+      showJBResult('ok','✅ Chave válida! Clique em <strong>Ativar Nuvem</strong> para começar.');
+    } else if(r.status===401){
+      showJBResult('err','❌ Chave inválida. Verifique se copiou a <strong>Master Key</strong> corretamente.');
+    } else {
+      showJBResult('warn','⚠️ Código '+r.status+'. Tente clicar em Ativar Nuvem mesmo assim.');
+    }
+  })
+  .catch(function(){ $id('jbTestBtn').textContent='Testar chave'; $id('jbTestBtn').disabled=false; showJBResult('err','❌ Falha de rede.'); });
+}
+
+function connectJB(){
+  var key=$id('jbKey').value.trim();
+  var existingBinId=$id('jbBinId').value.trim();
+  if(!key){ showJBResult('err','❌ Insira sua API Key.'); return; }
+  $id('jbConnectBtn').textContent='Conectando…'; $id('jbConnectBtn').disabled=true;
+
+  // Se já tem Bin ID, conecta direto e faz merge
+  if(existingBinId){
+    JB.key=key; JB.binId=existingBinId;
+    jbSaveConfig(); jbUpdateBtn(); closeJB();
+    _jbMergeAndRender('Nuvem reconectada ✓');
+    return;
+  }
+
+  // Cria um Bin novo com os dados atuais
+  fetch(JB_API+'/b',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':'LeadTime-SALA','X-Collection-Name':'sala-leadtime'},
+    body:JSON.stringify(allData)
   })
   .then(function(r){
     if(!r.ok) return r.json().then(function(e){throw new Error(e.message||'HTTP '+r.status);});
     return r.json();
   })
   .then(function(j){
-    GH.sha=j.content.sha;
-    setSyncLabel('✅ GitHub · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    JB.key=key; JB.binId=j.metadata.id;
+    jbSaveConfig(); jbUpdateBtn();
+    $id('jbConnectBtn').textContent='☁️ Ativar Nuvem'; $id('jbConnectBtn').disabled=false;
+    closeJB();
+    setSyncLabel('✅ Nuvem ativada · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    toast('☁️ Nuvem ativada!',
+      'Bin ID: <code>'+JB.binId+'</code><br>'+
+      'Compartilhe o dashboard com o time — os dados sincronizam automaticamente para todos.');
   })
   .catch(function(e){
-    setSyncLabel('⚠️ GitHub offline — dados no localStorage');
-    toast('Erro ao salvar no GitHub',e.message,'err');
+    $id('jbConnectBtn').textContent='☁️ Ativar Nuvem'; $id('jbConnectBtn').disabled=false;
+    showJBResult('err','❌ Erro: '+e.message);
   });
 }
 
-// ── Auto-save com debounce (30s após última edição) ──
-function ghAutoSave(){
-  if(!ghIsConfigured()) return;
-  clearTimeout(_ghSaveTimer);
-  _ghSaveTimer=setTimeout(function(){ ghSave(); },30000);
-  setSyncLabel('💾 GitHub · aguardando…');
-}
-
-// ── Modal GitHub ──
-function openGitHub(){
-  ghLoadConfig();
-  $id('ghToken').value=GH.token;
-  $id('ghOwner').value=GH.owner;
-  $id('ghRepo').value=GH.repo;
-  $id('ghBranch').value=GH.branch||'main';
-  $id('ghFile').value=GH.file||'leadtime-data.json';
-  $id('ghTestResult').style.display='none';
-  $id('ghOv').classList.add('on');
-}
-function closeGitHub(){ $id('ghOv').classList.remove('on'); }
-
-function ghReadFields(){
-  return{
-    token:$id('ghToken').value.trim(),
-    owner:$id('ghOwner').value.trim(),
-    repo:$id('ghRepo').value.trim(),
-    branch:$id('ghBranch').value.trim()||'main',
-    file:$id('ghFile').value.trim()||'leadtime-data.json'
-  };
-}
-
-function testGitHub(){
-  var cfg=ghReadFields();
-  if(!cfg.token||!cfg.owner||!cfg.repo){
-    showGhResult('err','Preencha Token, Owner e Repositório.');
-    return;
-  }
-  $id('ghTestBtn').textContent='Testando…'; $id('ghTestBtn').disabled=true;
-  fetch('https://api.github.com/repos/'+cfg.owner+'/'+cfg.repo,{
-    headers:{'Authorization':'token '+cfg.token,'Accept':'application/vnd.github.v3+json'}
-  })
-  .then(function(r){
-    $id('ghTestBtn').textContent='Testar conexão'; $id('ghTestBtn').disabled=false;
-    if(r.ok){
-      showGhResult('ok','✅ Repositório encontrado! Clique em Conectar para sincronizar os dados.');
-    } else if(r.status===401){
-      showGhResult('err','❌ Token inválido ou sem permissão.');
-    } else if(r.status===404){
-      showGhResult('err','❌ Repositório não encontrado. Verifique owner e nome do repo.');
-    } else {
-      showGhResult('err','❌ Erro HTTP '+r.status);
-    }
-  })
-  .catch(function(){ $id('ghTestBtn').textContent='Testar conexão'; $id('ghTestBtn').disabled=false; showGhResult('err','❌ Falha de rede. Verifique sua conexão.'); });
-}
-
-function showGhResult(type,msg){
-  var el=$id('ghTestResult');
-  el.style.display='block';
-  el.style.background=type==='ok'?'#dcfce7':'#fef2f2';
-  el.style.color=type==='ok'?'#15803d':'#dc2626';
-  el.style.border='1px solid '+(type==='ok'?'#86efac':'#fecaca');
-  el.textContent=msg;
-}
-
-function connectGitHub(){
-  var cfg=ghReadFields();
-  if(!cfg.token||!cfg.owner||!cfg.repo){
-    showGhResult('err','Preencha Token, Owner e Repositório antes de conectar.');
-    return;
-  }
-  GH.token=cfg.token; GH.owner=cfg.owner; GH.repo=cfg.repo;
-  GH.branch=cfg.branch; GH.file=cfg.file; GH.sha='';
-  ghSaveConfig();
-  ghUpdateBtn();
-  closeGitHub();
-  // Carrega dados do GitHub (merge com local)
-  ghLoad(function(err,data){
-    if(err){
-      if(err.indexOf('não encontrado')>=0){
-        // Arquivo ainda não existe — faz o primeiro push com dados atuais
-        ghSave('Primeiro commit — LeadTime SALA');
-        toast('GitHub conectado','Repositório encontrado. Dados enviados pela primeira vez. 🚀');
-      } else {
-        toast('Aviso GitHub',err,'warn');
-      }
-      return;
-    }
-    // Merge: GitHub é fonte de verdade para dados existentes no repo
+function _jbMergeAndRender(msg){
+  jbLoad(function(err,data){
+    if(err){ toast('Aviso nuvem',err,'warn'); return; }
     var existing={};
     allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
-    var merged=data.map(function(r){
+    allData=data.map(function(r){
       var loc=existing[r.id];
-      if(!loc) return Object.assign({},r,{lt:calcLT(r.ini||null,r.fim||null)});
-      // Prefere GitHub para dados editáveis se mais completo
-      return Object.assign({},loc,{
-        status:r.status||loc.status,
-        fim:isValidDate(r.fim)?r.fim:loc.fim,
-        ini:isValidDate(r.ini)?r.ini:loc.ini,
-        dataPrevista:isValidDate(r.dataPrevista)?r.dataPrevista:loc.dataPrevista,
-        chg:r.chg||loc.chg||'',
-        impedimento:r.impedimento||loc.impedimento||'',
-        lt:calcLT(isValidDate(r.ini)?r.ini:loc.ini, isValidDate(r.fim)?r.fim:loc.fim)
-      });
+      var sIni=normalizeDateValue(r.ini)||(loc?normalizeDateValue(loc.ini):null);
+      var sFim=normalizeDateValue(r.fim)||(loc?normalizeDateValue(loc.fim):null);
+      return Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)});
     });
-    // Mantém épicos locais não presentes no GitHub
-    allData.forEach(function(r){
-      if(r&&r.id&&!merged.find(function(m){return m.id===r.id;})){ merged.push(r); }
+    Object.keys(existing).forEach(function(id){
+      if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
     });
-    allData=merged;
-    saveLocal();
-    renderAll();
-    setSyncLabel('✅ GitHub · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
-    toast('GitHub conectado ✓',allData.length+' épicos sincronizados com '+GH.owner+'/'+GH.repo);
+    applyManualCardState();
+    saveLocal(); renderAll();
+    setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    if(msg) toast('☁️ '+msg,allData.length+' épicos sincronizados em tempo real.');
   });
 }
 
 // ═══════════════════════════════════════
 // DATASET HELPERS (Épicos vs Medição)
 // ═══════════════════════════════════════
-// Valida se uma string é uma data válida no formato YYYY-MM-DD
+// Normaliza datas vindas do input, cache, Google Sheets ou JSONBin.
+// O estado interno deve ficar sempre como YYYY-MM-DD.
+function _pad2(n){ return String(n).padStart(2,'0'); }
+function _validYMD(y,m,d){
+  y=+y; m=+m; d=+d;
+  if(!y||!m||!d||m<1||m>12||d<1||d>31) return null;
+  var dt=new Date(y,m-1,d);
+  if(dt.getFullYear()!==y || dt.getMonth()!==m-1 || dt.getDate()!==d) return null;
+  return y+'-'+_pad2(m)+'-'+_pad2(d);
+}
+function normalizeDateValue(v){
+  if(v===undefined||v===null||v==='') return null;
+  if(v instanceof Date && !isNaN(v.getTime())){
+    return _validYMD(v.getFullYear(), v.getMonth()+1, v.getDate());
+  }
+  var s=String(v).trim();
+  if(!s) return null;
+  var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return _validYMD(m[1],m[2],m[3]);
+  m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(m) return _validYMD(m[3],m[2],m[1]);
+  m=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if(m) return _validYMD(m[3],m[2],m[1]);
+  m=s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if(m) return _validYMD(m[1],m[2],m[3]);
+  var dt=new Date(s);
+  if(!isNaN(dt.getTime())) return _validYMD(dt.getFullYear(), dt.getMonth()+1, dt.getDate());
+  return null;
+}
 function isValidDate(d){
-  return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
+  return !!normalizeDateValue(d);
 }
 function activeEpics(){
   // Épicos ativos: SEM Data Fim VÁLIDA → aparecem na aba Épicos
@@ -840,6 +853,111 @@ function activeEpics(){
 function measuredEpics(){
   // Épicos medidos: COM Data Fim VÁLIDA → aparecem na aba Medição
   return allData.filter(function(r){ return isValidDate(r.fim); });
+}
+
+// Registro local de finalização.
+// Evita que F5 + sincronização remota sem Data Fim faça o card voltar para Épicos.
+var FINALIZED_KEY='leadtime_sala_finalized_cards_v1';
+function loadFinalizedMap(){
+  try{
+    var raw=localStorage.getItem(FINALIZED_KEY);
+    var map=raw?JSON.parse(raw):{};
+    return map && typeof map==='object' ? map : {};
+  }catch(e){ return {}; }
+}
+function saveFinalizedMap(map){
+  try{ localStorage.setItem(FINALIZED_KEY, JSON.stringify(map||{})); }catch(e){}
+}
+function rememberFinalizedCard(rec){
+  if(!rec||!rec.id||!isValidDate(rec.fim)) return;
+  forgetUnfinalizedCard(rec.id);
+  var map=loadFinalizedMap();
+  map[rec.id]={
+    fim:normalizeDateValue(rec.fim),
+    status:'Concluído',
+    statusAntes:rec.statusAntes||rec.status||'',
+    updatedAt:new Date().toISOString()
+  };
+  saveFinalizedMap(map);
+}
+function forgetFinalizedCard(id){
+  if(!id) return;
+  var map=loadFinalizedMap();
+  if(map[id]){ delete map[id]; saveFinalizedMap(map); }
+}
+
+// Registro local de retorno manual para Épicos.
+// Se o usuário limpar a Data Fim na aba Medição, essa escolha tem prioridade
+// sobre uma eventual resposta antiga da nuvem/Sheets ainda contendo Data Fim.
+var UNFINALIZED_KEY='leadtime_sala_unfinalized_cards_v1';
+function loadUnfinalizedMap(){
+  try{
+    var raw=localStorage.getItem(UNFINALIZED_KEY);
+    var map=raw?JSON.parse(raw):{};
+    return map && typeof map==='object' ? map : {};
+  }catch(e){ return {}; }
+}
+function saveUnfinalizedMap(map){
+  try{ localStorage.setItem(UNFINALIZED_KEY, JSON.stringify(map||{})); }catch(e){}
+}
+function rememberUnfinalizedCard(rec){
+  if(!rec||!rec.id) return;
+  forgetFinalizedCard(rec.id);
+  var map=loadUnfinalizedMap();
+  map[rec.id]={
+    status:rec.status||'Em Execução',
+    statusAntes:rec.statusAntes||'',
+    updatedAt:new Date().toISOString()
+  };
+  saveUnfinalizedMap(map);
+}
+function forgetUnfinalizedCard(id){
+  if(!id) return;
+  var map=loadUnfinalizedMap();
+  if(map[id]){ delete map[id]; saveUnfinalizedMap(map); }
+}
+function applyFinalizedMap(){
+  var map=loadFinalizedMap();
+  if(!map || !Object.keys(map).length) return;
+  var cleared=loadUnfinalizedMap();
+  allData=allData.map(function(r){
+    var mark=map[r.id];
+    if(cleared && cleared[r.id]) return r;
+    if(mark && isValidDate(mark.fim)){
+      var fim=normalizeDateValue(mark.fim);
+      var ini=normalizeDateValue(r.ini);
+      return Object.assign({}, r, {
+        ini:ini,
+        fim:fim,
+        status:'Concluído',
+        statusAntes:r.statusAntes||mark.statusAntes||r.status||null,
+        lt:calcLT(ini,fim)
+      });
+    }
+    return r;
+  });
+}
+function applyUnfinalizedMap(){
+  var map=loadUnfinalizedMap();
+  if(!map || !Object.keys(map).length) return;
+  allData=allData.map(function(r){
+    var mark=map[r.id];
+    if(mark){
+      var ini=normalizeDateValue(r.ini);
+      return Object.assign({}, r, {
+        ini:ini,
+        fim:null,
+        status:mark.status || r.statusAntes || 'Em Execução',
+        statusAntes:null,
+        lt:calcLT(ini,null)
+      });
+    }
+    return r;
+  });
+}
+function applyManualCardState(){
+  applyFinalizedMap();
+  applyUnfinalizedMap();
 }
 
 // ═══════════════════════════════════════
@@ -851,8 +969,8 @@ function saveLocal(){
     localStorage.setItem(STORAGE_META, JSON.stringify({savedAt:new Date().toISOString()}));
     localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION);
     showSavedBadge();
-    // Agenda sincronização automática com GitHub (30s debounce)
-    ghAutoSave();
+    // Agenda sincronização automática com a nuvem (10s debounce)
+    jbAutoSave();
   }catch(e){ /* storage full or disabled */ }
 }
 function loadLocal(){
@@ -957,7 +1075,8 @@ function copyId(id,btn){
 }
 function parseLocalDate(str){
   // Parses YYYY-MM-DD as LOCAL date (avoids UTC→local timezone shift)
-  var p=str.split('-');
+  str=normalizeDateValue(str)||str;
+  var p=String(str).split('-');
   return new Date(+p[0], +p[1]-1, +p[2]);
 }
 function calcLT(ini,fim){
@@ -1008,16 +1127,57 @@ function deliveryCls(diff){
 // TABS
 // ═══════════════════════════════════════
 function goTab(id,btn){
+  id=normalizeTab(id);
   document.querySelectorAll('.tabbt').forEach(function(b){b.classList.remove('on');});
   document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on');});
-  btn.classList.add('on');
-  $id('pane-'+id).classList.add('on');
+  btn = btn || $id('tab-'+id);
+  if(btn) btn.classList.add('on');
+  var pane=$id('pane-'+id);
+  if(pane) pane.classList.add('on');
   curTab=id;
-  // Re-render target tab to reflect any changes made in other tabs
+  saveTab(id); // persiste aba ativa
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   updateTabCounts();
+}
+
+// Ativa uma aba programaticamente — manipulação direta de DOM, à prova de timing
+function activateTab(id){
+  id=normalizeTab(id || curTab || loadTab());
+  // Remove .on de todas as abas e painéis
+  var bts=document.querySelectorAll('.tabbt');
+  for(var i=0;i<bts.length;i++) bts[i].classList.remove('on');
+  var pns=document.querySelectorAll('.pane');
+  for(var j=0;j<pns.length;j++) pns[j].classList.remove('on');
+  // Aplica .on na aba e painel desejados
+  var btn=$id('tab-'+id);
+  var pane=$id('pane-'+id);
+  if(btn) btn.classList.add('on');
+  if(pane) pane.classList.add('on');
+  curTab=id;
+  saveTab(id);
+  // Renderiza conteúdo da aba ativa
+  if(id==='me') renderMed();
+  else if(id==='ep'){ populateSqF(); renderTbl(); }
+  else if(id==='db') renderDash();
+  updateTabCounts();
+}
+
+function focusMeasuredEpic(id){
+  if(!id) return;
+  setTimeout(function(){
+    var rows=document.querySelectorAll('#medTblBody tr[data-epic-id]');
+    for(var i=0;i<rows.length;i++){
+      rows[i].classList.remove('med-focus');
+      if(rows[i].getAttribute('data-epic-id')===id){
+        rows[i].classList.add('med-focus');
+        try{ rows[i].scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){ rows[i].scrollIntoView(); }
+        (function(row){ setTimeout(function(){ row.classList.remove('med-focus'); },3500); })(rows[i]);
+        break;
+      }
+    }
+  },80);
 }
 
 // ═══════════════════════════════════════
@@ -1180,7 +1340,7 @@ function renderTbl(){
   var rows=sl.map(function(r){
     var gi=allData.indexOf(r);
     var lc=ltMap[ltCls(r.lt)];
-    return '<tr>'+
+    return '<tr data-epic-id="'+esc(r.id)+'">'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
@@ -1209,49 +1369,84 @@ function renderTbl(){
 }
 
 function fc(el){
+  var tabToRestore=rememberTab();
   var gi=parseInt(el.dataset.i), f=el.dataset.f;
   if(isNaN(gi)||!allData[gi]) return;
-  var oldVal=allData[gi][f];
+
+  var rec=allData[gi];
+  var oldVal=rec[f];
+  var rawVal=(el.value||'').trim();
+  var targetTab=tabToRestore;
+  var movedToMedicao=false;
+
+  // Na aba Medição, limpar manualmente a Data Fim é uma ação explícita de reabertura.
+  // Nesse caso o card deve voltar para Épicos; reload/F5/cache não podem causar isso sozinhos.
+
   // Date fields → validate and store only valid YYYY-MM-DD or null
   if(f==='ini'||f==='fim'||f==='dataPrevista'){
-    var dateVal=el.value||null;
-    allData[gi][f]=isValidDate(dateVal)?dateVal:null;
+    var dateVal=rawVal||null;
+    rec[f]=normalizeDateValue(dateVal);
   } else {
-    allData[gi][f]=el.value||'';
+    rec[f]=el.value||'';
   }
+
   if(f==='fim'){
-    var newFim=allData[gi].fim;
-    allData[gi].lt=calcLT(allData[gi].ini,newFim);
-    // Transição para Medição (foi finalizado agora)
+    var newFim=rec.fim;
+    rec.lt=calcLT(rec.ini,newFim);
+
+    // Transição para Medição: quando a Data Fim é preenchida em Épicos,
+    // o sistema deve ir para Medição e persistir essa aba também após F5/reload.
     if(!isValidDate(oldVal) && isValidDate(newFim)){
-      // Preserva o status original antes de mudar para Concluído
-      allData[gi].statusAntes = allData[gi].status;
-      allData[gi].status='Concluído';
+      rec.statusAntes = rec.status;
+      rec.status='Concluído';
+      forgetUnfinalizedCard(rec.id);
+      rememberFinalizedCard(rec);
+      targetTab='me';
+      movedToMedicao=true;
+      saveTab('me');
       toast('✓ Épico movido para Medição',
-        '<strong>'+esc(allData[gi].id)+'</strong> finalizado como <strong>Concluído</strong>. Lead Time: <strong>'+allData[gi].lt+' dias</strong>.');
+        '<strong>'+esc(rec.id)+'</strong> finalizado como <strong>Concluído</strong>. Lead Time: <strong>'+rec.lt+' dias</strong>.');
     }
-    // Retorno para Épicos (desfez a finalização)
+    // Retorno para Épicos: só ocorre quando o usuário remove manualmente uma Data Fim existente.
+    // Essa ação apaga a marca de finalização e grava uma marca de reabertura local.
     else if(isValidDate(oldVal) && !isValidDate(newFim)){
-      // Restaura o status original (ex: Executado, Em Execução)
-      allData[gi].status = allData[gi].statusAntes || 'Em Execução';
-      allData[gi].statusAntes = null;
+      rec.status = rec.statusAntes || 'Em Execução';
+      rec.statusAntes = null;
+      forgetFinalizedCard(rec.id);
+      rememberUnfinalizedCard(rec);
+      targetTab='ep';
+      movedToMedicao=false;
+      pg=1;
+      saveTab('ep');
       toast('↩ Épico retornado para Épicos',
-        '<strong>'+esc(allData[gi].id)+'</strong> voltou para a lista de ativos como <strong>'+allData[gi].status+'</strong>.','warn');
+        '<strong>'+esc(rec.id)+'</strong> voltou para a lista de ativos como <strong>'+rec.status+'</strong>.','warn');
     }
-    renderTbl(); renderMed(); renderDash(); updateTabCounts();
+
+    renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
+    if(movedToMedicao) focusMeasuredEpic(rec.id);
   }
-  if(f==='dataPrevista'){ renderDash(); }
+  if(f==='dataPrevista'){ renderDash(); activateTab(targetTab); }
   if(f==='ini'){
-    allData[gi].lt=calcLT(allData[gi].ini,allData[gi].fim);
-    renderTbl(); renderMed(); renderDash(); updateTabCounts();
+    rec.lt=calcLT(rec.ini,rec.fim);
+    renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
+    if(targetTab==='me') focusMeasuredEpic(rec.id);
   }
   // Re-render Medição when CHG or impedimento changes (ensures data displays correctly)
   if(f==='chg'||f==='impedimento'){
-    renderMed(); renderDash();
+    renderMed(); renderDash(); activateTab(targetTab);
+    if(targetTab==='me') focusMeasuredEpic(rec.id);
   }
+
   saveLocal();
+  saveTab(targetTab);
+
+  // Campos críticos (Data Fim, Data Início) → salva na nuvem IMEDIATAMENTE (sem debounce)
+  // Evita perda de dados se o usuário atualizar a página antes dos 10s
+  if(f==='fim'||f==='ini'){
+    clearTimeout(_jbSaveTimer);
+    jbSave();
+  }
   // Sincronizar com Google Sheets todos os campos editáveis manualmente
-  // Inclui Data Início (ini) pois é preenchida manualmente após importação do Jira
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
     var r=allData[gi];
     saveToSheets([{
@@ -1260,6 +1455,7 @@ function fc(el){
     }]);
   }
 }
+
 function ar(el){el.style.height='auto';el.style.height=Math.max(30,el.scrollHeight)+'px';}
 
 function populateSqF(){
@@ -1330,7 +1526,7 @@ function renderMed(){
   $id('medTblBody').innerHTML=sorted.map(function(r){
     var gi=allData.indexOf(r);
     var lc=ltMap[ltCls(r.lt)];
-    return '<tr>'+
+    return '<tr data-epic-id="'+esc(r.id)+'">'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
@@ -1382,19 +1578,25 @@ document.querySelectorAll('.chip').forEach(function(btn){
 // REFRESH / RENDER ALL
 // ═══════════════════════════════════════
 function doRefresh(){
+  var tabToRestore=rememberTab();
   allData=allData.map(function(r){
     return Object.assign({},r,{lt:calcLT(r.ini,r.fim)});
   });
   var n=new Date();
   $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  activateTab(tabToRestore); // mantém aba do usuário
   saveLocal();
   var btn=document.querySelector('.tbtn[onclick="doRefresh()"]');
   if(btn){btn.style.background='#dcfce7';btn.style.borderColor='#86efac';btn.style.color='#15803d';setTimeout(function(){btn.style.background='';btn.style.borderColor='';btn.style.color='';},800);}
 }
 
-function renderAll(){
+function renderAll(tabToRestore){
+  // Renderiza todos os painéis mas mantém a aba atual do usuário
+  var tab=normalizeTab(tabToRestore || getActiveTab());
   renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  // Garante que a aba ativa visual bate com a posição real do usuário (não reseta para Épicos)
+  activateTab(tab);
 }
 
 // ═══════════════════════════════════════
@@ -2147,9 +2349,9 @@ var SEED=[
   }
   allData=source.map(function(r){
     // Sanitize: only keep date values that are valid YYYY-MM-DD
-    var sIni = isValidDate(r.ini) ? r.ini : null;
-    var sFim = isValidDate(r.fim) ? r.fim : null;
-    var sPrev = isValidDate(r.dataPrevista) ? r.dataPrevista : null;
+    var sIni = normalizeDateValue(r.ini);
+    var sFim = normalizeDateValue(r.fim);
+    var sPrev = normalizeDateValue(r.dataPrevista);
     return {
       id:r.id,
       squad:r.squad,
@@ -2164,6 +2366,7 @@ var SEED=[
       lt:calcLT(sIni, sFim)
     };
   });
+  applyManualCardState();
   var _n=new Date();
   if(saved&&saved.length){
     $id('syncLbl').textContent='Carregado do cache local · '+_n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -2179,47 +2382,102 @@ var SEED=[
   renderTbl();
   updateTabCounts();
 
-  // ── Carrega config do GitHub e atualiza botão ──
-  ghLoadConfig();
-  ghUpdateBtn();
+  // ── PERSISTÊNCIA DE ABA: restaura a aba salva e força ativação visual ──
+  // Lê o valor salvo no localStorage e ativa imediatamente — antes de qualquer sync
+  curTab = normalizeTab(loadTab());
+  activateTab(curTab);
 
-  // ── Carregar dados do GitHub (assíncrono, prioridade sobre Sheets) ──
-  if(ghIsConfigured()){
-    ghLoad(function(err,data){
-      if(err){
-        if(err.indexOf('não encontrado')>=0){
-          // Arquivo não existe ainda — faz push inicial
-          ghSave('Primeiro commit — LeadTime SALA');
-          setSyncLabel('✅ GitHub · arquivo criado com sucesso');
-        } else {
-          setSyncLabel('⚠️ GitHub offline — '+err);
-        }
-        // Fallback: tenta Sheets
-        _trySheets();
-        return;
-      }
-      // Merge GitHub → local
+  // ── Carrega config do JSONBin e atualiza botão ──
+  jbLoadConfig();
+  jbUpdateBtn();
+
+  // ── Carrega dados da nuvem (JSONBin) em background ──
+  if(jbIsConfigured()){
+    jbLoad(function(err,data){
+      if(err){ setSyncLabel('⚠️ Nuvem offline — usando dados locais'); _trySheets(); return; }
       var existing={};
       allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
+
+      // Merge inteligente: para cada campo, usa o valor mais completo entre nuvem e local.
+      // LOCAL tem prioridade quando a nuvem não tem o campo (evita perda de edições recentes).
+      // NUVEM tem prioridade quando local não tem (garante sincronização do time).
+      function bestVal(cloudVal, localVal, defaultVal){
+        var hasCloud = cloudVal!==undefined && cloudVal!==null && cloudVal!=='';
+        var hasLocal = localVal!==undefined && localVal!==null && localVal!=='';
+        if(hasLocal && !hasCloud) return localVal;  // local tem, nuvem não → mantém local
+        if(hasCloud) return cloudVal;               // nuvem tem → usa nuvem (mais recente)
+        return defaultVal;
+      }
+
       allData=data.map(function(r){
         var loc=existing[r.id];
-        var sIni=isValidDate(r.ini)?r.ini:(loc?loc.ini:null);
-        var sFim=isValidDate(r.fim)?r.fim:(loc?loc.fim:null);
-        return Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim),statusAntes:(r.statusAntes||null)});
+        var sIni=normalizeDateValue(r.ini)||(loc?normalizeDateValue(loc.ini):null);
+        var sFim=normalizeDateValue(r.fim)||(loc?normalizeDateValue(loc.fim):null);
+        var sPrev=normalizeDateValue(r.dataPrevista)||(loc?normalizeDateValue(loc.dataPrevista):null);
+        return Object.assign({}, loc||{}, r, {
+          ini: sIni,
+          fim: sFim,
+          dataPrevista: sPrev,
+          status: bestVal(r.status, loc?loc.status:null, 'Em Execução'),
+          statusAntes: bestVal(r.statusAntes, loc?loc.statusAntes:null, null),
+          chg: bestVal(r.chg, loc?loc.chg:null, ''),
+          impedimento: bestVal(r.impedimento, loc?loc.impedimento:null, ''),
+          lt: calcLT(sIni, sFim)
+        });
       });
-      // Mantém épicos locais ausentes no GitHub
       Object.keys(existing).forEach(function(id){
         if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
       });
-      saveLocal();
-      renderAll();
-      setSyncLabel('✅ GitHub · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      applyManualCardState();
+
+      // ── Sanitização pós-merge ──
+      // Se um épico ficou com status "Concluído" mas sem Data Fim válida,
+      // restaura o status original (statusAntes) ou "Em Execução".
+      // Isso evita épicos "Concluídos" presos na aba Épicos sem Data Fim.
+      allData.forEach(function(r){
+        if(!isValidDate(r.fim) && r.status==='Concluído'){
+          r.status = r.statusAntes || 'Em Execução';
+          r.statusAntes = null;
+        }
+      });
+
+      saveLocal(); renderAll();
+      setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
-    return; // não tenta Sheets se GitHub configurado
+  } else {
+    _trySheets();
   }
 
-  // ── Fallback: Carregar dados do Google Sheets ──
-  _trySheets();
+  // ── Auto-refresh a cada 2 minutos (para o time ver atualizações sem F5) ──
+  setInterval(function(){
+    if(!jbIsConfigured()) return;
+    jbLoad(function(err,data){
+      if(err) return;
+      var existing={};
+      allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
+      var hasChanges=false;
+      var merged=data.map(function(r){
+        var loc=existing[r.id];
+        // Prefere local para fim se nuvem não tem (evita sobrescrever edição recente)
+        var sIni=normalizeDateValue(r.ini)||(loc?normalizeDateValue(loc.ini):null);
+        var sFim=normalizeDateValue(r.fim)||(loc?normalizeDateValue(loc.fim):null);
+        var newR=Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)});
+        // Sanitiza: Concluído sem Data Fim → restaura status original
+        if(!isValidDate(newR.fim) && newR.status==='Concluído'){
+          newR.status = newR.statusAntes || (loc?loc.status:'Em Execução') || 'Em Execução';
+          newR.statusAntes = null;
+        }
+        if(!loc||loc.fim!==newR.fim||loc.chg!==newR.chg||loc.status!==newR.status||loc.impedimento!==newR.impedimento) hasChanges=true;
+        return newR;
+      });
+      if(!hasChanges) return;
+      allData=merged;
+      applyManualCardState();
+      saveLocal(); renderAll();
+      setSyncLabel('✅ Nuvem · atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      toast('🔄 Dados atualizados','O dashboard foi sincronizado com as últimas alterações.');
+    });
+  }, 120000); // 2 minutos
 })();
 
 function _trySheets(){
@@ -2238,20 +2496,22 @@ function _trySheets(){
       allData = allData.map(function(local){
         var remote = sheetsData.filter(function(r){ return r.id === local.id; })[0];
         if(!remote) return local;
-        var mergedIni = isValidDate(pick(remote.ini, local.ini, null)) ? pick(remote.ini, local.ini, null) : null;
-        var mergedFim = isValidDate(pick(remote.fim, local.fim, null)) ? pick(remote.fim, local.fim, null) : null;
-        var mergedPrev = isValidDate(pick(remote.dataPrevista, local.dataPrevista, null)) ? pick(remote.dataPrevista, local.dataPrevista, null) : null;
+        var mergedIni = normalizeDateValue(remote.ini)||normalizeDateValue(local.ini);
+        var mergedFim = normalizeDateValue(remote.fim)||normalizeDateValue(local.fim);
+        var mergedPrev = normalizeDateValue(remote.dataPrevista)||normalizeDateValue(local.dataPrevista);
         return Object.assign({}, local, {
           chg:          pick(remote.chg,          local.chg,          ''),
           impedimento:  pick(remote.impedimento,  local.impedimento,  ''),
           ini:          mergedIni,
           fim:          mergedFim,
           dataPrevista: mergedPrev,
+          status:       mergedFim ? 'Concluído' : pick(remote.status, local.status, 'Em Execução'),
           lt:           calcLT(mergedIni, mergedFim)
         });
       });
+      applyManualCardState();
       saveLocal();
-      renderDash(); renderMed(); populateSqF(); renderTbl(); updateTabCounts();
+      renderAll(rememberTab()); // mantém aba do usuário após sync
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
   }
