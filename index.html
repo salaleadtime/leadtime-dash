@@ -423,7 +423,7 @@ tr:nth-child(even):hover td{background:#f0f5ff}
     <span class="fdate-sep">→</span>
     <input type="date" class="fdate" id="fDateFim" title="Data início máxima">
     <button class="chip fdate-clear" id="fDateClear" onclick="clearDateF()" title="Limpar período">✕</button>
-    <input class="fsrch" id="srch" placeholder="Buscar ID, squad, resumo…" oninput="renderTbl()">
+    <input class="fsrch" id="srch" name="leadtime_epic_search" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Buscar ID, squad, resumo…" oninput="pg=1;renderTbl()">
   </div>
 
   <div class="tc">
@@ -618,6 +618,23 @@ function rememberTab(){
   curTab=id;
   saveTab(id);
   return id;
+}
+function clearEpicSearch(render){
+  var s=$id('srch');
+  if(s && s.value){ s.value=''; }
+  if(render){ pg=1; renderTbl(); }
+}
+function clearEpicSearchAfterLoad(){
+  // Evita restauração/autofill do navegador no campo de busca após F5 ou troca de arquivo no Git.
+  [0,120,400,900].forEach(function(ms){
+    setTimeout(function(){
+      var s=$id('srch');
+      if(s && s.value){
+        s.value='';
+        if(getActiveTab()==='ep'){ pg=1; renderTbl(); }
+      }
+    },ms);
+  });
 }
 var STORAGE_KEY='leadtime_sala_v8_data';
 var STORAGE_META='leadtime_sala_v8_meta';
@@ -1422,6 +1439,7 @@ function fc(el){
         '<strong>'+esc(rec.id)+'</strong> voltou para a lista de ativos como <strong>'+rec.status+'</strong>.','warn');
     }
 
+    if(movedToMedicao || targetTab==='ep') clearEpicSearch(false);
     renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
     if(movedToMedicao) focusMeasuredEpic(rec.id);
   }
@@ -2376,6 +2394,7 @@ var SEED=[
   }else{
     $id('syncLbl').textContent='Atualizado: '+_n.toLocaleDateString('pt-BR')+' às '+_n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   }
+  clearEpicSearch(false);
   renderDash();
   renderMed();
   populateSqF();
@@ -2386,6 +2405,7 @@ var SEED=[
   // Lê o valor salvo no localStorage e ativa imediatamente — antes de qualquer sync
   curTab = normalizeTab(loadTab());
   activateTab(curTab);
+  clearEpicSearchAfterLoad();
 
   // ── Carrega config do JSONBin e atualiza botão ──
   jbLoadConfig();
