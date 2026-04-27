@@ -135,8 +135,6 @@ html,body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',
 #pane-me table tbody tr td{background:#fcfefc}
 #pane-me table tbody tr:nth-child(even) td{background:#f6fbf7}
 #pane-me table tbody tr:hover td{background:#ecfdf5}
-#pane-me table tbody tr.med-focus td{background:#dcfce7!important;box-shadow:inset 0 0 0 9999px rgba(22,163,74,.10);transition:background .25s ease}
-#pane-ep table tbody tr.ep-focus td{background:#eff6ff!important;box-shadow:inset 0 0 0 9999px rgba(37,99,235,.08);transition:background .25s ease}
 
 /* ── GitHub Integration modal ── */
 .gh-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);background:var(--card);color:var(--tx3);transition:all .2s}
@@ -603,7 +601,6 @@ function saveTab(id){
 function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
-// Valida e preserva a aba ativa mesmo quando os painéis são renderizados novamente.
 function normalizeTab(id){
   return (id==='ep'||id==='me'||id==='db') ? id : 'ep';
 }
@@ -626,21 +623,18 @@ var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-04-27-v23-busca-limpa';
+var SEED_VERSION='2026-04-27-v24-cloud-first';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycby_InO5hqN9CHcbC83vOyNCYTpTDDXn9KGwx50oWGK3MmK_yKUJnjIAxECq2fhN-YRung/exec';
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbwbTq-6M1ASGKTJ_VQQpWIguglLQSUOXqd09RfPFD2cdmDleEZPHV7lERDLRMdt3y0DOw/exec';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
 var _sheetsLastWritePayload = '';
-// Intervalo de leitura automática do Google Sheets para usuários que recebem o link.
-// Ajustado para reduzir chamadas externas e evitar múltiplas solicitações de rede no preview.
 var SHEETS_POLL_MS = 120000;
-var SHEETS_BOOT_DELAY_MS = 2500;
 
 // ═══════════════════════════════════════
 // JSONBIN — sincronização em tempo real
@@ -807,7 +801,7 @@ function _jbMergeAndRender(msg){
       var loc=existing[r.id];
       var sIni=isValidDate(r.ini)?r.ini:(loc?loc.ini:null);
       var sFim=isValidDate(r.fim)?r.fim:(loc?loc.fim:null);
-      return Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)});
+      return normalizeWorkflowRecord(Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)}));
     });
     Object.keys(existing).forEach(function(id){
       if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
@@ -834,9 +828,9 @@ function measuredEpics(){
   return allData.filter(function(r){ return isValidDate(r.fim); });
 }
 
-// Normaliza o fluxo entre Épicos e Medição:
-// - Com Data Fim válida: o card pertence à Medição e o status deve ser Concluído.
-// - Sem Data Fim válida: o card pertence a Épicos e volta ao status anterior.
+// Regra única do fluxo:
+// - Com Data Fim válida: card pertence à Medição e status deve ser Concluído.
+// - Sem Data Fim válida: card pertence a Épicos e recupera o status anterior.
 function normalizeWorkflowRecord(rec){
   if(!rec) return rec;
   if(isValidDate(rec.fim)){
@@ -855,6 +849,31 @@ function normalizeWorkflowRecord(rec){
 }
 function normalizeWorkflowAll(){
   allData=allData.map(function(r){ return normalizeWorkflowRecord(r); });
+}
+function makeRow(r){
+  var sIni = isValidDate(r.ini) ? r.ini : null;
+  var sFim = isValidDate(r.fim) ? r.fim : null;
+  var sPrev = isValidDate(r.dataPrevista) ? r.dataPrevista : null;
+  return normalizeWorkflowRecord({
+    id:String(r.id||''),
+    squad:String(r.squad||''),
+    resumo:String(r.resumo||''),
+    status:String(r.status||'Em Execução'),
+    statusAntes:r.statusAntes||null,
+    ini:sIni,
+    fim:sFim,
+    dataPrevista:sPrev,
+    chg:r.chg||'',
+    impedimento:r.impedimento||'',
+    lt:calcLT(sIni,sFim)
+  });
+}
+function replaceFromSharedSource(rows){
+  if(!Array.isArray(rows)||!rows.length) return false;
+  allData=rows.filter(function(r){return r&&r.id;}).map(makeRow);
+  saveLocal();
+  renderAll(rememberTab());
+  return true;
 }
 
 // ═══════════════════════════════════════
@@ -892,15 +911,9 @@ function showSavedBadge(){
 // ═══════════════════════════════════════
 function loadFromSheets(callback, silent){
   if(!SHEETS_WEBAPP){ callback('sem webapp'); return; }
-
-  // Evita chamadas simultâneas ao mesmo Web App.
-  // No preview do ChatGPT, múltiplos fetchs ao mesmo domínio geram a janela
-  // "Permitir acesso de rede?" repetida. Aqui só uma leitura pode rodar por vez.
   if(_sheetsSyncing){ callback('sync em andamento'); return; }
-
   _sheetsSyncing = true;
   _sheetsLastReadAt = Date.now();
-
   if(!silent) setSyncLabel('🔄 Sincronizando com Google Sheets…');
 
   fetch(SHEETS_WEBAPP+'?t='+Date.now())
@@ -923,18 +936,15 @@ function loadFromSheets(callback, silent){
 // Usa text/plain para evitar preflight CORS; o GAS recebe via e.postData.contents.
 function saveToSheets(items){
   if(!SHEETS_WEBAPP || !items || !items.length) return;
-
-  // Evita múltiplos POSTs iguais em sequência.
-  // Isso mantém a sincronização, mas impede chamadas duplicadas ao abrir a tela.
-  var payload = JSON.stringify(items);
-  if(_sheetsWriteSyncing && payload === _sheetsLastWritePayload) return;
-  _sheetsWriteSyncing = true;
-  _sheetsLastWritePayload = payload;
+  var payload=JSON.stringify(items);
+  if(_sheetsWriteSyncing && payload===_sheetsLastWritePayload) return;
+  _sheetsWriteSyncing=true;
+  _sheetsLastWritePayload=payload;
 
   setSyncLabel('🔄 Salvando no Google Sheets…');
   fetch(SHEETS_WEBAPP, {
     method: 'POST',
-    mode:   'no-cors',          // resposta opaca — OK, dados chegam mesmo assim
+    mode:   'no-cors',
     headers:{'Content-Type':'text/plain'},
     body:   payload
   })
@@ -945,9 +955,7 @@ function saveToSheets(items){
   .catch(function(){
     setSyncLabel('⚠️ Falha ao salvar no Sheets (dados locais preservados)');
   })
-  .finally(function(){
-    _sheetsWriteSyncing = false;
-  });
+  .finally(function(){ _sheetsWriteSyncing=false; });
 }
 
 function setSyncLabel(txt){
@@ -1054,7 +1062,7 @@ function goTab(id,btn){
   var pane=$id('pane-'+id);
   if(pane) pane.classList.add('on');
   curTab=id;
-  saveTab(id); // persiste aba ativa
+  saveTab(id);
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
@@ -1064,56 +1072,22 @@ function goTab(id,btn){
 // Ativa uma aba programaticamente — manipulação direta de DOM, à prova de timing
 function activateTab(id){
   id=normalizeTab(id || curTab || loadTab());
-  // Remove .on de todas as abas e painéis
   var bts=document.querySelectorAll('.tabbt');
   for(var i=0;i<bts.length;i++) bts[i].classList.remove('on');
   var pns=document.querySelectorAll('.pane');
   for(var j=0;j<pns.length;j++) pns[j].classList.remove('on');
-  // Aplica .on na aba e painel desejados
   var btn=$id('tab-'+id);
   var pane=$id('pane-'+id);
   if(btn) btn.classList.add('on');
   if(pane) pane.classList.add('on');
   curTab=id;
   saveTab(id);
-  // Renderiza conteúdo da aba ativa
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   updateTabCounts();
 }
 
-function focusMeasuredEpic(id){
-  if(!id) return;
-  setTimeout(function(){
-    var rows=document.querySelectorAll('#medTblBody tr[data-epic-id]');
-    for(var i=0;i<rows.length;i++){
-      rows[i].classList.remove('med-focus');
-      if(rows[i].getAttribute('data-epic-id')===id){
-        rows[i].classList.add('med-focus');
-        try{ rows[i].scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){ rows[i].scrollIntoView(); }
-        (function(row){ setTimeout(function(){ row.classList.remove('med-focus'); },3500); })(rows[i]);
-        break;
-      }
-    }
-  },80);
-}
-
-function focusActiveEpic(id){
-  if(!id) return;
-  setTimeout(function(){
-    var rows=document.querySelectorAll('#tblBody tr[data-epic-id]');
-    for(var i=0;i<rows.length;i++){
-      rows[i].classList.remove('ep-focus');
-      if(rows[i].getAttribute('data-epic-id')===id){
-        rows[i].classList.add('ep-focus');
-        try{ rows[i].scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){ rows[i].scrollIntoView(); }
-        (function(row){ setTimeout(function(){ row.classList.remove('ep-focus'); },3500); })(rows[i]);
-        break;
-      }
-    }
-  },80);
-}
 
 // ═══════════════════════════════════════
 // DASHBOARD
@@ -1275,7 +1249,7 @@ function renderTbl(){
   var rows=sl.map(function(r){
     var gi=allData.indexOf(r);
     var lc=ltMap[ltCls(r.lt)];
-    return '<tr data-epic-id="'+esc(r.id)+'">'+
+    return '<tr>'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
@@ -1312,12 +1286,7 @@ function fc(el){
   var oldVal=rec[f];
   var rawVal=(el.value||'').trim();
   var targetTab=tabToRestore;
-  var movedToMedicao=false;
-  var movedToEpico=false;
 
-  // Date fields → validate and store only valid YYYY-MM-DD or null.
-  // Regra revisada: limpar Data Fim na aba Medição é uma ação válida;
-  // o card deve retornar para Épicos e recuperar o status anterior.
   if(f==='ini'||f==='fim'||f==='dataPrevista'){
     var dateVal=rawVal||null;
     rec[f]=isValidDate(dateVal)?dateVal:null;
@@ -1327,30 +1296,24 @@ function fc(el){
 
   if(f==='fim'){
     var oldFimValid=isValidDate(oldVal);
-    var newFim=rec.fim;
-    var newFimValid=isValidDate(newFim);
+    var newFimValid=isValidDate(rec.fim);
 
-    // Entrou em Medição: Data Fim preenchida → status obrigatório Concluído.
     if(!oldFimValid && newFimValid){
       if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
       rec.status='Concluído';
       targetTab='me';
-      movedToMedicao=true;
       saveTab('me');
       toast('✓ Épico movido para Medição',
-        '<strong>'+esc(rec.id)+'</strong> finalizado como <strong>Concluído</strong>. Lead Time: <strong>'+calcLT(rec.ini,newFim)+' dias</strong>.');
+        '<strong>'+esc(rec.id)+'</strong> finalizado como <strong>Concluído</strong>. Lead Time: <strong>'+calcLT(rec.ini,rec.fim)+' dias</strong>.');
     }
-    // Saiu da Medição: Data Fim removida → volta para Épicos com o status anterior.
     else if(oldFimValid && !newFimValid){
       rec.status = rec.statusAntes || 'Em Execução';
       rec.statusAntes = null;
       targetTab='ep';
-      movedToEpico=true;
       saveTab('ep');
       toast('↩ Épico retornado para Épicos',
         '<strong>'+esc(rec.id)+'</strong> voltou para a lista de ativos como <strong>'+esc(rec.status)+'</strong>.','warn');
     }
-    // Permanece medido: qualquer card com Data Fim válida deve ficar como Concluído.
     else if(newFimValid){
       if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
       rec.status='Concluído';
@@ -1359,35 +1322,25 @@ function fc(el){
 
     normalizeWorkflowRecord(rec);
     renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
-    if(movedToMedicao || targetTab==='me') focusMeasuredEpic(rec.id);
-    if(movedToEpico || targetTab==='ep') focusActiveEpic(rec.id);
   }
   if(f==='dataPrevista'){ renderDash(); activateTab(targetTab); }
   if(f==='ini'){
     rec.lt=calcLT(rec.ini,rec.fim);
     normalizeWorkflowRecord(rec);
     renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
-    if(targetTab==='me') focusMeasuredEpic(rec.id);
-    if(targetTab==='ep') focusActiveEpic(rec.id);
   }
-  // Re-render Medição when CHG or impedimento changes (ensures data displays correctly)
   if(f==='chg'||f==='impedimento'){
     normalizeWorkflowRecord(rec);
     renderMed(); renderDash(); activateTab(targetTab);
-    if(targetTab==='me') focusMeasuredEpic(rec.id);
-    if(targetTab==='ep') focusActiveEpic(rec.id);
   }
 
   saveLocal();
   saveTab(targetTab);
 
-  // Campos críticos (Data Fim, Data Início) → salva na nuvem IMEDIATAMENTE (sem debounce)
-  // Evita perda de dados se o usuário atualizar a página antes dos 10s
   if(f==='fim'||f==='ini'){
     clearTimeout(_jbSaveTimer);
     jbSave();
   }
-  // Sincronizar com Google Sheets todos os campos editáveis manualmente
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
     var r=allData[gi];
     saveToSheets([{
@@ -1467,7 +1420,7 @@ function renderMed(){
   $id('medTblBody').innerHTML=sorted.map(function(r){
     var gi=allData.indexOf(r);
     var lc=ltMap[ltCls(r.lt)];
-    return '<tr data-epic-id="'+esc(r.id)+'">'+
+    return '<tr>'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
@@ -1520,21 +1473,18 @@ document.querySelectorAll('.chip').forEach(function(btn){
 // ═══════════════════════════════════════
 function doRefresh(){
   var tabToRestore=rememberTab();
-  allData=allData.map(function(r){
-    return Object.assign({},r,{lt:calcLT(r.ini,r.fim)});
-  });
+  normalizeWorkflowAll();
   var n=new Date();
   $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
-  activateTab(tabToRestore); // mantém aba do usuário
+  activateTab(tabToRestore);
   saveLocal();
 
-  // Atualizar Todos também deve consultar a fonte compartilhada.
-  // Caso contrário, o botão só recalcula o cache local do navegador.
-  if(jbIsConfigured()){
-    _jbMergeAndRender('Dados atualizados');
-  } else if(SHEETS_WEBAPP){
+  // Fonte compartilhada sempre vence o cache local.
+  if(SHEETS_WEBAPP){
     _trySheets(false);
+  }else if(jbIsConfigured()){
+    _jbMergeAndRender('Dados atualizados');
   }
 
   var btn=document.querySelector('.tbtn[onclick="doRefresh()"]');
@@ -1542,12 +1492,12 @@ function doRefresh(){
 }
 
 function renderAll(tabToRestore){
-  // Renderiza todos os painéis mas mantém a aba atual do usuário
   var tab=normalizeTab(tabToRestore || getActiveTab());
+  normalizeWorkflowAll();
   renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
-  // Garante que a aba ativa visual bate com a posição real do usuário (não reseta para Épicos)
   activateTab(tab);
 }
+
 
 // ═══════════════════════════════════════
 // UPLOAD handlers
@@ -2232,11 +2182,6 @@ function loadGS(){
 
     renderAll();
     saveLocal();
-    // Quando o usuário importa/conecta a planilha, empurra o estado atual para a fonte compartilhada.
-    // Assim, quem abrir o link depois recebe os mesmos dados.
-    saveToSheets(allData.map(function(r){
-      return {id:r.id,status:r.status||'',statusAntes:r.statusAntes||'',chg:r.chg||'',impedimento:r.impedimento||'',ini:r.ini||'',fim:r.fim||'',dataPrevista:r.dataPrevista||''};
-    }));
   }).catch(function(err){toast('Erro ao importar',err.message+'<br>Verifique se o link está publicado como CSV.','err');});
 }
 
@@ -2275,54 +2220,7 @@ var SEED=[
 // BOOT
 // ═══════════════════════════════════════
 (function boot(){
-  // 1) Comparar versão do SEED no arquivo com a versão em cache
-  //    - Versões iguais → usa o cache local (edições do usuário)
-  //    - Versões diferentes → o arquivo foi atualizado (ex: pull do Git); SEED vence
-  //    - Sem versão no cache (primeiro uso ou legado) → mantém cache, registra versão
-  var saved=loadLocal();
-  var savedVersion=null;
-  try{ savedVersion=localStorage.getItem(STORAGE_VERSION_KEY); }catch(e){}
-  var source=SEED;
-  var usedCache=false;
-  if(saved&&saved.length){
-    if(savedVersion && savedVersion!==SEED_VERSION){
-      // Arquivo HTML foi atualizado por outra pessoa — descartar cache desatualizado
-      source=SEED;
-      try{
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(STORAGE_META);
-        localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION);
-      }catch(e){}
-    }else{
-      // Mesma versão (ou legado sem versão) — usar cache do usuário
-      source=saved;
-      usedCache=true;
-      if(!savedVersion){
-        try{ localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION); }catch(e){}
-      }
-    }
-  }
-  allData=source.map(function(r){
-    // Sanitize: only keep date values that are valid YYYY-MM-DD
-    var sIni = isValidDate(r.ini) ? r.ini : null;
-    var sFim = isValidDate(r.fim) ? r.fim : null;
-    var sPrev = isValidDate(r.dataPrevista) ? r.dataPrevista : null;
-    return normalizeWorkflowRecord({
-      id:r.id,
-      squad:r.squad,
-      resumo:r.resumo,
-      status:r.status,
-      statusAntes:r.statusAntes||null,
-      ini:sIni,
-      fim:sFim,
-      dataPrevista:sPrev,
-      chg:r.chg||'',
-      impedimento:r.impedimento||'',
-      lt:calcLT(sIni, sFim)
-    });
-  });
-  // Evita que o navegador reaproveite valor antigo no campo de busca (ex.: CHG digitada antes).
-  // Esse filtro é visual e não deve nascer preenchido após deploy/reload.
+  // Limpa filtros visuais que o navegador pode reaproveitar por autocomplete/cache.
   try{
     if($id('srch')){
       $id('srch').value='';
@@ -2330,209 +2228,102 @@ var SEED=[
     }
   }catch(e){}
 
-  var _n=new Date();
-  if(saved&&saved.length){
-    $id('syncLbl').textContent='Carregado do cache local · '+_n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    $id('upName').textContent='Dados salvos localmente';
-    $id('upSub').textContent=allData.length+' épicos · recarregados automaticamente';
-    showSavedBadge();
-  }else{
-    $id('syncLbl').textContent='Atualizado: '+_n.toLocaleDateString('pt-BR')+' às '+_n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  function localOrSeed(){
+    var saved=loadLocal();
+    var savedVersion=null;
+    try{ savedVersion=localStorage.getItem(STORAGE_VERSION_KEY); }catch(e){}
+    var source=SEED;
+    var usedCache=false;
+    if(saved&&saved.length){
+      if(savedVersion && savedVersion!==SEED_VERSION){
+        source=SEED;
+        try{
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(STORAGE_META);
+          localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION);
+        }catch(e){}
+      }else{
+        source=saved;
+        usedCache=true;
+        if(!savedVersion){
+          try{ localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION); }catch(e){}
+        }
+      }
+    }
+    allData=source.map(makeRow);
+    return usedCache;
   }
-  renderDash();
-  renderMed();
-  populateSqF();
-  renderTbl();
-  updateTabCounts();
 
-  // ── PERSISTÊNCIA DE ABA: restaura a aba salva e força ativação visual ──
-  // Lê o valor salvo no localStorage e ativa imediatamente — antes de qualquer sync
-  curTab = normalizeTab(loadTab());
-  activateTab(curTab);
+  function renderBootFromLocal(reason){
+    var usedCache=localOrSeed();
+    var n=new Date();
+    if(usedCache){
+      $id('syncLbl').textContent=(reason||'Carregado do cache local')+' · '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      $id('upName').textContent='Dados salvos localmente';
+      $id('upSub').textContent=allData.length+' épicos · recarregados automaticamente';
+      showSavedBadge();
+    }else{
+      $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    }
+    renderAll(normalizeTab(loadTab()));
+  }
 
-  // ── Carrega config do JSONBin e atualiza botão ──
+  // Carrega config do JSONBin apenas para manter o botão, mas Google Sheets vence como fonte oficial.
   jbLoadConfig();
   jbUpdateBtn();
 
-  // ── Carrega dados da nuvem (JSONBin) em background ──
+  // BOOT CLOUD-FIRST:
+  // Se há Web App do Google Sheets, não renderiza cache local antes.
+  // Isso elimina o bug visual de abrir 12 Épicos/3 Medição e depois virar 3/12.
+  if(SHEETS_WEBAPP){
+    setSyncLabel('🔄 Sincronizando com Google Sheets…');
+    loadFromSheets(function(err, sheetsData){
+      if(!err && Array.isArray(sheetsData) && sheetsData.length){
+        replaceFromSharedSource(sheetsData);
+        setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+        return;
+      }
+      renderBootFromLocal('⚠️ Sheets offline — usando cache local');
+    }, false);
+    return;
+  }
+
+  renderBootFromLocal();
+
+  // Nuvem JSONBin só entra se Google Sheets não estiver configurado.
   if(jbIsConfigured()){
     jbLoad(function(err,data){
-      if(err){ setSyncLabel('⚠️ Nuvem offline — usando dados locais'); _trySheets(); return; }
-      var existing={};
-      allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
-
-      // Merge inteligente: para cada campo, usa o valor mais completo entre nuvem e local.
-      // LOCAL tem prioridade quando a nuvem não tem o campo (evita perda de edições recentes).
-      // NUVEM tem prioridade quando local não tem (garante sincronização do time).
-      function bestVal(cloudVal, localVal, defaultVal){
-        var hasCloud = cloudVal!==undefined && cloudVal!==null && cloudVal!=='';
-        var hasLocal = localVal!==undefined && localVal!==null && localVal!=='';
-        if(hasLocal && !hasCloud) return localVal;  // local tem, nuvem não → mantém local
-        if(hasCloud) return cloudVal;               // nuvem tem → usa nuvem (mais recente)
-        return defaultVal;
-      }
-
-      allData=data.map(function(r){
-        var loc=existing[r.id];
-        var sIni=isValidDate(bestVal(r.ini, loc?loc.ini:null, null))
-          ? bestVal(r.ini, loc?loc.ini:null, null) : null;
-        var sFim=isValidDate(bestVal(r.fim, loc?loc.fim:null, null))
-          ? bestVal(r.fim, loc?loc.fim:null, null) : null;
-        var sPrev=isValidDate(bestVal(r.dataPrevista, loc?loc.dataPrevista:null, null))
-          ? bestVal(r.dataPrevista, loc?loc.dataPrevista:null, null) : null;
-        return normalizeWorkflowRecord(Object.assign({}, loc||{}, r, {
-          ini: sIni,
-          fim: sFim,
-          dataPrevista: sPrev,
-          status: bestVal(r.status, loc?loc.status:null, 'Em Execução'),
-          statusAntes: bestVal(r.statusAntes, loc?loc.statusAntes:null, null),
-          chg: bestVal(r.chg, loc?loc.chg:null, ''),
-          impedimento: bestVal(r.impedimento, loc?loc.impedimento:null, ''),
-          lt: calcLT(sIni, sFim)
-        }));
-      });
-      Object.keys(existing).forEach(function(id){
-        if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
-      });
-
-      // ── Sanitização pós-merge ──
-      // Se um épico ficou com status "Concluído" mas sem Data Fim válida,
-      // restaura o status original (statusAntes) ou "Em Execução".
-      // Isso evita épicos "Concluídos" presos na aba Épicos sem Data Fim.
-      allData.forEach(function(r){ normalizeWorkflowRecord(r); });
-
-      saveLocal(); renderAll();
-      setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      if(err){ setSyncLabel('⚠️ Nuvem offline — usando dados locais'); return; }
+      allData=(Array.isArray(data)?data:[]).map(makeRow);
+      saveLocal(); renderAll(normalizeTab(loadTab()));
+      setSyncLabel('✅ Nuvem sincronizada · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
-  } else {
-    // Primeira leitura com pequeno atraso para evitar corrida com a renderização
-    // e reduzir solicitações de rede repetidas no preview.
-    setTimeout(function(){ _trySheets(); }, SHEETS_BOOT_DELAY_MS);
   }
-
-  // ── Auto-refresh a cada 2 minutos (para o time ver atualizações sem F5) ──
-  setInterval(function(){
-    if(!jbIsConfigured()) return;
-    jbLoad(function(err,data){
-      if(err) return;
-      var existing={};
-      allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
-      var hasChanges=false;
-      var merged=data.map(function(r){
-        var loc=existing[r.id];
-        // Prefere local para fim se nuvem não tem (evita sobrescrever edição recente)
-        var sIni=isValidDate(r.ini)?r.ini:(loc&&isValidDate(loc.ini)?loc.ini:null);
-        var sFim=isValidDate(r.fim)?r.fim:(loc&&isValidDate(loc.fim)?loc.fim:null);
-        var newR=normalizeWorkflowRecord(Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)}));
-        // Sanitiza: Concluído sem Data Fim → restaura status original
-        if(!isValidDate(newR.fim) && newR.status==='Concluído'){
-          newR.status = newR.statusAntes || (loc?loc.status:'Em Execução') || 'Em Execução';
-          newR.statusAntes = null;
-        }
-        if(!loc||loc.fim!==newR.fim||loc.chg!==newR.chg||loc.status!==newR.status||loc.impedimento!==newR.impedimento) hasChanges=true;
-        return newR;
-      });
-      if(!hasChanges) return;
-      allData=merged;
-      saveLocal(); renderAll();
-      setSyncLabel('✅ Nuvem · atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
-      toast('🔄 Dados atualizados','O dashboard foi sincronizado com as últimas alterações.');
-    });
-  }, 120000); // 2 minutos
-
-  // ── Auto-refresh via Google Sheets para quem recebe apenas o link ──
-  // JSONBin depende de configuração no navegador; Google Sheets fica no código.
-  // Assim todos os usuários leem periodicamente a mesma base compartilhada.
-  setInterval(function(){
-    if(jbIsConfigured()||!SHEETS_WEBAPP||_sheetsSyncing) return;
-    // Não dispara leitura se acabou de haver uma leitura manual/automática.
-    if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
-    _trySheets(true);
-  }, SHEETS_POLL_MS);
 })();
 
-function hasOwn(o,k){
-  return Object.prototype.hasOwnProperty.call(o||{},k);
-}
-function sameSharedRecord(a,b){
-  return ['id','squad','resumo','status','statusAntes','ini','fim','dataPrevista','chg','impedimento','lt'].every(function(k){
-    return (a&&a[k]||'') === (b&&b[k]||'');
-  });
-}
-function mergeRowsFromSharedSource(remoteRows){
-  if(!Array.isArray(remoteRows)||!remoteRows.length) return false;
-  var before=allData.map(function(r){return Object.assign({},r);});
-  var byId={}, order=[];
-  allData.forEach(function(r){
-    if(r&&r.id){ byId[r.id]=Object.assign({},r); order.push(r.id); }
-  });
-
-  remoteRows.forEach(function(remote){
-    if(!remote||!remote.id) return;
-    var id=String(remote.id).trim();
-    if(!id) return;
-    var local=byId[id]||{};
-
-    // Campos descritivos só vêm da fonte compartilhada quando ela tem valor.
-    // Campos editáveis vêm da fonte compartilhada mesmo quando vazios, para permitir limpeza real.
-    var iniRaw = hasOwn(remote,'ini') ? remote.ini : local.ini;
-    var fimRaw = hasOwn(remote,'fim') ? remote.fim : local.fim;
-    var prevRaw = hasOwn(remote,'dataPrevista') ? remote.dataPrevista : local.dataPrevista;
-    var sIni = isValidDate(iniRaw) ? iniRaw : null;
-    var sFim = isValidDate(fimRaw) ? fimRaw : null;
-    var sPrev = isValidDate(prevRaw) ? prevRaw : null;
-    var mergedStatus = hasOwn(remote,'status') ? (remote.status||'') : (local.status||'Em Execução');
-    var mergedStatusAntes = hasOwn(remote,'statusAntes') ? (remote.statusAntes||null) : (local.statusAntes||null);
-
-    var merged=Object.assign({},local,{
-      id:id,
-      squad:(remote.squad||local.squad||''),
-      resumo:(remote.resumo||local.resumo||''),
-      status:mergedStatus||'Em Execução',
-      statusAntes:mergedStatusAntes,
-      ini:sIni,
-      fim:sFim,
-      dataPrevista:sPrev,
-      chg:hasOwn(remote,'chg') ? (remote.chg||'') : (local.chg||''),
-      impedimento:hasOwn(remote,'impedimento') ? (remote.impedimento||'') : (local.impedimento||''),
-      lt:calcLT(sIni,sFim)
-    });
-
-    normalizeWorkflowRecord(merged);
-
-    if(!byId[id]) order.push(id);
-    byId[id]=merged;
-  });
-
-  allData=order.map(function(id){return byId[id];}).filter(Boolean);
-  if(before.length!==allData.length) return true;
-  for(var i=0;i<allData.length;i++){
-    if(!sameSharedRecord(before[i], allData[i])) return true;
-  }
-  return false;
-}
 
 function _trySheets(silent){
-  // ── Carregar dados do Google Sheets: fonte compartilhada para quem recebe o link ──
+  // Google Sheets é a fonte oficial compartilhada.
+  // Ele substitui o cache local para evitar o bug visual 12/3 → 3/12 após sincronizar.
   if(SHEETS_WEBAPP){
     loadFromSheets(function(err, sheetsData){
       if(err){
-        if(!silent) setSyncLabel('⚠️ Sheets offline — usando dados locais');
+        if(!silent) setSyncLabel('⚠️ Sheets offline — usando cache local');
         return;
       }
-      var changed=mergeRowsFromSharedSource(sheetsData);
-      if(changed){
-        // Apenas recebe os dados compartilhados.
-        // Não faz POST automático durante leitura para evitar loop GET → POST → GET
-        // e a janela de permissão de rede aparecer repetidamente no preview.
-        saveLocal();
-        renderAll(rememberTab()); // mantém aba do usuário após sync
-        if(silent) toast('🔄 Dados atualizados','O dashboard recebeu alterações do Google Sheets.');
-      }
+      replaceFromSharedSource(sheetsData);
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      if(silent) toast('🔄 Dados atualizados','O dashboard recebeu os dados oficiais do Google Sheets.');
     }, !!silent);
   }
 }
+
+// Auto-refresh somente por Google Sheets; JSONBin não sobrescreve a base quando Sheets está ativo.
+setInterval(function(){
+  if(!SHEETS_WEBAPP || _sheetsSyncing) return;
+  if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
+  _trySheets(true);
+}, SHEETS_POLL_MS);
 
 </script>
 </body>
