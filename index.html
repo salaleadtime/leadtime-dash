@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lead Time SALA - v18</title>
+<title>Lead Time SALA</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -136,6 +136,7 @@ html,body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',
 #pane-me table tbody tr:nth-child(even) td{background:#f6fbf7}
 #pane-me table tbody tr:hover td{background:#ecfdf5}
 #pane-me table tbody tr.med-focus td{background:#dcfce7!important;box-shadow:inset 0 0 0 9999px rgba(22,163,74,.10);transition:background .25s ease}
+#pane-ep table tbody tr.ep-focus td{background:#eff6ff!important;box-shadow:inset 0 0 0 9999px rgba(37,99,235,.08);transition:background .25s ease}
 
 /* ── GitHub Integration modal ── */
 .gh-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);background:var(--card);color:var(--tx3);transition:all .2s}
@@ -423,7 +424,7 @@ tr:nth-child(even):hover td{background:#f0f5ff}
     <span class="fdate-sep">→</span>
     <input type="date" class="fdate" id="fDateFim" title="Data início máxima">
     <button class="chip fdate-clear" id="fDateClear" onclick="clearDateF()" title="Limpar período">✕</button>
-    <input class="fsrch" id="srch" name="leadtime_epic_search" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Buscar ID, squad, resumo…" oninput="pg=1;renderTbl()">
+    <input class="fsrch" id="srch" placeholder="Buscar ID, squad, resumo…" oninput="renderTbl()">
   </div>
 
   <div class="tc">
@@ -619,37 +620,27 @@ function rememberTab(){
   saveTab(id);
   return id;
 }
-function clearEpicSearch(render){
-  var s=$id('srch');
-  if(s && s.value){ s.value=''; }
-  if(render){ pg=1; renderTbl(); }
-}
-function clearEpicSearchAfterLoad(){
-  // Evita restauração/autofill do navegador no campo de busca após F5 ou troca de arquivo no Git.
-  [0,120,400,900].forEach(function(ms){
-    setTimeout(function(){
-      var s=$id('srch');
-      if(s && s.value){
-        s.value='';
-        if(getActiveTab()==='ep'){ pg=1; renderTbl(); }
-      }
-    },ms);
-  });
-}
 var STORAGE_KEY='leadtime_sala_v8_data';
 var STORAGE_META='leadtime_sala_v8_meta';
 var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-04-27T02:00:00.000Z';
+var SEED_VERSION='2026-04-26T20:30:00.000Z';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbzT4Cqih8dTvSjUbF_s5nuUIg3cmbl8tf3pl4zSHZYw_2dRi2oiRk_Xphn70n4mpo54lw/exec';
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycby_InO5hqN9CHcbC83vOyNCYTpTDDXn9KGwx50oWGK3MmK_yKUJnjIAxECq2fhN-YRung/exec';
 var _sheetsSyncing = false;
+var _sheetsWriteSyncing = false;
+var _sheetsLastReadAt = 0;
+var _sheetsLastWritePayload = '';
+// Intervalo de leitura automática do Google Sheets para usuários que recebem o link.
+// Ajustado para reduzir chamadas externas e evitar múltiplas solicitações de rede no preview.
+var SHEETS_POLL_MS = 120000;
+var SHEETS_BOOT_DELAY_MS = 2500;
 
 // ═══════════════════════════════════════
 // JSONBIN — sincronização em tempo real
@@ -814,14 +805,13 @@ function _jbMergeAndRender(msg){
     allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
     allData=data.map(function(r){
       var loc=existing[r.id];
-      var sIni=normalizeDateValue(r.ini)||(loc?normalizeDateValue(loc.ini):null);
-      var sFim=normalizeDateValue(r.fim)||(loc?normalizeDateValue(loc.fim):null);
+      var sIni=isValidDate(r.ini)?r.ini:(loc?loc.ini:null);
+      var sFim=isValidDate(r.fim)?r.fim:(loc?loc.fim:null);
       return Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)});
     });
     Object.keys(existing).forEach(function(id){
       if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
     });
-    applyManualCardState();
     saveLocal(); renderAll();
     setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     if(msg) toast('☁️ '+msg,allData.length+' épicos sincronizados em tempo real.');
@@ -831,37 +821,9 @@ function _jbMergeAndRender(msg){
 // ═══════════════════════════════════════
 // DATASET HELPERS (Épicos vs Medição)
 // ═══════════════════════════════════════
-// Normaliza datas vindas do input, cache, Google Sheets ou JSONBin.
-// O estado interno deve ficar sempre como YYYY-MM-DD.
-function _pad2(n){ return String(n).padStart(2,'0'); }
-function _validYMD(y,m,d){
-  y=+y; m=+m; d=+d;
-  if(!y||!m||!d||m<1||m>12||d<1||d>31) return null;
-  var dt=new Date(y,m-1,d);
-  if(dt.getFullYear()!==y || dt.getMonth()!==m-1 || dt.getDate()!==d) return null;
-  return y+'-'+_pad2(m)+'-'+_pad2(d);
-}
-function normalizeDateValue(v){
-  if(v===undefined||v===null||v==='') return null;
-  if(v instanceof Date && !isNaN(v.getTime())){
-    return _validYMD(v.getFullYear(), v.getMonth()+1, v.getDate());
-  }
-  var s=String(v).trim();
-  if(!s) return null;
-  var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(m) return _validYMD(m[1],m[2],m[3]);
-  m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if(m) return _validYMD(m[3],m[2],m[1]);
-  m=s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if(m) return _validYMD(m[3],m[2],m[1]);
-  m=s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
-  if(m) return _validYMD(m[1],m[2],m[3]);
-  var dt=new Date(s);
-  if(!isNaN(dt.getTime())) return _validYMD(dt.getFullYear(), dt.getMonth()+1, dt.getDate());
-  return null;
-}
+// Valida se uma string é uma data válida no formato YYYY-MM-DD
 function isValidDate(d){
-  return !!normalizeDateValue(d);
+  return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
 }
 function activeEpics(){
   // Épicos ativos: SEM Data Fim VÁLIDA → aparecem na aba Épicos
@@ -872,109 +834,27 @@ function measuredEpics(){
   return allData.filter(function(r){ return isValidDate(r.fim); });
 }
 
-// Registro local de finalização.
-// Evita que F5 + sincronização remota sem Data Fim faça o card voltar para Épicos.
-var FINALIZED_KEY='leadtime_sala_finalized_cards_v1';
-function loadFinalizedMap(){
-  try{
-    var raw=localStorage.getItem(FINALIZED_KEY);
-    var map=raw?JSON.parse(raw):{};
-    return map && typeof map==='object' ? map : {};
-  }catch(e){ return {}; }
-}
-function saveFinalizedMap(map){
-  try{ localStorage.setItem(FINALIZED_KEY, JSON.stringify(map||{})); }catch(e){}
-}
-function rememberFinalizedCard(rec){
-  if(!rec||!rec.id||!isValidDate(rec.fim)) return;
-  forgetUnfinalizedCard(rec.id);
-  var map=loadFinalizedMap();
-  map[rec.id]={
-    fim:normalizeDateValue(rec.fim),
-    status:'Concluído',
-    statusAntes:rec.statusAntes||rec.status||'',
-    updatedAt:new Date().toISOString()
-  };
-  saveFinalizedMap(map);
-}
-function forgetFinalizedCard(id){
-  if(!id) return;
-  var map=loadFinalizedMap();
-  if(map[id]){ delete map[id]; saveFinalizedMap(map); }
-}
-
-// Registro local de retorno manual para Épicos.
-// Se o usuário limpar a Data Fim na aba Medição, essa escolha tem prioridade
-// sobre uma eventual resposta antiga da nuvem/Sheets ainda contendo Data Fim.
-var UNFINALIZED_KEY='leadtime_sala_unfinalized_cards_v1';
-function loadUnfinalizedMap(){
-  try{
-    var raw=localStorage.getItem(UNFINALIZED_KEY);
-    var map=raw?JSON.parse(raw):{};
-    return map && typeof map==='object' ? map : {};
-  }catch(e){ return {}; }
-}
-function saveUnfinalizedMap(map){
-  try{ localStorage.setItem(UNFINALIZED_KEY, JSON.stringify(map||{})); }catch(e){}
-}
-function rememberUnfinalizedCard(rec){
-  if(!rec||!rec.id) return;
-  forgetFinalizedCard(rec.id);
-  var map=loadUnfinalizedMap();
-  map[rec.id]={
-    status:rec.status||'Em Execução',
-    statusAntes:rec.statusAntes||'',
-    updatedAt:new Date().toISOString()
-  };
-  saveUnfinalizedMap(map);
-}
-function forgetUnfinalizedCard(id){
-  if(!id) return;
-  var map=loadUnfinalizedMap();
-  if(map[id]){ delete map[id]; saveUnfinalizedMap(map); }
-}
-function applyFinalizedMap(){
-  var map=loadFinalizedMap();
-  if(!map || !Object.keys(map).length) return;
-  var cleared=loadUnfinalizedMap();
-  allData=allData.map(function(r){
-    var mark=map[r.id];
-    if(cleared && cleared[r.id]) return r;
-    if(mark && isValidDate(mark.fim)){
-      var fim=normalizeDateValue(mark.fim);
-      var ini=normalizeDateValue(r.ini);
-      return Object.assign({}, r, {
-        ini:ini,
-        fim:fim,
-        status:'Concluído',
-        statusAntes:r.statusAntes||mark.statusAntes||r.status||null,
-        lt:calcLT(ini,fim)
-      });
+// Normaliza o fluxo entre Épicos e Medição:
+// - Com Data Fim válida: o card pertence à Medição e o status deve ser Concluído.
+// - Sem Data Fim válida: o card pertence a Épicos e volta ao status anterior.
+function normalizeWorkflowRecord(rec){
+  if(!rec) return rec;
+  if(isValidDate(rec.fim)){
+    if(rec.status!=='Concluído'){
+      if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
+      rec.status='Concluído';
     }
-    return r;
-  });
-}
-function applyUnfinalizedMap(){
-  var map=loadUnfinalizedMap();
-  if(!map || !Object.keys(map).length) return;
-  allData=allData.map(function(r){
-    var mark=map[r.id];
-    if(mark){
-      var ini=normalizeDateValue(r.ini);
-      return Object.assign({}, r, {
-        ini:ini,
-        fim:null,
-        status:mark.status || r.statusAntes || 'Em Execução',
-        statusAntes:null,
-        lt:calcLT(ini,null)
-      });
+  }else{
+    if(rec.status==='Concluído'){
+      rec.status=rec.statusAntes || 'Em Execução';
+      rec.statusAntes=null;
     }
-    return r;
-  });
+  }
+  rec.lt=calcLT(rec.ini,rec.fim);
+  return rec;
 }
-function applyManualCardState(){
-  applyFinalizedMap();
-  applyUnfinalizedMap();
+function normalizeWorkflowAll(){
+  allData=allData.map(function(r){ return normalizeWorkflowRecord(r); });
 }
 
 // ═══════════════════════════════════════
@@ -982,6 +862,7 @@ function applyManualCardState(){
 // ═══════════════════════════════════════
 function saveLocal(){
   try{
+    normalizeWorkflowAll();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
     localStorage.setItem(STORAGE_META, JSON.stringify({savedAt:new Date().toISOString()}));
     localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION);
@@ -1009,9 +890,19 @@ function showSavedBadge(){
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — leitura e gravação
 // ═══════════════════════════════════════
-function loadFromSheets(callback){
+function loadFromSheets(callback, silent){
   if(!SHEETS_WEBAPP){ callback('sem webapp'); return; }
-  setSyncLabel('🔄 Sincronizando com Google Sheets…');
+
+  // Evita chamadas simultâneas ao mesmo Web App.
+  // No preview do ChatGPT, múltiplos fetchs ao mesmo domínio geram a janela
+  // "Permitir acesso de rede?" repetida. Aqui só uma leitura pode rodar por vez.
+  if(_sheetsSyncing){ callback('sync em andamento'); return; }
+
+  _sheetsSyncing = true;
+  _sheetsLastReadAt = Date.now();
+
+  if(!silent) setSyncLabel('🔄 Sincronizando com Google Sheets…');
+
   fetch(SHEETS_WEBAPP+'?t='+Date.now())
     .then(function(r){
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1024,20 +915,28 @@ function loadFromSheets(callback){
         callback('Sheets: resposta vazia ou inválida');
       }
     })
-    .catch(function(err){ callback(err.message||'falha ao conectar'); });
+    .catch(function(err){ callback(err.message||'falha ao conectar'); })
+    .finally(function(){ _sheetsSyncing = false; });
 }
 
 // Envia apenas os campos editáveis ao Web App (CHG, Impedimento, datas).
 // Usa text/plain para evitar preflight CORS; o GAS recebe via e.postData.contents.
 function saveToSheets(items){
   if(!SHEETS_WEBAPP || !items || !items.length) return;
+
+  // Evita múltiplos POSTs iguais em sequência.
+  // Isso mantém a sincronização, mas impede chamadas duplicadas ao abrir a tela.
+  var payload = JSON.stringify(items);
+  if(_sheetsWriteSyncing && payload === _sheetsLastWritePayload) return;
+  _sheetsWriteSyncing = true;
+  _sheetsLastWritePayload = payload;
+
   setSyncLabel('🔄 Salvando no Google Sheets…');
   fetch(SHEETS_WEBAPP, {
     method: 'POST',
     mode:   'no-cors',          // resposta opaca — OK, dados chegam mesmo assim
-    keepalive:true,             // reduz perda se o usuário der F5 logo após editar
     headers:{'Content-Type':'text/plain'},
-    body:   JSON.stringify(items)
+    body:   payload
   })
   .then(function(){
     setSyncLabel('✅ Sincronizado com Google Sheets');
@@ -1045,54 +944,15 @@ function saveToSheets(items){
   })
   .catch(function(){
     setSyncLabel('⚠️ Falha ao salvar no Sheets (dados locais preservados)');
+  })
+  .finally(function(){
+    _sheetsWriteSyncing = false;
   });
 }
 
 function setSyncLabel(txt){
   var el=$id('syncLbl');
   if(el) el.textContent=txt;
-}
-
-// Evita o efeito visual de "todos os cards em Épicos" antes da sincronização.
-// Em primeiro acesso/novo navegador, o dashboard aguarda Sheets/Nuvem antes de renderizar os cards.
-var _initialSyncWaiting=false;
-function showInitialSyncLoading(sourceName){
-  _initialSyncWaiting=true;
-  sourceName=sourceName||'base remota';
-  setSyncLabel('🔄 Sincronizando '+sourceName+'…');
-  var epTitle=$id('tblTitle'), epBody=$id('tblBody'), pgInfo=$id('pgInfo'), pgBts=$id('pgBts');
-  var medKpi=$id('medKpi'), medSquads=$id('medSquads'), medBody=$id('medTblBody'), medCnt=$id('medCnt');
-  var kpiRow=$id('kpiRow'), squadCards=$id('squadCards'), dList=$id('dList'), rList=$id('rList');
-  if($id('tabCtEp')) $id('tabCtEp').textContent='…';
-  if($id('tabCtMe')) $id('tabCtMe').textContent='…';
-  if(epTitle) epTitle.textContent='Carregando dados';
-  if(epBody) epBody.innerHTML='<tr><td colspan="10" class="empty" style="padding:2rem;text-align:center">🔄 Sincronizando dados antes de exibir os cards.<br>Isso evita mostrar os cards na aba errada durante o carregamento.</td></tr>';
-  if(pgInfo) pgInfo.textContent='Aguardando sincronização';
-  if(pgBts) pgBts.innerHTML='';
-  if(medKpi) medKpi.innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">🔄 Sincronizando medição…</div>';
-  if(medSquads) medSquads.innerHTML='';
-  if(medBody) medBody.innerHTML='<tr><td colspan="8" class="empty" style="padding:2rem;text-align:center">🔄 Carregando épicos medidos…</td></tr>';
-  if(medCnt) medCnt.textContent='carregando';
-  if(kpiRow) kpiRow.innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">🔄 Sincronizando dashboard…</div>';
-  if(squadCards) squadCards.innerHTML='';
-  if(dList) dList.innerHTML='<div class="empty">Sincronizando dados…</div>';
-  if(rList) rList.innerHTML='<div class="empty">Sincronizando dados…</div>';
-}
-function finishInitialSyncRender(tabToRestore){
-  _initialSyncWaiting=false;
-  clearEpicSearch(false);
-  renderDash();
-  renderMed();
-  populateSqF();
-  renderTbl();
-  updateTabCounts();
-  activateTab(normalizeTab(tabToRestore||curTab||loadTab()));
-  clearEpicSearchAfterLoad();
-}
-function fallbackInitialSyncRender(reason){
-  if(!_initialSyncWaiting) return;
-  finishInitialSyncRender(rememberTab());
-  if(reason) setSyncLabel(reason);
 }
 
 // ═══════════════════════════════════════
@@ -1135,8 +995,7 @@ function copyId(id,btn){
 }
 function parseLocalDate(str){
   // Parses YYYY-MM-DD as LOCAL date (avoids UTC→local timezone shift)
-  str=normalizeDateValue(str)||str;
-  var p=String(str).split('-');
+  var p=str.split('-');
   return new Date(+p[0], +p[1]-1, +p[2]);
 }
 function calcLT(ini,fim){
@@ -1234,6 +1093,22 @@ function focusMeasuredEpic(id){
         rows[i].classList.add('med-focus');
         try{ rows[i].scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){ rows[i].scrollIntoView(); }
         (function(row){ setTimeout(function(){ row.classList.remove('med-focus'); },3500); })(rows[i]);
+        break;
+      }
+    }
+  },80);
+}
+
+function focusActiveEpic(id){
+  if(!id) return;
+  setTimeout(function(){
+    var rows=document.querySelectorAll('#tblBody tr[data-epic-id]');
+    for(var i=0;i<rows.length;i++){
+      rows[i].classList.remove('ep-focus');
+      if(rows[i].getAttribute('data-epic-id')===id){
+        rows[i].classList.add('ep-focus');
+        try{ rows[i].scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){ rows[i].scrollIntoView(); }
+        (function(row){ setTimeout(function(){ row.classList.remove('ep-focus'); },3500); })(rows[i]);
         break;
       }
     }
@@ -1438,78 +1313,69 @@ function fc(el){
   var rawVal=(el.value||'').trim();
   var targetTab=tabToRestore;
   var movedToMedicao=false;
+  var movedToEpico=false;
 
-  // Na aba Medição, limpar manualmente a Data Fim é uma ação explícita de reabertura.
-  // Nesse caso o card deve voltar para Épicos; reload/F5/cache não podem causar isso sozinhos.
-
-  // Date fields → validate and store only valid YYYY-MM-DD or null
+  // Date fields → validate and store only valid YYYY-MM-DD or null.
+  // Regra revisada: limpar Data Fim na aba Medição é uma ação válida;
+  // o card deve retornar para Épicos e recuperar o status anterior.
   if(f==='ini'||f==='fim'||f==='dataPrevista'){
     var dateVal=rawVal||null;
-    rec[f]=normalizeDateValue(dateVal);
+    rec[f]=isValidDate(dateVal)?dateVal:null;
   } else {
     rec[f]=el.value||'';
   }
 
   if(f==='fim'){
+    var oldFimValid=isValidDate(oldVal);
     var newFim=rec.fim;
-    rec.lt=calcLT(rec.ini,newFim);
+    var newFimValid=isValidDate(newFim);
 
-    // Transição para Medição: quando a Data Fim é preenchida em Épicos,
-    // o sistema deve ir para Medição e persistir essa aba também após F5/reload.
-    if(!isValidDate(oldVal) && isValidDate(newFim)){
-      rec.statusAntes = rec.status;
+    // Entrou em Medição: Data Fim preenchida → status obrigatório Concluído.
+    if(!oldFimValid && newFimValid){
+      if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
       rec.status='Concluído';
-      forgetUnfinalizedCard(rec.id);
-      rememberFinalizedCard(rec);
       targetTab='me';
       movedToMedicao=true;
       saveTab('me');
       toast('✓ Épico movido para Medição',
-        '<strong>'+esc(rec.id)+'</strong> finalizado como <strong>Concluído</strong>. Lead Time: <strong>'+rec.lt+' dias</strong>.');
+        '<strong>'+esc(rec.id)+'</strong> finalizado como <strong>Concluído</strong>. Lead Time: <strong>'+calcLT(rec.ini,newFim)+' dias</strong>.');
     }
-    // Retorno para Épicos: só ocorre quando o usuário remove manualmente uma Data Fim existente.
-    // Essa ação apaga a marca de finalização e grava uma marca de reabertura local.
-    else if(isValidDate(oldVal) && !isValidDate(newFim)){
+    // Saiu da Medição: Data Fim removida → volta para Épicos com o status anterior.
+    else if(oldFimValid && !newFimValid){
       rec.status = rec.statusAntes || 'Em Execução';
       rec.statusAntes = null;
-      forgetFinalizedCard(rec.id);
-      rememberUnfinalizedCard(rec);
       targetTab='ep';
-      movedToMedicao=false;
-      pg=1;
+      movedToEpico=true;
       saveTab('ep');
       toast('↩ Épico retornado para Épicos',
-        '<strong>'+esc(rec.id)+'</strong> voltou para a lista de ativos como <strong>'+rec.status+'</strong>.','warn');
+        '<strong>'+esc(rec.id)+'</strong> voltou para a lista de ativos como <strong>'+esc(rec.status)+'</strong>.','warn');
     }
-    // Edição de Data Fim já existente na aba Medição.
-    // Antes, a marca local de finalização podia continuar com a data antiga
-    // e sobrescrever a nova data após F5, atualização ou sincronização.
-    else if(isValidDate(oldVal) && isValidDate(newFim)){
-      if(normalizeDateValue(oldVal)!==normalizeDateValue(newFim) || rec.status!=='Concluído'){
-        rec.status = 'Concluído';
-        forgetUnfinalizedCard(rec.id);
-        rememberFinalizedCard(rec);
-        targetTab='me';
-        saveTab('me');
-        toast('✓ Data Fim atualizada',
-          '<strong>'+esc(rec.id)+'</strong> atualizado para <strong>'+formatDate(rec.fim)+'</strong>. Lead Time: <strong>'+rec.lt+' dias</strong>.');
-      }
+    // Permanece medido: qualquer card com Data Fim válida deve ficar como Concluído.
+    else if(newFimValid){
+      if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
+      rec.status='Concluído';
+      if(tabToRestore==='ep') targetTab='me';
     }
 
-    if(movedToMedicao || targetTab==='ep') clearEpicSearch(false);
+    normalizeWorkflowRecord(rec);
     renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
-    if(movedToMedicao) focusMeasuredEpic(rec.id);
+    if(movedToMedicao || targetTab==='me') focusMeasuredEpic(rec.id);
+    if(movedToEpico || targetTab==='ep') focusActiveEpic(rec.id);
   }
   if(f==='dataPrevista'){ renderDash(); activateTab(targetTab); }
   if(f==='ini'){
     rec.lt=calcLT(rec.ini,rec.fim);
+    normalizeWorkflowRecord(rec);
     renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
     if(targetTab==='me') focusMeasuredEpic(rec.id);
+    if(targetTab==='ep') focusActiveEpic(rec.id);
   }
   // Re-render Medição when CHG or impedimento changes (ensures data displays correctly)
   if(f==='chg'||f==='impedimento'){
+    normalizeWorkflowRecord(rec);
     renderMed(); renderDash(); activateTab(targetTab);
     if(targetTab==='me') focusMeasuredEpic(rec.id);
+    if(targetTab==='ep') focusActiveEpic(rec.id);
   }
 
   saveLocal();
@@ -1525,7 +1391,7 @@ function fc(el){
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
     var r=allData[gi];
     saveToSheets([{
-      id:r.id, status:r.status||'', chg:r.chg||'', impedimento:r.impedimento||'',
+      id:r.id, status:r.status||'', statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
       ini:r.ini||'', fim:r.fim||'', dataPrevista:r.dataPrevista||''
     }]);
   }
@@ -1662,6 +1528,15 @@ function doRefresh(){
   renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tabToRestore); // mantém aba do usuário
   saveLocal();
+
+  // Atualizar Todos também deve consultar a fonte compartilhada.
+  // Caso contrário, o botão só recalcula o cache local do navegador.
+  if(jbIsConfigured()){
+    _jbMergeAndRender('Dados atualizados');
+  } else if(SHEETS_WEBAPP){
+    _trySheets(false);
+  }
+
   var btn=document.querySelector('.tbtn[onclick="doRefresh()"]');
   if(btn){btn.style.background='#dcfce7';btn.style.borderColor='#86efac';btn.style.color='#15803d';setTimeout(function(){btn.style.background='';btn.style.borderColor='';btn.style.color='';},800);}
 }
@@ -2357,6 +2232,11 @@ function loadGS(){
 
     renderAll();
     saveLocal();
+    // Quando o usuário importa/conecta a planilha, empurra o estado atual para a fonte compartilhada.
+    // Assim, quem abrir o link depois recebe os mesmos dados.
+    saveToSheets(allData.map(function(r){
+      return {id:r.id,status:r.status||'',statusAntes:r.statusAntes||'',chg:r.chg||'',impedimento:r.impedimento||'',ini:r.ini||'',fim:r.fim||'',dataPrevista:r.dataPrevista||''};
+    }));
   }).catch(function(err){toast('Erro ao importar',err.message+'<br>Verifique se o link está publicado como CSV.','err');});
 }
 
@@ -2424,10 +2304,10 @@ var SEED=[
   }
   allData=source.map(function(r){
     // Sanitize: only keep date values that are valid YYYY-MM-DD
-    var sIni = normalizeDateValue(r.ini);
-    var sFim = normalizeDateValue(r.fim);
-    var sPrev = normalizeDateValue(r.dataPrevista);
-    return {
+    var sIni = isValidDate(r.ini) ? r.ini : null;
+    var sFim = isValidDate(r.fim) ? r.fim : null;
+    var sPrev = isValidDate(r.dataPrevista) ? r.dataPrevista : null;
+    return normalizeWorkflowRecord({
       id:r.id,
       squad:r.squad,
       resumo:r.resumo,
@@ -2439,9 +2319,8 @@ var SEED=[
       chg:r.chg||'',
       impedimento:r.impedimento||'',
       lt:calcLT(sIni, sFim)
-    };
+    });
   });
-  applyManualCardState();
   var _n=new Date();
   if(saved&&saved.length){
     $id('syncLbl').textContent='Carregado do cache local · '+_n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -2451,22 +2330,20 @@ var SEED=[
   }else{
     $id('syncLbl').textContent='Atualizado: '+_n.toLocaleDateString('pt-BR')+' às '+_n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   }
-  // ── Carrega config do JSONBin antes da primeira renderização ──
+  renderDash();
+  renderMed();
+  populateSqF();
+  renderTbl();
+  updateTabCounts();
+
+  // ── PERSISTÊNCIA DE ABA: restaura a aba salva e força ativação visual ──
+  // Lê o valor salvo no localStorage e ativa imediatamente — antes de qualquer sync
+  curTab = normalizeTab(loadTab());
+  activateTab(curTab);
+
+  // ── Carrega config do JSONBin e atualiza botão ──
   jbLoadConfig();
   jbUpdateBtn();
-
-  // ── PERSISTÊNCIA DE ABA: restaura a aba salva antes de qualquer sync ──
-  curTab = normalizeTab(loadTab());
-
-  // Em primeiro acesso/novo navegador, não renderiza o SEED antes da sincronização.
-  // Isso elimina o efeito: "todos os cards aparecem em Épicos e depois se redistribuem".
-  var shouldWaitInitialRemote = !usedCache && (jbIsConfigured() || !!SHEETS_WEBAPP);
-  if(shouldWaitInitialRemote){
-    activateTab(curTab);
-    showInitialSyncLoading(jbIsConfigured()?'Nuvem':'Google Sheets');
-  }else{
-    finishInitialSyncRender(curTab);
-  }
 
   // ── Carrega dados da nuvem (JSONBin) em background ──
   if(jbIsConfigured()){
@@ -2488,10 +2365,13 @@ var SEED=[
 
       allData=data.map(function(r){
         var loc=existing[r.id];
-        var sIni=normalizeDateValue(r.ini)||(loc?normalizeDateValue(loc.ini):null);
-        var sFim=normalizeDateValue(r.fim)||(loc?normalizeDateValue(loc.fim):null);
-        var sPrev=normalizeDateValue(r.dataPrevista)||(loc?normalizeDateValue(loc.dataPrevista):null);
-        return Object.assign({}, loc||{}, r, {
+        var sIni=isValidDate(bestVal(r.ini, loc?loc.ini:null, null))
+          ? bestVal(r.ini, loc?loc.ini:null, null) : null;
+        var sFim=isValidDate(bestVal(r.fim, loc?loc.fim:null, null))
+          ? bestVal(r.fim, loc?loc.fim:null, null) : null;
+        var sPrev=isValidDate(bestVal(r.dataPrevista, loc?loc.dataPrevista:null, null))
+          ? bestVal(r.dataPrevista, loc?loc.dataPrevista:null, null) : null;
+        return normalizeWorkflowRecord(Object.assign({}, loc||{}, r, {
           ini: sIni,
           fim: sFim,
           dataPrevista: sPrev,
@@ -2500,34 +2380,25 @@ var SEED=[
           chg: bestVal(r.chg, loc?loc.chg:null, ''),
           impedimento: bestVal(r.impedimento, loc?loc.impedimento:null, ''),
           lt: calcLT(sIni, sFim)
-        });
+        }));
       });
       Object.keys(existing).forEach(function(id){
         if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
       });
-      applyManualCardState();
 
       // ── Sanitização pós-merge ──
       // Se um épico ficou com status "Concluído" mas sem Data Fim válida,
       // restaura o status original (statusAntes) ou "Em Execução".
       // Isso evita épicos "Concluídos" presos na aba Épicos sem Data Fim.
-      allData.forEach(function(r){
-        if(!isValidDate(r.fim) && r.status==='Concluído'){
-          r.status = r.statusAntes || 'Em Execução';
-          r.statusAntes = null;
-        }
-      });
+      allData.forEach(function(r){ normalizeWorkflowRecord(r); });
 
-      saveLocal();
-      if(_initialSyncWaiting){
-        finishInitialSyncRender(rememberTab());
-      }else{
-        renderAll();
-      }
+      saveLocal(); renderAll();
       setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
   } else {
-    _trySheets();
+    // Primeira leitura com pequeno atraso para evitar corrida com a renderização
+    // e reduzir solicitações de rede repetidas no preview.
+    setTimeout(function(){ _trySheets(); }, SHEETS_BOOT_DELAY_MS);
   }
 
   // ── Auto-refresh a cada 2 minutos (para o time ver atualizações sem F5) ──
@@ -2541,9 +2412,9 @@ var SEED=[
       var merged=data.map(function(r){
         var loc=existing[r.id];
         // Prefere local para fim se nuvem não tem (evita sobrescrever edição recente)
-        var sIni=normalizeDateValue(r.ini)||(loc?normalizeDateValue(loc.ini):null);
-        var sFim=normalizeDateValue(r.fim)||(loc?normalizeDateValue(loc.fim):null);
-        var newR=Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)});
+        var sIni=isValidDate(r.ini)?r.ini:(loc&&isValidDate(loc.ini)?loc.ini:null);
+        var sFim=isValidDate(r.fim)?r.fim:(loc&&isValidDate(loc.fim)?loc.fim:null);
+        var newR=normalizeWorkflowRecord(Object.assign({},loc||{},r,{ini:sIni,fim:sFim,lt:calcLT(sIni,sFim)}));
         // Sanitiza: Concluído sem Data Fim → restaura status original
         if(!isValidDate(newR.fim) && newR.status==='Concluído'){
           newR.status = newR.statusAntes || (loc?loc.status:'Em Execução') || 'Em Execução';
@@ -2554,57 +2425,106 @@ var SEED=[
       });
       if(!hasChanges) return;
       allData=merged;
-      applyManualCardState();
       saveLocal(); renderAll();
       setSyncLabel('✅ Nuvem · atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
       toast('🔄 Dados atualizados','O dashboard foi sincronizado com as últimas alterações.');
     });
   }, 120000); // 2 minutos
+
+  // ── Auto-refresh via Google Sheets para quem recebe apenas o link ──
+  // JSONBin depende de configuração no navegador; Google Sheets fica no código.
+  // Assim todos os usuários leem periodicamente a mesma base compartilhada.
+  setInterval(function(){
+    if(jbIsConfigured()||!SHEETS_WEBAPP||_sheetsSyncing) return;
+    // Não dispara leitura se acabou de haver uma leitura manual/automática.
+    if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
+    _trySheets(true);
+  }, SHEETS_POLL_MS);
 })();
 
-function _trySheets(){
-  // ── Carregar dados do Google Sheets (assíncrono, após render inicial) ──
+function hasOwn(o,k){
+  return Object.prototype.hasOwnProperty.call(o||{},k);
+}
+function sameSharedRecord(a,b){
+  return ['id','squad','resumo','status','statusAntes','ini','fim','dataPrevista','chg','impedimento','lt'].every(function(k){
+    return (a&&a[k]||'') === (b&&b[k]||'');
+  });
+}
+function mergeRowsFromSharedSource(remoteRows){
+  if(!Array.isArray(remoteRows)||!remoteRows.length) return false;
+  var before=allData.map(function(r){return Object.assign({},r);});
+  var byId={}, order=[];
+  allData.forEach(function(r){
+    if(r&&r.id){ byId[r.id]=Object.assign({},r); order.push(r.id); }
+  });
+
+  remoteRows.forEach(function(remote){
+    if(!remote||!remote.id) return;
+    var id=String(remote.id).trim();
+    if(!id) return;
+    var local=byId[id]||{};
+
+    // Campos descritivos só vêm da fonte compartilhada quando ela tem valor.
+    // Campos editáveis vêm da fonte compartilhada mesmo quando vazios, para permitir limpeza real.
+    var iniRaw = hasOwn(remote,'ini') ? remote.ini : local.ini;
+    var fimRaw = hasOwn(remote,'fim') ? remote.fim : local.fim;
+    var prevRaw = hasOwn(remote,'dataPrevista') ? remote.dataPrevista : local.dataPrevista;
+    var sIni = isValidDate(iniRaw) ? iniRaw : null;
+    var sFim = isValidDate(fimRaw) ? fimRaw : null;
+    var sPrev = isValidDate(prevRaw) ? prevRaw : null;
+    var mergedStatus = hasOwn(remote,'status') ? (remote.status||'') : (local.status||'Em Execução');
+    var mergedStatusAntes = hasOwn(remote,'statusAntes') ? (remote.statusAntes||null) : (local.statusAntes||null);
+
+    var merged=Object.assign({},local,{
+      id:id,
+      squad:(remote.squad||local.squad||''),
+      resumo:(remote.resumo||local.resumo||''),
+      status:mergedStatus||'Em Execução',
+      statusAntes:mergedStatusAntes,
+      ini:sIni,
+      fim:sFim,
+      dataPrevista:sPrev,
+      chg:hasOwn(remote,'chg') ? (remote.chg||'') : (local.chg||''),
+      impedimento:hasOwn(remote,'impedimento') ? (remote.impedimento||'') : (local.impedimento||''),
+      lt:calcLT(sIni,sFim)
+    });
+
+    normalizeWorkflowRecord(merged);
+
+    if(!byId[id]) order.push(id);
+    byId[id]=merged;
+  });
+
+  allData=order.map(function(id){return byId[id];}).filter(Boolean);
+  if(before.length!==allData.length) return true;
+  for(var i=0;i<allData.length;i++){
+    if(!sameSharedRecord(before[i], allData[i])) return true;
+  }
+  return false;
+}
+
+function _trySheets(silent){
+  // ── Carregar dados do Google Sheets: fonte compartilhada para quem recebe o link ──
   if(SHEETS_WEBAPP){
     loadFromSheets(function(err, sheetsData){
       if(err){
-        fallbackInitialSyncRender('⚠️ Sheets offline — usando dados locais');
-        if(!_initialSyncWaiting) setSyncLabel('⚠️ Sheets offline — usando dados locais');
+        if(!silent) setSyncLabel('⚠️ Sheets offline — usando dados locais');
         return;
       }
-      function pick(remoteVal, localVal, defaultVal){
-        if(remoteVal !== undefined && remoteVal !== null && remoteVal !== '') return remoteVal;
-        if(localVal !== undefined && localVal !== null && localVal !== '') return localVal;
-        return defaultVal;
-      }
-      allData = allData.map(function(local){
-        var remote = sheetsData.filter(function(r){ return r.id === local.id; })[0];
-        if(!remote) return local;
-        var mergedIni = normalizeDateValue(remote.ini)||normalizeDateValue(local.ini);
-        var mergedFim = normalizeDateValue(remote.fim)||normalizeDateValue(local.fim);
-        var mergedPrev = normalizeDateValue(remote.dataPrevista)||normalizeDateValue(local.dataPrevista);
-        return Object.assign({}, local, {
-          chg:          pick(remote.chg,          local.chg,          ''),
-          impedimento:  pick(remote.impedimento,  local.impedimento,  ''),
-          ini:          mergedIni,
-          fim:          mergedFim,
-          dataPrevista: mergedPrev,
-          status:       mergedFim ? 'Concluído' : pick(remote.status, local.status, 'Em Execução'),
-          lt:           calcLT(mergedIni, mergedFim)
-        });
-      });
-      applyManualCardState();
-      saveLocal();
-      if(_initialSyncWaiting){
-        finishInitialSyncRender(rememberTab());
-      }else{
+      var changed=mergeRowsFromSharedSource(sheetsData);
+      if(changed){
+        // Apenas recebe os dados compartilhados.
+        // Não faz POST automático durante leitura para evitar loop GET → POST → GET
+        // e a janela de permissão de rede aparecer repetidamente no preview.
+        saveLocal();
         renderAll(rememberTab()); // mantém aba do usuário após sync
+        if(silent) toast('🔄 Dados atualizados','O dashboard recebeu alterações do Google Sheets.');
       }
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
-    });
-  }else{
-    fallbackInitialSyncRender('Atualizado: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    }, !!silent);
   }
 }
+
 </script>
 </body>
 </html>
