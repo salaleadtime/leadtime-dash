@@ -367,10 +367,6 @@ tr:nth-child(even):hover td{background:#f0f5ff}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     <span>Exportar Excel</span>
   </button>
-  <button class="tbtn green" onclick="doExportHTML()" title="Salva todos os dados no arquivo HTML para compartilhar via Git com o time">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    <span>Salvar HTML (Git)</span>
-  </button>
 </header>
 
 <!-- TABS -->
@@ -422,7 +418,6 @@ tr:nth-child(even):hover td{background:#f0f5ff}
     <span class="fdate-sep">→</span>
     <input type="date" class="fdate" id="fDateFim" title="Data início máxima">
     <button class="chip fdate-clear" id="fDateClear" onclick="clearDateF()" title="Limpar período">✕</button>
-    <input class="fsrch" id="srch" name="dash_search_disabled" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Buscar ID, squad, resumo…" oninput="pg=1;renderTbl()">
   </div>
 
   <div class="tc">
@@ -629,7 +624,7 @@ var SEED_VERSION='2026-04-27-v28-get-save-confirmado';
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbznppOpW4oiSJN02stWMV6qt0dMYNdtYAvqBKGkx4b8Vk7rPW3PAFUbLEFuL2WWwsAdWw/exec';
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
@@ -660,6 +655,7 @@ function jbIsConfigured(){ return !!(JB.binId); }
 function jbUpdateBtn(){
   var btn=$id('jbBtn'), lbl=$id('jbBtnLabel');
   if(!btn||!lbl) return;
+  if(SHEETS_WEBAPP){ btn.style.display='none'; return; }
   if(jbIsConfigured()){
     btn.style.background='#dcfce7'; btn.style.borderColor='#86efac'; btn.style.color='#15803d';
     lbl.textContent='☁️ Nuvem ✓';
@@ -870,7 +866,19 @@ function makeRow(r){
 }
 function replaceFromSharedSource(rows){
   if(!Array.isArray(rows)||!rows.length) return false;
-  allData=rows.filter(function(r){return r&&r.id;}).map(makeRow);
+  var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
+
+  // Merge: Sheets é autoritativo para registros que existem nele.
+  // Registros locais (SEED/import) que NÃO existem no Sheets são preservados.
+  // Isso garante que épicos adicionados via import + "Salvar HTML (Git)"
+  // não desapareçam para o time quando o Sheets não os contém.
+  var inIds={};
+  incoming.forEach(function(r){ inIds[r.id]=true; });
+  allData.forEach(function(r){
+    if(r&&r.id&&!inIds[r.id]) incoming.push(r);
+  });
+
+  allData=incoming;
   saveLocal();
   renderAll(rememberTab());
   return true;
@@ -973,6 +981,38 @@ function saveToSheets(items){
     });
 }
 
+// ── Envia registros em lotes ao Sheets (para importações em massa) ──
+// Divide em grupos pequenos para não estourar o limite de URL do GET.
+function saveToSheetsBatch(items){
+  if(!SHEETS_WEBAPP || !items || !items.length) return;
+  var BATCH=3, batches=[], total=0;
+  for(var i=0;i<items.length;i+=BATCH) batches.push(items.slice(i,i+BATCH));
+  total=batches.length;
+  var idx=0, ok=0, fail=0;
+  function sendNext(){
+    if(idx>=batches.length){
+      if(fail===0){
+        setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+        toast('✓ '+items.length+' registros enviados ao Sheets','Todos os '+total+' lotes foram salvos com sucesso.');
+        setTimeout(function(){ _trySheets(true); },1000);
+      } else {
+        setSyncLabel('⚠️ Sheets: '+ok+'/'+total+' lotes salvos');
+        toast('Erro parcial ao salvar no Sheets', fail+' de '+total+' lotes falharam. Os registros locais foram preservados.','err');
+      }
+      return;
+    }
+    var payload=JSON.stringify(batches[idx]);
+    var url=SHEETS_WEBAPP+'?action=update&t='+Date.now()+'&payload='+encodeURIComponent(payload);
+    setSyncLabel('🔄 Salvando no Sheets… (lote '+(idx+1)+'/'+total+')');
+    fetch(url)
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(j){ if(!j||j.ok!==true) throw new Error((j&&j.error)||'Erro'); ok++; })
+      .catch(function(e){ fail++; console.error('Lote '+(idx+1)+' falhou:',e); })
+      .finally(function(){ idx++; setTimeout(sendNext,1500); });
+  }
+  sendNext();
+}
+
 function setSyncLabel(txt){
   var el=$id('syncLbl');
   if(el) el.textContent=txt;
@@ -996,7 +1036,7 @@ function toast(title, sub, kind){
 function prevTag(d){
   if(!d) return '';
   var now=new Date(); now.setHours(0,0,0,0);
-  var diff=Math.floor((new Date(d)-now)/86400000);
+  var diff=Math.floor((parseLocalDate(d)-now)/86400000);
   if(diff<0) return 'color:#dc2626;font-weight:700';
   if(diff<=7) return 'color:#dc2626;font-weight:600';
   if(diff<=21) return 'color:#d97706;font-weight:600';
@@ -1165,7 +1205,7 @@ function renderDeliveries(){
       if(isDone) return false;
       return !!r.dataPrevista;
     })
-    .sort(function(a,b){return new Date(a.dataPrevista)-new Date(b.dataPrevista);})
+    .sort(function(a,b){return parseLocalDate(a.dataPrevista)-parseLocalDate(b.dataPrevista);})
     .slice(0,8);
   $id('dCnt').textContent=list.length+' '+(list.length===1?'prevista':'previstas');
   if(!list.length){
@@ -1174,7 +1214,7 @@ function renderDeliveries(){
   }
   $id('dList').innerHTML=list.map(function(r){
     var d=r.dataPrevista;
-    var diff=Math.floor((new Date(d)-now)/86400000);
+    var diff=Math.floor((parseLocalDate(d)-now)/86400000);
     var ico=deliveryIco(diff);
     var pillCls=deliveryCls(diff);
     var pillLbl=diff===0?'🎯 hoje':diff===1?'🎯 amanhã':diff<0?'⚠ '+Math.abs(diff)+'d atrás':'em '+diff+'d';
@@ -1772,6 +1812,16 @@ function loadXlsx(file){
       );
       renderAll();
       saveLocal();
+
+      // Envia os dados importados ao Google Sheets em lotes para sincronizar com o time
+      if(SHEETS_WEBAPP){
+        saveToSheetsBatch(merged.map(function(r){
+          return {id:r.id, squad:r.squad||'', resumo:r.resumo||'', status:r.status||'',
+            statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
+            ini:r.ini||'', fim:r.fim||'', dataPrevista:r.dataPrevista||''};
+        }));
+      }
+
     }catch(err){toast('Erro ao ler arquivo',err.message,'err');}
   };
   reader.readAsArrayBuffer(file);
@@ -2197,6 +2247,15 @@ function loadGS(){
 
     renderAll();
     saveLocal();
+
+    // Envia os dados importados ao Google Sheets em lotes para sincronizar com o time
+    if(SHEETS_WEBAPP){
+      saveToSheetsBatch(merged.map(function(r){
+        return {id:r.id, squad:r.squad||'', resumo:r.resumo||'', status:r.status||'',
+          statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
+          ini:r.ini||'', fim:r.fim||'', dataPrevista:r.dataPrevista||''};
+      }));
+    }
   }).catch(function(err){toast('Erro ao importar',err.message+'<br>Verifique se o link está publicado como CSV.','err');});
 }
 
@@ -2287,10 +2346,11 @@ var SEED=[
   jbLoadConfig();
   jbUpdateBtn();
 
-  // BOOT CLOUD-FIRST:
-  // Se há Web App do Google Sheets, não renderiza cache local antes.
-  // Isso elimina o bug visual de abrir 12 Épicos/3 Medição e depois virar 3/12.
+  // BOOT CLOUD-FIRST com render imediato do cache:
+  // Renderiza o cache local primeiro para evitar tela em branco no F5,
+  // depois o Google Sheets sobrescreve via replaceFromSharedSource (que preserva a aba atual).
   if(SHEETS_WEBAPP){
+    renderBootFromLocal();
     setSyncLabel('🔄 Sincronizando com Google Sheets…');
     loadFromSheets(function(err, sheetsData){
       if(!err && Array.isArray(sheetsData) && sheetsData.length){
@@ -2298,7 +2358,7 @@ var SEED=[
         setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
         return;
       }
-      renderBootFromLocal('⚠️ Sheets offline — usando cache local');
+      setSyncLabel('⚠️ Sheets offline — usando cache local');
     }, false);
     return;
   }
