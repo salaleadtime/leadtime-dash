@@ -335,6 +335,50 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
 @media(max-width:880px){.kgrid{grid-template-columns:1fr 1fr 1fr}.g2{grid-template-columns:1fr}}
 @media(max-width:580px){.kgrid{grid-template-columns:1fr 1fr}.top .tbtn span{display:none}}
+
+/* ══ ESTÓRIAS ══ */
+.st-upbar{background:#f0f4fa;border-bottom:1px solid #e2e8f0;padding:.65rem 1.6rem;display:flex;align-items:center;gap:12px}
+.st-up-ico{font-size:15px;flex-shrink:0}
+.st-up-name{font-size:11.5px;font-weight:600;color:#475569}
+.st-up-sub{font-size:11px;color:var(--tx3);margin-left:6px}
+.st-up-saved{margin-left:auto;font-size:10px;color:var(--g);font-weight:600;display:flex;align-items:center;gap:4px}
+.st-up-saved.hidden{display:none}
+#fist{display:none}
+
+/* Epic summary cards */
+.st-epic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:1.1rem}
+.st-epic-card{background:var(--card);border:1px solid #e8edf5;border-radius:var(--rad);padding:1rem 1.1rem;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(15,23,42,.07);transition:box-shadow .2s,transform .2s;cursor:default}
+.st-epic-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.st-epic-card.st-alert{border-color:#fca5a5;box-shadow:0 2px 12px rgba(220,38,38,.12)}
+.st-epic-card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.6rem}
+.st-epic-id{font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--accent);text-decoration:none}
+.st-epic-id:hover{text-decoration:underline}
+.st-alert-badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap}
+.st-count-row{display:flex;align-items:baseline;gap:6px;margin-bottom:.5rem}
+.st-count-num{font-size:32px;font-weight:800;letter-spacing:-2px;line-height:1;color:#0f172a}
+.st-count-lbl{font-size:11px;color:#64748b;font-weight:500}
+.st-bar{height:4px;background:#e5e7f0;border-radius:2px;margin-bottom:.6rem;overflow:hidden}
+.st-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#2563eb,#6366f1);transition:width .5s}
+.st-bar-fill.done{background:linear-gradient(90deg,#16a34a,#22c55e)}
+.st-epic-footer{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#94a3b8}
+.st-epic-squad{font-weight:600;color:#475569}
+.st-epic-stats{display:flex;gap:10px}
+.st-stat{display:flex;align-items:center;gap:3px}
+.st-stat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* Stories table */
+.st-filters{background:var(--card);border:1px solid #e2e8f0;border-radius:var(--rad);padding:.9rem 1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(15,23,42,.07)}
+.st-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#64748b;margin-bottom:.8rem;display:flex;align-items:center;gap:8px}
+.st-section-title::after{content:'';flex:1;height:1px;background:#e2e8f0}
+
+/* Status colors for stories */
+.sst-prod{background:#dcfce7;color:#14532d;border:1px solid #86efac}
+.sst-homol{background:#eff6ff;color:#1e40af;border:1px solid #93c5fd}
+.sst-dev{background:#fef9c3;color:#713f12;border:1px solid #fde047}
+.sst-test{background:#f5f3ff;color:#4c1d95;border:1px solid #c4b5fd}
+.sst-deploy{background:#fff7ed;color:#7c2d12;border:1px solid #fdba74}
+.sst-backlog{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.sst-other{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 </style>
 </head>
 <body>
@@ -374,6 +418,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 <!-- TABS -->
 <nav class="tabs">
   <button class="tabbt on" id="tab-ep" onclick="goTab('ep',this)">Épicos <span class="tab-ct" id="tabCtEp"></span></button>
+  <button class="tabbt" id="tab-st" onclick="goTab('st',this)">📋 Estórias <span class="tab-ct" id="tabCtSt"></span></button>
   <button class="tabbt" id="tab-me" onclick="goTab('me',this)">📊 Medição <span class="tab-ct" id="tabCtMe"></span></button>
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
 </nav>
@@ -479,6 +524,25 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     </div>
   </div>
 
+  <!-- Estórias em produção (concluídas) -->
+  <div id="medStoriesSection" style="margin-top:1rem;display:none">
+    <div class="sec-lbl" style="margin-bottom:.8rem">Estórias em Produção</div>
+    <div class="tc">
+      <div class="tc-hd">
+        <span class="tc-hd-t">Histórico de Estórias</span>
+        <span class="tc-hint"><span id="medStCnt">—</span> · estórias concluídas ("Em produção")</span>
+      </div>
+      <div class="tscr">
+        <table style="min-width:600px">
+          <thead><tr>
+            <th>Chave</th><th>Épico Pai</th><th>Resumo</th><th>Squad</th>
+          </tr></thead>
+          <tbody id="medStTblBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 </div>
 </div>
 <div class="pane" id="pane-db">
@@ -512,6 +576,65 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   </div>
 
 </div>
+</div>
+
+<!-- ══ ESTÓRIAS PANE ══ -->
+<div class="pane" id="pane-st">
+
+  <!-- Upload bar de estórias -->
+  <div class="st-upbar" id="stUpbar">
+    <span class="st-up-ico">📋</span>
+    <span class="st-up-name" id="stUpName">Carregar planilha de Estórias</span>
+    <span class="st-up-sub" id="stUpSub">Arraste ou clique · .xlsx (exportação do Jira)</span>
+    <span class="st-up-saved hidden" id="stUpSaved">💾 <span id="stUpSavedTxt">Salvo localmente</span></span>
+    <input type="file" id="fist" accept=".xlsx,.xls">
+    <button class="up-btn" onclick="document.getElementById('fist').click()">Selecionar arquivo</button>
+  </div>
+
+  <div class="ep" id="stContent">
+
+    <!-- KPIs de estórias -->
+    <div class="kgrid" id="stKpi" style="margin-bottom:1rem"></div>
+
+    <!-- Cards de épicos com contagem de estórias -->
+    <div class="st-section-title" id="stEpicTitle">Épicos · Estórias em Andamento</div>
+    <div class="st-epic-grid" id="stEpicGrid"></div>
+
+    <!-- Tabela de estórias ativas -->
+    <div class="st-filters" id="stFilters">
+      <span class="fl">Épico:</span>
+      <select class="fsel" id="stEpicF"><option value="all">Todos</option></select>
+      <div class="fsep"></div>
+      <span class="fl">Status:</span>
+      <select class="fsel" id="stStatusF">
+        <option value="all">Todos</option>
+        <option value="Em Desenvolvimento">Em Desenvolvimento</option>
+        <option value="Em teste">Em teste</option>
+        <option value="Em deploy para teste">Em deploy para teste</option>
+        <option value="Em homologação">Em homologação</option>
+        <option value="Em deploy para produção">Em deploy para produção</option>
+        <option value="Product Backlog">Product Backlog</option>
+      </select>
+      <div class="fsep"></div>
+      <span id="stTotal" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
+    </div>
+
+    <div class="tc">
+      <div class="tc-hd">
+        <span class="tc-hd-t">Estórias Ativas</span>
+        <span class="tc-hint">Estórias em andamento · "Em produção" vai automaticamente para Medição</span>
+      </div>
+      <div class="tscr">
+        <table id="stTbl" style="min-width:700px">
+          <thead><tr>
+            <th>Chave</th><th>Épico Pai</th><th>Resumo</th><th>Situação</th><th>Squad</th>
+          </tr></thead>
+          <tbody id="stTblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <!-- GitHub Integration modal -->
@@ -588,6 +711,11 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 var META=62, allData=[], pg=1, PG=12, sortLT=null; // null | 'desc' | 'asc'
 var filt={s:'all',l:'all',sq:'all',dateIni:null,dateFim:null};
 var curTab='ep';
+// Estórias
+var allStories=[];
+var STORIES_KEY='leadtime_sala_v8_stories';
+var STORY_LIMIT=10;
+var stFilt={epic:'all',status:'all'};
 var TAB_KEY='leadtime_sala_active_tab';
 
 // Persiste a aba ativa no localStorage
@@ -599,7 +727,7 @@ function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='st') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -1123,6 +1251,7 @@ function goTab(id,btn){
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
+  else if(id==='st') renderStories();
   updateTabCounts();
 }
 
@@ -1142,6 +1271,7 @@ function activateTab(id){
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
+  else if(id==='st') renderStories();
   updateTabCounts();
 }
 
@@ -1470,6 +1600,7 @@ function renderMed(){
   }).join('');
 
   $id('medCnt').textContent=n+' épico'+(n!==1?'s':'');
+  renderMedStories();
 
   // Tabela de medidos — sem Data Prevista e sem Impedimentos (concluídos não precisam)
   var ltMap={r:'ltr',a:'lta',g:'ltg'};
@@ -1490,10 +1621,30 @@ function renderMed(){
   }).join('');
 }
 
+function renderMedStories(){
+  if(!allStories.length){ $id('medStoriesSection').style.display='none'; return; }
+  var done=allStories.filter(function(s){return isStoryDone(s);});
+  var sec=$id('medStoriesSection');
+  if(!done.length){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  $id('medStCnt').textContent=done.length+' estória'+(done.length!==1?'s':'');
+  $id('medStTblBody').innerHTML=done.map(function(s){
+    return '<tr>'+
+      '<td><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a></div></td>'+
+      '<td><a class="cid-link" href="'+jiraUrl(s.epic)+'" target="_blank">'+esc(s.epic)+'</a></td>'+
+      '<td class="cres">'+esc(s.resumo)+'</td>'+
+      '<td>'+squadBadge(s.squad||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
 function updateTabCounts(){
   var a=activeEpics().length, m=measuredEpics().length;
+  var stActive=allStories.filter(function(s){return !isStoryDone(s);}).length;
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
+  var stEl=$id('tabCtSt');
+  if(stEl) stEl.textContent=stActive||'';
 }
 
 // ═══════════════════════════════════════
@@ -1533,7 +1684,7 @@ function doRefresh(){
   normalizeWorkflowAll();
   var n=new Date();
   $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  renderDash(); renderMed(); renderStories(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tabToRestore);
   saveLocal();
 
@@ -1551,12 +1702,287 @@ function doRefresh(){
 function renderAll(tabToRestore){
   var tab=normalizeTab(tabToRestore || getActiveTab());
   normalizeWorkflowAll();
-  renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  renderDash(); renderMed(); renderStories(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tab);
 }
 
 
 // ═══════════════════════════════════════
+
+// ═══════════════════════════════════════
+// ESTÓRIAS — funções principais
+// ═══════════════════════════════════════
+
+// Status que indica concluído (vai para Medição)
+function isStoryDone(s){
+  var st=(s.status||'').trim().toLowerCase();
+  return st.indexOf('em producao')>=0 || st.indexOf('em produção')>=0 ||
+         st.indexOf('produc')>=0;
+}
+
+// Classe de cor para badge de status de história
+function storyStatusClass(status){
+  var s=(status||'').toLowerCase();
+  if(s.indexOf('produc')>=0||s.indexOf('produção')>=0) return 'sst-prod';
+  if(s.indexOf('homolog')>=0) return 'sst-homol';
+  if(s.indexOf('desenvolv')>=0) return 'sst-dev';
+  if(s.indexOf('teste')>=0||s.indexOf('test')>=0) return 'sst-test';
+  if(s.indexOf('deploy')>=0) return 'sst-deploy';
+  if(s.indexOf('backlog')>=0) return 'sst-backlog';
+  return 'sst-other';
+}
+
+// Detecta colunas na planilha de Estórias do Jira
+function detectStoriesFormat(wb){
+  var sheetNames=wb.SheetNames;
+  for(var s=0;s<sheetNames.length;s++){
+    var ws=wb.Sheets[sheetNames[s]];
+    if(!ws) continue;
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    for(var i=0;i<Math.min(5,rows.length);i++){
+      var row=rows[i];
+      if(!row||!row.length) continue;
+      var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase();});
+      // Precisa ter "chave" (story ID) e "epic" (link ao épico pai)
+      var hasChave=cells.some(function(c){return c.indexOf('chave')>=0||c==='key'||c==='id'&&c.length<5;});
+      var hasEpic=cells.some(function(c){return c.indexOf('epic')>=0||c.indexOf('epico')>=0;});
+      if(hasChave&&hasEpic){
+        var map={id:-1,epic:-1,resumo:-1,status:-1,squad:-1,criado:-1,tipo:-1};
+        cells.forEach(function(c,j){
+          if(map.id<0&&(c==='chave'||c==='key'||c==='chave do item')) map.id=j;
+          else if(map.epic<0&&(c.indexOf('epic')>=0||c.indexOf('epico')>=0)) map.epic=j;
+          else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
+          else if(map.status<0&&(c.indexOf('situacao')>=0||c==='status'||c.indexOf('estado')>=0)) map.status=j;
+          else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('time')>=0)) map.squad=j;
+          else if(map.criado<0&&(c.indexOf('criado')>=0||c.indexOf('created')>=0)) map.criado=j;
+          else if(map.tipo<0&&(c.indexOf('tipo')>=0||c.indexOf('type')>=0)) map.tipo=j;
+        });
+        if(map.id>=0&&map.epic>=0) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
+      }
+    }
+  }
+  return null;
+}
+
+// Carrega planilha de Estórias
+function loadStoriesXlsx(file){
+  if(typeof XLSX==='undefined'){
+    toast('Carregando biblioteca...','Aguarde alguns segundos e tente novamente.','warn');
+    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadStoriesXlsx(file);});
+    return;
+  }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var det=detectStoriesFormat(wb);
+      if(!det){
+        toast('Formato não reconhecido',
+          'Colunas esperadas: "Chave do item" (ID da história) + "Campo personalizado (Epic Link)" (épico pai) + "Situação".','err');
+        return;
+      }
+      var rows=det.rows;
+      var m=det.map;
+      var stories=[];
+      for(var i=det.hrow+1;i<rows.length;i++){
+        var row=rows[i];
+        if(!row||!row.length) continue;
+        var id=(row[m.id]||'').toString().trim();
+        var epic=(row[m.epic]||'').toString().trim();
+        if(!id||!epic) continue;
+        // Pega apenas o ID do épico (sem URL)
+        epic=epic.replace(/.*\/([A-Z]+-\d+).*/,'$1').trim();
+        var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
+        var status=m.status>=0?(row[m.status]||'').toString().trim():'';
+        var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
+        stories.push({id:id,epic:epic,resumo:resumo,status:status,squad:squad});
+      }
+      allStories=stories;
+      saveStoriesLocal();
+      $id('stUpName').textContent=file.name;
+      $id('stUpSub').textContent=stories.length+' estórias carregadas';
+      $id('stUpSaved').classList.remove('hidden');
+      $id('stUpSavedTxt').textContent='Salvo localmente · '+stories.length+' estórias';
+      renderStories();
+      updateTabCounts();
+      toast('📋 Estórias carregadas',stories.length+' estórias importadas de "'+file.name+'".');
+    }catch(err){
+      toast('Erro ao ler arquivo','Verifique se é um .xlsx válido: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Salva/carrega estórias no localStorage
+function saveStoriesLocal(){
+  try{ localStorage.setItem(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
+}
+function loadStoriesLocal(){
+  try{
+    var raw=localStorage.getItem(STORIES_KEY);
+    if(raw) allStories=JSON.parse(raw);
+  }catch(e){}
+}
+
+// Renderiza a aba Estórias
+function renderStories(){
+  if(!allStories.length){
+    $id('stKpi').innerHTML='<div class="empty" style="grid-column:1/-1;padding:2rem">Nenhuma estória carregada. Clique em <strong>Selecionar arquivo</strong> para importar a planilha do Jira.</div>';
+    $id('stEpicGrid').innerHTML='';
+    $id('stTblBody').innerHTML='<tr><td colspan="5" class="empty">Sem dados</td></tr>';
+    return;
+  }
+
+  var active=allStories.filter(function(s){return !isStoryDone(s);});
+  var done=allStories.filter(function(s){return isStoryDone(s);});
+
+  // ── KPIs de estórias ──
+  var epicsWithStories=Object.keys(allStories.reduce(function(acc,s){acc[s.epic]=1;return acc;},{})).length;
+  var alertEpics=getEpicsWithAlerts().length;
+  $id('stKpi').innerHTML=
+    kpi('kn','Total Estórias',''+allStories.length,'em '+epicsWithStories+' épicos','')+
+    kpi('kb','Em Andamento',''+active.length,'não concluídas','cb')+
+    kpi('kg','Em Produção',''+done.length,'concluídas','cg')+
+    kpi('kr','Épicos c/ Alerta',''+alertEpics,'mais de '+STORY_LIMIT+' estórias','cr');
+
+  // ── Épicos: cards de resumo ──
+  renderStoryEpicCards(active);
+
+  // ── Filtro de épicos ──
+  populateStoryEpicFilter(active);
+
+  // ── Tabela de estórias ativas ──
+  renderStoryTable(active);
+}
+
+// Retorna épicos que têm mais de STORY_LIMIT estórias
+function getEpicsWithAlerts(){
+  var counts={};
+  allStories.forEach(function(s){ counts[s.epic]=(counts[s.epic]||0)+1; });
+  return Object.keys(counts).filter(function(ep){return counts[ep]>STORY_LIMIT;});
+}
+
+function renderStoryEpicCards(active){
+  // Agrupa por épico (apenas estórias ativas)
+  var epicMap={};
+  active.forEach(function(s){
+    if(!epicMap[s.epic]) epicMap[s.epic]={id:s.epic,stories:[],squad:s.squad};
+    epicMap[s.epic].stories.push(s);
+    if(!epicMap[s.epic].squad&&s.squad) epicMap[s.epic].squad=s.squad;
+  });
+
+  // Total de estórias por épico (incluindo concluídas para % barra)
+  var totalByEpic={};
+  allStories.forEach(function(s){ totalByEpic[s.epic]=(totalByEpic[s.epic]||0)+1; });
+
+  var epics=Object.values(epicMap).sort(function(a,b){return b.stories.length-a.stories.length;});
+
+  if(!epics.length){
+    $id('stEpicGrid').innerHTML='<div class="empty" style="grid-column:1/-1">Todas as estórias estão em produção.</div>';
+    return;
+  }
+  $id('stEpicTitle').textContent='Épicos · '+epics.length+' com estórias em andamento';
+
+  $id('stEpicGrid').innerHTML=epics.map(function(ep){
+    var cnt=ep.stories.length;
+    var total=totalByEpic[ep.id]||cnt;
+    var doneCnt=total-cnt;
+    var pct=total>0?Math.round((doneCnt/total)*100):0;
+    var isAlert=total>STORY_LIMIT;
+    var alertBadge=isAlert?'<span class="st-alert-badge">⚠ '+total+' estórias — acima do limite ('+STORY_LIMIT+')</span>':'';
+
+    // Status breakdown
+    var devCnt=ep.stories.filter(function(s){return s.status.toLowerCase().indexOf('desenvolv')>=0;}).length;
+    var testCnt=ep.stories.filter(function(s){return s.status.toLowerCase().indexOf('test')>=0||s.status.toLowerCase().indexOf('homolog')>=0;}).length;
+    var deployPct=ep.stories.filter(function(s){return s.status.toLowerCase().indexOf('deploy')>=0;}).length;
+
+    // Procura o épico no allData para link
+    var epicRec=allData.find(function(r){return r.id===ep.id;});
+    var idHtml=epicRec
+      ?'<a class="st-epic-id" href="'+jiraUrl(ep.id)+'" target="_blank">'+esc(ep.id)+'</a>'
+      :'<a class="st-epic-id" href="'+jiraUrl(ep.id)+'" target="_blank">'+esc(ep.id)+'</a>';
+
+    var squadHtml=ep.squad?'<span class="'+squadColor(ep.squad)+' bdg" style="font-size:9px;padding:2px 7px">'+esc(ep.squad)+'</span>':'';
+
+    return '<div class="st-epic-card'+(isAlert?' st-alert':'')+'">'+
+      '<div class="st-epic-card-hd">'+
+        idHtml+
+        (isAlert?'<span class="st-alert-badge">⚠ Limite</span>':'<span style="font-size:10px;color:#94a3b8">'+total+' total</span>')+
+      '</div>'+
+      (isAlert?'<div style="margin-bottom:.5rem">'+alertBadge+'</div>':'')+
+      '<div class="st-count-row">'+
+        '<span class="st-count-num">'+cnt+'</span>'+
+        '<span class="st-count-lbl">em andamento</span>'+
+      '</div>'+
+      '<div class="st-bar"><div class="st-bar-fill" style="width:'+pct+'%"></div></div>'+
+      '<div class="st-epic-footer">'+
+        squadHtml+
+        '<div class="st-epic-stats">'+
+          (devCnt?'<span class="st-stat"><span class="st-stat-dot" style="background:#eab308"></span>'+devCnt+' dev</span>':'')+
+          (testCnt?'<span class="st-stat"><span class="st-stat-dot" style="background:#6366f1"></span>'+testCnt+' teste</span>':'')+
+          (doneCnt?'<span class="st-stat"><span class="st-stat-dot" style="background:#16a34a"></span>'+doneCnt+' prontas</span>':'')+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function populateStoryEpicFilter(active){
+  var epics=Array.from(new Set(active.map(function(s){return s.epic;}))).sort();
+  var sel=$id('stEpicF');
+  if(!sel) return;
+  var prev=sel.value;
+  sel.innerHTML='<option value="all">Todos ('+epics.length+')</option>';
+  epics.forEach(function(ep){
+    var o=document.createElement('option');
+    o.value=ep; o.textContent=ep;
+    sel.appendChild(o);
+  });
+  if(prev) sel.value=prev;
+  sel.onchange=function(){stFilt.epic=this.value; renderStoryTable(active);};
+  $id('stStatusF').onchange=function(){stFilt.status=this.value; renderStoryTable(active);};
+}
+
+function renderStoryTable(active){
+  var filtered=active.filter(function(s){
+    if(stFilt.epic!=='all'&&s.epic!==stFilt.epic) return false;
+    if(stFilt.status!=='all'&&s.status!==stFilt.status) return false;
+    return true;
+  });
+  $id('stTotal').textContent=filtered.length+' estórias exibidas';
+
+  if(!filtered.length){
+    $id('stTblBody').innerHTML='<tr><td colspan="5" class="empty">Nenhuma estória encontrada.</td></tr>';
+    return;
+  }
+  $id('stTblBody').innerHTML=filtered.map(function(s){
+    var stClass=storyStatusClass(s.status);
+    var epicRec=allData.find(function(r){return r.id===s.epic;});
+    var epicLink='<a class="cid-link" href="'+jiraUrl(s.epic)+'" target="_blank">'+esc(s.epic)+'</a>';
+    var ltInfo='';
+    if(epicRec&&epicRec.lt){
+      var lc=epicRec.lt>=META?'ltr':epicRec.lt>=40?'lta':'ltg';
+      ltInfo=' <span class="clt '+lc+'" style="font-size:10px">'+epicRec.lt+'d</span>';
+    }
+    return '<tr>'+
+      '<td><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a></div></td>'+
+      '<td><div class="cid-wrap">'+epicLink+ltInfo+'</div></td>'+
+      '<td class="cres">'+esc(s.resumo)+'</td>'+
+      '<td><span class="bdg '+stClass+'">'+esc(s.status)+'</span></td>'+
+      '<td>'+squadBadge(s.squad||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// Helper: retorna cor do squad
+function squadColor(sq){
+  var map={
+    'Guardiões':'bblue','Contact':'bgreen','Expresso':'bamber',
+    'Interestelar':'bviolet'
+  };
+  return map[sq]||'bgray';
+}
+
 // UPLOAD handlers
 // ═══════════════════════════════════════
 $id('fi').onchange=function(e){if(e.target.files[0]) loadXlsx(e.target.files[0]);};
@@ -1564,6 +1990,15 @@ var ub=$id('upbar');
 ub.addEventListener('dragover',function(e){e.preventDefault();ub.classList.add('drag');});
 ub.addEventListener('dragleave',function(){ub.classList.remove('drag');});
 ub.addEventListener('drop',function(e){e.preventDefault();ub.classList.remove('drag');if(e.dataTransfer.files[0]) loadXlsx(e.dataTransfer.files[0]);});
+
+// Estórias upload
+$id('fist').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.files[0]);};
+var sub=$id('stUpbar');
+if(sub){
+  sub.addEventListener('dragover',function(e){e.preventDefault();sub.style.background='var(--accent-soft)';});
+  sub.addEventListener('dragleave',function(){sub.style.background='';});
+  sub.addEventListener('drop',function(e){e.preventDefault();sub.style.background='';if(e.dataTransfer.files[0]) loadStoriesXlsx(e.dataTransfer.files[0]);});
+}
 
 // ═══════════════════════════════════════
 // HELPERS para importação do Jira
@@ -2341,6 +2776,7 @@ var SEED=[
     }else{
       $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     }
+    loadStoriesLocal();
     renderAll(normalizeTab(loadTab()));
   }
 
