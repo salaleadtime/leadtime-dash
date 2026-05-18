@@ -379,9 +379,86 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .sst-deploy{background:#fff7ed;color:#7c2d12;border:1px solid #fdba74}
 .sst-backlog{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
 .sst-other{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+
+/* ── LOGIN OVERLAY ── */
+#login-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#1a1060 0%,#3d1a6e 55%,#6d1a6e 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+#login-overlay.hidden{display:none}
+.login-box{
+  background:#fff;border-radius:16px;padding:40px 36px;width:100%;max-width:360px;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);
+  display:flex;flex-direction:column;align-items:center;gap:20px;
+}
+.login-logo{
+  width:56px;height:56px;
+  background:linear-gradient(135deg,#e11d48 0%,#9333ea 60%,#6d28d9 100%);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:18px;
+  box-shadow:0 4px 16px rgba(99,102,241,.45);
+}
+.login-title{font-size:20px;font-weight:700;color:#0f172a;text-align:center;line-height:1.2}
+.login-sub{font-size:12px;color:#64748b;text-align:center}
+.login-input{
+  width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;
+  font-size:14px;font-family:inherit;outline:none;color:#0f172a;
+  transition:border-color .15s;
+}
+.login-input:focus{border-color:#7c3aed}
+.login-btn{
+  width:100%;padding:11px;border:none;border-radius:8px;cursor:pointer;
+  background:linear-gradient(135deg,#e11d48,#7c3aed);color:#fff;
+  font-size:14px;font-weight:700;font-family:inherit;
+  transition:opacity .15s;letter-spacing:.3px;
+}
+.login-btn:hover{opacity:.9}
+.login-err{
+  font-size:12px;color:#dc2626;font-weight:500;
+  display:none;text-align:center;
+}
+.login-err.show{display:block}
 </style>
 </head>
 <body>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">LT</div>
+    <div>
+      <div class="login-title">Lead Time · SALA</div>
+      <div class="login-sub">Digite a senha para acessar o dashboard</div>
+    </div>
+    <input id="login-pw" class="login-input" type="password" placeholder="Senha" autocomplete="current-password" />
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div id="login-err" class="login-err">Senha incorreta. Tente novamente.</div>
+  </div>
+</div>
+<script>
+(function(){
+  var AUTH_KEY='lt_sala_auth';
+  var PW='sala2024';
+  if(sessionStorage.getItem(AUTH_KEY)==='1'){
+    document.getElementById('login-overlay').classList.add('hidden');
+  }
+  document.getElementById('login-pw').addEventListener('keydown',function(e){
+    if(e.key==='Enter') doLogin();
+  });
+  window.doLogin=function(){
+    var v=document.getElementById('login-pw').value;
+    if(v===PW){
+      sessionStorage.setItem(AUTH_KEY,'1');
+      document.getElementById('login-overlay').classList.add('hidden');
+    } else {
+      document.getElementById('login-err').classList.add('show');
+      document.getElementById('login-pw').value='';
+      document.getElementById('login-pw').focus();
+    }
+  };
+})();
+</script>
 
 <!-- TOPBAR -->
 <header class="top">
