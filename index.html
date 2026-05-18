@@ -439,23 +439,31 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 <script>
 (function(){
   var AUTH_KEY='lt_sala_auth';
-  var PW='sala2024';
+  var PW_HASH='e00b815e60c1fdeb8f72a1039a0bbf3298a23b7a5b00aad96b9e399809572b02';
   if(sessionStorage.getItem(AUTH_KEY)==='1'){
     document.getElementById('login-overlay').classList.add('hidden');
   }
   document.getElementById('login-pw').addEventListener('keydown',function(e){
     if(e.key==='Enter') doLogin();
   });
+  function sha256(str){
+    var buf=new TextEncoder().encode(str);
+    return crypto.subtle.digest('SHA-256',buf).then(function(hash){
+      return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+    });
+  }
   window.doLogin=function(){
     var v=document.getElementById('login-pw').value;
-    if(v===PW){
-      sessionStorage.setItem(AUTH_KEY,'1');
-      document.getElementById('login-overlay').classList.add('hidden');
-    } else {
-      document.getElementById('login-err').classList.add('show');
-      document.getElementById('login-pw').value='';
-      document.getElementById('login-pw').focus();
-    }
+    sha256(v).then(function(hash){
+      if(hash===PW_HASH){
+        sessionStorage.setItem(AUTH_KEY,'1');
+        document.getElementById('login-overlay').classList.add('hidden');
+      } else {
+        document.getElementById('login-err').classList.add('show');
+        document.getElementById('login-pw').value='';
+        document.getElementById('login-pw').focus();
+      }
+    });
   };
 })();
 </script>
