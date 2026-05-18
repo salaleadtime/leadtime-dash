@@ -126,7 +126,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .fdate-clear.on:hover{background:#fecaca}
 
 /* ── MEDIÇÃO pane ── */
-.med-hero{display:flex;align-items:center;gap:16px;padding:1.1rem 1.3rem;background:linear-gradient(135deg,#fdf4ff 0%,#f5f3ff 100%);border:1px solid #e9d5ff;border-radius:var(--rad);margin-bottom:1rem;box-shadow:var(--shadow-md)}
+.med-hero{display:flex;align-items:center;gap:16px;padding:1.1rem 1.3rem;background:linear-gradient(135deg,#fff5f5 0%,#fff0f0 100%);border:1px solid #fecaca;border-radius:var(--rad);margin-bottom:1rem;box-shadow:var(--shadow-md)}
 .med-hero-icon{font-size:28px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(37,99,235,.15)}
 .med-hero-t{font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.4px}
 .med-hero-s{font-size:11px;color:var(--tx2);margin-top:2px}
@@ -337,7 +337,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 @media(max-width:580px){.kgrid{grid-template-columns:1fr 1fr}.top .tbtn span{display:none}}
 
 /* ══ ESTÓRIAS ══ */
-.st-upbar{background:#fdf4ff;border-bottom:1px solid #e9d5ff;padding:.65rem 1.6rem;display:flex;align-items:center;gap:12px}
+.st-upbar{background:#fff5f5;border-bottom:1px solid #fecaca;padding:.65rem 1.6rem;display:flex;align-items:center;gap:12px}
 .st-up-ico{font-size:15px;flex-shrink:0}
 .st-up-name{font-size:11.5px;font-weight:600;color:#475569}
 .st-up-sub{font-size:11px;color:var(--tx3);margin-left:6px}
@@ -362,8 +362,8 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .st-grp-hd>td{background:#f8fafc;padding:.6rem 1rem;border-top:2px solid #f1f5f9;border-bottom:none}
 .st-grp-hd:first-child>td{border-top:none}
 .st-grp-hd>td:first-child,.st-story-row>td:first-child{border-left:3px solid var(--grp-accent,#e2e8f0)}
-.st-grp-id{font-family:ui-monospace,monospace;font-size:11.5px;font-weight:700;color:#0f172a;text-decoration:none}
-.st-grp-id:hover{color:var(--accent);text-decoration:underline}
+.st-grp-id{font-family:ui-monospace,monospace;font-size:11.5px;font-weight:700;color:#7a0000;text-decoration:none}
+.st-grp-id:hover{color:#cc0000;text-decoration:underline}
 .st-grp-prog{display:flex;align-items:center;gap:8px}
 .st-grp-bar{width:90px;height:4px;background:#e2e8f0;border-radius:2px;overflow:hidden;flex-shrink:0}
 .st-grp-fill{height:100%;border-radius:2px;transition:width .5s}
@@ -373,6 +373,14 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .st-story-row>td{padding:.48rem 1rem;vertical-align:middle}
 .st-story-row>td:first-child{padding-left:1.4rem}
 .st-story-row:hover>td{background:#f8fafc}
+
+/* Accordion toggle */
+.st-toggle{background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:4px;color:#94a3b8;display:inline-flex;align-items:center;transition:color .15s;vertical-align:middle;margin-right:5px;flex-shrink:0}
+.st-toggle:hover{color:#475569;background:#f1f5f9}
+.st-toggle-ico{display:inline-block;font-size:9px;line-height:1;transition:transform .2s}
+.st-toggle.open .st-toggle-ico{transform:rotate(90deg)}
+.st-grp-hd{cursor:pointer}
+.st-grp-hd:hover>td{background:#f0f0f0}
 
 /* Status colors for stories */
 .sst-prod{background:#dcfce7;color:#14532d;border:1px solid #86efac}
@@ -386,7 +394,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 /* ── LOGIN OVERLAY ── */
 #login-overlay{
   position:fixed;inset:0;z-index:9999;
-  background:linear-gradient(135deg,#1a1060 0%,#3d1a6e 55%,#6d1a6e 100%);
+  background:linear-gradient(135deg,#7a0000 0%,#cc0000 55%,#a80028 100%);
   display:flex;align-items:center;justify-content:center;
 }
 #login-overlay.hidden{display:none}
@@ -397,7 +405,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 }
 .login-logo{
   width:56px;height:56px;
-  background:linear-gradient(135deg,#e11d48 0%,#9333ea 60%,#6d28d9 100%);
+  background:linear-gradient(135deg,#cc0000 0%,#ff3333 60%,#990000 100%);
   border-radius:14px;display:flex;align-items:center;justify-content:center;
   color:#fff;font-weight:800;font-size:18px;
   box-shadow:0 4px 16px rgba(99,102,241,.45);
@@ -409,10 +417,10 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   font-size:14px;font-family:inherit;outline:none;color:#0f172a;
   transition:border-color .15s;
 }
-.login-input:focus{border-color:#7c3aed}
+.login-input:focus{border-color:#cc0000}
 .login-btn{
   width:100%;padding:11px;border:none;border-radius:8px;cursor:pointer;
-  background:linear-gradient(135deg,#e11d48,#7c3aed);color:#fff;
+  background:linear-gradient(135deg,#cc0000,#990000);color:#fff;
   font-size:14px;font-weight:700;font-family:inherit;
   transition:opacity .15s;letter-spacing:.3px;
 }
@@ -1920,7 +1928,7 @@ function renderStories(){
   var alertEpics=getEpicsWithAlerts().length;
 
   $id('stKpi').innerHTML=
-    '<div class="st-kpi-item" style="--kpi-accent:#6366f1"><span class="st-kpi-val">'+allStories.length+'</span><span class="st-kpi-lbl">Total</span><span class="st-kpi-sub">em '+epicsWithStories+' épicos</span></div>'+
+    '<div class="st-kpi-item" style="--kpi-accent:#cc0000"><span class="st-kpi-val">'+allStories.length+'</span><span class="st-kpi-lbl">Total</span><span class="st-kpi-sub">em '+epicsWithStories+' épicos</span></div>'+
     '<div class="st-kpi-item" style="--kpi-accent:#f59e0b"><span class="st-kpi-val">'+active.length+'</span><span class="st-kpi-lbl">Em Andamento</span><span class="st-kpi-sub">não concluídas</span></div>'+
     '<div class="st-kpi-item" style="--kpi-accent:#16a34a"><span class="st-kpi-val">'+done.length+'</span><span class="st-kpi-lbl">Em Produção</span><span class="st-kpi-sub">concluídas</span></div>'+
     '<div class="st-kpi-item'+(alertEpics?' alert':'')+'" style="--kpi-accent:#dc2626"><span class="st-kpi-val">'+alertEpics+'</span><span class="st-kpi-lbl">Alertas</span><span class="st-kpi-sub">acima de '+STORY_LIMIT+' estórias</span></div>';
@@ -1954,13 +1962,11 @@ function populateStoryEpicFilter(active){
 }
 
 function renderStoryTable(active){
-  // Filtra por status
   var statusFiltered=active.filter(function(s){
     if(stFilt.status!=='all'&&s.status!==stFilt.status) return false;
     return true;
   });
 
-  // Agrupa por épico aplicando filtro de épico
   var epicMap={};
   var epicOrder=[];
   statusFiltered.forEach(function(s){
@@ -1969,7 +1975,6 @@ function renderStoryTable(active){
     epicMap[s.epic].push(s);
   });
 
-  // Ordena por quantidade de estórias desc
   epicOrder.sort(function(a,b){return epicMap[b].length-epicMap[a].length;});
 
   var totalShown=epicOrder.reduce(function(n,ep){return n+epicMap[ep].length;},0);
@@ -2000,32 +2005,51 @@ function renderStoryTable(active){
     }
 
     var accent=getSquadAccent(sq);
-    var hdrRow='<tr class="st-grp-hd" style="--grp-accent:'+accent+'">'+
-      '<td><a class="st-grp-id" href="'+jiraUrl(ep)+'" target="_blank">'+esc(ep)+'</a>'+ltInfo+'</td>'+
-      '<td>'+
-        '<div class="st-grp-prog">'+
-          '<div class="st-grp-bar"><div class="st-grp-fill" style="width:'+pct+'%;background:'+accent+'"></div></div>'+
-          '<span class="st-grp-pct">'+pct+'%</span>'+
-          '<span class="st-grp-meta">'+doneCnt+'/'+total+' prontas</span>'+
-          (isAlert?'<span class="st-grp-alert">⚠ '+total+'</span>':'')+
-        '</div>'+
-      '</td>'+
-      '<td></td>'+
-      '<td>'+(sq?'<span class="'+squadColor(sq)+' bdg" style="font-size:9px;padding:2px 7px">'+esc(sq)+'</span>':'')+'</td>'+
-    '</tr>';
+    var grpId='grp_'+ep.replace(/[^a-z0-9]/gi,'_');
+
+    var hdrRow=
+      '<tr class="st-grp-hd" style="--grp-accent:'+accent+'" onclick="toggleEpicGroup(\''+grpId+'\')">'+
+        '<td>'+
+          '<button class="st-toggle" id="tog_'+grpId+'" data-grp="'+grpId+'" onclick="event.stopPropagation();toggleEpicGroup(\''+grpId+'\')">'+
+            '<span class="st-toggle-ico">&#9658;</span>'+
+          '</button>'+
+          '<a class="st-grp-id" href="'+jiraUrl(ep)+'" target="_blank" onclick="event.stopPropagation()">'+esc(ep)+'</a>'+
+          ltInfo+
+          ' <span style="font-size:10px;color:#94a3b8">('+stories.length+')</span>'+
+        '</td>'+
+        '<td>'+
+          '<div class="st-grp-prog">'+
+            '<div class="st-grp-bar"><div class="st-grp-fill" style="width:'+pct+'%;background:'+accent+'"></div></div>'+
+            '<span class="st-grp-pct">'+pct+'%</span>'+
+            '<span class="st-grp-meta">'+doneCnt+'/'+total+' prontas</span>'+
+            (isAlert?'<span class="st-grp-alert">&#9888; '+total+'</span>':'')+
+          '</div>'+
+        '</td>'+
+        '<td></td>'+
+        '<td>'+(sq?'<span class="'+squadColor(sq)+' bdg" style="font-size:9px;padding:2px 7px">'+esc(sq)+'</span>':'')+'</td>'+
+      '</tr>';
 
     var storyRows=stories.map(function(s){
       var stClass=storyStatusClass(s.status);
-      return '<tr class="st-story-row" style="--grp-accent:'+accent+'">'+
+      var diffSquad=s.squad&&s.squad!==sq;
+      return '<tr class="st-story-row" data-grp="'+grpId+'" style="--grp-accent:'+accent+';display:none">'+
         '<td><a class="cid-link" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a></td>'+
         '<td class="cres">'+esc(s.resumo)+'</td>'+
         '<td><span class="bdg '+stClass+'">'+esc(s.status)+'</span></td>'+
-        '<td>'+squadBadge(s.squad||'—')+'</td>'+
+        '<td>'+(diffSquad?squadBadge(s.squad):'')+'</td>'+
       '</tr>';
     }).join('');
 
     return hdrRow+storyRows;
   }).join('');
+}
+
+function toggleEpicGroup(grpId){
+  var rows=document.querySelectorAll('.st-story-row[data-grp="'+grpId+'"]');
+  var btn=document.getElementById('tog_'+grpId);
+  if(!btn) return;
+  var open=btn.classList.toggle('open');
+  rows.forEach(function(r){r.style.display=open?'':'none';});
 }
 
 // Helper: retorna cor do squad
