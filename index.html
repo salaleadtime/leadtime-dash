@@ -345,31 +345,32 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .st-up-saved.hidden{display:none}
 #fist{display:none}
 
-/* Epic summary cards */
-.st-epic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:1.1rem}
-.st-epic-card{background:var(--card);border:1px solid #e8edf5;border-radius:var(--rad);padding:1rem 1.1rem;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(15,23,42,.07);transition:box-shadow .2s,transform .2s;cursor:default}
-.st-epic-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
-.st-epic-card.st-alert{border-color:#fca5a5;box-shadow:0 2px 12px rgba(220,38,38,.12)}
-.st-epic-card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.6rem}
-.st-epic-id{font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--accent);text-decoration:none}
-.st-epic-id:hover{text-decoration:underline}
-.st-alert-badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap}
-.st-count-row{display:flex;align-items:baseline;gap:6px;margin-bottom:.5rem}
-.st-count-num{font-size:32px;font-weight:800;letter-spacing:-2px;line-height:1;color:#0f172a}
-.st-count-lbl{font-size:11px;color:#64748b;font-weight:500}
-.st-bar{height:4px;background:#e5e7f0;border-radius:2px;margin-bottom:.6rem;overflow:hidden}
-.st-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#7c3aed,#e11d48);transition:width .5s}
-.st-bar-fill.done{background:linear-gradient(90deg,#16a34a,#22c55e)}
-.st-epic-footer{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#94a3b8}
-.st-epic-squad{font-weight:600;color:#475569}
-.st-epic-stats{display:flex;gap:10px}
-.st-stat{display:flex;align-items:center;gap:3px}
-.st-stat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+/* KPI summary bar */
+.st-kpi-bar{display:flex;gap:1px;margin-bottom:1rem;background:#e2e8f0;border-radius:var(--rad);overflow:hidden;border:1px solid #e2e8f0}
+.st-kpi-item{flex:1;background:var(--card);padding:.7rem 1rem;display:flex;flex-direction:column;gap:2px;min-width:0}
+.st-kpi-val{font-size:22px;font-weight:800;letter-spacing:-1px;color:#0f172a;line-height:1}
+.st-kpi-lbl{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.st-kpi-sub{font-size:10px;color:#94a3b8}
+.st-kpi-item.alert .st-kpi-val{color:#dc2626}
 
-/* Stories table */
-.st-filters{background:var(--card);border:1px solid #e2e8f0;border-radius:var(--rad);padding:.9rem 1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(15,23,42,.07)}
-.st-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#64748b;margin-bottom:.8rem;display:flex;align-items:center;gap:8px}
-.st-section-title::after{content:'';flex:1;height:1px;background:#e2e8f0}
+/* Filter controls */
+.st-ctrl{display:flex;align-items:center;gap:10px;margin-bottom:.8rem;flex-wrap:wrap}
+
+/* Grouped table rows */
+.st-grp-hd>td{background:#f8fafc;padding:.5rem 1rem;border-bottom:1px solid #e8edf5;border-top:2px solid #e8edf5}
+.st-grp-hd:first-child>td{border-top:none}
+.st-grp-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.st-grp-id{font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--accent);text-decoration:none}
+.st-grp-id:hover{text-decoration:underline}
+.st-grp-prog{display:flex;align-items:center;gap:6px;min-width:100px;max-width:160px;flex:1}
+.st-grp-bar{flex:1;height:3px;background:#e2e8f0;border-radius:2px;overflow:hidden}
+.st-grp-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#7c3aed,#e11d48);transition:width .5s}
+.st-grp-fill.done{background:linear-gradient(90deg,#16a34a,#22c55e)}
+.st-grp-pct{font-size:10px;color:#64748b;white-space:nowrap}
+.st-grp-meta{font-size:10px;color:#94a3b8;white-space:nowrap}
+.st-grp-alert{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.st-story-row>td{padding:.5rem 1rem;vertical-align:middle}
+.st-story-row:hover>td{background:#f8fafc}
 
 /* Status colors for stories */
 .sst-prod{background:#dcfce7;color:#14532d;border:1px solid #86efac}
@@ -678,15 +679,11 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
   <div class="ep" id="stContent">
 
-    <!-- KPIs de estórias -->
-    <div class="kgrid" id="stKpi" style="margin-bottom:1rem"></div>
+    <!-- Barra de KPIs compacta -->
+    <div class="st-kpi-bar" id="stKpi"></div>
 
-    <!-- Cards de épicos com contagem de estórias -->
-    <div class="st-section-title" id="stEpicTitle">Épicos · Estórias em Andamento</div>
-    <div class="st-epic-grid" id="stEpicGrid"></div>
-
-    <!-- Tabela de estórias ativas -->
-    <div class="st-filters" id="stFilters">
+    <!-- Filtros -->
+    <div class="st-ctrl" id="stFilters">
       <span class="fl">Épico:</span>
       <select class="fsel" id="stEpicF"><option value="all">Todos</option></select>
       <div class="fsep"></div>
@@ -700,19 +697,15 @@ tr:nth-child(even):hover td{background:#e8f0ff}
         <option value="Em deploy para produção">Em deploy para produção</option>
         <option value="Product Backlog">Product Backlog</option>
       </select>
-      <div class="fsep"></div>
       <span id="stTotal" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
     </div>
 
+    <!-- Tabela agrupada por épico -->
     <div class="tc">
-      <div class="tc-hd">
-        <span class="tc-hd-t">Estórias Ativas</span>
-        <span class="tc-hint">Estórias em andamento · "Em produção" vai automaticamente para Medição</span>
-      </div>
       <div class="tscr">
-        <table id="stTbl" style="min-width:700px">
+        <table id="stTbl" style="min-width:640px">
           <thead><tr>
-            <th>Chave</th><th>Épico Pai</th><th>Resumo</th><th>Situação</th><th>Squad</th>
+            <th style="width:120px">Chave</th><th>Resumo</th><th style="width:200px">Situação</th><th style="width:130px">Squad</th>
           </tr></thead>
           <tbody id="stTblBody"></tbody>
         </table>
@@ -1912,31 +1905,25 @@ function loadStoriesLocal(){
 // Renderiza a aba Estórias
 function renderStories(){
   if(!allStories.length){
-    $id('stKpi').innerHTML='<div class="empty" style="grid-column:1/-1;padding:2rem">Nenhuma estória carregada. Clique em <strong>Selecionar arquivo</strong> para importar a planilha do Jira.</div>';
-    $id('stEpicGrid').innerHTML='';
-    $id('stTblBody').innerHTML='<tr><td colspan="5" class="empty">Sem dados</td></tr>';
+    $id('stKpi').innerHTML=
+      '<div class="st-kpi-item" style="flex:none;width:100%;text-align:center;padding:1.5rem">'+
+      '<span style="color:#94a3b8;font-size:11px">Nenhuma estória carregada. Clique em <strong>Selecionar arquivo</strong> para importar a planilha do Jira.</span></div>';
+    $id('stTblBody').innerHTML='<tr><td colspan="4" class="empty">Sem dados</td></tr>';
     return;
   }
 
   var active=allStories.filter(function(s){return !isStoryDone(s);});
   var done=allStories.filter(function(s){return isStoryDone(s);});
-
-  // ── KPIs de estórias ──
   var epicsWithStories=Object.keys(allStories.reduce(function(acc,s){acc[s.epic]=1;return acc;},{})).length;
   var alertEpics=getEpicsWithAlerts().length;
+
   $id('stKpi').innerHTML=
-    kpi('kn','Total Estórias',''+allStories.length,'em '+epicsWithStories+' épicos','')+
-    kpi('kb','Em Andamento',''+active.length,'não concluídas','cb')+
-    kpi('kg','Em Produção',''+done.length,'concluídas','cg')+
-    kpi('kr','Épicos c/ Alerta',''+alertEpics,'mais de '+STORY_LIMIT+' estórias','cr');
+    '<div class="st-kpi-item"><span class="st-kpi-val">'+allStories.length+'</span><span class="st-kpi-lbl">Total</span><span class="st-kpi-sub">em '+epicsWithStories+' épicos</span></div>'+
+    '<div class="st-kpi-item"><span class="st-kpi-val">'+active.length+'</span><span class="st-kpi-lbl">Em Andamento</span><span class="st-kpi-sub">não concluídas</span></div>'+
+    '<div class="st-kpi-item"><span class="st-kpi-val">'+done.length+'</span><span class="st-kpi-lbl">Em Produção</span><span class="st-kpi-sub">concluídas</span></div>'+
+    '<div class="st-kpi-item'+(alertEpics?' alert':'')+'"><span class="st-kpi-val">'+alertEpics+'</span><span class="st-kpi-lbl">Alertas</span><span class="st-kpi-sub">acima de '+STORY_LIMIT+' estórias</span></div>';
 
-  // ── Épicos: cards de resumo ──
-  renderStoryEpicCards(active);
-
-  // ── Filtro de épicos ──
   populateStoryEpicFilter(active);
-
-  // ── Tabela de estórias ativas ──
   renderStoryTable(active);
 }
 
@@ -1947,70 +1934,6 @@ function getEpicsWithAlerts(){
   return Object.keys(counts).filter(function(ep){return counts[ep]>STORY_LIMIT;});
 }
 
-function renderStoryEpicCards(active){
-  // Agrupa por épico (apenas estórias ativas)
-  var epicMap={};
-  active.forEach(function(s){
-    if(!epicMap[s.epic]) epicMap[s.epic]={id:s.epic,stories:[],squad:s.squad};
-    epicMap[s.epic].stories.push(s);
-    if(!epicMap[s.epic].squad&&s.squad) epicMap[s.epic].squad=s.squad;
-  });
-
-  // Total de estórias por épico (incluindo concluídas para % barra)
-  var totalByEpic={};
-  allStories.forEach(function(s){ totalByEpic[s.epic]=(totalByEpic[s.epic]||0)+1; });
-
-  var epics=Object.values(epicMap).sort(function(a,b){return b.stories.length-a.stories.length;});
-
-  if(!epics.length){
-    $id('stEpicGrid').innerHTML='<div class="empty" style="grid-column:1/-1">Todas as estórias estão em produção.</div>';
-    return;
-  }
-  $id('stEpicTitle').textContent='Épicos · '+epics.length+' com estórias em andamento';
-
-  $id('stEpicGrid').innerHTML=epics.map(function(ep){
-    var cnt=ep.stories.length;
-    var total=totalByEpic[ep.id]||cnt;
-    var doneCnt=total-cnt;
-    var pct=total>0?Math.round((doneCnt/total)*100):0;
-    var isAlert=total>STORY_LIMIT;
-    var alertBadge=isAlert?'<span class="st-alert-badge">⚠ '+total+' estórias — acima do limite ('+STORY_LIMIT+')</span>':'';
-
-    // Status breakdown
-    var devCnt=ep.stories.filter(function(s){return s.status.toLowerCase().indexOf('desenvolv')>=0;}).length;
-    var testCnt=ep.stories.filter(function(s){return s.status.toLowerCase().indexOf('test')>=0||s.status.toLowerCase().indexOf('homolog')>=0;}).length;
-    var deployPct=ep.stories.filter(function(s){return s.status.toLowerCase().indexOf('deploy')>=0;}).length;
-
-    // Procura o épico no allData para link
-    var epicRec=allData.find(function(r){return r.id===ep.id;});
-    var idHtml=epicRec
-      ?'<a class="st-epic-id" href="'+jiraUrl(ep.id)+'" target="_blank">'+esc(ep.id)+'</a>'
-      :'<a class="st-epic-id" href="'+jiraUrl(ep.id)+'" target="_blank">'+esc(ep.id)+'</a>';
-
-    var squadHtml=ep.squad?'<span class="'+squadColor(ep.squad)+' bdg" style="font-size:9px;padding:2px 7px">'+esc(ep.squad)+'</span>':'';
-
-    return '<div class="st-epic-card'+(isAlert?' st-alert':'')+'">'+
-      '<div class="st-epic-card-hd">'+
-        idHtml+
-        (isAlert?'<span class="st-alert-badge">⚠ Limite</span>':'<span style="font-size:10px;color:#94a3b8">'+total+' total</span>')+
-      '</div>'+
-      (isAlert?'<div style="margin-bottom:.5rem">'+alertBadge+'</div>':'')+
-      '<div class="st-count-row">'+
-        '<span class="st-count-num">'+cnt+'</span>'+
-        '<span class="st-count-lbl">em andamento</span>'+
-      '</div>'+
-      '<div class="st-bar"><div class="st-bar-fill" style="width:'+pct+'%"></div></div>'+
-      '<div class="st-epic-footer">'+
-        squadHtml+
-        '<div class="st-epic-stats">'+
-          (devCnt?'<span class="st-stat"><span class="st-stat-dot" style="background:#eab308"></span>'+devCnt+' dev</span>':'')+
-          (testCnt?'<span class="st-stat"><span class="st-stat-dot" style="background:#6366f1"></span>'+testCnt+' teste</span>':'')+
-          (doneCnt?'<span class="st-stat"><span class="st-stat-dot" style="background:#16a34a"></span>'+doneCnt+' prontas</span>':'')+
-        '</div>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-}
 
 function populateStoryEpicFilter(active){
   var epics=Array.from(new Set(active.map(function(s){return s.epic;}))).sort();
@@ -2029,33 +1952,76 @@ function populateStoryEpicFilter(active){
 }
 
 function renderStoryTable(active){
-  var filtered=active.filter(function(s){
-    if(stFilt.epic!=='all'&&s.epic!==stFilt.epic) return false;
+  // Filtra por status
+  var statusFiltered=active.filter(function(s){
     if(stFilt.status!=='all'&&s.status!==stFilt.status) return false;
     return true;
   });
-  $id('stTotal').textContent=filtered.length+' estórias exibidas';
 
-  if(!filtered.length){
-    $id('stTblBody').innerHTML='<tr><td colspan="5" class="empty">Nenhuma estória encontrada.</td></tr>';
+  // Agrupa por épico aplicando filtro de épico
+  var epicMap={};
+  var epicOrder=[];
+  statusFiltered.forEach(function(s){
+    if(stFilt.epic!=='all'&&s.epic!==stFilt.epic) return;
+    if(!epicMap[s.epic]){epicMap[s.epic]=[];epicOrder.push(s.epic);}
+    epicMap[s.epic].push(s);
+  });
+
+  // Ordena por quantidade de estórias desc
+  epicOrder.sort(function(a,b){return epicMap[b].length-epicMap[a].length;});
+
+  var totalShown=epicOrder.reduce(function(n,ep){return n+epicMap[ep].length;},0);
+  $id('stTotal').textContent=totalShown+' estórias · '+epicOrder.length+' épicos';
+
+  if(!epicOrder.length){
+    $id('stTblBody').innerHTML='<tr><td colspan="4" class="empty">Nenhuma estória encontrada.</td></tr>';
     return;
   }
-  $id('stTblBody').innerHTML=filtered.map(function(s){
-    var stClass=storyStatusClass(s.status);
-    var epicRec=allData.find(function(r){return r.id===s.epic;});
-    var epicLink='<a class="cid-link" href="'+jiraUrl(s.epic)+'" target="_blank">'+esc(s.epic)+'</a>';
+
+  var totalByEpic={};
+  allStories.forEach(function(s){totalByEpic[s.epic]=(totalByEpic[s.epic]||0)+1;});
+
+  $id('stTblBody').innerHTML=epicOrder.map(function(ep){
+    var stories=epicMap[ep];
+    var total=totalByEpic[ep]||stories.length;
+    var doneCnt=allStories.filter(function(s){return s.epic===ep&&isStoryDone(s);}).length;
+    var pct=total>0?Math.round((doneCnt/total)*100):0;
+    var isAlert=total>STORY_LIMIT;
+
+    var squadVal=stories.find(function(s){return s.squad;});
+    var sq=squadVal?squadVal.squad:'';
+    var epicRec=allData.find(function(r){return r.id===ep;});
     var ltInfo='';
     if(epicRec&&epicRec.lt){
       var lc=epicRec.lt>=META?'ltr':epicRec.lt>=40?'lta':'ltg';
       ltInfo=' <span class="clt '+lc+'" style="font-size:10px">'+epicRec.lt+'d</span>';
     }
-    return '<tr>'+
-      '<td><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a></div></td>'+
-      '<td><div class="cid-wrap">'+epicLink+ltInfo+'</div></td>'+
-      '<td class="cres">'+esc(s.resumo)+'</td>'+
-      '<td><span class="bdg '+stClass+'">'+esc(s.status)+'</span></td>'+
-      '<td>'+squadBadge(s.squad||'—')+'</td>'+
-    '</tr>';
+
+    var hdrRow='<tr class="st-grp-hd"><td colspan="4">'+
+      '<div class="st-grp-inner">'+
+        '<a class="st-grp-id" href="'+jiraUrl(ep)+'" target="_blank">'+esc(ep)+'</a>'+
+        ltInfo+
+        (sq?'<span class="'+squadColor(sq)+' bdg" style="font-size:9px;padding:2px 7px">'+esc(sq)+'</span>':'')+
+        '<div class="st-grp-prog">'+
+          '<div class="st-grp-bar"><div class="st-grp-fill'+(pct===100?' done':'')+'" style="width:'+pct+'%"></div></div>'+
+          '<span class="st-grp-pct">'+pct+'%</span>'+
+        '</div>'+
+        '<span class="st-grp-meta">'+doneCnt+'/'+total+' prontas</span>'+
+        (isAlert?'<span class="st-grp-alert">⚠ '+total+' estórias</span>':'')+
+      '</div>'+
+    '</td></tr>';
+
+    var storyRows=stories.map(function(s){
+      var stClass=storyStatusClass(s.status);
+      return '<tr class="st-story-row">'+
+        '<td><a class="cid-link" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a></td>'+
+        '<td class="cres">'+esc(s.resumo)+'</td>'+
+        '<td><span class="bdg '+stClass+'">'+esc(s.status)+'</span></td>'+
+        '<td>'+squadBadge(s.squad||'—')+'</td>'+
+      '</tr>';
+    }).join('');
+
+    return hdrRow+storyRows;
   }).join('');
 }
 
