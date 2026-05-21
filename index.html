@@ -518,6 +518,19 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     </div>
   </div>
 
+  <!-- Filtros da Medição -->
+  <div class="fbar" id="medFbar">
+    <span class="fl">Squad:</span>
+    <select class="fsel" id="medSqF"><option value="all">Todas</option></select>
+    <div class="fsep"></div>
+    <span class="fl">Data Fim (período):</span>
+    <input type="date" class="fdate" id="medDateFrom" title="Início do período">
+    <span class="fdate-sep">→</span>
+    <input type="date" class="fdate" id="medDateTo" title="Fim do período">
+    <button class="chip fdate-clear" id="medDateClear" onclick="clearMedDateF()" title="Limpar período">✕</button>
+    <span id="medFiltHint" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
+  </div>
+
   <div class="kgrid" id="medKpi" style="margin-bottom:.9rem"></div>
 
   <div class="sec-lbl" style="margin-bottom:.5rem">Lead Time por Squad</div>
@@ -672,6 +685,7 @@ var allStories=[];
 var STORIES_KEY='leadtime_sala_v8_stories';
 var STORY_LIMIT=10;
 var stFilt={epic:'all',status:'all'};
+var medFilt={squad:'all',dateFrom:'',dateTo:''};
 var TAB_KEY='leadtime_sala_active_tab';
 
 // Persiste a aba ativa no localStorage
@@ -1509,10 +1523,39 @@ function populateSqF(){
 // MEDIÇÃO — aba de épicos finalizados
 // ═══════════════════════════════════════
 function renderMed(){
-  var list=measuredEpics();
+  var all=measuredEpics();
+
+  // Populate squad dropdown preserving selection
+  var sqSel=$id('medSqF');
+  if(sqSel){
+    var allSquads=Array.from(new Set(all.map(function(r){return r.squad;}))).filter(Boolean).sort();
+    sqSel.innerHTML='<option value="all">Todas</option>'+allSquads.map(function(sq){
+      return '<option value="'+esc(sq)+'"'+(sq===medFilt.squad?' selected':'')+'>'+esc(sq)+'</option>';
+    }).join('');
+  }
+
+  // Apply filters
+  var list=all;
+  if(medFilt.squad!=='all') list=list.filter(function(r){return r.squad===medFilt.squad;});
+  if(medFilt.dateFrom) list=list.filter(function(r){return r.fim>=medFilt.dateFrom;});
+  if(medFilt.dateTo) list=list.filter(function(r){return r.fim<=medFilt.dateTo;});
+
+  // Date filter UI state
+  var dc=$id('medDateClear');
+  if(dc) dc.classList.toggle('on',!!(medFilt.dateFrom||medFilt.dateTo));
+  var df=$id('medDateFrom'); if(df) df.classList.toggle('active',!!medFilt.dateFrom);
+  var dt=$id('medDateTo');   if(dt) dt.classList.toggle('active',!!medFilt.dateTo);
+
+  // Filter hint
+  var hint=$id('medFiltHint');
+  if(hint){
+    var isFiltered=medFilt.squad!=='all'||medFilt.dateFrom||medFilt.dateTo;
+    hint.textContent=isFiltered ? list.length+' de '+all.length+' épicos (filtrado)' : '';
+  }
+
   var n=list.length;
   if(n===0){
-    $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">📊 Nenhum épico medido ainda.<br>Os épicos aparecem aqui automaticamente quando a Data Fim é preenchida na aba Épicos.</div>';
+    $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">📊 Nenhum épico encontrado para o filtro selecionado.</div>';
     $id('medSquads').innerHTML='';
     $id('medTblBody').innerHTML='';
     $id('medCnt').textContent='0 épicos';
@@ -1532,7 +1575,7 @@ function renderMed(){
     kpi('kr','LT Máximo',''+maxLT,'pior tempo','cr')+
     kpi('ka','Dentro da Meta',pctMeta+'%',naMeta+' de '+n+' épicos','ca');
 
-  // Squad cards — reaproveita estilo mas baseado só em medidos
+  // Squad cards — baseado na lista filtrada
   var squads=Array.from(new Set(list.map(function(r){return r.squad;}))).filter(Boolean).sort();
   var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706'};
   $id('medSquads').innerHTML=squads.map(function(sq){
@@ -1558,7 +1601,6 @@ function renderMed(){
   $id('medCnt').textContent=n+' épico'+(n!==1?'s':'');
   renderMedStories();
 
-  // Tabela de medidos — sem Data Prevista e sem Impedimentos (concluídos não precisam)
   var ltMap={r:'ltr',a:'lta',g:'ltg'};
   var sorted=list.slice().sort(function(a,b){return new Date(b.fim)-new Date(a.fim);});
   $id('medTblBody').innerHTML=sorted.map(function(r){
@@ -1575,6 +1617,12 @@ function renderMed(){
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
     '</tr>';
   }).join('');
+}
+function clearMedDateF(){
+  medFilt.dateFrom=''; medFilt.dateTo='';
+  var df=$id('medDateFrom'); if(df) df.value='';
+  var dt=$id('medDateTo');   if(dt) dt.value='';
+  renderMed();
 }
 
 function renderMedStories(){
@@ -1617,6 +1665,11 @@ function clearDateF(){
 // handlers (setup once — after DOM is parsed, which it is by time script runs at bottom)
 $id('fDateIni').onchange=function(){filt.dateIni=this.value||null; updateDateClear(); pg=1; renderTbl();};
 $id('fDateFim').onchange=function(){filt.dateFim=this.value||null; updateDateClear(); pg=1; renderTbl();};
+
+// Filtros da aba Medição
+$id('medSqF').onchange=function(){medFilt.squad=this.value; renderMed();};
+$id('medDateFrom').onchange=function(){medFilt.dateFrom=this.value||''; renderMed();};
+$id('medDateTo').onchange=function(){medFilt.dateTo=this.value||''; renderMed();};
 
 // chips
 document.querySelectorAll('.chip').forEach(function(btn){
