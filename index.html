@@ -615,21 +615,26 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     </div>
   </div>
 
-  <!-- Estórias em produção (concluídas) -->
+  <!-- Estórias em produção (concluídas) — colapsável -->
   <div id="medStoriesSection" style="margin-top:1rem;display:none">
-    <div class="sec-lbl" style="margin-bottom:.8rem">Estórias em Produção</div>
-    <div class="tc">
-      <div class="tc-hd">
-        <span class="tc-hd-t">Histórico de Estórias</span>
-        <span class="tc-hint"><span id="medStCnt">—</span> · estórias concluídas ("Em produção")</span>
-      </div>
-      <div class="tscr">
-        <table style="min-width:600px">
-          <thead><tr>
-            <th>Chave</th><th>Épico Pai</th><th>Resumo</th><th>Squad</th>
-          </tr></thead>
-          <tbody id="medStTblBody"></tbody>
-        </table>
+    <div class="sec-lbl" style="margin-bottom:.5rem;cursor:pointer;user-select:none" onclick="toggleMedStories()" title="Clique para expandir/recolher">
+      Estórias em Produção
+      <span id="medStoriesToggleIco" style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px;text-transform:none;letter-spacing:0">▶ mostrar</span>
+    </div>
+    <div id="medStoriesBody" style="display:none">
+      <div class="tc">
+        <div class="tc-hd">
+          <span class="tc-hd-t">Histórico de Estórias</span>
+          <span class="tc-hint"><span id="medStCnt">—</span> · estórias concluídas ("Em produção")</span>
+        </div>
+        <div class="tscr">
+          <table style="min-width:600px">
+            <thead><tr>
+              <th>Chave</th><th>Épico Pai</th><th>Resumo</th><th>Squad</th>
+            </tr></thead>
+            <tbody id="medStTblBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -1812,6 +1817,14 @@ function renderMed(){
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
     '</tr>';
   }).join('');
+}
+function toggleMedStories(){
+  var body=$id('medStoriesBody');
+  var ico=$id('medStoriesToggleIco');
+  if(!body) return;
+  var open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  if(ico) ico.textContent=open?'▼ ocultar':'▶ mostrar';
 }
 function clearMedDateF(){
   medFilt.dateFrom=''; medFilt.dateTo='';
