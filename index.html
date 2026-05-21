@@ -622,19 +622,12 @@ tr:nth-child(even):hover td{background:#e8f0ff}
       <span id="medStoriesToggleIco" style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px;text-transform:none;letter-spacing:0">▶ mostrar</span>
     </div>
     <div id="medStoriesBody" style="display:none">
-      <div class="tc">
-        <div class="tc-hd">
-          <span class="tc-hd-t">Histórico de Estórias</span>
-          <span class="tc-hint"><span id="medStCnt">—</span> · estórias concluídas ("Em produção")</span>
-        </div>
-        <div class="tscr">
-          <table style="min-width:600px">
-            <thead><tr>
-              <th>Chave</th><th>Épico Pai</th><th>Resumo</th><th>Squad</th>
-            </tr></thead>
-            <tbody id="medStTblBody"></tbody>
-          </table>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+        <span style="font-size:11px;font-weight:600;color:#475569">Histórico de Estórias</span>
+        <span style="font-size:10px;color:#94a3b8"><span id="medStCnt">—</span> · estórias concluídas em produção</span>
+      </div>
+      <div id="medStCardList" class="sv-card-list"></div>
+    </div>
       </div>
     </div>
   </div>
@@ -1840,13 +1833,39 @@ function renderMedStories(){
   if(!done.length){ sec.style.display='none'; return; }
   sec.style.display='block';
   $id('medStCnt').textContent=done.length+' estória'+(done.length!==1?'s':'');
-  $id('medStTblBody').innerHTML=done.map(function(s){
-    return '<tr>'+
-      '<td><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a></div></td>'+
-      '<td><a class="cid-link" href="'+jiraUrl(s.epic)+'" target="_blank">'+esc(s.epic)+'</a></td>'+
-      '<td class="cres">'+esc(s.resumo)+'</td>'+
-      '<td>'+squadBadge(s.squad||'—')+'</td>'+
-    '</tr>';
+
+  // Agrupar por épico pai
+  var epicMap={};
+  var epicOrder=[];
+  done.forEach(function(s){
+    if(!epicMap[s.epic]){epicMap[s.epic]=[];epicOrder.push(s.epic);}
+    epicMap[s.epic].push(s);
+  });
+  epicOrder.sort(function(a,b){return epicMap[b].length-epicMap[a].length;});
+
+  $id('medStCardList').innerHTML=epicOrder.map(function(ep){
+    var stories=epicMap[ep];
+    var epicRec=allData.find(function(r){return r.id===ep;});
+    var sq=(epicRec&&epicRec.squad)||(stories[0]&&stories[0].squad)||'';
+    var accent=getSquadAccent(sq);
+    var cardId='mst_'+ep.replace(/[^a-z0-9]/gi,'_');
+    var rows=stories.map(function(s){
+      return '<div class="sv-story-row">'+
+        '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
+        '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
+        '<span class="bdg sst-prod">✓ Em Produção</span>'+
+      '</div>';
+    }).join('');
+    return '<div class="sv-card" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
+      '<div class="sv-card-hd" onclick="toggleCard(\''+cardId+'\')">'+
+        '<span class="sv-card-arrow">&#9658;</span>'+
+        '<a class="sv-card-ep" href="'+jiraUrl(ep)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+esc(ep)+'</a>'+
+        (sq?'<span class="'+squadColor(sq)+' bdg" style="font-size:9px;padding:2px 7px;flex-shrink:0">'+esc(sq)+'</span>':'')+
+        (epicRec?'<span class="sv-card-resumo" title="'+esc(epicRec.resumo)+'">'+esc(epicRec.resumo)+'</span>':'')+
+        '<span class="sv-card-cnt">'+stories.length+' estória'+(stories.length!==1?'s':'')+'</span>'+
+      '</div>'+
+      '<div class="sv-card-body">'+rows+'</div>'+
+    '</div>';
   }).join('');
 }
 
