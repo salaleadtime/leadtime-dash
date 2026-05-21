@@ -1438,13 +1438,17 @@ function renderDeliveries(){
 }
 
 function renderRisks(){
-  var list=allData.filter(function(r){return r.lt>=META;}).sort(function(a,b){return b.lt-a.lt;});
+  var all=allData.filter(function(r){return r.lt>=META;});
+  var byLt=function(a,b){return b.lt-a.lt;};
+  var pending=all.filter(function(r){return !isValidDate(r.fim);}).sort(byLt);
+  var done=all.filter(function(r){return isValidDate(r.fim);}).sort(byLt);
+  var list=pending.concat(done);
   $id('rCnt').textContent=list.length+' épicos';
   if(!list.length){$id('rList').innerHTML='<div class="empty" style="color:#16a34a">✅ Nenhum épico acima da meta!</div>';return;}
   $id('rList').innerHTML=list.map(function(r){
-    var done=isValidDate(r.fim);
-    var doneBadge=done?'<span class="rli-done">✓ Entregue</span>':'';
-    return '<div class="rli'+(done?' rli-conc':'')+'">'+
+    var isDone=isValidDate(r.fim);
+    var doneBadge=isDone?'<span class="rli-done">✓ Entregue</span>':'';
+    return '<div class="rli'+(isDone?' rli-conc':'')+'">'+
       '<span class="rid">'+r.id.replace('SLOPC-','#')+'<br><span style="color:#7c3aed;font-weight:600">'+esc(r.squad)+'</span><br>'+doneBadge+'</span>'+
       '<span class="rres">'+esc(r.resumo)+'</span>'+
       '<span class="rlt">⚠ '+r.lt+'d</span></div>';
