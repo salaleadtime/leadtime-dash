@@ -332,6 +332,14 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .pg-val{font-size:18px;font-weight:800;letter-spacing:-1px;color:#334155;line-height:1}
 .pg-lbl{font-size:9px;color:#94a3b8;margin-top:3px;line-height:1.3}
 
+/* FAB copiar para Teams/e-mail */
+.fab-cap{position:fixed;bottom:28px;right:28px;z-index:4000;background:#7a0000;color:#fff;border:none;border-radius:14px;padding:11px 20px 11px 16px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(122,0,0,.4);transition:all .2s;font-family:inherit;letter-spacing:.2px}
+.fab-cap:hover{background:#cc0000;transform:translateY(-2px);box-shadow:0 8px 28px rgba(204,0,0,.45)}
+.fab-cap:active{transform:translateY(0)}
+.fab-cap.busy{opacity:.65;cursor:wait;pointer-events:none}
+.fab-cap svg{flex-shrink:0}
+.fab-cap-sub{font-size:9.5px;font-weight:400;opacity:.75;display:block;line-height:1;margin-top:1px}
+
 /* modal */
 .ov{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .ov.on{display:flex}
@@ -483,9 +491,9 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     <span>Atualizar</span>
   </button>
-  <button class="tbtn" onclick="doCapture()">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-    <span>Capturar</span>
+  <button class="tbtn" onclick="doCaptureClipboard()" title="Copiar imagem · colar no Teams ou e-mail">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    <span>Copiar</span>
   </button>
   <button class="tbtn green" onclick="doExport()">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -2795,64 +2803,76 @@ function doExportHTML(){
 }
 
 // ═══════════════════════════════════════
-// CAPTURE (lazy load html2canvas)
-// FIX: html2canvas não renderiza o .value de <input>/<textarea> — só o HTML estático.
-//      A solução é usar o callback onclone para substituir os inputs por spans/divs
-//      contendo o texto real antes da captura.
+// CAPTURE — copia para clipboard (Teams/e-mail) com fallback para download
 // ═══════════════════════════════════════
-function doCapture(){
+function captureTarget(){
+  if(curTab==='db') return $id('dbContent');
+  if(curTab==='me') return $id('pane-me');
+  if(curTab==='sv') return $id('pane-sv');
+  return $id('pane-ep');
+}
+
+function captureOnClone(clonedDoc){
+  clonedDoc.querySelectorAll('input.einp').forEach(function(inp){
+    var val=inp.value;
+    var span=clonedDoc.createElement('span');
+    if(inp.classList.contains('date')){
+      if(val){var p=val.split('-');span.textContent=p.length===3?p[2]+'/'+p[1]+'/'+p[0]:val;}
+      else{span.textContent='—';}
+    }else{span.textContent=val||'—';}
+    span.className='einp-print';
+    if(inp.parentNode) inp.parentNode.replaceChild(span,inp);
+  });
+  clonedDoc.querySelectorAll('textarea.eimp').forEach(function(ta){
+    var div=clonedDoc.createElement('div');
+    div.textContent=ta.value||'';
+    div.className='eimp-print';
+    if(ta.parentNode) ta.parentNode.replaceChild(div,ta);
+  });
+  // Oculta o botão flutuante na captura
+  var fab=clonedDoc.getElementById('fabCap');
+  if(fab) fab.style.display='none';
+}
+
+function doCaptureClipboard(){
   if(typeof html2canvas==='undefined'){
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){doCapture();});
+    loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){doCaptureClipboard();});
     return;
   }
-  var tgt;
-  if(curTab==='db') tgt=$id('dbContent');
-  else if(curTab==='me') tgt=$id('pane-me');
-  else tgt=$id('pane-ep');
+  var fab=$id('fabCap');
+  if(fab) fab.classList.add('busy');
+  toast('📸 Capturando...','Aguarde um instante.');
 
-  html2canvas(tgt,{
-    scale:2,
-    useCORS:true,
-    backgroundColor:'#f4f6fb',
-    onclone:function(clonedDoc){
-      // Substitui inputs de texto/data por spans com o valor real
-      var inputs=clonedDoc.querySelectorAll('input.einp');
-      inputs.forEach(function(inp){
-        var val=inp.value;
-        var span=clonedDoc.createElement('span');
-        var isDate=inp.classList.contains('date');
-        if(isDate){
-          // Formata data em dd/mm/aaaa para a captura
-          if(val){
-            var p=val.split('-');
-            span.textContent=p.length===3?p[2]+'/'+p[1]+'/'+p[0]:val;
-          } else {
-            span.textContent='—';
-            span.className='empty';
-          }
-        } else {
-          span.textContent=val||'—';
-          if(!val) span.className='empty';
-        }
-        span.className=(span.className+' einp-print').trim();
-        if(inp.parentNode) inp.parentNode.replaceChild(span,inp);
-      });
-      // Substitui textareas por divs com o texto real
-      var tas=clonedDoc.querySelectorAll('textarea.eimp');
-      tas.forEach(function(ta){
-        var div=clonedDoc.createElement('div');
-        div.textContent=ta.value||'';
-        div.className='eimp-print';
-        if(ta.parentNode) ta.parentNode.replaceChild(div,ta);
-      });
+  html2canvas(captureTarget(),{scale:2,useCORS:true,backgroundColor:'#f4f6fb',onclone:captureOnClone})
+  .then(function(canvas){
+    if(fab) fab.classList.remove('busy');
+    // Tenta copiar para clipboard
+    if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+      canvas.toBlob(function(blob){
+        navigator.clipboard.write([new ClipboardItem({'image/png':blob})])
+        .then(function(){
+          toast('📋 Copiado!','Cole com Ctrl+V direto no Teams, Outlook ou WhatsApp.');
+        })
+        .catch(function(){fallbackDownload(canvas);});
+      },'image/png');
+    } else {
+      fallbackDownload(canvas);
     }
-  }).then(function(canvas){
-    var a=document.createElement('a');
-    a.download='leadtime_'+curTab+'_'+new Date().toISOString().split('T')[0]+'.png';
-    a.href=canvas.toDataURL('image/png'); a.click();
-    toast('Imagem capturada','Download iniciado.');
-  }).catch(function(e){toast('Erro ao capturar',e.message,'err');});
+  }).catch(function(e){
+    if(fab) fab.classList.remove('busy');
+    toast('Erro ao capturar',e.message,'err');
+  });
 }
+
+function fallbackDownload(canvas){
+  var a=document.createElement('a');
+  a.download='leadtime_'+curTab+'_'+new Date().toISOString().split('T')[0]+'.png';
+  a.href=canvas.toDataURL('image/png'); a.click();
+  toast('Download iniciado','Clipboard não disponível neste navegador — imagem baixada.');
+}
+
+// mantém compatibilidade com chamadas antigas
+function doCapture(){ doCaptureClipboard(); }
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS
@@ -3122,5 +3142,11 @@ setInterval(function(){
 }, SHEETS_POLL_MS);
 
 </script>
+
+<!-- Botão flutuante copiar para Teams/e-mail -->
+<button class="fab-cap" id="fabCap" onclick="doCaptureClipboard()">
+  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  <span><span style="display:block">Copiar Tela</span><span class="fab-cap-sub">colar no Teams ou e-mail</span></span>
+</button>
 </body>
 </html>
