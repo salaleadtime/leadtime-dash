@@ -1927,7 +1927,7 @@ function doRefresh(){
   normalizeWorkflowAll();
   var n=new Date();
   $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  renderDash(); renderMed(); renderStories(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tabToRestore);
   saveLocal();
 
@@ -1945,7 +1945,7 @@ function doRefresh(){
 function renderAll(tabToRestore){
   var tab=normalizeTab(tabToRestore || getActiveTab());
   normalizeWorkflowAll();
-  renderDash(); renderMed(); renderStories(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tab);
 }
 
