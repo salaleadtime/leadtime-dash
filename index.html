@@ -466,6 +466,48 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .sst-backlog{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
 .sst-other{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
 
+/* ══ BACKLOG / REFINAMENTO ══ */
+#fiBk{display:none}
+.bk-history{background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--rad);padding:.7rem 1.2rem;margin-bottom:1rem}
+.bk-hist-row{display:flex;align-items:flex-end;gap:0;flex-wrap:wrap}
+.bk-hist-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:default}
+.bk-hist-dot{width:10px;height:10px;border-radius:50%;background:#cbd5e1;flex-shrink:0}
+.bk-hist-dot-cur{background:#7a0000}
+.bk-hist-label{font-size:9px;color:#94a3b8;font-weight:700}
+.bk-hist-cnt{font-size:10px;font-weight:700;color:#334155}
+.bk-hist-cur .bk-hist-label{color:#7a0000}
+.bk-hist-cur .bk-hist-cnt{color:#7a0000}
+.bk-hist-line{width:24px;height:1px;background:#e2e8f0;margin-bottom:18px;flex-shrink:0}
+.bk-delta-bar{background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--rads);padding:.5rem 1rem;font-size:11px;display:flex;align-items:center;gap:8px;margin-bottom:.8rem;flex-wrap:wrap}
+.bk-delta-info{color:#64748b}
+.bk-delta-up{color:#dc2626;font-weight:700;font-size:12px}
+.bk-delta-down{color:#16a34a;font-weight:700;font-size:12px}
+.bk-delta-eq{color:#94a3b8;font-weight:700;font-size:12px}
+.bk-squad-list{display:flex;flex-direction:column;gap:6px}
+.bk-squad-card{background:#fff;border:1px solid #e8edf5;border-radius:10px;overflow:hidden;border-left:4px solid var(--sq-accent,#e2e8f0);box-shadow:0 1px 4px rgba(15,23,42,.06);transition:box-shadow .2s}
+.bk-squad-card:hover{box-shadow:0 3px 12px rgba(15,23,42,.1)}
+.bk-squad-card.open .bk-squad-body{display:block}
+.bk-squad-hd{display:flex;align-items:center;gap:10px;padding:.65rem 1rem;cursor:pointer;user-select:none;min-height:52px}
+.bk-squad-hd:hover{background:#fafafa}
+.bk-squad-arrow{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;font-size:9px;flex-shrink:0}
+.bk-squad-card.open .bk-squad-arrow{transform:rotate(90deg);color:#475569}
+.bk-squad-info{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.bk-squad-name{font-size:13px;font-weight:700;color:#0f172a}
+.bk-squad-delta{font-size:10px}
+.bk-squad-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.bk-squad-cnt{font-size:26px;font-weight:800;color:#334155;line-height:1;letter-spacing:-1.2px}
+.bk-squad-sub{font-size:9px;color:#94a3b8}
+.bk-refined-cnt{font-size:9.5px;font-weight:700;color:#16a34a;background:#dcfce7;padding:1px 6px;border-radius:4px;border:1px solid #86efac;margin-top:2px}
+.bk-squad-body{display:none;border-top:1px solid #f1f5f9}
+.bk-story-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;padding:.35rem 1rem .35rem 1.6rem;border-bottom:1px solid #f8fafc}
+.bk-story-row:last-child{border-bottom:none}
+.bk-story-row:hover{background:#fafafa}
+.bk-badge-refined{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;white-space:nowrap}
+.bk-badge-backlog{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;white-space:nowrap}
+.bk-spark-row{display:flex;align-items:flex-end;gap:2px;margin-top:4px;height:28px}
+.bk-spark-bar{width:8px;border-radius:2px 2px 0 0;flex-shrink:0;transition:height .3s}
+.bk-spark-lbl{font-size:9px;color:#94a3b8;margin-left:5px;align-self:center}
+
 </style>
 </head>
 <body>
@@ -508,6 +550,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   <button class="tabbt" id="tab-me" onclick="goTab('me',this)">📊 Medição <span class="tab-ct" id="tabCtMe"></span></button>
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
+  <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -705,6 +748,28 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
 </div>
 
+<!-- ══ BACKLOG / REFINAMENTO PANE ══ -->
+<div class="pane" id="pane-bk">
+
+  <div class="sv-upbar" id="bkUpbar">
+    <span style="font-size:13px;flex-shrink:0">📥</span>
+    <span class="sv-up-name" id="bkUpName">Importar export do Jira — Product Backlog</span>
+    <span class="sv-up-sub" id="bkUpSub">Histórias em backlog · Export Jira filtrado por status · .xlsx</span>
+    <span class="up-saved hidden" id="bkUpSaved">💾 <span id="bkUpSavedTxt">Salvo localmente</span></span>
+    <input type="file" id="fiBk" accept=".xlsx,.xls">
+    <button class="up-btn" onclick="document.getElementById('fiBk').click()">Selecionar arquivo</button>
+  </div>
+
+  <div class="ep" id="bkContent">
+    <div class="empty" style="padding:3rem 2rem;text-align:center">
+      <div style="font-size:32px;margin-bottom:.8rem">📥</div>
+      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>
+      <div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>
+    </div>
+  </div>
+
+</div>
+
 <!-- GitHub Integration modal -->
 <div class="ov" id="jbOv" onclick="if(event.target===this)closeJB()">
   <div class="mdl" style="max-width:480px">
@@ -783,6 +848,8 @@ var curTab='ep';
 var allStories=[];
 var STORIES_KEY='leadtime_sala_v8_stories';
 var STORY_LIMIT=12;
+var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
+var backlogSnaps=[];
 var stFilt={epic:'all',status:'all'};
 var medFilt={squad:'all',dateFrom:'',dateTo:''};
 var TAB_KEY='leadtime_sala_active_tab';
@@ -796,7 +863,7 @@ function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -1322,6 +1389,7 @@ function goTab(id,btn){
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
+  else if(id==='bk') renderBacklogView();
   updateTabCounts();
 }
 
@@ -1343,13 +1411,14 @@ function activateTab(id){
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
+  else if(id==='bk') renderBacklogView();
   updateTabCounts();
 }
 
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk')?'none':'flex';
 }
 
 
@@ -1892,6 +1961,8 @@ function updateTabCounts(){
   $id('tabCtMe').textContent=m;
   var svEl=$id('tabCtSv');
   if(svEl) svEl.textContent=allStories.length||'';
+  var bkEl=$id('tabCtBk');
+  if(bkEl){ var bkCur=backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].stories.length:0; bkEl.textContent=bkCur||''; }
 }
 
 // ═══════════════════════════════════════
@@ -2074,6 +2145,240 @@ function loadStoriesLocal(){
     var raw=localStorage.getItem(STORIES_KEY);
     if(raw) allStories=JSON.parse(raw);
   }catch(e){}
+}
+
+// ═══════════════════════════════════════
+// BACKLOG / REFINAMENTO
+// ═══════════════════════════════════════
+function saveBacklogSnaps(){
+  try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+}
+function loadBacklogSnaps(){
+  try{
+    var raw=localStorage.getItem(BACKLOG_KEY);
+    if(raw) backlogSnaps=JSON.parse(raw)||[];
+  }catch(e){ backlogSnaps=[]; }
+}
+
+function detectBacklogFormat(wb){
+  var sheetNames=wb.SheetNames;
+  for(var s=0;s<sheetNames.length;s++){
+    var ws=wb.Sheets[sheetNames[s]];
+    if(!ws) continue;
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    for(var i=0;i<Math.min(5,rows.length);i++){
+      var row=rows[i];
+      if(!row||!row.length) continue;
+      var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase();});
+      var hasChave=cells.some(function(c){return c.indexOf('chave')>=0||c==='key';});
+      if(hasChave){
+        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1};
+        cells.forEach(function(c,j){
+          if(map.id<0&&(c.indexOf('chave')>=0||c==='key'||c==='chave do item')) map.id=j;
+          else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
+          else if(map.status<0&&(c.indexOf('situacao')>=0||c==='status'||c.indexOf('estado')>=0)) map.status=j;
+          else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('time')>=0)) map.squad=j;
+          else if(map.points<0&&(c.indexOf('story point')>=0||c.indexOf('pontos')>=0||c.indexOf('points')>=0||c.indexOf('estimativa')>=0||c.indexOf('historia point')>=0)) map.points=j;
+          else if(map.sprint<0&&c.indexOf('sprint')>=0) map.sprint=j;
+        });
+        if(map.id>=0) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
+      }
+    }
+  }
+  return null;
+}
+
+function loadBacklogXlsx(file){
+  if(typeof XLSX==='undefined'){
+    toast('Carregando biblioteca...','Aguarde alguns segundos e tente novamente.','warn');
+    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadBacklogXlsx(file);});
+    return;
+  }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var det=detectBacklogFormat(wb);
+      if(!det){
+        toast('Formato não reconhecido',
+          'Colunas esperadas: "Chave do item" (ID) + "Situação". Export Jira · Product Backlog.','err');
+        return;
+      }
+      var rows=det.rows, m=det.map;
+      var stories=[];
+      for(var i=det.hrow+1;i<rows.length;i++){
+        var row=rows[i];
+        if(!row||!row.length) continue;
+        var id=(row[m.id]||'').toString().trim();
+        if(!id) continue;
+        var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
+        var status=m.status>=0?(row[m.status]||'').toString().trim():'';
+        var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
+        var pts=m.points>=0?parseFloat(row[m.points])||0:0;
+        var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
+        stories.push({id:id,resumo:resumo,status:status,squad:squad,points:pts,sprint:sprint});
+      }
+      if(!stories.length){
+        toast('Nenhuma história encontrada','O arquivo não contém histórias válidas.','err');
+        return;
+      }
+      var nextSeq=(backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].seq:0)+1;
+      backlogSnaps.push({seq:nextSeq,stories:stories});
+      saveBacklogSnaps();
+
+      var bkUpName=$id('bkUpName'); if(bkUpName) bkUpName.textContent=file.name;
+      var bkUpSub=$id('bkUpSub'); if(bkUpSub) bkUpSub.textContent='#'+nextSeq+' · '+stories.length+' histórias importadas';
+      var bkUpSaved=$id('bkUpSaved'); if(bkUpSaved) bkUpSaved.classList.remove('hidden');
+      var bkUpSavedTxt=$id('bkUpSavedTxt'); if(bkUpSavedTxt) bkUpSavedTxt.textContent='Importação #'+nextSeq+' salva localmente';
+
+      renderBacklogView();
+      updateTabCounts();
+      toast('📥 Backlog importado','Importação #'+nextSeq+' · '+stories.length+' histórias em backlog.');
+    }catch(err){
+      toast('Erro ao ler arquivo','Verifique se é um .xlsx válido: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function isRefined(story){
+  return story.points>0;
+}
+
+function renderBacklogView(){
+  var bkContent=$id('bkContent');
+  if(!bkContent) return;
+
+  if(!backlogSnaps.length){
+    bkContent.innerHTML=
+      '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+      '<div style="font-size:32px;margin-bottom:.8rem">📥</div>'+
+      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>'+
+      '<div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>'+
+      '</div>';
+    return;
+  }
+
+  var cur=backlogSnaps[backlogSnaps.length-1];
+  var prev=backlogSnaps.length>1?backlogSnaps[backlogSnaps.length-2]:null;
+  var stories=cur.stories;
+
+  // Count per squad
+  var curSquadCnt={}, prevSquadCnt={};
+  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
+  if(prev) prev.stories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
+
+  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  var totalBacklog=stories.length;
+  var totalRefined=stories.filter(isRefined).length;
+
+  // Global delta
+  var totalDelta=prev!==null?totalBacklog-prev.stories.length:null;
+  var globalDeltaHtml='';
+  if(totalDelta!==null){
+    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
+    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
+    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
+  }
+
+  // Import history dots
+  var historyHtml='';
+  if(backlogSnaps.length>1){
+    var dots=backlogSnaps.map(function(snap,idx){
+      var isCur=idx===backlogSnaps.length-1;
+      return '<div class="bk-hist-item'+(isCur?' bk-hist-cur':'')+'">'+
+        '<div class="bk-hist-cnt">'+snap.stories.length+'</div>'+
+        '<div class="bk-hist-dot'+(isCur?' bk-hist-dot-cur':'')+'"></div>'+
+        '<div class="bk-hist-label">#'+snap.seq+'</div>'+
+      '</div>';
+    });
+    var dotsWithLines=[];
+    dots.forEach(function(d,i){dotsWithLines.push(d);if(i<dots.length-1)dotsWithLines.push('<div class="bk-hist-line"></div>');});
+    historyHtml='<div class="bk-history">'+
+      '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:.6rem">Histórico de Importações</div>'+
+      '<div class="bk-hist-row">'+dotsWithLines.join('')+'</div>'+
+    '</div>';
+  }
+
+  // Squad cards
+  var squadCardsHtml=squads.map(function(sq){
+    var sqStories=stories.filter(function(s){return s.squad===sq;});
+    var refined=sqStories.filter(isRefined);
+    var cnt=sqStories.length;
+    var delta=prev!==null?(cnt-(prevSquadCnt[sq]||0)):null;
+    var accent=getSquadAccent(sq);
+    var cardId='bk_'+sq.replace(/[^a-z0-9]/gi,'_');
+
+    var deltaHtml='';
+    if(delta!==null){
+      if(delta>0) deltaHtml='<span class="bk-delta-up">▲ '+delta+' vs #'+(cur.seq-1)+'</span>';
+      else if(delta<0) deltaHtml='<span class="bk-delta-down">▼ '+Math.abs(delta)+' vs #'+(cur.seq-1)+'</span>';
+      else deltaHtml='<span class="bk-delta-eq">= vs #'+(cur.seq-1)+'</span>';
+    }
+
+    // Sparkline bars per squad across all imports
+    var sparkHtml='';
+    if(backlogSnaps.length>1){
+      var snapCounts=backlogSnaps.map(function(snap){
+        return snap.stories.filter(function(s){return s.squad===sq;}).length;
+      });
+      var maxC=Math.max.apply(null,snapCounts)||1;
+      sparkHtml='<div class="bk-spark-row">'+
+        snapCounts.map(function(c,idx){
+          var h=Math.max(3,Math.round(c/maxC*24));
+          var isCur=idx===backlogSnaps.length-1;
+          return '<div class="bk-spark-bar" style="height:'+h+'px;background:'+(isCur?accent:'#cbd5e1')+'" title="#'+backlogSnaps[idx].seq+': '+c+'"></div>';
+        }).join('')+
+        '<span class="bk-spark-lbl">'+snapCounts.join(' → ')+'</span>'+
+      '</div>';
+    }
+
+    var rows=sqStories.map(function(s){
+      var ref=isRefined(s);
+      var badge=ref
+        ?'<span class="bk-badge-refined">🃏 Refinado'+(s.points?' · '+s.points+'pts':'')+'</span>'
+        :'<span class="bk-badge-backlog">📋 Backlog</span>';
+      return '<div class="bk-story-row">'+
+        '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
+        '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
+        badge+
+      '</div>';
+    }).join('');
+
+    return '<div class="bk-squad-card" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
+      '<div class="bk-squad-hd" onclick="toggleCard(\''+cardId+'\')">'+
+        '<div class="bk-squad-arrow">&#9658;</div>'+
+        '<div class="bk-squad-info">'+
+          '<span class="bk-squad-name">'+esc(sq)+'</span>'+
+          (deltaHtml?'<span class="bk-squad-delta">'+deltaHtml+'</span>':'')+
+          sparkHtml+
+        '</div>'+
+        '<div class="bk-squad-right">'+
+          '<span class="bk-squad-cnt">'+cnt+'</span>'+
+          '<span class="bk-squad-sub">histórias em backlog</span>'+
+          (refined.length?'<span class="bk-refined-cnt">🃏 '+refined.length+' refinada'+(refined.length!==1?'s':'')+'</span>':'')+
+        '</div>'+
+      '</div>'+
+      '<div class="bk-squad-body">'+rows+'</div>'+
+    '</div>';
+  }).join('');
+
+  bkContent.innerHTML=
+    '<div class="sv-kpi" style="margin-bottom:1rem">'+
+      svKpiItem('#7a0000',totalBacklog,'Total Backlog','importação #'+cur.seq)+
+      svKpiItem('#3b82f6',squads.length,'Squads com Backlog','grupos ativos')+
+      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com story points estimados')+
+      svKpiItem('#f59e0b',backlogSnaps.length,'Importações','snapshots históricos')+
+    '</div>'+
+    '<div class="bk-delta-bar">'+
+      (prev
+        ? '<span class="bk-delta-info">vs importação anterior (#'+prev.seq+')</span> '+globalDeltaHtml+
+          ' <span class="bk-delta-info">· '+totalBacklog+' histórias agora vs '+prev.stories.length+' antes</span>'
+        : '<span style="color:#94a3b8">Importe novamente para ver o delta entre importações (▲▼=)</span>')+
+    '</div>'+
+    historyHtml+
+    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Backlog por Squad · Importação #'+cur.seq+'</div>'+
+    '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
 }
 
 // ─── Status groups para visualização de estórias ──────────
@@ -2286,6 +2591,15 @@ ub.addEventListener('drop',function(e){e.preventDefault();ub.classList.remove('d
 
 // Stories upload
 $id('fiSv').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.files[0]);};
+
+// Backlog upload
+$id('fiBk').onchange=function(e){if(e.target.files[0]) loadBacklogXlsx(e.target.files[0]);};
+var bkUb=$id('bkUpbar');
+if(bkUb){
+  bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
+  bkUb.addEventListener('dragleave',function(){bkUb.style.background='';});
+  bkUb.addEventListener('drop',function(e){e.preventDefault();bkUb.style.background='';if(e.dataTransfer.files[0]) loadBacklogXlsx(e.dataTransfer.files[0]);});
+}
 var svUb=$id('svUpbar');
 if(svUb){
   svUb.addEventListener('dragover',function(e){e.preventDefault();svUb.style.background='var(--accent-soft)';});
@@ -2818,6 +3132,7 @@ function captureTarget(){
   if(curTab==='db') return $id('dbContent');
   if(curTab==='me') return $id('pane-me');
   if(curTab==='sv') return $id('pane-sv');
+  if(curTab==='bk') return $id('pane-bk');
   return $id('pane-ep');
 }
 
@@ -3074,6 +3389,15 @@ var SEED=[
     var usedCache=localOrSeed();
     // Restore stories from localStorage
     loadStoriesLocal();
+    // Restore backlog snapshots
+    loadBacklogSnaps();
+    if(backlogSnaps.length){
+      var bkLastSnap=backlogSnaps[backlogSnaps.length-1];
+      var bkN=$id('bkUpName'); if(bkN) bkN.textContent='Dados salvos localmente';
+      var bkS=$id('bkUpSub'); if(bkS) bkS.textContent='#'+bkLastSnap.seq+' · '+bkLastSnap.stories.length+' histórias · recarregadas automaticamente';
+      var bkSv=$id('bkUpSaved'); if(bkSv) bkSv.classList.remove('hidden');
+      var bkSvT=$id('bkUpSavedTxt'); if(bkSvT) bkSvT.textContent='Importação #'+bkLastSnap.seq+' · '+backlogSnaps.length+' snapshots salvos';
+    }
     if(allStories.length){
       var upN=$id('svUpName'); if(upN) upN.textContent='Dados salvos localmente';
       var upS=$id('svUpSub'); if(upS) upS.textContent=allStories.length+' estórias · recarregadas automaticamente';
