@@ -126,10 +126,10 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .fdate-clear.on:hover{background:#fecaca}
 
 /* ── MEDIÇÃO pane ── */
-.med-hero{display:flex;align-items:center;gap:16px;padding:1.1rem 1.3rem;background:linear-gradient(135deg,#fff5f5 0%,#fff0f0 100%);border:1px solid #fecaca;border-radius:var(--rad);margin-bottom:1rem;box-shadow:var(--shadow-md)}
-.med-hero-icon{font-size:28px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(37,99,235,.15)}
-.med-hero-t{font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.4px}
-.med-hero-s{font-size:11px;color:var(--tx2);margin-top:2px}
+.med-hero{display:flex;align-items:center;gap:12px;padding:.55rem 1rem;background:#fff;border:1px solid #e2e8f0;border-radius:var(--rad);margin-bottom:.8rem;box-shadow:var(--shadow-md)}
+.med-hero-icon{font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:#f8fafc;border-radius:8px;box-shadow:0 1px 4px rgba(37,99,235,.1)}
+.med-hero-t{font-size:12px;font-weight:700;color:var(--tx);letter-spacing:-.2px}
+.med-hero-s{font-size:10px;color:var(--tx2);margin-top:1px}
 
 /* Medição table visual distinction - subtle success tint */
 #pane-me table tbody tr td{background:#fcfefc}
@@ -157,16 +157,17 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .metabar strong{font-weight:700;color:#cc0000}
 
 /* ── UPLOAD ── */
-.upbar{background:#fff5f5;border-bottom:1px solid #fecaca;padding:.65rem 1.6rem;display:flex;align-items:center;gap:12px}
+.upbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:.35rem 1.6rem;display:flex;align-items:center;gap:10px}
 .upbar.drag{background:var(--accent-soft)}
-.up-ico{font-size:15px;flex-shrink:0}
-.up-name{font-size:11.5px;font-weight:600;color:#475569}
-.up-sub{font-size:11px;color:var(--tx3);margin-left:6px}
+.up-ico{font-size:13px;flex-shrink:0}
+.up-name{font-size:11px;font-weight:600;color:#475569}
+.up-sub{font-size:10px;color:var(--tx3);margin-left:4px}
 .up-saved{margin-left:auto;font-size:10px;color:var(--g);font-weight:600;display:flex;align-items:center;gap:4px}
 .up-saved.hidden{display:none}
-.up-btn{background:#e11d48;color:#fff;border:none;border-radius:var(--rads);padding:7px 16px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .15s;box-shadow:0 1px 4px rgba(225,29,72,.3)}
+.up-btn{background:#e11d48;color:#fff;border:none;border-radius:var(--rads);padding:5px 13px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .15s;box-shadow:0 1px 4px rgba(225,29,72,.3)}
 .up-btn:hover{opacity:.85}
 #fi{display:none}
+#fiSv{display:none}
 
 /* ── PANES ── */
 .pane{display:none}.pane.on{display:block}
@@ -305,12 +306,40 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .dli-pill.g{background:var(--gs);color:var(--gt);border:1px solid var(--gb)}
 
 /* risk list */
-.rli{display:grid;grid-template-columns:95px auto 48px;gap:7px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-soft)}
+.rli{display:grid;grid-template-columns:105px auto 48px;gap:7px;align-items:start;padding:7px 0;border-bottom:1px solid var(--border-soft)}
 .rli:last-child{border-bottom:none}
-.rid{font-size:10px;font-family:ui-monospace,monospace;color:var(--tx3)}
+.rli.rli-conc{opacity:.6}
+.rid{font-size:10px;font-family:ui-monospace,monospace;color:var(--tx3);line-height:1.5}
 .rres{font-size:11px;color:var(--tx2);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.rlt{font-size:12px;font-weight:700;color:var(--r);text-align:right}
+.rlt{font-size:12px;font-weight:700;color:var(--r);text-align:right;padding-top:1px}
+.rli-done{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:#dcfce7;color:#15803d;border:1px solid #86efac;white-space:nowrap;margin-top:3px}
 .empty{text-align:center;padding:2rem;color:var(--tx3);font-size:11px}
+/* trimester banner */
+.tri-banner{background:#fff;border:1px solid #e2e8f0;border-radius:var(--rad);padding:.65rem 1.2rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 4px rgba(15,23,42,.06);flex-wrap:wrap}
+.tri-q{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#fff;background:#7a0000;padding:3px 9px;border-radius:5px;flex-shrink:0}
+.tri-lbl{font-size:13px;font-weight:700;color:#0f172a;letter-spacing:-.3px}
+.tri-detail{font-size:10px;color:#64748b;margin-top:2px}
+.tri-prog-wrap{flex:1;min-width:120px;max-width:180px;display:flex;flex-direction:column;gap:4px}
+.tri-prog-bar{height:4px;background:#e5e7f0;border-radius:2px;overflow:hidden}
+.tri-prog-fill{height:100%;background:linear-gradient(90deg,#7a0000,#cc0000);border-radius:2px}
+.tri-prog-txt{font-size:9.5px;color:#94a3b8}
+.tri-note{margin-left:auto;font-size:9px;color:#cbd5e1;font-style:italic;cursor:help;white-space:nowrap;flex-shrink:0}
+/* panorama geral */
+.pg{background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--rad);padding:.7rem 1.2rem}
+.pg-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#94a3b8;margin-bottom:.6rem}
+.pg-row{display:flex;gap:0;flex-wrap:wrap}
+.pg-item{flex:1;padding:.4rem .8rem;border-right:1px solid #e2e8f0;min-width:80px}
+.pg-item:last-child{border-right:none}
+.pg-val{font-size:18px;font-weight:800;letter-spacing:-1px;color:#334155;line-height:1}
+.pg-lbl{font-size:9px;color:#94a3b8;margin-top:3px;line-height:1.3}
+
+/* FAB copiar para Teams/e-mail */
+.fab-cap{position:fixed;bottom:28px;right:28px;z-index:4000;background:#7a0000;color:#fff;border:none;border-radius:14px;padding:11px 20px 11px 16px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(122,0,0,.4);transition:all .2s;font-family:inherit;letter-spacing:.2px}
+.fab-cap:hover{background:#cc0000;transform:translateY(-2px);box-shadow:0 8px 28px rgba(204,0,0,.45)}
+.fab-cap:active{transform:translateY(0)}
+.fab-cap.busy{opacity:.65;cursor:wait;pointer-events:none}
+.fab-cap svg{flex-shrink:0}
+.fab-cap-sub{font-size:9.5px;font-weight:400;opacity:.75;display:block;line-height:1;margin-top:1px}
 
 /* modal */
 .ov{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
@@ -380,6 +409,48 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .st-card-body{display:none;border-top:1px solid #f1f5f9}
 .st-card.open .st-card-body{display:block}
 .st-story-item{display:grid;grid-template-columns:110px 1fr 180px;gap:8px;align-items:center;padding:.42rem 1rem .42rem 2.6rem;border-bottom:1px solid #f8fafc;font-size:12px}
+
+/* ══ ESTÓRIAS POR ÉPICO ══ */
+.sv-upbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:.35rem 1.6rem;display:flex;align-items:center;gap:10px}
+.sv-up-name{font-size:11px;font-weight:600;color:#475569}
+.sv-up-sub{font-size:10px;color:var(--tx3);margin-left:4px}
+.sv-kpi{display:flex;gap:0;margin-bottom:1rem;background:var(--card);border-radius:var(--rad);overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.sv-kpi-item{flex:1;background:var(--card);padding:.7rem 1rem;display:flex;flex-direction:column;gap:2px;min-width:0;border-right:1px solid #f1f5f9;position:relative}
+.sv-kpi-item:last-child{border-right:none}
+.sv-kpi-item::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-accent,#e2e8f0)}
+.sv-kpi-val{font-size:22px;font-weight:800;letter-spacing:-1.2px;color:#0f172a;line-height:1}
+.sv-kpi-lbl{font-size:9.5px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.sv-kpi-sub{font-size:9.5px;color:#94a3b8}
+.sv-kpi-item.alert .sv-kpi-val{color:#dc2626}
+.sv-card{background:#fff;border:1px solid #e8edf5;border-radius:10px;overflow:hidden;border-left:4px solid var(--sq-accent,#e2e8f0);box-shadow:0 1px 4px rgba(15,23,42,.06);transition:box-shadow .2s}
+.sv-card:hover{box-shadow:0 3px 12px rgba(15,23,42,.1)}
+.sv-card-list{display:flex;flex-direction:column;gap:6px}
+.sv-card-hd{display:flex;align-items:center;gap:8px;padding:.55rem 1rem;cursor:pointer;user-select:none;flex-wrap:wrap;min-height:42px}
+.sv-card-hd:hover{background:#fafafa}
+.sv-card-arrow{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;font-size:9px;flex-shrink:0}
+.sv-card.open .sv-card-arrow{transform:rotate(90deg);color:#475569}
+.sv-card-ep{font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:#7a0000;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.sv-card-ep:hover{text-decoration:underline;color:#cc0000}
+.sv-card-resumo{font-size:11px;color:#475569;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sv-badge-full{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap;flex-shrink:0}
+.sv-badge-near{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;white-space:nowrap;flex-shrink:0}
+.sv-card-cnt{font-size:10px;font-weight:700;color:#334155;white-space:nowrap;flex-shrink:0}
+.sv-bar-wrap{padding:.35rem 1rem .55rem}
+.sv-stack{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#f1f5f9;margin-bottom:.5rem}
+.sv-stack-seg{height:100%;min-width:3px;transition:flex .4s}
+.sv-legend{display:flex;flex-wrap:wrap;gap:4px 12px}
+.sv-leg-item{display:flex;align-items:center;gap:4px;font-size:9.5px;color:#64748b}
+.sv-leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.sv-leg-cnt{font-weight:700;color:#334155}
+.sv-card-body{display:none;border-top:1px solid #f1f5f9}
+.sv-card.open .sv-card-body{display:block}
+.sv-story-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;padding:.35rem 1rem .35rem 1.6rem;border-bottom:1px solid #f8fafc}
+.sv-story-row:last-child{border-bottom:none}
+.sv-story-row:hover{background:#fafafa}
+.sv-story-key{font-family:ui-monospace,monospace;font-size:10px;color:#cc0000;text-decoration:none;font-weight:600}
+.sv-story-key:hover{text-decoration:underline}
+.sv-story-sum{font-size:11px;color:#334155;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sv-empty-ep{opacity:.4;border-left-color:#e2e8f0!important}
 .st-story-item:last-child{border-bottom:none}
 .st-story-item:hover{background:#fafafa}
 .st-story-key{font-family:ui-monospace,monospace;font-size:10px;color:#cc0000;text-decoration:none;white-space:nowrap;font-weight:600}
@@ -394,6 +465,48 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .sst-deploy{background:#fff7ed;color:#7c2d12;border:1px solid #fdba74}
 .sst-backlog{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
 .sst-other{background:#f8fafc;color:#475569;border:1px solid #e2e8f0}
+
+/* ══ BACKLOG / REFINAMENTO ══ */
+#fiBk{display:none}
+.bk-history{background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--rad);padding:.7rem 1.2rem;margin-bottom:1rem}
+.bk-hist-row{display:flex;align-items:flex-end;gap:0;flex-wrap:wrap}
+.bk-hist-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:default}
+.bk-hist-dot{width:10px;height:10px;border-radius:50%;background:#cbd5e1;flex-shrink:0}
+.bk-hist-dot-cur{background:#7a0000}
+.bk-hist-label{font-size:9px;color:#94a3b8;font-weight:700}
+.bk-hist-cnt{font-size:10px;font-weight:700;color:#334155}
+.bk-hist-cur .bk-hist-label{color:#7a0000}
+.bk-hist-cur .bk-hist-cnt{color:#7a0000}
+.bk-hist-line{width:24px;height:1px;background:#e2e8f0;margin-bottom:18px;flex-shrink:0}
+.bk-delta-bar{background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--rads);padding:.5rem 1rem;font-size:11px;display:flex;align-items:center;gap:8px;margin-bottom:.8rem;flex-wrap:wrap}
+.bk-delta-info{color:#64748b}
+.bk-delta-up{color:#dc2626;font-weight:700;font-size:12px}
+.bk-delta-down{color:#16a34a;font-weight:700;font-size:12px}
+.bk-delta-eq{color:#94a3b8;font-weight:700;font-size:12px}
+.bk-squad-list{display:flex;flex-direction:column;gap:6px}
+.bk-squad-card{background:#fff;border:1px solid #e8edf5;border-radius:10px;overflow:hidden;border-left:4px solid var(--sq-accent,#e2e8f0);box-shadow:0 1px 4px rgba(15,23,42,.06);transition:box-shadow .2s}
+.bk-squad-card:hover{box-shadow:0 3px 12px rgba(15,23,42,.1)}
+.bk-squad-card.open .bk-squad-body{display:block}
+.bk-squad-hd{display:flex;align-items:center;gap:10px;padding:.65rem 1rem;cursor:pointer;user-select:none;min-height:52px}
+.bk-squad-hd:hover{background:#fafafa}
+.bk-squad-arrow{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;font-size:9px;flex-shrink:0}
+.bk-squad-card.open .bk-squad-arrow{transform:rotate(90deg);color:#475569}
+.bk-squad-info{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.bk-squad-name{font-size:13px;font-weight:700;color:#0f172a}
+.bk-squad-delta{font-size:10px}
+.bk-squad-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.bk-squad-cnt{font-size:26px;font-weight:800;color:#334155;line-height:1;letter-spacing:-1.2px}
+.bk-squad-sub{font-size:9px;color:#94a3b8}
+.bk-refined-cnt{font-size:9.5px;font-weight:700;color:#16a34a;background:#dcfce7;padding:1px 6px;border-radius:4px;border:1px solid #86efac;margin-top:2px}
+.bk-squad-body{display:none;border-top:1px solid #f1f5f9}
+.bk-story-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;padding:.35rem 1rem .35rem 1.6rem;border-bottom:1px solid #f8fafc}
+.bk-story-row:last-child{border-bottom:none}
+.bk-story-row:hover{background:#fafafa}
+.bk-badge-refined{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;white-space:nowrap}
+.bk-badge-backlog{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;white-space:nowrap}
+.bk-spark-row{display:flex;align-items:flex-end;gap:2px;margin-top:4px;height:28px}
+.bk-spark-bar{width:8px;border-radius:2px 2px 0 0;flex-shrink:0;transition:height .3s}
+.bk-spark-lbl{font-size:9px;color:#94a3b8;margin-left:5px;align-self:center}
 
 </style>
 </head>
@@ -421,9 +534,9 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     <span>Atualizar</span>
   </button>
-  <button class="tbtn" onclick="doCapture()">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-    <span>Capturar</span>
+  <button class="tbtn" onclick="doCaptureClipboard()" title="Copiar imagem · colar no Teams ou e-mail">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    <span>Copiar</span>
   </button>
   <button class="tbtn green" onclick="doExport()">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -436,6 +549,8 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   <button class="tabbt on" id="tab-ep" onclick="goTab('ep',this)">Épicos <span class="tab-ct" id="tabCtEp"></span></button>
   <button class="tabbt" id="tab-me" onclick="goTab('me',this)">📊 Medição <span class="tab-ct" id="tabCtMe"></span></button>
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
+  <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
+  <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -518,6 +633,19 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     </div>
   </div>
 
+  <!-- Filtros da Medição -->
+  <div class="fbar" id="medFbar">
+    <span class="fl">Squad:</span>
+    <select class="fsel" id="medSqF"><option value="all">Todas</option></select>
+    <div class="fsep"></div>
+    <span class="fl">Data Fim (período):</span>
+    <input type="date" class="fdate" id="medDateFrom" title="Início do período">
+    <span class="fdate-sep">→</span>
+    <input type="date" class="fdate" id="medDateTo" title="Fim do período">
+    <button class="chip fdate-clear" id="medDateClear" onclick="clearMedDateF()" title="Limpar período">✕</button>
+    <span id="medFiltHint" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
+  </div>
+
   <div class="kgrid" id="medKpi" style="margin-bottom:.9rem"></div>
 
   <div class="sec-lbl" style="margin-bottom:.5rem">Lead Time por Squad</div>
@@ -539,21 +667,19 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     </div>
   </div>
 
-  <!-- Estórias em produção (concluídas) -->
+  <!-- Estórias em produção (concluídas) — colapsável -->
   <div id="medStoriesSection" style="margin-top:1rem;display:none">
-    <div class="sec-lbl" style="margin-bottom:.8rem">Estórias em Produção</div>
-    <div class="tc">
-      <div class="tc-hd">
-        <span class="tc-hd-t">Histórico de Estórias</span>
-        <span class="tc-hint"><span id="medStCnt">—</span> · estórias concluídas ("Em produção")</span>
+    <div class="sec-lbl" style="margin-bottom:.5rem;cursor:pointer;user-select:none" onclick="toggleMedStories()" title="Clique para expandir/recolher">
+      Estórias em Produção
+      <span id="medStoriesToggleIco" style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px;text-transform:none;letter-spacing:0">▶ mostrar</span>
+    </div>
+    <div id="medStoriesBody" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+        <span style="font-size:11px;font-weight:600;color:#475569">Histórico de Estórias</span>
+        <span style="font-size:10px;color:#94a3b8"><span id="medStCnt">—</span> · estórias concluídas em produção</span>
       </div>
-      <div class="tscr">
-        <table style="min-width:600px">
-          <thead><tr>
-            <th>Chave</th><th>Épico Pai</th><th>Resumo</th><th>Squad</th>
-          </tr></thead>
-          <tbody id="medStTblBody"></tbody>
-        </table>
+      <div id="medStCardList" class="sv-card-list"></div>
+    </div>
       </div>
     </div>
   </div>
@@ -563,13 +689,15 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 <div class="pane" id="pane-db">
 <div class="db" id="dbContent">
 
+  <div id="triBanner"></div>
+
   <div>
-    <div class="sec-lbl">Visão Executiva</div>
+    <div class="sec-lbl">Visão do Trimestre</div>
     <div class="kgrid" id="kpiRow"></div>
   </div>
 
   <div>
-    <div class="sec-lbl">Performance por Squad</div>
+    <div class="sec-lbl">Lead Time por Squad · Trimestre Atual</div>
     <div class="sgrid" id="squadCards"></div>
   </div>
 
@@ -590,7 +718,56 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     </div>
   </div>
 
+  <div id="panoramaGeral"></div>
+
 </div>
+</div>
+
+<!-- ══ ESTÓRIAS POR ÉPICO PANE ══ -->
+<div class="pane" id="pane-sv">
+
+  <div class="sv-upbar" id="svUpbar">
+    <span style="font-size:13px;flex-shrink:0">📋</span>
+    <span class="sv-up-name" id="svUpName">Carregar planilha de Estórias</span>
+    <span class="sv-up-sub" id="svUpSub">Export Jira · Issue Type = Story · .xlsx</span>
+    <span class="up-saved hidden" id="svUpSaved">💾 <span id="svUpSavedTxt">Salvo localmente</span></span>
+    <input type="file" id="fiSv" accept=".xlsx,.xls">
+    <button class="up-btn" onclick="document.getElementById('fiSv').click()">Selecionar arquivo</button>
+  </div>
+
+  <div class="ep" id="svContent">
+    <div class="sv-kpi" id="svKpi"></div>
+    <div class="fbar" id="svFbar">
+      <span class="fl">Squad:</span>
+      <select class="fsel" id="svSqF"><option value="all">Todas</option></select>
+      <div class="fsep"></div>
+      <span id="svTotal" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
+    </div>
+    <div class="sv-card-list" id="svCardList"></div>
+  </div>
+
+</div>
+
+<!-- ══ BACKLOG / REFINAMENTO PANE ══ -->
+<div class="pane" id="pane-bk">
+
+  <div class="sv-upbar" id="bkUpbar">
+    <span style="font-size:13px;flex-shrink:0">📥</span>
+    <span class="sv-up-name" id="bkUpName">Importar export do Jira — Product Backlog</span>
+    <span class="sv-up-sub" id="bkUpSub">Histórias em backlog · Export Jira filtrado por status · .xlsx</span>
+    <span class="up-saved hidden" id="bkUpSaved">💾 <span id="bkUpSavedTxt">Salvo localmente</span></span>
+    <input type="file" id="fiBk" accept=".xlsx,.xls">
+    <button class="up-btn" onclick="document.getElementById('fiBk').click()">Selecionar arquivo</button>
+  </div>
+
+  <div class="ep" id="bkContent">
+    <div class="empty" style="padding:3rem 2rem;text-align:center">
+      <div style="font-size:32px;margin-bottom:.8rem">📥</div>
+      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>
+      <div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- GitHub Integration modal -->
@@ -670,8 +847,11 @@ var curTab='ep';
 // Estórias
 var allStories=[];
 var STORIES_KEY='leadtime_sala_v8_stories';
-var STORY_LIMIT=10;
+var STORY_LIMIT=12;
+var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
+var backlogSnaps=[];
 var stFilt={epic:'all',status:'all'};
+var medFilt={squad:'all',dateFrom:'',dateTo:''};
 var TAB_KEY='leadtime_sala_active_tab';
 
 // Persiste a aba ativa no localStorage
@@ -683,7 +863,7 @@ function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -1204,10 +1384,12 @@ function goTab(id,btn){
   if(pane) pane.classList.add('on');
   curTab=id;
   saveTab(id);
+  syncUpbar(id);
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
-  else if(id==='st') renderStories();
+  else if(id==='sv') renderStoryView();
+  else if(id==='bk') renderBacklogView();
   updateTabCounts();
 }
 
@@ -1224,36 +1406,95 @@ function activateTab(id){
   if(pane) pane.classList.add('on');
   curTab=id;
   saveTab(id);
+  syncUpbar(id);
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
-  else if(id==='st') renderStories();
+  else if(id==='sv') renderStoryView();
+  else if(id==='bk') renderBacklogView();
   updateTabCounts();
+}
+
+// Mostra o upbar principal apenas nas abas que não têm upload próprio
+function syncUpbar(id){
+  var ub=$id('upbar');
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk')?'none':'flex';
 }
 
 
 // ═══════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════
+// ─── TRIMESTRE ─────────────────────────────────────────
+function getCurrentTrimester(){
+  var now=new Date(); now.setHours(0,0,0,0);
+  var m=now.getMonth(); var y=now.getFullYear();
+  var q=Math.floor(m/3);
+  var names=[['Jan','Fev','Mar'],['Abr','Mai','Jun'],['Jul','Ago','Set'],['Out','Nov','Dez']];
+  var sm=q*3;
+  var from=new Date(y,sm,1);
+  var to=new Date(y,sm+3,0);
+  var total=Math.floor((to-from)/86400000)+1;
+  var elapsed=Math.min(total,Math.floor((now-from)/86400000)+1);
+  var remaining=Math.max(0,Math.floor((to-now)/86400000));
+  return {q:q+1,year:y,label:names[q].join(' / ')+' · '+y,from:from,to:to,
+    pct:Math.round(elapsed/total*100),elapsed:elapsed,remaining:remaining,total:total};
+}
+function getPrevTrimester(){
+  var now=new Date(); var m=now.getMonth(); var y=now.getFullYear();
+  var q=Math.floor(m/3)-1; var py=y;
+  if(q<0){q=3;py=y-1;}
+  return {from:new Date(py,q*3,1),to:new Date(py,q*3+3,0)};
+}
+function inTrimester(dateStr,tri){
+  if(!dateStr) return false;
+  var d=new Date(dateStr+'T00:00:00');
+  return d>=tri.from&&d<=tri.to;
+}
+
 function renderDash(){
+  renderTriBanner();
   renderKPI();
   renderSquads();
   renderDeliveries();
   renderRisks();
+  renderPanorama();
+}
+
+function renderTriBanner(){
+  var el=$id('triBanner'); if(!el) return;
+  var tri=getCurrentTrimester();
+  el.innerHTML=
+    '<div class="tri-banner">'+
+      '<span class="tri-q">T'+tri.q+'</span>'+
+      '<div>'+
+        '<div class="tri-lbl">'+tri.label+'</div>'+
+        '<div class="tri-detail">'+tri.elapsed+'d decorridos · '+tri.remaining+'d restantes</div>'+
+      '</div>'+
+      '<div class="tri-prog-wrap">'+
+        '<div class="tri-prog-bar"><div class="tri-prog-fill" style="width:'+tri.pct+'%"></div></div>'+
+        '<div class="tri-prog-txt">'+tri.pct+'% do trimestre</div>'+
+      '</div>'+
+      '<span class="tri-note" title="Os dados se renovam automaticamente a cada trimestre: Jan–Mar · Abr–Jun · Jul–Set · Out–Dez">ℹ dados por trimestre</span>'+
+    '</div>';
 }
 
 function renderKPI(){
   var t=allData.length;
   if(!t){$id('kpiRow').innerHTML='';return;}
-  var conc=allData.filter(function(r){var s=r.status.trim();return (s==='Concluído'||s==='Executado')&&r.fim;}).length;
-  var exec=allData.filter(function(r){var s=r.status.trim();return s==='Em Execução'||(s==='Executado'&&!r.fim)||(s==='Concluído'&&!r.fim);}).length;
+  var tri=getCurrentTrimester();
+  var triEpics=allData.filter(function(r){return inTrimester(r.fim,tri);});
+  var delivered=triEpics.length;
+  var avgTri=delivered?Math.round(triEpics.reduce(function(s,r){return s+r.lt;},0)/delivered):0;
+  var naMeta=triEpics.filter(function(r){return r.lt<META;}).length;
+  var pctMeta=delivered?Math.round(naMeta/delivered*100):0;
+  var exec=activeEpics().length;
   var crit=allData.filter(function(r){return r.lt>=META;}).length;
-  var avg=Math.round(allData.reduce(function(s,r){return s+r.lt;},0)/t);
   $id('kpiRow').innerHTML=
-    kpi('kn','Total',''+t,'épicos monitorados','')+
-    kpi('kb','Em Execução',''+exec,'sem Data Fim','cb')+
-    kpi('kg','Concluídos',''+conc,'com Data Fim','cg')+
-    kpi('ka','Média LT',''+avg,'dias · meta: '+META+'d','ca')+
+    kpi('kg','Entregues no TRI',''+delivered,'épicos finalizados no trimestre','cg')+
+    kpi('kb','LT Médio TRI',''+avgTri,'dias · meta: '+META+'d','cb')+
+    kpi('ka','Dentro da Meta',delivered?pctMeta+'%':'—',naMeta+' de '+delivered+' épicos','ca')+
+    kpi('kn','Em Andamento',''+exec,'sem Data Fim','')+
     kpi('kr','Críticos ≥ '+META+'d',''+crit,'épicos acima do limite','cr');
 }
 function kpi(cls,lbl,val,sub,vcls){
@@ -1261,25 +1502,46 @@ function kpi(cls,lbl,val,sub,vcls){
 }
 
 function renderSquads(){
+  var tri=getCurrentTrimester();
+  var prev=getPrevTrimester();
+  var triEpics=allData.filter(function(r){return inTrimester(r.fim,tri);});
+  var prevEpics=allData.filter(function(r){return inTrimester(r.fim,prev);});
   var squads=Array.from(new Set(allData.map(function(r){return r.squad;}))).filter(Boolean).sort();
   var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706'};
   $id('squadCards').innerHTML=squads.map(function(sq){
-    var items=allData.filter(function(r){return r.squad===sq;});
-    if(!items.length) return '';
-    var avg=Math.round(items.reduce(function(s,r){return s+r.lt;},0)/items.length);
-    var crit=items.filter(function(r){return r.lt>=META;}).length;
-    var ok=items.filter(function(r){return r.lt<40;}).length;
-    var cl=ltCls(avg);
-    var col=cl==='r'?'#dc2626':cl==='a'?'#d97706':'#16a34a';
-    var pct=Math.min(100,Math.round(avg/200*100));
+    var items=triEpics.filter(function(r){return r.squad===sq;});
     var acc=colors[sq]||'#334155';
+    if(!items.length){
+      return '<div class="sc" style="opacity:.5">'+
+        '<div class="sc-acc" style="background:'+acc+'"></div>'+
+        '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">sem entregas neste TRI</div></div></div>'+
+        '<div class="sc-lt" style="color:#94a3b8">—</div>'+
+        '<div class="sc-sub">sem dados no trimestre</div>'+
+      '</div>';
+    }
+    var savg=Math.round(items.reduce(function(s,r){return s+r.lt;},0)/items.length);
+    var prevItems=prevEpics.filter(function(r){return r.squad===sq;});
+    var trend='';
+    if(prevItems.length){
+      var pavg=Math.round(prevItems.reduce(function(s,r){return s+r.lt;},0)/prevItems.length);
+      var diff=savg-pavg;
+      if(diff>0) trend='<div style="font-size:9.5px;color:#dc2626;margin-bottom:.3rem">↑ +'+diff+'d vs TRI anterior</div>';
+      else if(diff<0) trend='<div style="font-size:9.5px;color:#16a34a;margin-bottom:.3rem">↓ '+diff+'d vs TRI anterior</div>';
+      else trend='<div style="font-size:9.5px;color:#94a3b8;margin-bottom:.3rem">= igual ao TRI anterior</div>';
+    }
+    var scrit=items.filter(function(r){return r.lt>=META;}).length;
+    var sok=items.filter(function(r){return r.lt<40;}).length;
+    var cl=ltCls(savg);
+    var col=cl==='r'?'#dc2626':cl==='a'?'#d97706':'#16a34a';
+    var pct=Math.min(100,Math.round(savg/200*100));
     return '<div class="sc">'+
       '<div class="sc-acc" style="background:'+acc+'"></div>'+
-      '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">'+items.length+' épico'+(items.length!==1?'s':'')+'</div></div><div class="sc-ico">'+ltIco(avg)+'</div></div>'+
-      '<div class="sc-lt" style="color:'+col+'">'+avg+'</div>'+
+      '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">'+items.length+' entrega'+(items.length!==1?'s':'')+' no TRI</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
+      '<div class="sc-lt" style="color:'+col+'">'+savg+'</div>'+
       '<div class="sc-sub">dias · LT médio</div>'+
+      trend+
       '<div class="sc-bar"><div class="sc-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
-      '<div class="sc-stats"><span>Críticos: <strong style="color:#dc2626">'+crit+'</strong></span><span>Ok: <strong style="color:#16a34a">'+ok+'</strong></span></div>'+
+      '<div class="sc-stats"><span>Acima da meta: <strong style="color:#dc2626">'+scrit+'</strong></span><span>Ok: <strong style="color:#16a34a">'+sok+'</strong></span></div>'+
     '</div>';
   }).join('');
 }
@@ -1328,15 +1590,46 @@ function renderDeliveries(){
 }
 
 function renderRisks(){
-  var list=allData.filter(function(r){return r.lt>=META;}).sort(function(a,b){return b.lt-a.lt;});
+  var all=allData.filter(function(r){return r.lt>=META;});
+  var byLt=function(a,b){return b.lt-a.lt;};
+  var pending=all.filter(function(r){return !isValidDate(r.fim);}).sort(byLt);
+  var done=all.filter(function(r){return isValidDate(r.fim);}).sort(byLt);
+  var list=pending.concat(done);
   $id('rCnt').textContent=list.length+' épicos';
   if(!list.length){$id('rList').innerHTML='<div class="empty" style="color:#16a34a">✅ Nenhum épico acima da meta!</div>';return;}
   $id('rList').innerHTML=list.map(function(r){
-    return '<div class="rli">'+
-      '<span class="rid">'+r.id.replace('SLOPC-','#')+'<br><span style="color:#7c3aed;font-weight:600">'+esc(r.squad)+'</span></span>'+
+    var isDone=isValidDate(r.fim);
+    var doneBadge=isDone?'<span class="rli-done">✓ Entregue</span>':'';
+    return '<div class="rli'+(isDone?' rli-conc':'')+'">'+
+      '<span class="rid">'+r.id.replace('SLOPC-','#')+'<br><span style="color:#7c3aed;font-weight:600">'+esc(r.squad)+'</span><br>'+doneBadge+'</span>'+
       '<span class="rres">'+esc(r.resumo)+'</span>'+
       '<span class="rlt">⚠ '+r.lt+'d</span></div>';
   }).join('');
+}
+
+function renderPanorama(){
+  var el=$id('panoramaGeral'); if(!el) return;
+  var t=allData.length;
+  if(!t){el.innerHTML='';return;}
+  var conc=measuredEpics().length;
+  var exec=activeEpics().length;
+  var avg=Math.round(allData.reduce(function(s,r){return s+r.lt;},0)/t);
+  var naMeta=measuredEpics().filter(function(r){return r.lt<META;}).length;
+  var pctMeta=conc?Math.round(naMeta/conc*100):0;
+  el.innerHTML=
+    '<div class="pg">'+
+      '<div class="pg-title">Panorama Histórico — todos os épicos desde o início</div>'+
+      '<div class="pg-row">'+
+        pgItem(t,'Total épicos','monitorados')+
+        pgItem(conc,'Entregues','acumulado')+
+        pgItem(exec,'Em andamento','ativos')+
+        pgItem(avg+'d','LT médio','histórico')+
+        pgItem(pctMeta+'%','Dentro da meta','acumulado')+
+      '</div>'+
+    '</div>';
+}
+function pgItem(val,lbl,sub){
+  return '<div class="pg-item"><div class="pg-val">'+val+'</div><div class="pg-lbl">'+lbl+'<br><span>'+sub+'</span></div></div>';
 }
 
 // ═══════════════════════════════════════
@@ -1509,10 +1802,39 @@ function populateSqF(){
 // MEDIÇÃO — aba de épicos finalizados
 // ═══════════════════════════════════════
 function renderMed(){
-  var list=measuredEpics();
+  var all=measuredEpics();
+
+  // Populate squad dropdown preserving selection
+  var sqSel=$id('medSqF');
+  if(sqSel){
+    var allSquads=Array.from(new Set(all.map(function(r){return r.squad;}))).filter(Boolean).sort();
+    sqSel.innerHTML='<option value="all">Todas</option>'+allSquads.map(function(sq){
+      return '<option value="'+esc(sq)+'"'+(sq===medFilt.squad?' selected':'')+'>'+esc(sq)+'</option>';
+    }).join('');
+  }
+
+  // Apply filters
+  var list=all;
+  if(medFilt.squad!=='all') list=list.filter(function(r){return r.squad===medFilt.squad;});
+  if(medFilt.dateFrom) list=list.filter(function(r){return r.fim>=medFilt.dateFrom;});
+  if(medFilt.dateTo) list=list.filter(function(r){return r.fim<=medFilt.dateTo;});
+
+  // Date filter UI state
+  var dc=$id('medDateClear');
+  if(dc) dc.classList.toggle('on',!!(medFilt.dateFrom||medFilt.dateTo));
+  var df=$id('medDateFrom'); if(df) df.classList.toggle('active',!!medFilt.dateFrom);
+  var dt=$id('medDateTo');   if(dt) dt.classList.toggle('active',!!medFilt.dateTo);
+
+  // Filter hint
+  var hint=$id('medFiltHint');
+  if(hint){
+    var isFiltered=medFilt.squad!=='all'||medFilt.dateFrom||medFilt.dateTo;
+    hint.textContent=isFiltered ? list.length+' de '+all.length+' épicos (filtrado)' : '';
+  }
+
   var n=list.length;
   if(n===0){
-    $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">📊 Nenhum épico medido ainda.<br>Os épicos aparecem aqui automaticamente quando a Data Fim é preenchida na aba Épicos.</div>';
+    $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">📊 Nenhum épico encontrado para o filtro selecionado.</div>';
     $id('medSquads').innerHTML='';
     $id('medTblBody').innerHTML='';
     $id('medCnt').textContent='0 épicos';
@@ -1532,7 +1854,7 @@ function renderMed(){
     kpi('kr','LT Máximo',''+maxLT,'pior tempo','cr')+
     kpi('ka','Dentro da Meta',pctMeta+'%',naMeta+' de '+n+' épicos','ca');
 
-  // Squad cards — reaproveita estilo mas baseado só em medidos
+  // Squad cards — baseado na lista filtrada
   var squads=Array.from(new Set(list.map(function(r){return r.squad;}))).filter(Boolean).sort();
   var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706'};
   $id('medSquads').innerHTML=squads.map(function(sq){
@@ -1558,7 +1880,6 @@ function renderMed(){
   $id('medCnt').textContent=n+' épico'+(n!==1?'s':'');
   renderMedStories();
 
-  // Tabela de medidos — sem Data Prevista e sem Impedimentos (concluídos não precisam)
   var ltMap={r:'ltr',a:'lta',g:'ltg'};
   var sorted=list.slice().sort(function(a,b){return new Date(b.fim)-new Date(a.fim);});
   $id('medTblBody').innerHTML=sorted.map(function(r){
@@ -1576,6 +1897,20 @@ function renderMed(){
     '</tr>';
   }).join('');
 }
+function toggleMedStories(){
+  var body=$id('medStoriesBody');
+  var ico=$id('medStoriesToggleIco');
+  if(!body) return;
+  var open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  if(ico) ico.textContent=open?'▼ ocultar':'▶ mostrar';
+}
+function clearMedDateF(){
+  medFilt.dateFrom=''; medFilt.dateTo='';
+  var df=$id('medDateFrom'); if(df) df.value='';
+  var dt=$id('medDateTo');   if(dt) dt.value='';
+  renderMed();
+}
 
 function renderMedStories(){
   if(!allStories.length){ $id('medStoriesSection').style.display='none'; return; }
@@ -1584,13 +1919,39 @@ function renderMedStories(){
   if(!done.length){ sec.style.display='none'; return; }
   sec.style.display='block';
   $id('medStCnt').textContent=done.length+' estória'+(done.length!==1?'s':'');
-  $id('medStTblBody').innerHTML=done.map(function(s){
-    return '<tr>'+
-      '<td><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a></div></td>'+
-      '<td><a class="cid-link" href="'+jiraUrl(s.epic)+'" target="_blank">'+esc(s.epic)+'</a></td>'+
-      '<td class="cres">'+esc(s.resumo)+'</td>'+
-      '<td>'+squadBadge(s.squad||'—')+'</td>'+
-    '</tr>';
+
+  // Agrupar por épico pai
+  var epicMap={};
+  var epicOrder=[];
+  done.forEach(function(s){
+    if(!epicMap[s.epic]){epicMap[s.epic]=[];epicOrder.push(s.epic);}
+    epicMap[s.epic].push(s);
+  });
+  epicOrder.sort(function(a,b){return epicMap[b].length-epicMap[a].length;});
+
+  $id('medStCardList').innerHTML=epicOrder.map(function(ep){
+    var stories=epicMap[ep];
+    var epicRec=allData.find(function(r){return r.id===ep;});
+    var sq=(epicRec&&epicRec.squad)||(stories[0]&&stories[0].squad)||'';
+    var accent=getSquadAccent(sq);
+    var cardId='mst_'+ep.replace(/[^a-z0-9]/gi,'_');
+    var rows=stories.map(function(s){
+      return '<div class="sv-story-row">'+
+        '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
+        '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
+        '<span class="bdg sst-prod">✓ Em Produção</span>'+
+      '</div>';
+    }).join('');
+    return '<div class="sv-card" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
+      '<div class="sv-card-hd" onclick="toggleCard(\''+cardId+'\')">'+
+        '<span class="sv-card-arrow">&#9658;</span>'+
+        '<a class="sv-card-ep" href="'+jiraUrl(ep)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+esc(ep)+'</a>'+
+        (sq?'<span class="'+squadColor(sq)+' bdg" style="font-size:9px;padding:2px 7px;flex-shrink:0">'+esc(sq)+'</span>':'')+
+        (epicRec?'<span class="sv-card-resumo" title="'+esc(epicRec.resumo)+'">'+esc(epicRec.resumo)+'</span>':'')+
+        '<span class="sv-card-cnt">'+stories.length+' estória'+(stories.length!==1?'s':'')+'</span>'+
+      '</div>'+
+      '<div class="sv-card-body">'+rows+'</div>'+
+    '</div>';
   }).join('');
 }
 
@@ -1598,6 +1959,10 @@ function updateTabCounts(){
   var a=activeEpics().length, m=measuredEpics().length;
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
+  var svEl=$id('tabCtSv');
+  if(svEl) svEl.textContent=allStories.length||'';
+  var bkEl=$id('tabCtBk');
+  if(bkEl){ var bkCur=backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].stories.length:0; bkEl.textContent=bkCur||''; }
 }
 
 // ═══════════════════════════════════════
@@ -1618,6 +1983,11 @@ function clearDateF(){
 $id('fDateIni').onchange=function(){filt.dateIni=this.value||null; updateDateClear(); pg=1; renderTbl();};
 $id('fDateFim').onchange=function(){filt.dateFim=this.value||null; updateDateClear(); pg=1; renderTbl();};
 
+// Filtros da aba Medição
+$id('medSqF').onchange=function(){medFilt.squad=this.value; renderMed();};
+$id('medDateFrom').onchange=function(){medFilt.dateFrom=this.value||''; renderMed();};
+$id('medDateTo').onchange=function(){medFilt.dateTo=this.value||''; renderMed();};
+
 // chips
 document.querySelectorAll('.chip').forEach(function(btn){
   btn.onclick=function(){
@@ -1637,7 +2007,7 @@ function doRefresh(){
   normalizeWorkflowAll();
   var n=new Date();
   $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  renderDash(); renderMed(); renderStories(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tabToRestore);
   saveLocal();
 
@@ -1655,7 +2025,7 @@ function doRefresh(){
 function renderAll(tabToRestore){
   var tab=normalizeTab(tabToRestore || getActiveTab());
   normalizeWorkflowAll();
-  renderDash(); renderMed(); renderStories(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+  renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tab);
 }
 
@@ -1752,11 +2122,11 @@ function loadStoriesXlsx(file){
       }
       allStories=stories;
       saveStoriesLocal();
-      $id('stUpName').textContent=file.name;
-      $id('stUpSub').textContent=stories.length+' estórias carregadas';
-      $id('stUpSaved').classList.remove('hidden');
-      $id('stUpSavedTxt').textContent='Salvo localmente · '+stories.length+' estórias';
-      renderStories();
+      var upName=$id('svUpName'); if(upName) upName.textContent=file.name;
+      var upSub=$id('svUpSub'); if(upSub) upSub.textContent=stories.length+' estórias carregadas';
+      var upSaved=$id('svUpSaved'); if(upSaved) upSaved.classList.remove('hidden');
+      var upSavedTxt=$id('svUpSavedTxt'); if(upSavedTxt) upSavedTxt.textContent='Salvo localmente · '+stories.length+' estórias';
+      renderStoryView();
       updateTabCounts();
       toast('📋 Estórias carregadas',stories.length+' estórias importadas de "'+file.name+'".');
     }catch(err){
@@ -1777,129 +2147,415 @@ function loadStoriesLocal(){
   }catch(e){}
 }
 
-// Renderiza a aba Estórias
-function renderStories(){
-  if(!allStories.length){
-    $id('stKpi').innerHTML=
-      '<div class="st-kpi-item" style="flex:none;width:100%;text-align:center;padding:1.5rem">'+
-      '<span style="color:#94a3b8;font-size:11px">Nenhuma estória carregada. Clique em <strong>Selecionar arquivo</strong> para importar a planilha do Jira.</span></div>';
-    $id('stCardList').innerHTML='<div class="empty">Nenhuma estória carregada. Clique em <strong>Selecionar arquivo</strong> para importar a planilha do Jira.</div>';
+// ═══════════════════════════════════════
+// BACKLOG / REFINAMENTO
+// ═══════════════════════════════════════
+function saveBacklogSnaps(){
+  try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+}
+function loadBacklogSnaps(){
+  try{
+    var raw=localStorage.getItem(BACKLOG_KEY);
+    if(raw) backlogSnaps=JSON.parse(raw)||[];
+  }catch(e){ backlogSnaps=[]; }
+}
+
+function detectBacklogFormat(wb){
+  var sheetNames=wb.SheetNames;
+  for(var s=0;s<sheetNames.length;s++){
+    var ws=wb.Sheets[sheetNames[s]];
+    if(!ws) continue;
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+    for(var i=0;i<Math.min(5,rows.length);i++){
+      var row=rows[i];
+      if(!row||!row.length) continue;
+      var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase();});
+      var hasChave=cells.some(function(c){return c.indexOf('chave')>=0||c==='key';});
+      if(hasChave){
+        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1};
+        cells.forEach(function(c,j){
+          if(map.id<0&&(c.indexOf('chave')>=0||c==='key'||c==='chave do item')) map.id=j;
+          else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
+          else if(map.status<0&&(c.indexOf('situacao')>=0||c==='status'||c.indexOf('estado')>=0)) map.status=j;
+          else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('time')>=0)) map.squad=j;
+          else if(map.points<0&&(c.indexOf('story point')>=0||c.indexOf('pontos')>=0||c.indexOf('points')>=0||c.indexOf('estimativa')>=0||c.indexOf('historia point')>=0)) map.points=j;
+          else if(map.sprint<0&&c.indexOf('sprint')>=0) map.sprint=j;
+        });
+        if(map.id>=0) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
+      }
+    }
+  }
+  return null;
+}
+
+function loadBacklogXlsx(file){
+  if(typeof XLSX==='undefined'){
+    toast('Carregando biblioteca...','Aguarde alguns segundos e tente novamente.','warn');
+    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadBacklogXlsx(file);});
+    return;
+  }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var det=detectBacklogFormat(wb);
+      if(!det){
+        toast('Formato não reconhecido',
+          'Colunas esperadas: "Chave do item" (ID) + "Situação". Export Jira · Product Backlog.','err');
+        return;
+      }
+      var rows=det.rows, m=det.map;
+      var stories=[];
+      for(var i=det.hrow+1;i<rows.length;i++){
+        var row=rows[i];
+        if(!row||!row.length) continue;
+        var id=(row[m.id]||'').toString().trim();
+        if(!id) continue;
+        var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
+        var status=m.status>=0?(row[m.status]||'').toString().trim():'';
+        var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
+        var pts=m.points>=0?parseFloat(row[m.points])||0:0;
+        var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
+        stories.push({id:id,resumo:resumo,status:status,squad:squad,points:pts,sprint:sprint});
+      }
+      if(!stories.length){
+        toast('Nenhuma história encontrada','O arquivo não contém histórias válidas.','err');
+        return;
+      }
+      var nextSeq=(backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].seq:0)+1;
+      backlogSnaps.push({seq:nextSeq,stories:stories});
+      saveBacklogSnaps();
+
+      var bkUpName=$id('bkUpName'); if(bkUpName) bkUpName.textContent=file.name;
+      var bkUpSub=$id('bkUpSub'); if(bkUpSub) bkUpSub.textContent='#'+nextSeq+' · '+stories.length+' histórias importadas';
+      var bkUpSaved=$id('bkUpSaved'); if(bkUpSaved) bkUpSaved.classList.remove('hidden');
+      var bkUpSavedTxt=$id('bkUpSavedTxt'); if(bkUpSavedTxt) bkUpSavedTxt.textContent='Importação #'+nextSeq+' salva localmente';
+
+      renderBacklogView();
+      updateTabCounts();
+      toast('📥 Backlog importado','Importação #'+nextSeq+' · '+stories.length+' histórias em backlog.');
+    }catch(err){
+      toast('Erro ao ler arquivo','Verifique se é um .xlsx válido: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function isRefined(story){
+  return story.points>0;
+}
+
+function renderBacklogView(){
+  var bkContent=$id('bkContent');
+  if(!bkContent) return;
+
+  if(!backlogSnaps.length){
+    bkContent.innerHTML=
+      '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+      '<div style="font-size:32px;margin-bottom:.8rem">📥</div>'+
+      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>'+
+      '<div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>'+
+      '</div>';
     return;
   }
 
-  var active=allStories.filter(function(s){return !isStoryDone(s);});
-  var done=allStories.filter(function(s){return isStoryDone(s);});
-  var epicsWithStories=Object.keys(allStories.reduce(function(acc,s){acc[s.epic]=1;return acc;},{})).length;
-  var alertEpics=getEpicsWithAlerts().length;
+  var cur=backlogSnaps[backlogSnaps.length-1];
+  var prev=backlogSnaps.length>1?backlogSnaps[backlogSnaps.length-2]:null;
+  var stories=cur.stories;
 
-  $id('stKpi').innerHTML=
-    '<div class="st-kpi-item" style="--kpi-accent:#cc0000"><span class="st-kpi-val">'+allStories.length+'</span><span class="st-kpi-lbl">Total</span><span class="st-kpi-sub">em '+epicsWithStories+' épicos</span></div>'+
-    '<div class="st-kpi-item" style="--kpi-accent:#f59e0b"><span class="st-kpi-val">'+active.length+'</span><span class="st-kpi-lbl">Em Andamento</span><span class="st-kpi-sub">não concluídas</span></div>'+
-    '<div class="st-kpi-item" style="--kpi-accent:#16a34a"><span class="st-kpi-val">'+done.length+'</span><span class="st-kpi-lbl">Em Produção</span><span class="st-kpi-sub">concluídas</span></div>'+
-    '<div class="st-kpi-item'+(alertEpics?' alert':'')+'" style="--kpi-accent:#dc2626"><span class="st-kpi-val">'+alertEpics+'</span><span class="st-kpi-lbl">Alertas</span><span class="st-kpi-sub">acima de '+STORY_LIMIT+' estórias</span></div>';
+  // Count per squad
+  var curSquadCnt={}, prevSquadCnt={};
+  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
+  if(prev) prev.stories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
 
-  populateStoryEpicFilter(active);
-  renderStoryTable(active);
-}
+  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  var totalBacklog=stories.length;
+  var totalRefined=stories.filter(isRefined).length;
 
-// Retorna épicos que têm mais de STORY_LIMIT estórias
-function getEpicsWithAlerts(){
-  var counts={};
-  allStories.forEach(function(s){ counts[s.epic]=(counts[s.epic]||0)+1; });
-  return Object.keys(counts).filter(function(ep){return counts[ep]>STORY_LIMIT;});
-}
-
-
-function populateStoryEpicFilter(active){
-  var epics=Array.from(new Set(active.map(function(s){return s.epic;}))).sort();
-  var sel=$id('stEpicF');
-  if(!sel) return;
-  var prev=sel.value;
-  sel.innerHTML='<option value="all">Todos ('+epics.length+')</option>';
-  epics.forEach(function(ep){
-    var o=document.createElement('option');
-    o.value=ep; o.textContent=ep;
-    sel.appendChild(o);
-  });
-  if(prev) sel.value=prev;
-  sel.onchange=function(){stFilt.epic=this.value; renderStoryTable(active);};
-  $id('stStatusF').onchange=function(){stFilt.status=this.value; renderStoryTable(active);};
-}
-
-function renderStoryTable(active){
-  var statusFiltered=active.filter(function(s){
-    if(stFilt.status!=='all'&&s.status!==stFilt.status) return false;
-    return true;
-  });
-
-  var epicMap={};
-  var epicOrder=[];
-  statusFiltered.forEach(function(s){
-    if(stFilt.epic!=='all'&&s.epic!==stFilt.epic) return;
-    if(!epicMap[s.epic]){epicMap[s.epic]=[];epicOrder.push(s.epic);}
-    epicMap[s.epic].push(s);
-  });
-
-  epicOrder.sort(function(a,b){return epicMap[b].length-epicMap[a].length;});
-
-  var totalShown=epicOrder.reduce(function(n,ep){return n+epicMap[ep].length;},0);
-  $id('stTotal').textContent=totalShown+' estórias · '+epicOrder.length+' épicos';
-
-  if(!epicOrder.length){
-    $id('stCardList').innerHTML='<div class="empty">Nenhuma estória encontrada.</div>';
-    return;
+  // Global delta
+  var totalDelta=prev!==null?totalBacklog-prev.stories.length:null;
+  var globalDeltaHtml='';
+  if(totalDelta!==null){
+    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
+    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
+    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
   }
 
-  var totalByEpic={};
-  allStories.forEach(function(s){totalByEpic[s.epic]=(totalByEpic[s.epic]||0)+1;});
+  // Import history dots
+  var historyHtml='';
+  if(backlogSnaps.length>1){
+    var dots=backlogSnaps.map(function(snap,idx){
+      var isCur=idx===backlogSnaps.length-1;
+      return '<div class="bk-hist-item'+(isCur?' bk-hist-cur':'')+'">'+
+        '<div class="bk-hist-cnt">'+snap.stories.length+'</div>'+
+        '<div class="bk-hist-dot'+(isCur?' bk-hist-dot-cur':'')+'"></div>'+
+        '<div class="bk-hist-label">#'+snap.seq+'</div>'+
+      '</div>';
+    });
+    var dotsWithLines=[];
+    dots.forEach(function(d,i){dotsWithLines.push(d);if(i<dots.length-1)dotsWithLines.push('<div class="bk-hist-line"></div>');});
+    historyHtml='<div class="bk-history">'+
+      '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:.6rem">Histórico de Importações</div>'+
+      '<div class="bk-hist-row">'+dotsWithLines.join('')+'</div>'+
+    '</div>';
+  }
 
-  $id('stCardList').innerHTML=epicOrder.map(function(ep){
-    var stories=epicMap[ep];
-    var total=totalByEpic[ep]||stories.length;
-    var doneCnt=allStories.filter(function(s){return s.epic===ep&&isStoryDone(s);}).length;
-    var pct=total>0?Math.round((doneCnt/total)*100):0;
-    var isAlert=total>STORY_LIMIT;
+  // Squad cards
+  var squadCardsHtml=squads.map(function(sq){
+    var sqStories=stories.filter(function(s){return s.squad===sq;});
+    var refined=sqStories.filter(isRefined);
+    var cnt=sqStories.length;
+    var delta=prev!==null?(cnt-(prevSquadCnt[sq]||0)):null;
+    var accent=getSquadAccent(sq);
+    var cardId='bk_'+sq.replace(/[^a-z0-9]/gi,'_');
 
-    var squadVal=stories.find(function(s){return s.squad;});
-    var sq=squadVal?squadVal.squad:'';
-    var epicRec=allData.find(function(r){return r.id===ep;});
-    var ltInfo='';
-    if(epicRec&&epicRec.lt){
-      var lc=epicRec.lt>=META?'ltr':epicRec.lt>=40?'lta':'ltg';
-      ltInfo='<span class="clt '+lc+'" style="font-size:10px;margin-left:4px">'+epicRec.lt+'d</span>';
+    var deltaHtml='';
+    if(delta!==null){
+      if(delta>0) deltaHtml='<span class="bk-delta-up">▲ '+delta+' vs #'+(cur.seq-1)+'</span>';
+      else if(delta<0) deltaHtml='<span class="bk-delta-down">▼ '+Math.abs(delta)+' vs #'+(cur.seq-1)+'</span>';
+      else deltaHtml='<span class="bk-delta-eq">= vs #'+(cur.seq-1)+'</span>';
     }
 
-    var accent=getSquadAccent(sq);
-    var cardId='stcard_'+ep.replace(/[^a-z0-9]/gi,'_');
+    // Sparkline bars per squad across all imports
+    var sparkHtml='';
+    if(backlogSnaps.length>1){
+      var snapCounts=backlogSnaps.map(function(snap){
+        return snap.stories.filter(function(s){return s.squad===sq;}).length;
+      });
+      var maxC=Math.max.apply(null,snapCounts)||1;
+      sparkHtml='<div class="bk-spark-row">'+
+        snapCounts.map(function(c,idx){
+          var h=Math.max(3,Math.round(c/maxC*24));
+          var isCur=idx===backlogSnaps.length-1;
+          return '<div class="bk-spark-bar" style="height:'+h+'px;background:'+(isCur?accent:'#cbd5e1')+'" title="#'+backlogSnaps[idx].seq+': '+c+'"></div>';
+        }).join('')+
+        '<span class="bk-spark-lbl">'+snapCounts.join(' → ')+'</span>'+
+      '</div>';
+    }
 
-    var storyItems=stories.map(function(s){
-      var stClass=storyStatusClass(s.status);
-      return '<div class="st-story-item">'+
-        '<a class="st-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a>'+
-        '<span class="st-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
-        '<span class="bdg '+stClass+'" style="justify-self:start">'+esc(s.status)+'</span>'+
+    var rows=sqStories.map(function(s){
+      var ref=isRefined(s);
+      var badge=ref
+        ?'<span class="bk-badge-refined">🃏 Refinado'+(s.points?' · '+s.points+'pts':'')+'</span>'
+        :'<span class="bk-badge-backlog">📋 Backlog</span>';
+      return '<div class="bk-story-row">'+
+        '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
+        '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
+        badge+
       '</div>';
     }).join('');
 
-    return '<div class="st-card" id="'+cardId+'" style="--grp-accent:'+accent+'">'+
-      '<div class="st-card-hd" onclick="toggleCard(\''+cardId+'\')">'+
-        '<span class="st-card-arrow">&#9658;</span>'+
-        '<a class="st-card-id" href="'+jiraUrl(ep)+'" target="_blank" onclick="event.stopPropagation()">'+esc(ep)+'</a>'+
-        ltInfo+
-        (sq?'<span class="'+squadColor(sq)+' bdg" style="font-size:9px;padding:2px 7px;flex-shrink:0">'+esc(sq)+'</span>':'')+
-        '<div class="st-card-mid">'+
-          '<div class="st-card-prog">'+
-            '<div class="st-card-bar"><div class="st-card-fill" style="width:'+pct+'%;background:'+accent+'"></div></div>'+
-            '<span class="st-card-pct">'+pct+'%</span>'+
-          '</div>'+
-          '<span class="st-card-meta">'+doneCnt+'/'+total+' prontas</span>'+
-          (isAlert?'<span class="st-card-alert">&#9888; '+stories.length+' estórias</span>':'')+
+    return '<div class="bk-squad-card" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
+      '<div class="bk-squad-hd" onclick="toggleCard(\''+cardId+'\')">'+
+        '<div class="bk-squad-arrow">&#9658;</div>'+
+        '<div class="bk-squad-info">'+
+          '<span class="bk-squad-name">'+esc(sq)+'</span>'+
+          (deltaHtml?'<span class="bk-squad-delta">'+deltaHtml+'</span>':'')+
+          sparkHtml+
         '</div>'+
-        '<span class="st-card-cnt">'+stories.length+' itens</span>'+
+        '<div class="bk-squad-right">'+
+          '<span class="bk-squad-cnt">'+cnt+'</span>'+
+          '<span class="bk-squad-sub">histórias em backlog</span>'+
+          (refined.length?'<span class="bk-refined-cnt">🃏 '+refined.length+' refinada'+(refined.length!==1?'s':'')+'</span>':'')+
+        '</div>'+
       '</div>'+
-      '<div class="st-card-body">'+storyItems+'</div>'+
+      '<div class="bk-squad-body">'+rows+'</div>'+
     '</div>';
   }).join('');
+
+  bkContent.innerHTML=
+    '<div class="sv-kpi" style="margin-bottom:1rem">'+
+      svKpiItem('#7a0000',totalBacklog,'Total Backlog','importação #'+cur.seq)+
+      svKpiItem('#3b82f6',squads.length,'Squads com Backlog','grupos ativos')+
+      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com story points estimados')+
+      svKpiItem('#f59e0b',backlogSnaps.length,'Importações','snapshots históricos')+
+    '</div>'+
+    '<div class="bk-delta-bar">'+
+      (prev
+        ? '<span class="bk-delta-info">vs importação anterior (#'+prev.seq+')</span> '+globalDeltaHtml+
+          ' <span class="bk-delta-info">· '+totalBacklog+' histórias agora vs '+prev.stories.length+' antes</span>'
+        : '<span style="color:#94a3b8">Importe novamente para ver o delta entre importações (▲▼=)</span>')+
+    '</div>'+
+    historyHtml+
+    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Backlog por Squad · Importação #'+cur.seq+'</div>'+
+    '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
+}
+
+// ─── Status groups para visualização de estórias ──────────
+var SV_STATUS=[
+  {key:'backlog',  label:'Backlog',      color:'#94a3b8', test:function(s){return s.indexOf('backlog')>=0;}},
+  {key:'dev',      label:'Dev',          color:'#f59e0b', test:function(s){return s.indexOf('desenvolv')>=0;}},
+  {key:'teste',    label:'Teste',        color:'#8b5cf6', test:function(s){return (s.indexOf('teste')>=0||s.indexOf(' test')>=0)&&s.indexOf('deploy')<0;}},
+  {key:'deploy-t', label:'Deploy/Teste', color:'#f97316', test:function(s){return s.indexOf('deploy')>=0&&(s.indexOf('teste')>=0||s.indexOf(' test')>=0);}},
+  {key:'homolog',  label:'Homolog',      color:'#3b82f6', test:function(s){return s.indexOf('homolog')>=0;}},
+  {key:'deploy-p', label:'Deploy/Prod',  color:'#6366f1', test:function(s){return s.indexOf('deploy')>=0&&(s.indexOf('produc')>=0||s.indexOf('produção')>=0);}},
+  {key:'prod',     label:'Produção',     color:'#22c55e', test:function(s){return (s.indexOf('produc')>=0||s.indexOf('produção')>=0)&&s.indexOf('deploy')<0;}}
+];
+
+function classifySvStatus(status){
+  var s=(status||'').toLowerCase().trim();
+  for(var i=0;i<SV_STATUS.length;i++){if(SV_STATUS[i].test(s)) return SV_STATUS[i].key;}
+  return 'other';
+}
+
+function svBuildBar(stories){
+  var counts={other:0};
+  SV_STATUS.forEach(function(st){counts[st.key]=0;});
+  stories.forEach(function(s){var k=classifySvStatus(s.status);counts[k]=(counts[k]||0)+1;});
+  var segs=SV_STATUS.filter(function(st){return counts[st.key]>0;}).map(function(st){
+    return '<div class="sv-stack-seg" style="flex:'+counts[st.key]+';background:'+st.color+'" title="'+st.label+': '+counts[st.key]+'"></div>';
+  }).join('');
+  var legend=SV_STATUS.filter(function(st){return counts[st.key]>0;}).map(function(st){
+    return '<span class="sv-leg-item"><span class="sv-leg-dot" style="background:'+st.color+'"></span>'+st.label+' <span class="sv-leg-cnt">'+counts[st.key]+'</span></span>';
+  }).join('');
+  return {segs:segs,legend:legend,counts:counts};
+}
+
+function isNearDelivery(stories){
+  if(!stories.length) return false;
+  var bar=svBuildBar(stories); var c=bar.counts;
+  var blocking=(c.backlog||0)+(c.dev||0)+(c.teste||0)+(c['deploy-t']||0)+(c.other||0);
+  var near=(c.homolog||0)+(c['deploy-p']||0);
+  return blocking===0&&near>0;
+}
+
+// ─── Renderiza aba Estórias por Épico ──────────────────────
+function renderStoryView(){
+  var svSq=$id('svSqF');
+  var sqFilter=svSq?svSq.value:'all';
+
+  // Populate squad dropdown from stories
+  var allSquads=Array.from(new Set(allStories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  if(svSq){
+    svSq.innerHTML='<option value="all">Todas</option>'+allSquads.map(function(sq){
+      return '<option value="'+esc(sq)+'"'+(sq===sqFilter?' selected':'')+'>'+esc(sq)+'</option>';
+    }).join('');
+    svSq.onchange=function(){renderStoryView();};
+  }
+
+  // KPIs globais (não filtrados)
+  var totalSt=allStories.length;
+  var epicsWithSt=Object.keys(allStories.reduce(function(a,s){a[s.epic]=1;return a;},{})).length;
+  var nearCnt=0; var fullCnt=0;
+
+  if(!totalSt){
+    $id('svKpi').innerHTML='';
+    $id('svCardList').innerHTML='<div class="empty" style="padding:3rem">📋 Nenhuma estória carregada.<br>Importe o export do Jira (Issue Type = Story) acima.</div>';
+    $id('svTotal').textContent='';
+    return;
+  }
+
+  // Group stories by epic
+  var epicMap={};
+  allStories.forEach(function(s){
+    if(!epicMap[s.epic]) epicMap[s.epic]=[];
+    epicMap[s.epic].push(s);
+  });
+
+  // Collect all epics: with stories first, then epics from allData with no stories
+  var epicIds=Object.keys(epicMap);
+  var allEpicIds=Array.from(new Set(allData.map(function(r){return r.id;}).concat(epicIds)));
+
+  // Count alerts
+  epicIds.forEach(function(ep){
+    var sts=epicMap[ep];
+    if(sts.length>=STORY_LIMIT) fullCnt++;
+    if(isNearDelivery(sts)) nearCnt++;
+  });
+
+  $id('svKpi').innerHTML=
+    svKpiItem('#cc0000',totalSt,'Total de Estórias','em '+epicsWithSt+' épicos')+
+    svKpiItem('#16a34a',nearCnt,'Próximos à Entrega','homolog ou deploy/prod','near'+(nearCnt?'':' '))+
+    svKpiItem('#dc2626',fullCnt,'Épicos Lotados','≥ '+STORY_LIMIT+' estórias','full'+(fullCnt?' alert':''))+
+    svKpiItem('#7c3aed',allEpicIds.filter(function(ep){return !epicMap[ep];}).length,'Sem Estórias','épicos sem vínculo');
+
+  // Apply squad filter
+  var filteredEpicIds=epicIds.filter(function(ep){
+    if(sqFilter==='all') return true;
+    var sts=epicMap[ep];
+    var rec=allData.find(function(r){return r.id===ep;});
+    var sq=(rec&&rec.squad)||((sts[0]&&sts[0].squad)||'');
+    return sq===sqFilter;
+  });
+
+  // Sort: near-delivery first, then by story count desc
+  filteredEpicIds.sort(function(a,b){
+    var na=isNearDelivery(epicMap[a])?1:0, nb=isNearDelivery(epicMap[b])?1:0;
+    if(nb!==na) return nb-na;
+    return (epicMap[b]||[]).length-(epicMap[a]||[]).length;
+  });
+
+  // Epics in allData with no stories (at bottom)
+  var noStories=allData.map(function(r){return r.id;}).filter(function(id){
+    return !epicMap[id]&&(sqFilter==='all'||((allData.find(function(r){return r.id===id;})||{}).squad===sqFilter));
+  });
+
+  $id('svTotal').textContent=filteredEpicIds.length+' épicos · '+
+    filteredEpicIds.reduce(function(n,ep){return n+(epicMap[ep]||[]).length;},0)+' estórias';
+
+  $id('svCardList').innerHTML=
+    filteredEpicIds.map(function(ep){return svEpicCard(ep,epicMap[ep]);}).join('')+
+    (noStories.length?
+      '<div style="font-size:9.5px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin:.8rem 0 .4rem">Épicos sem estórias vinculadas</div>'+
+      noStories.map(function(id){return svEpicCard(id,[]);}).join('')
+    :'');
+}
+
+function svKpiItem(color,val,lbl,sub,extra){
+  return '<div class="sv-kpi-item '+(extra||'')+'" style="--kpi-accent:'+color+'">'+
+    '<span class="sv-kpi-val">'+val+'</span>'+
+    '<span class="sv-kpi-lbl">'+lbl+'</span>'+
+    '<span class="sv-kpi-sub">'+sub+'</span></div>';
+}
+
+function svEpicCard(ep,stories){
+  var epicRec=allData.find(function(r){return r.id===ep;});
+  var sq=(epicRec&&epicRec.squad)||((stories[0]&&stories[0].squad)||'');
+  var resumo=(epicRec&&epicRec.resumo)||'';
+  var accent=getSquadAccent(sq);
+  var total=stories.length;
+  var isEmpty=total===0;
+  var isFull=total>=STORY_LIMIT;
+  var near=!isEmpty&&isNearDelivery(stories);
+  var cardId='sv_'+ep.replace(/[^a-z0-9]/gi,'_');
+  var ltInfo='';
+  if(epicRec&&epicRec.lt){
+    var lc=epicRec.lt>=META?'ltr':epicRec.lt>=40?'lta':'ltg';
+    ltInfo='<span class="clt '+lc+'" style="font-size:10px">'+epicRec.lt+'d</span>';
+  }
+
+  var bar=isEmpty?{segs:'',legend:''}:svBuildBar(stories);
+
+  var rows=stories.map(function(s){
+    var stCls=storyStatusClass(s.status);
+    return '<div class="sv-story-row">'+
+      '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
+      '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
+      '<span class="bdg '+stCls+'">'+esc(s.status)+'</span>'+
+    '</div>';
+  }).join('');
+
+  return '<div class="sv-card'+(isEmpty?' sv-empty-ep':'')+'" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
+    '<div class="sv-card-hd" onclick="toggleCard(\''+cardId+'\')">'+
+      '<span class="sv-card-arrow">&#9658;</span>'+
+      '<a class="sv-card-ep" href="'+jiraUrl(ep)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+esc(ep)+'</a>'+
+      (sq?'<span class="'+squadColor(sq)+' bdg" style="font-size:9px;padding:2px 7px;flex-shrink:0">'+esc(sq)+'</span>':'')+
+      ltInfo+
+      '<span class="sv-card-resumo" title="'+esc(resumo)+'">'+esc(resumo)+'</span>'+
+      (isFull?'<span class="sv-badge-full">🔴 Épico Lotado</span>':'')+
+      (near?'<span class="sv-badge-near">🚀 Próximo à Entrega</span>':'')+
+      '<span class="sv-card-cnt">'+(isEmpty?'sem estórias':total+' estória'+(total!==1?'s':''))+'</span>'+
+    '</div>'+
+    (!isEmpty?
+      '<div class="sv-bar-wrap">'+
+        '<div class="sv-stack">'+bar.segs+'</div>'+
+        '<div class="sv-legend">'+bar.legend+'</div>'+
+      '</div>'
+    :'')+
+    '<div class="sv-card-body">'+
+      (rows||'<div style="padding:.6rem 1rem;font-size:11px;color:#94a3b8">Nenhuma estória vinculada a este épico.</div>')+
+    '</div>'+
+  '</div>';
 }
 
 function toggleCard(cardId){
@@ -1933,6 +2589,23 @@ ub.addEventListener('dragover',function(e){e.preventDefault();ub.classList.add('
 ub.addEventListener('dragleave',function(){ub.classList.remove('drag');});
 ub.addEventListener('drop',function(e){e.preventDefault();ub.classList.remove('drag');if(e.dataTransfer.files[0]) loadXlsx(e.dataTransfer.files[0]);});
 
+// Stories upload
+$id('fiSv').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.files[0]);};
+
+// Backlog upload
+$id('fiBk').onchange=function(e){if(e.target.files[0]) loadBacklogXlsx(e.target.files[0]);};
+var bkUb=$id('bkUpbar');
+if(bkUb){
+  bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
+  bkUb.addEventListener('dragleave',function(){bkUb.style.background='';});
+  bkUb.addEventListener('drop',function(e){e.preventDefault();bkUb.style.background='';if(e.dataTransfer.files[0]) loadBacklogXlsx(e.dataTransfer.files[0]);});
+}
+var svUb=$id('svUpbar');
+if(svUb){
+  svUb.addEventListener('dragover',function(e){e.preventDefault();svUb.style.background='var(--accent-soft)';});
+  svUb.addEventListener('dragleave',function(){svUb.style.background='';});
+  svUb.addEventListener('drop',function(e){e.preventDefault();svUb.style.background='';if(e.dataTransfer.files[0]) loadStoriesXlsx(e.dataTransfer.files[0]);});
+}
 
 // ═══════════════════════════════════════
 // HELPERS para importação do Jira
@@ -2453,64 +3126,77 @@ function doExportHTML(){
 }
 
 // ═══════════════════════════════════════
-// CAPTURE (lazy load html2canvas)
-// FIX: html2canvas não renderiza o .value de <input>/<textarea> — só o HTML estático.
-//      A solução é usar o callback onclone para substituir os inputs por spans/divs
-//      contendo o texto real antes da captura.
+// CAPTURE — copia para clipboard (Teams/e-mail) com fallback para download
 // ═══════════════════════════════════════
-function doCapture(){
+function captureTarget(){
+  if(curTab==='db') return $id('dbContent');
+  if(curTab==='me') return $id('pane-me');
+  if(curTab==='sv') return $id('pane-sv');
+  if(curTab==='bk') return $id('pane-bk');
+  return $id('pane-ep');
+}
+
+function captureOnClone(clonedDoc){
+  clonedDoc.querySelectorAll('input.einp').forEach(function(inp){
+    var val=inp.value;
+    var span=clonedDoc.createElement('span');
+    if(inp.classList.contains('date')){
+      if(val){var p=val.split('-');span.textContent=p.length===3?p[2]+'/'+p[1]+'/'+p[0]:val;}
+      else{span.textContent='—';}
+    }else{span.textContent=val||'—';}
+    span.className='einp-print';
+    if(inp.parentNode) inp.parentNode.replaceChild(span,inp);
+  });
+  clonedDoc.querySelectorAll('textarea.eimp').forEach(function(ta){
+    var div=clonedDoc.createElement('div');
+    div.textContent=ta.value||'';
+    div.className='eimp-print';
+    if(ta.parentNode) ta.parentNode.replaceChild(div,ta);
+  });
+  // Oculta o botão flutuante na captura
+  var fab=clonedDoc.getElementById('fabCap');
+  if(fab) fab.style.display='none';
+}
+
+function doCaptureClipboard(){
   if(typeof html2canvas==='undefined'){
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){doCapture();});
+    loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){doCaptureClipboard();});
     return;
   }
-  var tgt;
-  if(curTab==='db') tgt=$id('dbContent');
-  else if(curTab==='me') tgt=$id('pane-me');
-  else tgt=$id('pane-ep');
+  var fab=$id('fabCap');
+  if(fab) fab.classList.add('busy');
+  toast('📸 Capturando...','Aguarde um instante.');
 
-  html2canvas(tgt,{
-    scale:2,
-    useCORS:true,
-    backgroundColor:'#f4f6fb',
-    onclone:function(clonedDoc){
-      // Substitui inputs de texto/data por spans com o valor real
-      var inputs=clonedDoc.querySelectorAll('input.einp');
-      inputs.forEach(function(inp){
-        var val=inp.value;
-        var span=clonedDoc.createElement('span');
-        var isDate=inp.classList.contains('date');
-        if(isDate){
-          // Formata data em dd/mm/aaaa para a captura
-          if(val){
-            var p=val.split('-');
-            span.textContent=p.length===3?p[2]+'/'+p[1]+'/'+p[0]:val;
-          } else {
-            span.textContent='—';
-            span.className='empty';
-          }
-        } else {
-          span.textContent=val||'—';
-          if(!val) span.className='empty';
-        }
-        span.className=(span.className+' einp-print').trim();
-        if(inp.parentNode) inp.parentNode.replaceChild(span,inp);
-      });
-      // Substitui textareas por divs com o texto real
-      var tas=clonedDoc.querySelectorAll('textarea.eimp');
-      tas.forEach(function(ta){
-        var div=clonedDoc.createElement('div');
-        div.textContent=ta.value||'';
-        div.className='eimp-print';
-        if(ta.parentNode) ta.parentNode.replaceChild(div,ta);
-      });
+  html2canvas(captureTarget(),{scale:2,useCORS:true,backgroundColor:'#f4f6fb',onclone:captureOnClone})
+  .then(function(canvas){
+    if(fab) fab.classList.remove('busy');
+    // Tenta copiar para clipboard
+    if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+      canvas.toBlob(function(blob){
+        navigator.clipboard.write([new ClipboardItem({'image/png':blob})])
+        .then(function(){
+          toast('📋 Copiado!','Cole com Ctrl+V direto no Teams, Outlook ou WhatsApp.');
+        })
+        .catch(function(){fallbackDownload(canvas);});
+      },'image/png');
+    } else {
+      fallbackDownload(canvas);
     }
-  }).then(function(canvas){
-    var a=document.createElement('a');
-    a.download='leadtime_'+curTab+'_'+new Date().toISOString().split('T')[0]+'.png';
-    a.href=canvas.toDataURL('image/png'); a.click();
-    toast('Imagem capturada','Download iniciado.');
-  }).catch(function(e){toast('Erro ao capturar',e.message,'err');});
+  }).catch(function(e){
+    if(fab) fab.classList.remove('busy');
+    toast('Erro ao capturar',e.message,'err');
+  });
 }
+
+function fallbackDownload(canvas){
+  var a=document.createElement('a');
+  a.download='leadtime_'+curTab+'_'+new Date().toISOString().split('T')[0]+'.png';
+  a.href=canvas.toDataURL('image/png'); a.click();
+  toast('Download iniciado','Clipboard não disponível neste navegador — imagem baixada.');
+}
+
+// mantém compatibilidade com chamadas antigas
+function doCapture(){ doCaptureClipboard(); }
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS
@@ -2701,6 +3387,23 @@ var SEED=[
 
   function renderBootFromLocal(reason){
     var usedCache=localOrSeed();
+    // Restore stories from localStorage
+    loadStoriesLocal();
+    // Restore backlog snapshots
+    loadBacklogSnaps();
+    if(backlogSnaps.length){
+      var bkLastSnap=backlogSnaps[backlogSnaps.length-1];
+      var bkN=$id('bkUpName'); if(bkN) bkN.textContent='Dados salvos localmente';
+      var bkS=$id('bkUpSub'); if(bkS) bkS.textContent='#'+bkLastSnap.seq+' · '+bkLastSnap.stories.length+' histórias · recarregadas automaticamente';
+      var bkSv=$id('bkUpSaved'); if(bkSv) bkSv.classList.remove('hidden');
+      var bkSvT=$id('bkUpSavedTxt'); if(bkSvT) bkSvT.textContent='Importação #'+bkLastSnap.seq+' · '+backlogSnaps.length+' snapshots salvos';
+    }
+    if(allStories.length){
+      var upN=$id('svUpName'); if(upN) upN.textContent='Dados salvos localmente';
+      var upS=$id('svUpSub'); if(upS) upS.textContent=allStories.length+' estórias · recarregadas automaticamente';
+      var upSv=$id('svUpSaved'); if(upSv) upSv.classList.remove('hidden');
+      var upSvT=$id('svUpSavedTxt'); if(upSvT) upSvT.textContent='Salvo localmente · '+allStories.length+' estórias';
+    }
     var n=new Date();
     if(usedCache){
       $id('syncLbl').textContent=(reason||'Carregado do cache local')+' · '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -2772,5 +3475,11 @@ setInterval(function(){
 }, SHEETS_POLL_MS);
 
 </script>
+
+<!-- Botão flutuante copiar para Teams/e-mail -->
+<button class="fab-cap" id="fabCap" onclick="doCaptureClipboard()">
+  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  <span><span style="display:block">Copiar Tela</span><span class="fab-cap-sub">colar no Teams ou e-mail</span></span>
+</button>
 </body>
 </html>
