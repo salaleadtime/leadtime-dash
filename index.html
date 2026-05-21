@@ -507,7 +507,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   <button class="tabbt on" id="tab-ep" onclick="goTab('ep',this)">Épicos <span class="tab-ct" id="tabCtEp"></span></button>
   <button class="tabbt" id="tab-me" onclick="goTab('me',this)">📊 Medição <span class="tab-ct" id="tabCtMe"></span></button>
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
-  <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Estórias por Épico <span class="tab-ct" id="tabCtSv"></span></button>
+  <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -1349,7 +1349,7 @@ function activateTab(id){
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db')?'none':'flex';
 }
 
 
