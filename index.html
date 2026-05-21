@@ -192,7 +192,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .tc-hint{font-size:10px;color:#94a3b8}
 .tscr{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:860px}
-th{background:#7a0000;color:#fca5a5;padding:10px 14px;text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;white-space:nowrap;border-bottom:none}
+th{background:#7a0000;color:#ffffff;padding:10px 14px;text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;white-space:nowrap;border-bottom:none}
 td{padding:11px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#f0f7ff}
@@ -434,7 +434,6 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 <!-- TABS -->
 <nav class="tabs">
   <button class="tabbt on" id="tab-ep" onclick="goTab('ep',this)">Épicos <span class="tab-ct" id="tabCtEp"></span></button>
-  <button class="tabbt" id="tab-st" onclick="goTab('st',this)">📋 Estórias <span class="tab-ct" id="tabCtSt"></span></button>
   <button class="tabbt" id="tab-me" onclick="goTab('me',this)">📊 Medição <span class="tab-ct" id="tabCtMe"></span></button>
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
 </nav>
@@ -594,48 +593,6 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 </div>
 </div>
 
-<!-- ══ ESTÓRIAS PANE ══ -->
-<div class="pane" id="pane-st">
-
-  <!-- Upload bar de estórias -->
-  <div class="st-upbar" id="stUpbar">
-    <span class="st-up-ico">📋</span>
-    <span class="st-up-name" id="stUpName">Carregar planilha de Estórias</span>
-    <span class="st-up-sub" id="stUpSub">Arraste ou clique · .xlsx (exportação do Jira)</span>
-    <span class="st-up-saved hidden" id="stUpSaved">💾 <span id="stUpSavedTxt">Salvo localmente</span></span>
-    <input type="file" id="fist" accept=".xlsx,.xls">
-    <button class="up-btn" onclick="document.getElementById('fist').click()">Selecionar arquivo</button>
-  </div>
-
-  <div class="ep" id="stContent">
-
-    <!-- Barra de KPIs compacta -->
-    <div class="st-kpi-bar" id="stKpi"></div>
-
-    <!-- Filtros -->
-    <div class="st-ctrl" id="stFilters">
-      <span class="fl">Épico:</span>
-      <select class="fsel" id="stEpicF"><option value="all">Todos</option></select>
-      <div class="fsep"></div>
-      <span class="fl">Status:</span>
-      <select class="fsel" id="stStatusF">
-        <option value="all">Todos</option>
-        <option value="Em Desenvolvimento">Em Desenvolvimento</option>
-        <option value="Em teste">Em teste</option>
-        <option value="Em deploy para teste">Em deploy para teste</option>
-        <option value="Em homologação">Em homologação</option>
-        <option value="Em deploy para produção">Em deploy para produção</option>
-        <option value="Product Backlog">Product Backlog</option>
-      </select>
-      <span id="stTotal" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
-    </div>
-
-    <!-- Cards accordion por épico -->
-    <div class="st-card-list" id="stCardList"></div>
-
-  </div>
-</div>
-
 <!-- GitHub Integration modal -->
 <div class="ov" id="jbOv" onclick="if(event.target===this)closeJB()">
   <div class="mdl" style="max-width:480px">
@@ -726,7 +683,7 @@ function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='st') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -1639,11 +1596,8 @@ function renderMedStories(){
 
 function updateTabCounts(){
   var a=activeEpics().length, m=measuredEpics().length;
-  var stActive=allStories.filter(function(s){return !isStoryDone(s);}).length;
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
-  var stEl=$id('tabCtSt');
-  if(stEl) stEl.textContent=stActive||'';
 }
 
 // ═══════════════════════════════════════
@@ -1979,14 +1933,6 @@ ub.addEventListener('dragover',function(e){e.preventDefault();ub.classList.add('
 ub.addEventListener('dragleave',function(){ub.classList.remove('drag');});
 ub.addEventListener('drop',function(e){e.preventDefault();ub.classList.remove('drag');if(e.dataTransfer.files[0]) loadXlsx(e.dataTransfer.files[0]);});
 
-// Estórias upload
-$id('fist').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.files[0]);};
-var sub=$id('stUpbar');
-if(sub){
-  sub.addEventListener('dragover',function(e){e.preventDefault();sub.style.background='var(--accent-soft)';});
-  sub.addEventListener('dragleave',function(){sub.style.background='';});
-  sub.addEventListener('drop',function(e){e.preventDefault();sub.style.background='';if(e.dataTransfer.files[0]) loadStoriesXlsx(e.dataTransfer.files[0]);});
-}
 
 // ═══════════════════════════════════════
 // HELPERS para importação do Jira
@@ -2764,7 +2710,6 @@ var SEED=[
     }else{
       $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     }
-    loadStoriesLocal();
     renderAll(normalizeTab(loadTab()));
   }
 
