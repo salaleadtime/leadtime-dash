@@ -167,6 +167,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .up-btn{background:#e11d48;color:#fff;border:none;border-radius:var(--rads);padding:5px 13px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .15s;box-shadow:0 1px 4px rgba(225,29,72,.3)}
 .up-btn:hover{opacity:.85}
 #fi{display:none}
+#fiSv{display:none}
 
 /* ── PANES ── */
 .pane{display:none}.pane.on{display:block}
@@ -1316,6 +1317,7 @@ function goTab(id,btn){
   if(pane) pane.classList.add('on');
   curTab=id;
   saveTab(id);
+  syncUpbar(id);
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
@@ -1336,11 +1338,18 @@ function activateTab(id){
   if(pane) pane.classList.add('on');
   curTab=id;
   saveTab(id);
+  syncUpbar(id);
   if(id==='me') renderMed();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
   updateTabCounts();
+}
+
+// Mostra o upbar principal apenas nas abas que não têm upload próprio
+function syncUpbar(id){
+  var ub=$id('upbar');
+  if(ub) ub.style.display=(id==='sv')?'none':'flex';
 }
 
 
