@@ -2213,7 +2213,7 @@ function detectBacklogFormat(wb){
       var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase();});
       var hasChave=cells.some(function(c){return c.indexOf('chave')>=0||c==='key';});
       if(hasChave){
-        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1,labels:-1};
+        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1,labelsIdx:[]};
         cells.forEach(function(c,j){
           if(map.id<0&&(c.indexOf('chave')>=0||c==='key'||c==='chave do item')) map.id=j;
           else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
@@ -2221,7 +2221,7 @@ function detectBacklogFormat(wb){
           else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('time')>=0)) map.squad=j;
           else if(map.points<0&&(c.indexOf('story point')>=0||c.indexOf('pontos')>=0||c.indexOf('points')>=0||c.indexOf('estimativa')>=0||c.indexOf('historia point')>=0)) map.points=j;
           else if(map.sprint<0&&c.indexOf('sprint')>=0) map.sprint=j;
-          else if(map.labels<0&&(c.indexOf('rotulo')>=0||c.indexOf('label')>=0)) map.labels=j;
+          else if(c.indexOf('rotulo')>=0||c.indexOf('label')>=0) map.labelsIdx.push(j);
         });
         if(map.id>=0) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
       }
@@ -2258,7 +2258,9 @@ function loadBacklogXlsx(file){
         var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
         var pts=m.points>=0?parseFloat(row[m.points])||0:0;
         var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
-        var labels=m.labels>=0?(row[m.labels]||'').toString().trim():null;
+        var labels=m.labelsIdx.length>0
+          ? m.labelsIdx.map(function(li){return(row[li]||'').toString().trim();}).filter(Boolean).join(' ')
+          : null;
         stories.push({id:id,resumo:resumo,status:status,squad:squad,points:pts,sprint:sprint,labels:labels});
       }
       if(!stories.length){
