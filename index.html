@@ -483,28 +483,29 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .bk-delta-up{color:#dc2626;font-weight:700;font-size:12px}
 .bk-delta-down{color:#16a34a;font-weight:700;font-size:12px}
 .bk-delta-eq{color:#94a3b8;font-weight:700;font-size:12px}
-.bk-squad-list{display:flex;flex-direction:column;gap:6px}
-.bk-squad-card{background:#fff;border:1px solid #e8edf5;border-radius:10px;overflow:hidden;border-left:4px solid var(--sq-accent,#e2e8f0);box-shadow:0 1px 4px rgba(15,23,42,.06);transition:box-shadow .2s}
-.bk-squad-card:hover{box-shadow:0 3px 12px rgba(15,23,42,.1)}
+.bk-squad-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){.bk-squad-list{grid-template-columns:1fr}}
+.bk-squad-card{background:#fff;border:1px solid #e8edf5;border-radius:10px;overflow:hidden;border-top:4px solid var(--sq-accent,#e2e8f0);box-shadow:0 1px 4px rgba(15,23,42,.06);transition:box-shadow .2s}
+.bk-squad-card:hover{box-shadow:0 4px 16px rgba(15,23,42,.12)}
 .bk-squad-card.open .bk-squad-body{display:block}
-.bk-squad-hd{display:flex;align-items:center;gap:10px;padding:.65rem 1rem;cursor:pointer;user-select:none;min-height:52px}
+.bk-squad-hd{display:flex;flex-direction:column;gap:6px;padding:.9rem 1rem .75rem;cursor:pointer;user-select:none}
 .bk-squad-hd:hover{background:#fafafa}
-.bk-squad-arrow{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;font-size:9px;flex-shrink:0}
+.bk-squad-hd-row1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.bk-squad-hd-row2{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:18px}
+.bk-squad-arrow{display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;font-size:9px;flex-shrink:0;margin-top:2px}
 .bk-squad-card.open .bk-squad-arrow{transform:rotate(90deg);color:#475569}
-.bk-squad-info{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
-.bk-squad-name{font-size:13px;font-weight:700;color:#0f172a}
+.bk-squad-name{font-size:12px;font-weight:700;color:#0f172a;line-height:1.2}
 .bk-squad-delta{font-size:10px}
-.bk-squad-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
-.bk-squad-cnt{font-size:26px;font-weight:800;color:#334155;line-height:1;letter-spacing:-1.2px}
-.bk-squad-sub{font-size:9px;color:#94a3b8}
-.bk-refined-cnt{font-size:9.5px;font-weight:700;color:#16a34a;background:#dcfce7;padding:1px 6px;border-radius:4px;border:1px solid #86efac;margin-top:2px}
+.bk-squad-cnt{font-size:32px;font-weight:800;color:#334155;line-height:1;letter-spacing:-1.5px}
+.bk-squad-sub{font-size:9px;color:#94a3b8;margin-top:2px}
+.bk-refined-cnt{font-size:9.5px;font-weight:700;color:#16a34a;background:#dcfce7;padding:1px 6px;border-radius:4px;border:1px solid #86efac}
 .bk-squad-body{display:none;border-top:1px solid #f1f5f9}
 .bk-story-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;padding:.35rem 1rem .35rem 1.6rem;border-bottom:1px solid #f8fafc}
 .bk-story-row:last-child{border-bottom:none}
 .bk-story-row:hover{background:#fafafa}
 .bk-badge-refined{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;white-space:nowrap}
 .bk-badge-backlog{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;white-space:nowrap}
-.bk-spark-row{display:flex;align-items:flex-end;gap:2px;margin-top:4px;height:28px}
+.bk-spark-row{display:flex;align-items:flex-end;gap:2px;margin-top:6px;height:24px}
 .bk-spark-bar{width:8px;border-radius:2px 2px 0 0;flex-shrink:0;transition:height .3s}
 .bk-spark-lbl{font-size:9px;color:#94a3b8;margin-left:5px;align-self:center}
 
@@ -2387,17 +2388,21 @@ function renderBacklogView(){
 
     return '<div class="bk-squad-card" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
       '<div class="bk-squad-hd" onclick="toggleCard(\''+cardId+'\')">'+
-        '<div class="bk-squad-arrow">&#9658;</div>'+
-        '<div class="bk-squad-info">'+
+        '<div class="bk-squad-hd-row1">'+
           '<span class="bk-squad-name">'+esc(sq)+'</span>'+
-          (deltaHtml?'<span class="bk-squad-delta">'+deltaHtml+'</span>':'')+
-          sparkHtml+
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">'+
+            '<span class="bk-squad-cnt">'+cnt+'</span>'+
+            '<span class="bk-squad-sub">histórias</span>'+
+          '</div>'+
         '</div>'+
-        '<div class="bk-squad-right">'+
-          '<span class="bk-squad-cnt">'+cnt+'</span>'+
-          '<span class="bk-squad-sub">histórias em backlog</span>'+
-          (refined.length?'<span class="bk-refined-cnt">🃏 '+refined.length+' refinada'+(refined.length!==1?'s':'')+'</span>':'')+
+        '<div class="bk-squad-hd-row2">'+
+          '<span class="bk-squad-delta">'+(deltaHtml||'<span style="color:#94a3b8;font-size:10px">—</span>')+'</span>'+
+          '<div style="display:flex;align-items:center;gap:6px">'+
+            (refined.length?'<span class="bk-refined-cnt">🃏 '+refined.length+' refinada'+(refined.length!==1?'s':'')+'</span>':'')+
+            '<div class="bk-squad-arrow">&#9658;</div>'+
+          '</div>'+
         '</div>'+
+        sparkHtml+
       '</div>'+
       '<div class="bk-squad-body">'+rows+'</div>'+
     '</div>';
