@@ -2213,7 +2213,7 @@ function detectBacklogFormat(wb){
       var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase();});
       var hasChave=cells.some(function(c){return c.indexOf('chave')>=0||c==='key';});
       if(hasChave){
-        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1};
+        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1,labels:-1};
         cells.forEach(function(c,j){
           if(map.id<0&&(c.indexOf('chave')>=0||c==='key'||c==='chave do item')) map.id=j;
           else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
@@ -2221,6 +2221,7 @@ function detectBacklogFormat(wb){
           else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('time')>=0)) map.squad=j;
           else if(map.points<0&&(c.indexOf('story point')>=0||c.indexOf('pontos')>=0||c.indexOf('points')>=0||c.indexOf('estimativa')>=0||c.indexOf('historia point')>=0)) map.points=j;
           else if(map.sprint<0&&c.indexOf('sprint')>=0) map.sprint=j;
+          else if(map.labels<0&&(c.indexOf('rotulo')>=0||c.indexOf('label')>=0)) map.labels=j;
         });
         if(map.id>=0) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
       }
@@ -2257,7 +2258,8 @@ function loadBacklogXlsx(file){
         var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
         var pts=m.points>=0?parseFloat(row[m.points])||0:0;
         var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
-        stories.push({id:id,resumo:resumo,status:status,squad:squad,points:pts,sprint:sprint});
+        var labels=m.labels>=0?(row[m.labels]||'').toString().trim():null;
+        stories.push({id:id,resumo:resumo,status:status,squad:squad,points:pts,sprint:sprint,labels:labels});
       }
       if(!stories.length){
         toast('Nenhuma história encontrada','O arquivo não contém histórias válidas.','err');
@@ -2283,6 +2285,11 @@ function loadBacklogXlsx(file){
 }
 
 function isRefined(story){
+  // Se o campo labels foi importado, usar o rótulo "Refinado" como critério oficial.
+  // Fallback para story.points>0 em snapshots antigos que não têm o campo labels.
+  if(story.labels!==null&&story.labels!==undefined){
+    return stripAcc(story.labels).toLowerCase().indexOf('refinado')>=0;
+  }
   return story.points>0;
 }
 
@@ -2412,7 +2419,7 @@ function renderBacklogView(){
     '<div class="sv-kpi" style="margin-bottom:1rem">'+
       svKpiItem('#7a0000',totalBacklog,'Total Backlog','importação #'+cur.seq)+
       svKpiItem('#3b82f6',squads.length,'Squads com Backlog','grupos ativos')+
-      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com story points estimados')+
+      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo Refinado no Jira')+
       svKpiItem('#f59e0b',backlogSnaps.length,'Importações','snapshots históricos')+
     '</div>'+
     '<div class="bk-delta-bar">'+
