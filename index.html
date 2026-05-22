@@ -2285,12 +2285,7 @@ function loadBacklogXlsx(file){
 }
 
 function isRefined(story){
-  // Se o campo labels foi importado, usar o rótulo "Refinado" como critério oficial.
-  // Fallback para story.points>0 em snapshots antigos que não têm o campo labels.
-  if(story.labels!==null&&story.labels!==undefined){
-    return stripAcc(story.labels).toLowerCase().indexOf('refinad')>=0;
-  }
-  return story.points>0;
+  return story.labels ? stripAcc(story.labels).toLowerCase().indexOf('refinad')>=0 : false;
 }
 
 function renderBacklogView(){
