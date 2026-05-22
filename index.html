@@ -638,7 +638,13 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     <span class="fl">Squad:</span>
     <select class="fsel" id="medSqF"><option value="all">Todas</option></select>
     <div class="fsep"></div>
-    <span class="fl">Data Fim (período):</span>
+    <span class="fl">Trimestre:</span>
+    <button class="chip" id="medChip1" onclick="applyTriChip(1)">T1</button>
+    <button class="chip" id="medChip2" onclick="applyTriChip(2)">T2</button>
+    <button class="chip" id="medChip3" onclick="applyTriChip(3)">T3</button>
+    <button class="chip" id="medChip4" onclick="applyTriChip(4)">T4</button>
+    <div class="fsep"></div>
+    <span class="fl">Período:</span>
     <input type="date" class="fdate" id="medDateFrom" title="Início do período">
     <span class="fdate-sep">→</span>
     <input type="date" class="fdate" id="medDateTo" title="Fim do período">
@@ -679,8 +685,6 @@ tr:nth-child(even):hover td{background:#e8f0ff}
         <span style="font-size:10px;color:#94a3b8"><span id="medStCnt">—</span> · estórias concluídas em produção</span>
       </div>
       <div id="medStCardList" class="sv-card-list"></div>
-    </div>
-      </div>
     </div>
   </div>
 
@@ -852,6 +856,8 @@ var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
 var backlogSnaps=[];
 var stFilt={epic:'all',status:'all'};
 var medFilt={squad:'all',dateFrom:'',dateTo:''};
+var medTriChip=0; // 0=nenhum, 1-4=trimestre ativo
+var _medTriInited=false;
 var TAB_KEY='leadtime_sala_active_tab';
 
 // Persiste a aba ativa no localStorage
@@ -1802,6 +1808,18 @@ function populateSqF(){
 // MEDIÇÃO — aba de épicos finalizados
 // ═══════════════════════════════════════
 function renderMed(){
+  // Auto-inicia com o trimestre atual na primeira abertura da aba
+  if(!_medTriInited){
+    _medTriInited=true;
+    var triNow=getCurrentTrimester();
+    medTriChip=triNow.q;
+    var triDates=getTriDates(triNow.q);
+    medFilt.dateFrom=triDates.from; medFilt.dateTo=triDates.to;
+    var df=$id('medDateFrom'); if(df) df.value=triDates.from;
+    var dt=$id('medDateTo');   if(dt) dt.value=triDates.to;
+  }
+  syncTriChips();
+
   var all=measuredEpics();
 
   // Populate squad dropdown preserving selection
@@ -1905,8 +1923,29 @@ function toggleMedStories(){
   body.style.display=open?'block':'none';
   if(ico) ico.textContent=open?'▼ ocultar':'▶ mostrar';
 }
+function fmtIso(d){
+  var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
+}
+function getTriDates(q){
+  var y=new Date().getFullYear(), sm=(q-1)*3;
+  return {from:fmtIso(new Date(y,sm,1)), to:fmtIso(new Date(y,sm+3,0))};
+}
+function applyTriChip(q){
+  var dates=getTriDates(q);
+  medFilt.dateFrom=dates.from; medFilt.dateTo=dates.to; medTriChip=q;
+  var df=$id('medDateFrom'); if(df) df.value=dates.from;
+  var dt=$id('medDateTo');   if(dt) dt.value=dates.to;
+  renderMed();
+}
+function syncTriChips(){
+  for(var q=1;q<=4;q++){
+    var ch=$id('medChip'+q);
+    if(ch) ch.classList.toggle('on', medTriChip===q);
+  }
+}
 function clearMedDateF(){
-  medFilt.dateFrom=''; medFilt.dateTo='';
+  medFilt.dateFrom=''; medFilt.dateTo=''; medTriChip=0;
   var df=$id('medDateFrom'); if(df) df.value='';
   var dt=$id('medDateTo');   if(dt) dt.value='';
   renderMed();
@@ -1985,11 +2024,12 @@ $id('fDateFim').onchange=function(){filt.dateFim=this.value||null; updateDateCle
 
 // Filtros da aba Medição
 $id('medSqF').onchange=function(){medFilt.squad=this.value; renderMed();};
-$id('medDateFrom').onchange=function(){medFilt.dateFrom=this.value||''; renderMed();};
-$id('medDateTo').onchange=function(){medFilt.dateTo=this.value||''; renderMed();};
+$id('medDateFrom').onchange=function(){medFilt.dateFrom=this.value||''; medTriChip=0; renderMed();};
+$id('medDateTo').onchange=function(){medFilt.dateTo=this.value||''; medTriChip=0; renderMed();};
 
-// chips
-document.querySelectorAll('.chip').forEach(function(btn){
+// chips — só aplica o handler global nos chips que têm data-f (status/LT/squad)
+// Chips sem data-f (tri chips, clear buttons) mantêm o próprio onclick inline
+document.querySelectorAll('.chip[data-f]').forEach(function(btn){
   btn.onclick=function(){
     var f=btn.dataset.f;
     document.querySelectorAll('.chip[data-f="'+f+'"]').forEach(function(b){b.classList.remove('on');});
