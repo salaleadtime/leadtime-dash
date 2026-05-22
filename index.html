@@ -960,7 +960,7 @@ function jbSave(){
   fetch(JB_API+'/b/'+JB.binId,{
     method:'PUT',
     headers:{'Content-Type':'application/json','X-Master-Key':JB.key,'X-Bin-Versioning':'false'},
-    body:JSON.stringify(allData)
+    body:JSON.stringify({epics:allData,backlog:backlogSnaps,_v:2})
   })
   .then(function(r){
     if(!r.ok) return r.json().then(function(e){throw new Error(e.message||'HTTP '+r.status);});
@@ -1064,9 +1064,11 @@ function connectJB(){
 function _jbMergeAndRender(msg){
   jbLoad(function(err,data){
     if(err){ toast('Aviso nuvem',err,'warn'); return; }
+    var epics=Array.isArray(data)?data:(data&&data.epics?data.epics:[]);
+    var bkSnaps=(!Array.isArray(data)&&data&&Array.isArray(data.backlog))?data.backlog:[];
     var existing={};
     allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
-    allData=data.map(function(r){
+    allData=epics.map(function(r){
       var loc=existing[r.id];
       var sIni=isValidDate(r.ini)?r.ini:(loc?loc.ini:null);
       var sFim=isValidDate(r.fim)?r.fim:(loc?loc.fim:null);
@@ -1075,6 +1077,7 @@ function _jbMergeAndRender(msg){
     Object.keys(existing).forEach(function(id){
       if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
     });
+    if(bkSnaps.length){ backlogSnaps=bkSnaps; saveBacklogSnaps(); }
     saveLocal(); renderAll();
     setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     if(msg) toast('☁️ '+msg,allData.length+' épicos sincronizados em tempo real.');
@@ -2193,6 +2196,7 @@ function loadStoriesLocal(){
 // ═══════════════════════════════════════
 function saveBacklogSnaps(){
   try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+  jbAutoSave();
 }
 function loadBacklogSnaps(){
   try{
@@ -3488,11 +3492,15 @@ var SEED=[
 
   renderBootFromLocal();
 
-  // Nuvem JSONBin só entra se Google Sheets não estiver configurado.
+  // Nuvem JSONBin: sempre carrega quando configurado (épicos como fallback + backlog snapshots compartilhados).
   if(jbIsConfigured()){
     jbLoad(function(err,data){
       if(err){ setSyncLabel('⚠️ Nuvem offline — usando dados locais'); return; }
-      allData=(Array.isArray(data)?data:[]).map(makeRow);
+      // Suporta formato antigo (array de épicos) e novo ({epics,backlog,_v:2})
+      var epics=Array.isArray(data)?data:(data&&data.epics?data.epics:[]);
+      var bkSnaps=(!Array.isArray(data)&&data&&Array.isArray(data.backlog))?data.backlog:[];
+      allData=epics.map(makeRow);
+      if(bkSnaps.length){ backlogSnaps=bkSnaps; saveBacklogSnaps(); }
       saveLocal(); renderAll(normalizeTab(loadTab()));
       setSyncLabel('✅ Nuvem sincronizada · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
