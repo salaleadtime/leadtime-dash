@@ -919,9 +919,18 @@ function jbLoadConfig(){
     if(c.key)   JB.key=c.key;
     if(c.binId) JB.binId=c.binId;
   }catch(e){}
+  // Se não tem bin ID local, tenta extrair do hash da URL (ex: #jb=abc123)
+  if(!JB.binId){
+    var m=location.hash.match(/[#&]jb=([^&]+)/);
+    if(m) JB.binId=decodeURIComponent(m[1]);
+  }
 }
 function jbSaveConfig(){
   try{ localStorage.setItem(JB_CONFIG_KEY,JSON.stringify({key:JB.key,binId:JB.binId})); }catch(e){}
+  // Coloca o bin ID no hash da URL para que quem receber o link já sincronize automaticamente
+  if(JB.binId){
+    try{ history.replaceState(null,'',location.pathname+'#jb='+encodeURIComponent(JB.binId)); }catch(e){}
+  }
 }
 function jbIsConfigured(){ return !!(JB.binId); }
 
@@ -1030,7 +1039,7 @@ function connectJB(){
   // Se já tem Bin ID, conecta direto e faz merge
   if(existingBinId){
     JB.key=key; JB.binId=existingBinId;
-    jbSaveConfig(); jbUpdateBtn(); closeJB();
+    jbSaveConfig(); jbUpdateBtn(); closeJB(); // jbSaveConfig já grava o hash na URL
     _jbMergeAndRender('Nuvem reconectada ✓');
     return;
   }
@@ -1052,8 +1061,8 @@ function connectJB(){
     closeJB();
     setSyncLabel('✅ Nuvem ativada · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     toast('☁️ Nuvem ativada!',
-      'Bin ID: <code>'+JB.binId+'</code><br>'+
-      'Compartilhe o dashboard com o time — os dados sincronizam automaticamente para todos.');
+      'Copie a URL do navegador agora (ela inclui o ID do bin) e compartilhe com o time — '+
+      'todos que abrirem esse link verão o backlog sincronizado automaticamente.');
   })
   .catch(function(e){
     $id('jbConnectBtn').textContent='☁️ Ativar Nuvem'; $id('jbConnectBtn').disabled=false;
