@@ -841,7 +841,13 @@ tr:nth-child(even):hover td{background:#e8f0ff}
       <div class="gh-form-row">
         <span class="gh-form-label">Bin ID</span>
         <input class="mi" id="jbBinId" placeholder="Gerado automaticamente ao conectar" readonly style="background:var(--accent-soft);color:var(--accent);font-family:monospace;font-size:11px">
-        <span class="gh-form-hint">Compartilhe este ID com quem também precisar editar os dados.</span>
+      </div>
+      <div style="margin-top:.5rem">
+        <button class="up-btn" style="background:#0f172a;font-size:11px" onclick="var v=$id('jbBinId').value;if(v){navigator.clipboard.writeText(v).then(function(){$id('jbCopyFeedback').textContent='✅ Copiado!';setTimeout(function(){$id('jbCopyFeedback').textContent='';},2000);});}">📋 Copiar Bin ID</button>
+        <span id="jbCopyFeedback" style="font-size:11px;color:#16a34a;margin-left:8px"></span>
+      </div>
+      <div style="font-size:10.5px;color:#64748b;margin-top:.5rem;line-height:1.5">
+        Cole esse Bin ID aqui no chat para que o Claude possa fixá-lo no código e o time acesse o backlog automaticamente.
       </div>
     </div>
 
