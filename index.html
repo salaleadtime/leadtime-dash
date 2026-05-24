@@ -964,6 +964,10 @@ function jbLoadConfig(){
     var m=location.hash.match(/[#&]jb=([^&]+)/);
     if(m) JB.binId=decodeURIComponent(m[1]);
   }
+  // Garante que o hash sempre reflita o bin ID atual (para links compartilháveis)
+  if(JB.binId && location.hash.indexOf('jb=') < 0){
+    try{ history.replaceState(null,'',location.pathname+'#jb='+encodeURIComponent(JB.binId)); }catch(e){}
+  }
 }
 function jbSaveConfig(){
   try{ localStorage.setItem(JB_CONFIG_KEY,JSON.stringify({key:JB.key,binId:JB.binId})); }catch(e){}
