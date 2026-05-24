@@ -415,6 +415,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .sv-up-name{font-size:11px;font-weight:600;color:#475569}
 .sv-up-sub{font-size:10px;color:var(--tx3);margin-left:4px}
 .sv-kpi{display:flex;gap:0;margin-bottom:1rem;background:var(--card);border-radius:var(--rad);overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+#svKpi{background:transparent;border:none;box-shadow:none;border-radius:0;overflow:visible;padding:0}
 .sv-kpi-item{flex:1;background:var(--card);padding:.7rem 1rem;display:flex;flex-direction:column;gap:2px;min-width:0;border-right:1px solid #f1f5f9;position:relative}
 .sv-kpi-item:last-child{border-right:none}
 .sv-kpi-item::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-accent,#e2e8f0)}
@@ -2433,7 +2434,7 @@ function renderBacklogView(){
     var rows=sqStories.map(function(s){
       var ref=isRefined(s);
       var badge=ref
-        ?'<span class="bk-badge-refined">🃏 Refinado'+(s.points?' · '+s.points+'pts':'')+'</span>'
+        ?'<span class="bk-badge-refined">🃏 Refinada</span>'
         :'<span class="bk-badge-backlog">📋 Backlog</span>';
       return '<div class="bk-story-row">'+
         '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
