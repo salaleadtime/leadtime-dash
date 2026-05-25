@@ -802,7 +802,10 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     <span class="sv-up-sub" id="bkUpSub">Histórias em backlog · Export Jira filtrado por status · .xlsx</span>
     <span class="up-saved hidden" id="bkUpSaved">💾 <span id="bkUpSavedTxt">Salvo localmente</span></span>
     <input type="file" id="fiBk" accept=".xlsx,.xls">
+    <input type="file" id="fiBkJson" accept=".json" style="display:none">
     <button class="up-btn" onclick="document.getElementById('fiBk').click()">Selecionar arquivo</button>
+    <button class="up-btn" style="background:#0f172a" onclick="exportBacklogJson()" title="Baixar todos os snapshots como .json para compartilhar com o time">⬇ Exportar Backlog</button>
+    <button class="up-btn" style="background:#475569" onclick="document.getElementById('fiBkJson').click()" title="Importar snapshots exportados por outro membro do time">⬆ Importar Backlog</button>
   </div>
 
   <div class="ep" id="bkContent">
@@ -2264,6 +2267,41 @@ function loadBacklogSnaps(){
   }catch(e){ backlogSnaps=[]; }
 }
 
+function exportBacklogJson(){
+  if(!backlogSnaps.length){ toast('Nada para exportar','Importe pelo menos um arquivo de backlog primeiro.','warn'); return; }
+  var blob=new Blob([JSON.stringify({_type:'leadtime_backlog_v1',snaps:backlogSnaps},null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='backlog_snapshots_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Exportado!','Envie o arquivo .json pelo Teams ou e-mail. O time importa clicando em "⬆ Importar Backlog".');
+}
+
+function importBacklogJson(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      var snaps=data.snaps||(Array.isArray(data)?data:null);
+      if(!snaps||!snaps.length) throw new Error('formato inválido');
+      // Merge: mantém snapshots locais que não existem no arquivo
+      var existingSeqs=new Set(backlogSnaps.map(function(s){return s.seq;}));
+      var added=0;
+      snaps.forEach(function(s){
+        if(!existingSeqs.has(s.seq)){ backlogSnaps.push(s); added++; }
+      });
+      backlogSnaps.sort(function(a,b){return a.seq-b.seq;});
+      saveBacklogSnaps();
+      renderBacklogView();
+      toast('Backlog importado!', snaps.length+' snapshots carregados'+(added?' · '+added+' novos':'· já estavam atualizados')+'. ');
+    }catch(err){
+      toast('Erro ao importar','Arquivo inválido ou corrompido: '+err.message,'err');
+    }
+  };
+  reader.readAsText(file);
+}
+
 function detectBacklogFormat(wb){
   var sheetNames=wb.SheetNames;
   for(var s=0;s<sheetNames.length;s++){
@@ -2779,6 +2817,7 @@ $id('fiSv').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.
 
 // Backlog upload
 $id('fiBk').onchange=function(e){if(e.target.files[0]) loadBacklogXlsx(e.target.files[0]);};
+$id('fiBkJson').onchange=function(e){if(e.target.files[0]){ importBacklogJson(e.target.files[0]); this.value=''; }};
 var bkUb=$id('bkUpbar');
 if(bkUb){
   bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
