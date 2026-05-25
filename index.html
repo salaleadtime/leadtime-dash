@@ -2742,7 +2742,7 @@ function renderStoryView(){
       svKpiHdItem('#cc0000',totalSt,'Total de Estórias','em '+epicsWithSt+' épicos')+
       svKpiHdItem('#16a34a',nearCnt,'Próximos à Entrega','homolog ou deploy/prod')+
       svKpiHdItem('#dc2626',fullCnt,'Épicos Lotados','≥ '+STORY_LIMIT+' estórias')+
-      svKpiHdItem('#7c3aed',noStEpics.length,'Sem Estórias','épicos sem vínculo')+
+      (allStories.length?'':svKpiHdItem('#7c3aed',noStEpics.length,'Sem Estórias','épicos sem vínculo'))+
     '</div>';
 
   // Apply squad filter
@@ -2787,13 +2787,13 @@ function renderStoryView(){
           '<th>Distribuição de Fase</th>'+
           '<th class="tc">Status</th>'+
         '</tr></thead>'+
-        '<tbody>'+rows+(noStRows?
+        '<tbody>'+rows+(noStRows && !allStories.length?
           '<tr><td colspan="6" style="padding:6px 14px;font-size:9.5px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-top:2px solid #e2e8f0">Épicos sem estórias vinculadas</td></tr>'+noStRows
         :'')+
         '</tbody>'+
         '<tfoot><tr>'+
           '<td colspan="2">'+filteredEpicIds.length+' épico'+(filteredEpicIds.length!==1?'s':'')+' exibido'+(filteredEpicIds.length!==1?'s':'')+
-            (noStoriesFiltered.length?' · '+noStoriesFiltered.length+' sem estórias':'')+
+            (!allStories.length && noStoriesFiltered.length?' · '+noStoriesFiltered.length+' sem estórias':'')+
           '</td>'+
           '<td style="text-align:center"></td>'+
           '<td style="text-align:center;font-size:16px;font-weight:800;color:#0f172a">'+totalFilSt+'</td>'+
