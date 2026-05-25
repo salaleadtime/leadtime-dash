@@ -946,7 +946,8 @@ var SEED_VERSION='2026-04-27-v28-get-save-confirmado';
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbz8Gu4n19dKP09PCD4epmPvcPOaSs-aqg-jHDul1odle6AB_kXzQdo_LbopFVUclaHGGQ/exec';
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
+var BK_GAS_URL     = 'https://script.google.com/macros/s/AKfycbz8Gu4n19dKP09PCD4epmPvcPOaSs-aqg-jHDul1odle6AB_kXzQdo_LbopFVUclaHGGQ/exec';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
@@ -2270,13 +2271,12 @@ function loadBacklogSnaps(){
 }
 
 function gasLoadBacklog(cb){
-  if(!SHEETS_WEBAPP){ if(cb) cb('no webapp'); return; }
-  var url=SHEETS_WEBAPP+'?action=getBacklog&t='+Date.now();
+  if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  var url=BK_GAS_URL+'?action=getBacklog&t='+Date.now();
   fetch(url)
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(json){
       if(json && json.ok && Array.isArray(json.backlog) && json.backlog.length){
-        // Mescla: snapshots remotos + locais, sem duplicatas, ordena por seq
         var existSeqs=new Set(backlogSnaps.map(function(s){ return s.seq; }));
         var added=0;
         json.backlog.forEach(function(s){
@@ -2296,14 +2296,17 @@ function gasLoadBacklog(cb){
 }
 
 function gasSaveBacklog(){
-  if(!SHEETS_WEBAPP || !backlogSnaps.length || _gasBacklogSaving) return;
+  if(!BK_GAS_URL || !backlogSnaps.length || _gasBacklogSaving) return;
   _gasBacklogSaving=true;
-  var payload=encodeURIComponent(JSON.stringify(backlogSnaps));
-  var url=SHEETS_WEBAPP+'?action=saveBacklog&t='+Date.now()+'&payload='+payload;
-  fetch(url)
-    .then(function(r){ return r.json(); })
-    .catch(function(){})
-    .finally(function(){ _gasBacklogSaving=false; });
+  // Usa POST mode:no-cors para enviar payload grande sem limitação de URL.
+  // O GAS precisa ter doPost definido para receber via e.postData.contents.
+  fetch(BK_GAS_URL+'?action=saveBacklog', {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify(backlogSnaps)
+  })
+  .catch(function(){})
+  .finally(function(){ _gasBacklogSaving=false; });
 }
 
 function exportBacklogJson(){
