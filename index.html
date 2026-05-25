@@ -2298,15 +2298,15 @@ function gasLoadBacklog(cb){
 function gasSaveBacklog(){
   if(!BK_GAS_URL || !backlogSnaps.length || _gasBacklogSaving) return;
   _gasBacklogSaving=true;
-  // Usa POST mode:no-cors para enviar payload grande sem limitação de URL.
-  // O GAS precisa ter doPost definido para receber via e.postData.contents.
-  fetch(BK_GAS_URL+'?action=saveBacklog', {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify(backlogSnaps)
-  })
-  .catch(function(){})
-  .finally(function(){ _gasBacklogSaving=false; });
+  // Envia via GET o snapshot mais recente.
+  // POST com GAS perde o body no redirect 302; GET é confiável.
+  var latest=backlogSnaps[backlogSnaps.length-1];
+  var payload=encodeURIComponent(JSON.stringify([latest]));
+  var url=BK_GAS_URL+'?action=saveBacklog&t='+Date.now()+'&payload='+payload;
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .catch(function(){})
+    .finally(function(){ _gasBacklogSaving=false; });
 }
 
 function exportBacklogJson(){
