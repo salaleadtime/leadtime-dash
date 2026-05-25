@@ -549,6 +549,14 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .sv-kpi-hd-v{font-size:20px;font-weight:800;letter-spacing:-1px;color:#0f172a;line-height:1}
 .sv-kpi-hd-l{font-size:9px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 
+/* ── HISTÓRICO DE FIM — badge e modal ── */
+.era-med-badge{display:inline-flex;align-items:center;gap:3px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:10px;font-size:9px;font-weight:700;padding:1px 6px;margin-top:3px;cursor:default;white-space:nowrap;letter-spacing:.2px}
+.hist-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.hist-entregue{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.hist-revertido-ui{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+.hist-revertido-sheets{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.hist-deletado{background:#1e293b;color:#f8fafc;border:1px solid #475569}
+
 </style>
 </head>
 <body>
@@ -574,6 +582,10 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   <button class="tbtn" onclick="doRefresh()">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     <span>Atualizar</span>
+  </button>
+  <button class="tbtn" id="histBtn" onclick="openHistorico()" title="Histórico de movimentações entre Épicos e Medição">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span>Histórico</span>
   </button>
   <button class="tbtn" onclick="doCaptureClipboard()" title="Copiar imagem · colar no Teams ou e-mail">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -885,6 +897,19 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   </div>
 </div>
 
+<!-- Modal: Histórico de movimentações Medição ↔ Épicos -->
+<div class="ov" id="histOv" onclick="if(event.target===this)closeHistorico()">
+  <div class="mdl" style="max-width:780px;width:96vw">
+    <div class="mt">Histórico — Movimentações entre Medição e Épicos</div>
+    <div class="ms">Registra toda alteração no campo <strong>Data Fim</strong>: entregas, reversões pela UI e mudanças vindas do Google Sheets. Épicos revertidos podem ser restaurados com 1 clique.</div>
+    <div id="histBody" style="max-height:460px;overflow-y:auto;margin:.75rem 0;font-size:11px"></div>
+    <div class="mf">
+      <button class="mb" onclick="histLimpar()" style="color:#dc2626">Limpar histórico local</button>
+      <button class="mb" onclick="closeHistorico()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast notification -->
 <div class="toast" id="toast">
   <div class="toast-t" id="toastT">—</div>
@@ -937,6 +962,7 @@ function rememberTab(){
 var STORAGE_KEY='leadtime_sala_v8_data';
 var STORAGE_META='leadtime_sala_v8_meta';
 var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
+var FIM_LOG_KEY='leadtime_sala_v8_fim_log';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
@@ -1197,6 +1223,7 @@ function makeRow(r){
     statusAntes:r.statusAntes||null,
     ini:sIni,
     fim:sFim,
+    fimAntes:isValidDate(r.fimAntes)?r.fimAntes:null,
     dataPrevista:sPrev,
     chg:r.chg||'',
     impedimento:r.impedimento||'',
@@ -1206,6 +1233,40 @@ function makeRow(r){
 function replaceFromSharedSource(rows){
   if(!Array.isArray(rows)||!rows.length) return false;
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
+
+  // Detectar mudanças de fim vindas do Sheets antes do merge
+  var localMap={};
+  allData.forEach(function(r){ if(r&&r.id) localMap[r.id]=r; });
+  incoming.forEach(function(r){
+    var old=localMap[r.id];
+    if(!old) return;
+    var oldFimValido=isValidDate(old.fim);
+    var newFimValido=isValidDate(r.fim);
+    if(oldFimValido && !newFimValido){
+      // fim removido externamente no Sheets — preservar fimAntes e logar
+      r.fimAntes=old.fimAntes||old.fim;
+      logFimChange(r.id,old.fim,'','REVERTIDO_SHEETS');
+      toast('⚠ Medição revertida via Sheets',
+        '<strong>'+esc(r.id)+'</strong>: Data Fim removida externamente na planilha. Verifique o <a href="#" onclick="openHistorico();return false;" style="color:#dc2626;font-weight:700">Histórico</a> para restaurar.','err');
+    } else if(!oldFimValido && newFimValido && old.fimAntes){
+      // fim restaurado no Sheets — limpar fimAntes
+      r.fimAntes=null;
+    } else if(oldFimValido && newFimValido && old.fim!==r.fim){
+      logFimChange(r.id,old.fim,r.fim,'ALTERADO_SHEETS');
+    }
+  });
+
+  // Detectar épicos deletados do Sheets que tinham fim ou fimAntes
+  allData.forEach(function(r){
+    if(!r||!r.id) return;
+    var inIds={};
+    incoming.forEach(function(x){ if(x&&x.id) inIds[x.id]=true; });
+    if(!inIds[r.id] && (isValidDate(r.fim)||isValidDate(r.fimAntes))){
+      logFimChange(r.id,r.fim||r.fimAntes||'','','DELETADO_SHEETS');
+      toast('🗑 Épico removido do Sheets',
+        '<strong>'+esc(r.id)+'</strong> sumiu da planilha e tinha Data Fim registrada. Verifique o <a href="#" onclick="openHistorico();return false;" style="color:#dc2626;font-weight:700">Histórico</a>.','err');
+    }
+  });
 
   // Merge: Sheets é autoritativo para registros que existem nele.
   // Registros locais (SEED/import) que NÃO existem no Sheets são preservados.
@@ -1759,7 +1820,9 @@ function renderTbl(){
     var gi=allData.indexOf(r);
     var lc=ltMap[ltCls(r.lt)];
     return '<tr>'+
-      '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
+      '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div>'+
+        (isValidDate(r.fimAntes)?'<div class="era-med-badge" title="Estava em Medição com Data Fim '+esc(r.fimAntes)+'">↩ era Medição · '+esc(r.fimAntes.slice(5).replace('-','/'))+'</div>':'')+
+      '</td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
@@ -1786,6 +1849,107 @@ function renderTbl(){
   }
 }
 
+// ═══════════════════════════════════════
+// HISTÓRICO DE FIM — rastreabilidade de movimentações Medição ↔ Épicos
+// ═══════════════════════════════════════
+function logFimChange(epicId,fimDe,fimPara,origem){
+  var log=[];
+  try{ log=JSON.parse(localStorage.getItem(FIM_LOG_KEY)||'[]'); }catch(e){}
+  if(!Array.isArray(log)) log=[];
+  log.push({ts:new Date().toISOString(),id:epicId,de:fimDe||'',para:fimPara||'',origem:origem});
+  if(log.length>300) log=log.slice(-300);
+  try{ localStorage.setItem(FIM_LOG_KEY,JSON.stringify(log)); }catch(e){}
+  // Atualizar badge do botão de histórico
+  var btn=$id('histBtn');
+  if(btn&&(origem==='REVERTIDO_UI'||origem==='REVERTIDO_SHEETS'||origem==='DELETADO_SHEETS')){
+    btn.style.background='rgba(194,65,12,.15)';
+    btn.style.borderColor='#fed7aa';
+    btn.style.color='#c2410c';
+  }
+}
+
+function openHistorico(){
+  renderHistorico();
+  $id('histOv').classList.add('on');
+  // Resetar destaque do botão
+  var btn=$id('histBtn');
+  if(btn){btn.style.background='';btn.style.borderColor='';btn.style.color='';}
+}
+function closeHistorico(){ $id('histOv').classList.remove('on'); }
+
+function histLimpar(){
+  if(!confirm('Apagar o histórico local? Essa ação não pode ser desfeita.')) return;
+  try{ localStorage.removeItem(FIM_LOG_KEY); }catch(e){}
+  renderHistorico();
+}
+
+function restaurarFim(epicId,fimAntes){
+  if(!epicId||!fimAntes) return;
+  var rec=allData.find(function(r){ return r.id===epicId; });
+  if(!rec){ toast('Épico não encontrado','<strong>'+esc(epicId)+'</strong> não está mais na lista de ativos.','err'); return; }
+  if(isValidDate(rec.fim)){ toast('Épico já está em Medição','<strong>'+esc(epicId)+'</strong> já tem Data Fim registrada.','warn'); return; }
+  rec.fim=fimAntes;
+  rec.fimAntes=null;
+  if(rec.status&&rec.status!=='Concluído'&&!rec.statusAntes) rec.statusAntes=rec.status;
+  rec.status='Concluído';
+  rec.lt=calcLT(rec.ini,rec.fim);
+  logFimChange(epicId,'',fimAntes,'RESTAURADO');
+  saveLocal();
+  saveToSheets([{id:rec.id,status:rec.status||'',statusAntes:rec.statusAntes||'',chg:rec.chg||'',impedimento:rec.impedimento||'',ini:rec.ini||'',fim:rec.fim||'',fimAntes:'',dataPrevista:rec.dataPrevista||''}]);
+  renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab('me');
+  toast('✓ Data Fim restaurada','<strong>'+esc(epicId)+'</strong> voltou para Medição com Data Fim <strong>'+fimAntes+'</strong>.');
+  closeHistorico();
+}
+
+function renderHistorico(){
+  var el=$id('histBody');
+  var log=[];
+  try{ log=JSON.parse(localStorage.getItem(FIM_LOG_KEY)||'[]'); }catch(e){}
+  if(!Array.isArray(log)||!log.length){
+    el.innerHTML='<div style="color:#94a3b8;padding:1.2rem 0;text-align:center">Nenhuma movimentação registrada neste navegador ainda.<br><span style="font-size:10px">O histórico é gravado a partir de agora.</span></div>';
+    return;
+  }
+  var rows=log.slice().reverse().map(function(e){
+    var tagClass,tagLabel,rowBg='',acaoExtra='';
+    if(e.origem==='ENTREGUE')            { tagClass='hist-entregue';          tagLabel='Entregue → Medição'; }
+    else if(e.origem==='REVERTIDO_UI')   { tagClass='hist-revertido-ui';       tagLabel='↩ Revertido (UI)';  rowBg='background:#fff7ed'; }
+    else if(e.origem==='REVERTIDO_SHEETS'){ tagClass='hist-revertido-sheets';  tagLabel='↩ Revertido (Sheets)'; rowBg='background:#fef2f2'; }
+    else if(e.origem==='DELETADO_SHEETS'){ tagClass='hist-deletado';           tagLabel='🗑 Deletado do Sheets'; rowBg='background:#1e2939'; }
+    else if(e.origem==='RESTAURADO')     { tagClass='hist-entregue';           tagLabel='✓ Restaurado'; }
+    else if(e.origem==='ALTERADO_SHEETS'){ tagClass='hist-entregue';           tagLabel='Alterado (Sheets)'; }
+    else                                  { tagClass='hist-entregue';           tagLabel=e.origem||'?'; }
+
+    // Botão restaurar: só para revertidos que o épico ainda existe sem fim
+    if(e.origem==='REVERTIDO_UI'||e.origem==='REVERTIDO_SHEETS'){
+      var rec=allData.find(function(r){ return r.id===e.id; });
+      if(rec&&!isValidDate(rec.fim)&&isValidDate(e.de)){
+        acaoExtra='<button onclick="restaurarFim(\''+esc(e.id)+'\',\''+esc(e.de)+'\')" '+
+          'style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid #bfdbfe;'+
+          'background:#eff6ff;color:#1d4ed8;cursor:pointer;font-family:inherit;margin-left:6px;font-weight:700">'+
+          '↩ Restaurar '+esc(e.de)+'</button>';
+      }
+    }
+
+    var ts=new Date(e.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return '<tr style="'+rowBg+'">'+
+      '<td style="padding:6px 10px;white-space:nowrap;color:#475569;font-size:10px">'+esc(ts)+'</td>'+
+      '<td style="padding:6px 10px;font-family:ui-monospace,monospace;font-size:10px;font-weight:700">'+esc(e.id)+'</td>'+
+      '<td style="padding:6px 10px"><span class="hist-tag '+tagClass+'">'+tagLabel+'</span>'+acaoExtra+'</td>'+
+      '<td style="padding:6px 10px;color:#94a3b8;font-size:10px">'+esc(e.de||'—')+'</td>'+
+      '<td style="padding:6px 10px;font-size:10px">'+esc(e.para||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+  el.innerHTML='<table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr style="background:#f8fafc;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">'+
+      '<th style="padding:5px 10px;text-align:left;white-space:nowrap">Data/Hora</th>'+
+      '<th style="padding:5px 10px;text-align:left">Épico</th>'+
+      '<th style="padding:5px 10px;text-align:left">Ação</th>'+
+      '<th style="padding:5px 10px;text-align:left">Fim anterior</th>'+
+      '<th style="padding:5px 10px;text-align:left">Novo fim</th>'+
+    '</tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>';
+}
+
 function fc(el){
   var tabToRestore=rememberTab();
   var gi=parseInt(el.dataset.i), f=el.dataset.f;
@@ -1808,20 +1972,24 @@ function fc(el){
     var newFimValid=isValidDate(rec.fim);
 
     if(!oldFimValid && newFimValid){
+      rec.fimAntes=null;
       if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
       rec.status='Concluído';
+      logFimChange(rec.id,'',rec.fim,'ENTREGUE');
       targetTab='me';
       saveTab('me');
       toast('✓ Épico movido para Medição',
         '<strong>'+esc(rec.id)+'</strong> finalizado como <strong>Concluído</strong>. Lead Time: <strong>'+calcLT(rec.ini,rec.fim)+' dias</strong>.');
     }
     else if(oldFimValid && !newFimValid){
+      rec.fimAntes=oldVal;
+      logFimChange(rec.id,oldVal,'','REVERTIDO_UI');
       rec.status = rec.statusAntes || 'Em Execução';
       rec.statusAntes = null;
       targetTab='ep';
       saveTab('ep');
       toast('↩ Épico retornado para Épicos',
-        '<strong>'+esc(rec.id)+'</strong> voltou para a lista de ativos como <strong>'+esc(rec.status)+'</strong>.','warn');
+        '<strong>'+esc(rec.id)+'</strong> voltou para Épicos. <a href="#" onclick="openHistorico();return false;" style="font-weight:700">Ver Histórico</a> para restaurar.','warn');
     }
     else if(newFimValid){
       if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
@@ -1854,7 +2022,7 @@ function fc(el){
     var r=allData[gi];
     saveToSheets([{
       id:r.id, status:r.status||'', statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
-      ini:r.ini||'', fim:r.fim||'', dataPrevista:r.dataPrevista||''
+      ini:r.ini||'', fim:r.fim||'', fimAntes:r.fimAntes||'', dataPrevista:r.dataPrevista||''
     }]);
   }
 }
