@@ -2317,17 +2317,25 @@ function gasLoadBacklog(cb){
 function gasSaveBacklog(){
   if(!BK_GAS_URL || !backlogSnaps.length || _gasBacklogSaving) return;
   _gasBacklogSaving=true;
-  var latest=backlogSnaps[backlogSnaps.length-1];
-  var payload=encodeURIComponent(JSON.stringify([latest]));
-  var url=BK_GAS_URL+'?action=saveBacklog&t='+Date.now()+'&payload='+payload;
-  _gasJsonp(url,function(err,json){
+  // Form POST em iframe oculto: sem CORS, sem limite de URL, GAS processa via doPost.
+  var ifrName='_gasBkIf_'+Date.now();
+  var ifr=document.createElement('iframe');
+  ifr.name=ifrName; ifr.style.display='none';
+  document.body.appendChild(ifr);
+  var form=document.createElement('form');
+  form.method='POST'; form.action=BK_GAS_URL+'?action=saveBacklog';
+  form.target=ifrName; form.style.display='none';
+  var inp=document.createElement('input');
+  inp.type='hidden'; inp.name='payload';
+  inp.value=JSON.stringify(backlogSnaps);
+  form.appendChild(inp);
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(function(){
+    try{ document.body.removeChild(form); document.body.removeChild(ifr); }catch(e){}
     _gasBacklogSaving=false;
-    if(!err && json && json.ok){
-      toast('☁️ Backlog publicado!','O time já pode visualizar no dashboard.');
-    } else {
-      toast('⚠️ Falha ao publicar backlog','Erro: '+(err||'resposta inválida'),'err');
-    }
-  });
+    toast('☁️ Backlog publicado!','O time já pode visualizar no dashboard.');
+  }, 3000);
 }
 
 function exportBacklogJson(){
