@@ -2324,7 +2324,7 @@ function gasSaveBacklog(){
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:'action=saveBacklog&payload='+encodeURIComponent(JSON.stringify(backlogSnaps))
   })
-  .then(function(r){ return r.text(); })
+  .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
   .then(function(){
     toast('☁️ Backlog publicado!','O time já pode visualizar no dashboard.');
   })
@@ -2340,7 +2340,7 @@ function gasLoadStories(cb){
   fetch(BK_GAS_URL+'?action=getStories&t='+Date.now())
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(json){
-      if(json && json.ok && Array.isArray(json.stories) && json.stories.length){
+      if(json && json.ok && Array.isArray(json.stories)){
         allStories=json.stories;
         try{ localStorage.setItem(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
         renderStoryView();
@@ -2364,7 +2364,7 @@ function gasSaveStories(){
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:'action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories))
   })
-  .then(function(r){ return r.text(); })
+  .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
   .then(function(){
     toast('☁️ Estórias publicadas!','O time já pode visualizar as estórias.');
   })
@@ -3771,6 +3771,8 @@ var SEED=[
     gasLoadStories(function(err, count){
       if(!err && count>0){
         toast('☁️ Estórias carregadas',count+' estórias sincronizadas do servidor.');
+      } else if(err){
+        toast('⚠️ Estórias: falha ao carregar servidor','Erro: '+err,'warn');
       }
     });
     loadFromSheets(function(err, sheetsData){
