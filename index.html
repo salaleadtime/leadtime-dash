@@ -2298,14 +2298,21 @@ function gasLoadBacklog(cb){
 function gasSaveBacklog(){
   if(!BK_GAS_URL || !backlogSnaps.length || _gasBacklogSaving) return;
   _gasBacklogSaving=true;
-  // Envia via GET o snapshot mais recente.
-  // POST com GAS perde o body no redirect 302; GET é confiável.
   var latest=backlogSnaps[backlogSnaps.length-1];
   var payload=encodeURIComponent(JSON.stringify([latest]));
   var url=BK_GAS_URL+'?action=saveBacklog&t='+Date.now()+'&payload='+payload;
   fetch(url)
     .then(function(r){ return r.json(); })
-    .catch(function(){})
+    .then(function(json){
+      if(json && json.ok){
+        toast('☁️ Backlog publicado!','O time já pode visualizar no dashboard.');
+      } else {
+        toast('⚠️ Falha ao publicar backlog','Resposta inesperada do servidor.','warn');
+      }
+    })
+    .catch(function(err){
+      toast('⚠️ Falha ao publicar backlog','Erro: '+(err&&err.message||'sem conexão'),'err');
+    })
     .finally(function(){ _gasBacklogSaving=false; });
 }
 
@@ -3699,6 +3706,8 @@ var SEED=[
         var bkS=$id('bkUpSub'); if(bkS) bkS.textContent=count+' snapshots carregados do servidor';
         renderBacklogView();
         toast('☁️ Backlog carregado','Dados do servidor: '+count+' snapshots disponíveis.');
+      } else if(err){
+        toast('⚠️ Backlog: falha ao carregar servidor','Erro: '+err,'warn');
       }
     });
     loadFromSheets(function(err, sheetsData){
