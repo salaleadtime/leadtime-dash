@@ -2293,49 +2293,43 @@ function _gasJsonp(url, cb){
 
 function gasLoadBacklog(cb){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  var url=BK_GAS_URL+'?action=getBacklog&t='+Date.now();
-  _gasJsonp(url,function(err,json){
-    if(err||!json||!json.ok){ if(cb) cb(err||'sem dados'); return; }
-    if(Array.isArray(json.backlog) && json.backlog.length){
-      var existSeqs=new Set(backlogSnaps.map(function(s){ return s.seq; }));
-      var added=0;
-      json.backlog.forEach(function(s){
-        if(!existSeqs.has(s.seq)){ backlogSnaps.push(s); added++; }
-      });
-      if(added>0){
-        backlogSnaps.sort(function(a,b){ return a.seq-b.seq; });
-        try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
-        renderBacklogView();
+  fetch(BK_GAS_URL+'?action=getBacklog&t='+Date.now())
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(json){
+      if(json && json.ok && Array.isArray(json.backlog) && json.backlog.length){
+        var existSeqs=new Set(backlogSnaps.map(function(s){ return s.seq; }));
+        var added=0;
+        json.backlog.forEach(function(s){
+          if(!existSeqs.has(s.seq)){ backlogSnaps.push(s); added++; }
+        });
+        if(added>0){
+          backlogSnaps.sort(function(a,b){ return a.seq-b.seq; });
+          try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+          renderBacklogView();
+        }
+        if(cb) cb(null, json.backlog.length);
+      } else {
+        if(cb) cb(null, 0);
       }
-      if(cb) cb(null, json.backlog.length);
-    } else {
-      if(cb) cb(null, 0);
-    }
-  });
+    })
+    .catch(function(err){ if(cb) cb(err.message||'erro'); });
 }
 
 function gasSaveBacklog(){
   if(!BK_GAS_URL || !backlogSnaps.length || _gasBacklogSaving) return;
   _gasBacklogSaving=true;
-  // Form POST em iframe oculto: sem CORS, sem limite de URL, GAS processa via doPost.
-  var ifrName='_gasBkIf_'+Date.now();
-  var ifr=document.createElement('iframe');
-  ifr.name=ifrName; ifr.style.display='none';
-  document.body.appendChild(ifr);
-  var form=document.createElement('form');
-  form.method='POST'; form.action=BK_GAS_URL+'?action=saveBacklog';
-  form.target=ifrName; form.style.display='none';
-  var inp=document.createElement('input');
-  inp.type='hidden'; inp.name='payload';
-  inp.value=JSON.stringify(backlogSnaps);
-  form.appendChild(inp);
-  document.body.appendChild(form);
-  form.submit();
-  setTimeout(function(){
-    try{ document.body.removeChild(form); document.body.removeChild(ifr); }catch(e){}
-    _gasBacklogSaving=false;
+  fetch(BK_GAS_URL+'?action=saveBacklog', {
+    method:'POST',
+    body: JSON.stringify(backlogSnaps)
+  })
+  .then(function(r){ return r.text(); })
+  .then(function(){
     toast('☁️ Backlog publicado!','O time já pode visualizar no dashboard.');
-  }, 3000);
+  })
+  .catch(function(err){
+    toast('⚠️ Falha ao publicar backlog','Erro: '+(err&&err.message||'sem conexão'),'err');
+  })
+  .finally(function(){ _gasBacklogSaving=false; });
 }
 
 function exportBacklogJson(){
