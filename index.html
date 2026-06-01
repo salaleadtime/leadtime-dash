@@ -4134,7 +4134,7 @@ setInterval(function(){
 // ═══════════════════════════════════════
 // CALENDÁRIO — Planejamento Anual (acordeão de trimestres)
 // ═══════════════════════════════════════
-var CAL_KEY='leadtime_sala_calendar_v1';
+var CAL_KEY='leadtime_sala_calendar_v2';   // v2: planejamento padrão 2º/3º/4º TRI carrega automaticamente
 var calData=null;          // [{id,name,open,sprints:[{name,month,start,end}]}]
 var calEditId=null;        // id em edição (null = novo)
 var CAL_MESES=['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
@@ -4352,10 +4352,11 @@ function calSaveTri(){
 }
 
 // recarrega o planejamento padrão (2º/3º/4º TRI com as datas dos prints)
+// não usa window.confirm (bloqueado em alguns navegadores embutidos) — reset direto com feedback
 function calSeedExample(){
-  calLoad();
-  if(calData.length && !confirm('Isto substitui o planejamento atual pelo padrão (2º, 3º e 4º TRI). Continuar?')) return;
-  calData=calDefaultData(); calSave(); renderCalendar();
+  calData=calDefaultData();
+  calSave();
+  renderCalendar();
   toast('↺ Planejamento padrão carregado','2º, 3º e 4º TRI · 18 sprints');
 }
 
