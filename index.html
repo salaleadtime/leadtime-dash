@@ -172,6 +172,85 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 /* ── PANES ── */
 .pane{display:none}.pane.on{display:block}
 
+/* ══ CALENDÁRIO (Planejamento Anual — acordeão de trimestres) ══ */
+:root{
+  --cal-red:#c1121f;--cal-redD:#7a0000;--cal-red2:#cc0000;
+  --cal-slate:#3a5266;--cal-slate2:#2f4356;
+  --cal-blue:#5b9bd5;--cal-blue2:#4a90d2;
+}
+.cal-wrap{padding:1.4rem 1.6rem 3rem;max-width:1180px;margin:0 auto}
+.cal-hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.cal-hd-ti{font-size:17px;font-weight:800;color:var(--tx);letter-spacing:-.3px}
+.cal-hd-ti span{color:var(--cal-red2)}
+.cal-hd-sub{font-size:11.5px;color:var(--tx3);margin-top:2px}
+.cal-hd-sp{flex:1}
+.cal-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.cal-btn.primary{background:linear-gradient(135deg,var(--cal-red2),#ff3333);color:#fff;box-shadow:0 2px 8px rgba(204,0,0,.28)}
+.cal-btn.primary:hover{filter:brightness(1.07)}
+.cal-btn.ghost{background:#fff;border:1px solid var(--border2);color:var(--tx2)}
+.cal-btn.ghost:hover{background:#f8fafc;border-color:#94a3b8}
+
+.cal-empty{text-align:center;padding:3.5rem 2rem;color:var(--tx3)}
+.cal-empty .ico{font-size:40px;margin-bottom:.7rem}
+.cal-empty .t{font-size:14px;font-weight:700;color:var(--tx2);margin-bottom:.3rem}
+
+/* trimestre (acordeão) */
+.cal-tri{border:1px solid var(--border);border-radius:15px;overflow:hidden;margin-bottom:15px;background:#fff;box-shadow:var(--shadow-sm)}
+.cal-thead{display:flex;align-items:center;gap:13px;padding:14px 18px;cursor:pointer;background:linear-gradient(135deg,var(--cal-redD),var(--cal-red2));color:#fff;user-select:none}
+.cal-thead:hover{filter:brightness(1.06)}
+.cal-chev{transition:transform .25s;flex-shrink:0}
+.cal-tri.open .cal-chev{transform:rotate(90deg)}
+.cal-tname{font-weight:800;font-size:14.5px;letter-spacing:.4px}
+.cal-trange{font-size:11px;opacity:.88;font-weight:500;margin-top:1px}
+.cal-tsp{flex:1}
+.cal-meta{display:flex;align-items:center;gap:9px}
+.cal-cur-badge{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;background:#16a34a;color:#fff;padding:4px 10px;border-radius:20px;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.cal-prog{width:84px;height:7px;border-radius:6px;background:rgba(255,255,255,.25);overflow:hidden}
+.cal-prog i{display:block;height:100%;background:#7be38a;border-radius:6px;transition:width .4s}
+.cal-count{font-size:10px;font-weight:700;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:20px;white-space:nowrap}
+.cal-thead-act{display:flex;gap:5px;margin-left:4px}
+.cal-iact{width:28px;height:28px;border-radius:8px;border:none;background:rgba(255,255,255,.16);color:#fff;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cal-iact:hover{background:rgba(255,255,255,.32)}
+
+.cal-tbody{display:none;padding:18px;background:#f8fafc;border-top:1px solid var(--cal-redD)}
+.cal-tri.open .cal-tbody{display:block}
+.cal-months{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.cal-month{background:#fff;border:1px solid var(--border-soft);border-radius:12px;overflow:hidden}
+.cal-mname{background:var(--cal-red);color:#fff;font-weight:700;text-align:center;padding:7px;font-size:12px;letter-spacing:.6px}
+.cal-sprints{padding:11px;display:flex;flex-direction:column;gap:9px}
+.cal-spr{border-radius:9px;padding:9px 12px;background:#fff;border:1px solid var(--border-soft);border-left:4px solid var(--cal-slate);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cal-spr.alt{border-left-color:var(--cal-blue)}
+.cal-spr.cur{border-left-color:#16a34a;background:#f0fdf4}
+.cal-spr.past{opacity:.62}
+.cal-spr-n{font-weight:700;color:var(--cal-slate2);font-size:12.5px;display:flex;align-items:center;gap:6px}
+.cal-spr-d{font-size:10.5px;font-weight:700;color:#fff;background:var(--cal-blue);padding:3px 9px;border-radius:20px;white-space:nowrap}
+.cal-spr.cur .cal-spr-d{background:#16a34a}
+.cal-dot-cur{width:7px;height:7px;border-radius:50%;background:#16a34a;display:inline-block;box-shadow:0 0 0 3px rgba(22,163,74,.18)}
+
+/* editor modal */
+.cal-ov{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.cal-ov.on{display:flex}
+.cal-mdl{background:#fff;border-radius:16px;width:100%;max-width:560px;box-shadow:var(--shadow-lg);overflow:hidden}
+.cal-mdl-hd{padding:18px 22px;background:linear-gradient(135deg,var(--cal-redD),var(--cal-red2));color:#fff}
+.cal-mdl-hd .t{font-size:15px;font-weight:800}
+.cal-mdl-hd .s{font-size:11px;opacity:.85;margin-top:2px}
+.cal-mdl-bd{padding:20px 22px;max-height:62vh;overflow-y:auto}
+.cal-fg{margin-bottom:14px}
+.cal-fg label{display:block;font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.cal-in{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:9px;font-size:13px;font-family:inherit;color:var(--tx);background:#fff}
+.cal-in:focus{outline:none;border-color:var(--cal-red2);box-shadow:0 0 0 3px rgba(204,0,0,.1)}
+.cal-frow{display:flex;gap:12px}
+.cal-frow .cal-fg{flex:1}
+.cal-help{font-size:10.5px;color:var(--tx3);margin-top:5px;line-height:1.4}
+.cal-sprlist{border:1px solid var(--border-soft);border-radius:10px;overflow:hidden;margin-top:4px}
+.cal-sprrow{display:grid;grid-template-columns:78px 1fr 1.05fr;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border-soft)}
+.cal-sprrow:last-child{border-bottom:none}
+.cal-sprrow:nth-child(even){background:#f8fafc}
+.cal-sprrow .lab{font-size:11px;font-weight:700;color:var(--cal-slate2)}
+.cal-sprrow .cal-in{padding:6px 9px;font-size:12px}
+.cal-mdl-ft{padding:14px 22px;border-top:1px solid var(--border-soft);display:flex;gap:10px;justify-content:flex-end;background:#fbfcfe;flex-wrap:wrap}
+@media(max-width:760px){.cal-months{grid-template-columns:1fr}.cal-sprrow{grid-template-columns:56px 1fr}.cal-sprrow .cal-in.dt{grid-column:2}}
+
 /* ══ ÉPICOS ══ */
 .ep{padding:1.2rem 1.6rem}
 
@@ -604,6 +683,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
+  <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -830,6 +910,60 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
 </div>
 
+<!-- ══ CALENDÁRIO PANE ══ -->
+<div class="pane" id="pane-cal">
+  <div class="cal-wrap">
+    <div class="cal-hd">
+      <div>
+        <div class="cal-hd-ti">Ritos | Gestão da VS — <span>PLANEJAMENTO ANUAL</span></div>
+        <div class="cal-hd-sub">Parametrize os trimestres do ano e suas sprints de 2 semanas · clique no cabeçalho para abrir/fechar</div>
+      </div>
+      <div class="cal-hd-sp"></div>
+      <button class="cal-btn ghost" onclick="calSeedExample()" title="Carregar o exemplo 3º/4º TRI">↺ Exemplo</button>
+      <button class="cal-btn primary" onclick="calOpenEditor()">+ Novo Trimestre</button>
+    </div>
+    <div id="calList"></div>
+  </div>
+</div>
+
+<!-- ══ CALENDÁRIO — editor de trimestre ══ -->
+<div class="cal-ov" id="calOv" onclick="if(event.target===this)calCloseEditor()">
+  <div class="cal-mdl">
+    <div class="cal-mdl-hd">
+      <div class="t" id="calMdlTi">Novo Trimestre</div>
+      <div class="s">Defina o nome e a data inicial — as sprints de 2 semanas são geradas em sequência automaticamente.</div>
+    </div>
+    <div class="cal-mdl-bd">
+      <div class="cal-fg">
+        <label>Nome do trimestre</label>
+        <input class="cal-in" id="calFName" placeholder="Ex.: 3º Trimestre">
+      </div>
+      <div class="cal-frow">
+        <div class="cal-fg">
+          <label>Data de início (1ª sprint)</label>
+          <input class="cal-in" id="calFStart" type="date">
+        </div>
+        <div class="cal-fg">
+          <label>Nº de sprints</label>
+          <input class="cal-in" id="calFCount" type="number" min="1" max="12" value="6">
+        </div>
+        <div class="cal-fg">
+          <label>Semanas/sprint</label>
+          <input class="cal-in" id="calFWeeks" type="number" min="1" max="8" value="2">
+        </div>
+      </div>
+      <button class="cal-btn ghost" style="margin-bottom:14px" onclick="calRegen()">↻ Gerar sprints em sequência</button>
+      <div class="cal-fg" style="margin-bottom:6px"><label>Sprints (nome · mês · período)</label></div>
+      <div class="cal-sprlist" id="calSprList"></div>
+      <div class="cal-help">Cada sprint começa no dia seguinte ao fim da anterior. Você pode ajustar nomes, rótulo de mês e datas manualmente; o período (fim) é recalculado quando você muda o início ou clica em "Gerar".</div>
+    </div>
+    <div class="cal-mdl-ft">
+      <button class="cal-btn ghost" onclick="calCloseEditor()">Cancelar</button>
+      <button class="cal-btn primary" onclick="calSaveTri()">Salvar trimestre</button>
+    </div>
+  </div>
+</div>
+
 <!-- GitHub Integration modal -->
 <div class="ov" id="jbOv" onclick="if(event.target===this)closeJB()">
   <div class="mdl" style="max-width:480px">
@@ -944,7 +1078,7 @@ function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -1524,6 +1658,7 @@ function goTab(id,btn){
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
+  else if(id==='cal') renderCalendar();
   updateTabCounts();
 }
 
@@ -1546,13 +1681,14 @@ function activateTab(id){
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
+  else if(id==='cal') renderCalendar();
   updateTabCounts();
 }
 
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal')?'none':'flex';
 }
 
 
@@ -3994,6 +4130,210 @@ setInterval(function(){
   if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
   _trySheets(true);
 }, SHEETS_POLL_MS);
+
+// ═══════════════════════════════════════
+// CALENDÁRIO — Planejamento Anual (acordeão de trimestres)
+// ═══════════════════════════════════════
+var CAL_KEY='leadtime_sala_calendar_v1';
+var calData=null;          // [{id,name,open,sprints:[{name,month,start,end}]}]
+var calEditId=null;        // id em edição (null = novo)
+var CAL_MESES=['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+
+function calUid(){return 'tri_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function calParse(s){ if(!s) return null; var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function calToISO(d){ var m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0'); return d.getFullYear()+'-'+m+'-'+dd; }
+function calAddDays(d,n){ var x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+function calBR(s,withYear){ var d=calParse(s); if(!d) return '—'; var dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0'); return dd+'/'+mm+(withYear?('/'+d.getFullYear()):''); }
+function calToday(){ var t=new Date(); t.setHours(0,0,0,0); return t; }
+
+function calLoad(){
+  if(calData!==null) return calData;
+  try{ var raw=localStorage.getItem(CAL_KEY); calData=raw?JSON.parse(raw):[]; }catch(e){ calData=[]; }
+  if(!Array.isArray(calData)) calData=[];
+  return calData;
+}
+function calSave(){ try{ localStorage.setItem(CAL_KEY, JSON.stringify(calData)); }catch(e){} }
+
+// status de uma sprint em relação a hoje
+function calSprStatus(sp){
+  var t=calToday(), s=calParse(sp.start), e=calParse(sp.end);
+  if(!s||!e) return 'future';
+  if(t>=s && t<=e) return 'cur';
+  if(t>e) return 'past';
+  return 'future';
+}
+
+function renderCalendar(){
+  calLoad();
+  var host=$id('calList'); if(!host) return;
+  if(!calData.length){
+    host.innerHTML='<div class="cal-empty"><div class="ico">📅</div><div class="t">Nenhum trimestre planejado ainda</div><div>Clique em <b>+ Novo Trimestre</b> para começar, ou em <b>↺ Exemplo</b> para carregar o modelo 3º/4º TRI.</div></div>';
+    return;
+  }
+  var html='';
+  calData.forEach(function(tri){
+    var sps=tri.sprints||[];
+    var range = sps.length ? (calBR(sps[0].start,true)+' a '+calBR(sps[sps.length-1].end,true)) : '—';
+    var pastN=0, hasCur=false;
+    sps.forEach(function(sp){ var st=calSprStatus(sp); if(st==='past')pastN++; if(st==='cur')hasCur=true; });
+    var pct = sps.length ? Math.round(100*(pastN+(hasCur?0.5:0))/sps.length) : 0;
+    // agrupa sprints consecutivas pelo rótulo de mês
+    var groups=[], gi=-1, gIdx=0;
+    sps.forEach(function(sp,idx){
+      sp._gi=idx;
+      if(gi<0 || groups[gi].label!==(sp.month||'')){ groups.push({label:sp.month||'—',items:[]}); gi++; }
+      groups[gi].items.push(sp);
+    });
+    var monthsHtml=groups.map(function(g){
+      var rows=g.items.map(function(sp){
+        var st=calSprStatus(sp);
+        var cls = st==='cur'?'cur':(st==='past'?'past':(sp._gi%2?'alt':''));
+        var dot = st==='cur'?'<span class="cal-dot-cur"></span>':'';
+        return '<div class="cal-spr '+cls+'">'
+          +'<span class="cal-spr-n">'+dot+calEsc(sp.name||('Sprint '+(sp._gi+1)))+'</span>'
+          +'<span class="cal-spr-d">'+calBR(sp.start)+' – '+calBR(sp.end)+'</span></div>';
+      }).join('');
+      return '<div class="cal-month"><div class="cal-mname">'+calEsc(g.label)+'</div><div class="cal-sprints">'+rows+'</div></div>';
+    }).join('');
+    var badge = hasCur ? '<span class="cal-cur-badge">● Em andamento</span>' : '';
+    html+='<div class="cal-tri'+(tri.open?' open':'')+'" data-id="'+tri.id+'">'
+      +'<div class="cal-thead" onclick="calToggleTri(\''+tri.id+'\')">'
+        +'<svg class="cal-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 6 15 12 9 18"/></svg>'
+        +'<div><div class="cal-tname">'+calEsc(tri.name)+'</div><div class="cal-trange">'+range+'</div></div>'
+        +'<div class="cal-tsp"></div>'
+        +'<div class="cal-meta">'+badge+'<div class="cal-prog"><i style="width:'+pct+'%"></i></div><span class="cal-count">'+sps.length+' sprints</span></div>'
+        +'<div class="cal-thead-act">'
+          +'<button class="cal-iact" title="Editar" onclick="event.stopPropagation();calOpenEditor(\''+tri.id+'\')">✏️</button>'
+          +'<button class="cal-iact" title="Excluir" onclick="event.stopPropagation();calDeleteTri(\''+tri.id+'\')">🗑️</button>'
+        +'</div>'
+      +'</div>'
+      +'<div class="cal-tbody"><div class="cal-months">'+monthsHtml+'</div></div>'
+    +'</div>';
+  });
+  host.innerHTML=html;
+}
+function calEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+function calToggleTri(id){
+  calLoad();
+  var tri=calData.find(function(t){return t.id===id;}); if(!tri) return;
+  tri.open=!tri.open; calSave(); renderCalendar();
+}
+
+function calDeleteTri(id){
+  calLoad();
+  var tri=calData.find(function(t){return t.id===id;}); if(!tri) return;
+  if(!confirm('Excluir "'+tri.name+'"? Esta ação não pode ser desfeita.')) return;
+  calData=calData.filter(function(t){return t.id!==id;}); calSave(); renderCalendar();
+  toast('🗑️ Trimestre excluído', tri.name);
+}
+
+// ── Editor ──
+function calOpenEditor(id){
+  calLoad();
+  calEditId=id||null;
+  var tri = id ? calData.find(function(t){return t.id===id;}) : null;
+  $id('calMdlTi').textContent = tri ? 'Editar Trimestre' : 'Novo Trimestre';
+  if(tri){
+    $id('calFName').value=tri.name||'';
+    var sps=tri.sprints||[];
+    $id('calFStart').value=sps.length?sps[0].start:'';
+    $id('calFCount').value=sps.length||6;
+    var wk=2;
+    if(sps.length){ var d1=calParse(sps[0].start),d2=calParse(sps[0].end); if(d1&&d2) wk=Math.max(1,Math.round(((d2-d1)/86400000+1)/7)); }
+    $id('calFWeeks').value=wk;
+    calRenderSprRows(sps.map(function(s){return {name:s.name,month:s.month,start:s.start,end:s.end};}));
+  }else{
+    $id('calFName').value='';
+    $id('calFStart').value='';
+    $id('calFCount').value=6;
+    $id('calFWeeks').value=2;
+    calRenderSprRows([]);
+  }
+  $id('calOv').classList.add('on');
+}
+function calCloseEditor(){ $id('calOv').classList.remove('on'); }
+
+// gera sprints sequenciais a partir do formulário
+function calRegen(){
+  var start=$id('calFStart').value;
+  var count=Math.max(1,Math.min(12,parseInt($id('calFCount').value,10)||6));
+  var weeks=Math.max(1,Math.min(8,parseInt($id('calFWeeks').value,10)||2));
+  if(!start){ toast('⚠️ Informe a data de início','Necessária para gerar as sprints','warn'); return; }
+  var rows=[], cur=calParse(start);
+  for(var i=0;i<count;i++){
+    var end=calAddDays(cur, weeks*7-1);
+    var pairFirst = (i%2===0) ? cur : calParse(rows[i-1].start); // mês do 1º da dupla
+    var month = CAL_MESES[pairFirst.getMonth()];
+    rows.push({name:'SPRINT '+(i+1), month:month, start:calToISO(cur), end:calToISO(end)});
+    cur=calAddDays(end,1);
+  }
+  calRenderSprRows(rows);
+}
+
+function calRenderSprRows(rows){
+  var host=$id('calSprList');
+  if(!rows.length){ host.innerHTML='<div style="padding:14px;text-align:center;color:#94a3b8;font-size:11.5px">Defina a data de início e clique em "Gerar sprints em sequência".</div>'; return; }
+  host.innerHTML=rows.map(function(s){
+    return '<div class="cal-sprrow">'
+      +'<input class="cal-in j-name" value="'+calEsc(s.name)+'" placeholder="Sprint">'
+      +'<input class="cal-in j-month" value="'+calEsc(s.month)+'" placeholder="Mês">'
+      +'<div style="display:flex;gap:6px"><input class="cal-in dt j-start" type="date" value="'+(s.start||'')+'"><input class="cal-in dt j-end" type="date" value="'+(s.end||'')+'"></div>'
+    +'</div>';
+  }).join('');
+}
+
+function calSaveTri(){
+  var name=$id('calFName').value.trim();
+  if(!name){ toast('⚠️ Dê um nome ao trimestre','Ex.: 3º Trimestre','warn'); return; }
+  var rows=document.querySelectorAll('#calSprList .cal-sprrow');
+  if(!rows.length){ toast('⚠️ Nenhuma sprint','Clique em "Gerar sprints em sequência"','warn'); return; }
+  var sprints=[];
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];
+    sprints.push({
+      name:r.querySelector('.j-name').value.trim()||('Sprint '+(i+1)),
+      month:r.querySelector('.j-month').value.trim()||'—',
+      start:r.querySelector('.j-start').value,
+      end:r.querySelector('.j-end').value
+    });
+  }
+  calLoad();
+  if(calEditId){
+    var tri=calData.find(function(t){return t.id===calEditId;});
+    if(tri){ tri.name=name; tri.sprints=sprints; }
+  }else{
+    calData.push({id:calUid(), name:name, open:true, sprints:sprints});
+  }
+  calSave(); calCloseEditor(); renderCalendar();
+  toast('✅ Planejamento salvo', name+' · '+sprints.length+' sprints');
+}
+
+// carrega o exemplo 3º/4º TRI da apresentação
+function calSeedExample(){
+  calLoad();
+  if(calData.length && !confirm('Isto adiciona os trimestres de exemplo (3º e 4º TRI). Continuar?')) return;
+  var ex=[
+    {id:calUid(),name:'3º Trimestre',open:true,sprints:[
+      {name:'SPRINT 1',month:'JULHO',start:'2026-06-22',end:'2026-07-05'},
+      {name:'SPRINT 2',month:'JULHO',start:'2026-07-06',end:'2026-07-19'},
+      {name:'SPRINT 3',month:'AGOSTO',start:'2026-07-20',end:'2026-08-02'},
+      {name:'SPRINT 4',month:'AGOSTO',start:'2026-08-03',end:'2026-08-16'},
+      {name:'SPRINT 5',month:'SETEMBRO',start:'2026-08-17',end:'2026-08-30'},
+      {name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-31',end:'2026-09-13'}
+    ]},
+    {id:calUid(),name:'4º Trimestre',open:false,sprints:[
+      {name:'SPRINT 1',month:'OUTUBRO',start:'2026-09-14',end:'2026-09-27'},
+      {name:'SPRINT 2',month:'OUTUBRO',start:'2026-09-28',end:'2026-10-11'},
+      {name:'SPRINT 3',month:'NOVEMBRO',start:'2026-10-12',end:'2026-10-25'},
+      {name:'SPRINT 4',month:'NOVEMBRO',start:'2026-10-26',end:'2026-11-08'},
+      {name:'SPRINT 5',month:'DEZEMBRO',start:'2026-11-09',end:'2026-11-22'},
+      {name:'SPRINT 6',month:'DEZEMBRO',start:'2026-11-23',end:'2026-12-06'}
+    ]}
+  ];
+  calData=calData.concat(ex); calSave(); renderCalendar();
+  toast('↺ Exemplo carregado','3º e 4º TRI · 12 sprints');
+}
 
 </script>
 
