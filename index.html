@@ -178,7 +178,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
   --cal-slate:#3a5266;--cal-slate2:#2f4356;
   --cal-blue:#5b9bd5;--cal-blue2:#4a90d2;
 }
-.cal-wrap{padding:1.4rem 1.6rem 3rem;max-width:1180px;margin:0 auto}
+.cal-wrap{padding:1.4rem 1.6rem 3rem;max-width:1500px;margin:0 auto}
 .cal-hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
 .cal-hd-ti{font-size:17px;font-weight:800;color:var(--tx);letter-spacing:-.3px}
 .cal-hd-ti span{color:var(--cal-red2)}
@@ -912,7 +912,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
 <!-- ══ CALENDÁRIO PANE ══ -->
 <div class="pane" id="pane-cal">
-  <div class="cal-wrap">
+  <div class="cal-wrap" id="calWrap">
     <div class="cal-hd">
       <div>
         <div class="cal-hd-ti">Ritos | Gestão da VS — <span>PLANEJAMENTO ANUAL</span></div>
@@ -3769,7 +3769,7 @@ function captureTarget(){
   if(curTab==='me') return $id('pane-me');
   if(curTab==='sv') return $id('pane-sv');
   if(curTab==='bk') return $id('pane-bk');
-  if(curTab==='cal') return $id('pane-cal');
+  if(curTab==='cal') return $id('calWrap');
   return $id('pane-ep');
 }
 
