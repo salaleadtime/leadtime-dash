@@ -3763,11 +3763,13 @@ function doExportHTML(){
 // ═══════════════════════════════════════
 // CAPTURE — copia para clipboard (Teams/e-mail) com fallback para download
 // ═══════════════════════════════════════
+var H2C_URL='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
 function captureTarget(){
   if(curTab==='db') return $id('dbContent');
   if(curTab==='me') return $id('pane-me');
   if(curTab==='sv') return $id('pane-sv');
   if(curTab==='bk') return $id('pane-bk');
+  if(curTab==='cal') return $id('pane-cal');
   return $id('pane-ep');
 }
 
@@ -3793,41 +3795,60 @@ function captureOnClone(clonedDoc){
   if(fab) fab.style.display='none';
 }
 
-function doCaptureClipboard(){
-  if(typeof html2canvas==='undefined'){
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){doCaptureClipboard();});
-    return;
-  }
-  var fab=$id('fabCap');
-  if(fab) fab.classList.add('busy');
-  toast('📸 Capturando...','Aguarde um instante.');
+var _capCanvas=null;  // guarda o último canvas capturado (para fallback de download)
 
-  html2canvas(captureTarget(),{scale:2,useCORS:true,backgroundColor:'#f4f6fb',onclone:captureOnClone})
-  .then(function(canvas){
-    if(fab) fab.classList.remove('busy');
-    // Tenta copiar para clipboard
-    if(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
-      canvas.toBlob(function(blob){
-        navigator.clipboard.write([new ClipboardItem({'image/png':blob})])
-        .then(function(){
-          toast('📋 Copiado!','Cole com Ctrl+V direto no Teams, Outlook ou WhatsApp.');
-        })
-        .catch(function(){fallbackDownload(canvas);});
-      },'image/png');
-    } else {
-      fallbackDownload(canvas);
-    }
-  }).catch(function(e){
-    if(fab) fab.classList.remove('busy');
-    toast('Erro ao capturar',e.message,'err');
+// canvas -> Promise<Blob>
+function canvasToBlob(canvas){
+  return new Promise(function(resolve,reject){
+    try{ canvas.toBlob(function(b){ b?resolve(b):reject(new Error('toBlob retornou vazio')); },'image/png'); }
+    catch(e){ reject(e); }
   });
 }
 
-function fallbackDownload(canvas){
+// captura a tela atual -> Promise<Blob> (e guarda o canvas para fallback)
+function captureBlobPromise(){
+  var fab=$id('fabCap'); if(fab) fab.classList.add('busy');
+  return html2canvas(captureTarget(),{scale:2,useCORS:true,backgroundColor:'#f4f6fb',onclone:captureOnClone})
+    .then(function(canvas){ _capCanvas=canvas; if(fab) fab.classList.remove('busy'); return canvasToBlob(canvas); })
+    .catch(function(e){ if(fab) fab.classList.remove('busy'); throw e; });
+}
+
+function doCaptureClipboard(){
+  // Recurso ainda carregando: avisa e tenta pré-carregar (próximo clique funciona)
+  if(typeof html2canvas==='undefined'){
+    loadLib(H2C_URL,function(){ toast('✅ Pronto','Clique em "Copiar" novamente para copiar a tela.'); });
+    toast('⏳ Preparando captura...','Aguarde 1s e clique em "Copiar" de novo.');
+    return;
+  }
+
+  var canCopy = !!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write);
+  toast('📸 Capturando...','Aguarde um instante.');
+
+  if(canCopy){
+    // CHAVE DA CORREÇÃO: clipboard.write é chamado AGORA (dentro do gesto do clique),
+    // recebendo uma Promise<Blob>. Assim não perdemos a ativação do usuário durante o render.
+    try{
+      var item=new ClipboardItem({'image/png': captureBlobPromise()});
+      navigator.clipboard.write([item])
+        .then(function(){ toast('📋 Copiado!','Cole com Ctrl+V direto no Teams, Outlook ou WhatsApp.'); })
+        .catch(function(){ fallbackDownload(); });   // ex.: permissão negada → baixa
+      return;
+    }catch(e){
+      // navegador não aceita Promise dentro do ClipboardItem (ex.: versões antigas) → captura e baixa
+    }
+  }
+  // Sem suporte a copiar imagem (ex.: Firefox) → captura e baixa
+  captureBlobPromise().then(function(){ fallbackDownload(); })
+    .catch(function(e){ toast('Erro ao capturar', e&&e.message,'err'); });
+}
+
+// usa o canvas já capturado para baixar (sem recapturar)
+function fallbackDownload(){
+  if(!_capCanvas){ toast('Erro','Captura indisponível. Tente novamente.','err'); return; }
   var a=document.createElement('a');
   a.download='leadtime_'+curTab+'_'+new Date().toISOString().split('T')[0]+'.png';
-  a.href=canvas.toDataURL('image/png'); a.click();
-  toast('Download iniciado','Clipboard não disponível neste navegador — imagem baixada.');
+  a.href=_capCanvas.toDataURL('image/png'); a.click();
+  toast('⬇ Imagem baixada','Cópia para a área de transferência não disponível neste navegador — imagem salva.');
 }
 
 // mantém compatibilidade com chamadas antigas
@@ -4130,6 +4151,9 @@ setInterval(function(){
   if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
   _trySheets(true);
 }, SHEETS_POLL_MS);
+
+// Pré-carrega o html2canvas para que "Copiar" funcione já no 1º clique (sem perder o gesto do usuário)
+setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL); }catch(e){} }, 2500);
 
 // ═══════════════════════════════════════
 // CALENDÁRIO — Planejamento Anual (acordeão de trimestres)
