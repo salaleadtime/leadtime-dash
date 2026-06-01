@@ -919,7 +919,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
         <div class="cal-hd-sub">Parametrize os trimestres do ano e suas sprints de 2 semanas · clique no cabeçalho para abrir/fechar</div>
       </div>
       <div class="cal-hd-sp"></div>
-      <button class="cal-btn ghost" onclick="calSeedExample()" title="Carregar o exemplo 3º/4º TRI">↺ Exemplo</button>
+      <button class="cal-btn ghost" onclick="calSeedExample()" title="Recarregar o planejamento padrão (2º/3º/4º TRI)">↺ Padrão</button>
       <button class="cal-btn primary" onclick="calOpenEditor()">+ Novo Trimestre</button>
     </div>
     <div id="calList"></div>
@@ -4148,11 +4148,53 @@ function calToday(){ var t=new Date(); t.setHours(0,0,0,0); return t; }
 
 function calLoad(){
   if(calData!==null) return calData;
-  try{ var raw=localStorage.getItem(CAL_KEY); calData=raw?JSON.parse(raw):[]; }catch(e){ calData=[]; }
+  var raw=null;
+  try{ raw=localStorage.getItem(CAL_KEY); }catch(e){}
+  if(raw===null){            // primeira vez: carrega o planejamento padrão (2º/3º/4º TRI)
+    calData=calDefaultData();
+    calSave();
+    return calData;
+  }
+  try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
   if(!Array.isArray(calData)) calData=[];
   return calData;
 }
 function calSave(){ try{ localStorage.setItem(CAL_KEY, JSON.stringify(calData)); }catch(e){} }
+
+// planejamento padrão — datas exatas dos trimestres apresentados
+function calDefaultData(){
+  var d=[
+    {id:calUid(),name:'2º Trimestre',sprints:[
+      {name:'SPRINT 1',month:'ABRIL',start:'2026-03-30',end:'2026-04-12'},
+      {name:'SPRINT 2',month:'ABRIL',start:'2026-04-13',end:'2026-04-26'},
+      {name:'SPRINT 3',month:'MAIO',start:'2026-04-27',end:'2026-05-10'},
+      {name:'SPRINT 4',month:'MAIO',start:'2026-05-11',end:'2026-05-24'},
+      {name:'SPRINT 5',month:'JUNHO',start:'2026-05-25',end:'2026-06-07'},
+      {name:'SPRINT 6',month:'JUNHO',start:'2026-06-08',end:'2026-06-21'}
+    ]},
+    {id:calUid(),name:'3º Trimestre',sprints:[
+      {name:'SPRINT 1',month:'JULHO',start:'2026-06-22',end:'2026-07-05'},
+      {name:'SPRINT 2',month:'JULHO',start:'2026-07-06',end:'2026-07-19'},
+      {name:'SPRINT 3',month:'AGOSTO',start:'2026-07-20',end:'2026-08-02'},
+      {name:'SPRINT 4',month:'AGOSTO',start:'2026-08-03',end:'2026-08-16'},
+      {name:'SPRINT 5',month:'SETEMBRO',start:'2026-08-17',end:'2026-08-30'},
+      {name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-21',end:'2026-09-13'}
+    ]},
+    {id:calUid(),name:'4º Trimestre',sprints:[
+      {name:'SPRINT 1',month:'OUTUBRO',start:'2026-09-14',end:'2026-09-27'},
+      {name:'SPRINT 2',month:'OUTUBRO',start:'2026-09-28',end:'2026-10-11'},
+      {name:'SPRINT 3',month:'NOVEMBRO',start:'2026-10-12',end:'2026-10-25'},
+      {name:'SPRINT 4',month:'NOVEMBRO',start:'2026-10-26',end:'2026-11-08'},
+      {name:'SPRINT 5',month:'DEZEMBRO',start:'2026-11-09',end:'2026-11-22'},
+      {name:'SPRINT 6',month:'DEZEMBRO',start:'2026-11-23',end:'2026-12-06'}
+    ]}
+  ];
+  // abre por padrão o trimestre que contém a data de hoje (senão, o primeiro)
+  var openIdx=d.findIndex(function(t){return t.sprints.some(function(s){return calSprStatus(s)==='cur';});});
+  if(openIdx<0) openIdx=0;
+  d.forEach(function(t,i){ t.open=(i===openIdx); });
+  return d;
+}
 
 // status de uma sprint em relação a hoje
 function calSprStatus(sp){
@@ -4167,7 +4209,7 @@ function renderCalendar(){
   calLoad();
   var host=$id('calList'); if(!host) return;
   if(!calData.length){
-    host.innerHTML='<div class="cal-empty"><div class="ico">📅</div><div class="t">Nenhum trimestre planejado ainda</div><div>Clique em <b>+ Novo Trimestre</b> para começar, ou em <b>↺ Exemplo</b> para carregar o modelo 3º/4º TRI.</div></div>';
+    host.innerHTML='<div class="cal-empty"><div class="ico">📅</div><div class="t">Nenhum trimestre planejado ainda</div><div>Clique em <b>+ Novo Trimestre</b> para começar, ou em <b>↺ Padrão</b> para carregar o planejamento 2º/3º/4º TRI.</div></div>';
     return;
   }
   var html='';
@@ -4309,30 +4351,12 @@ function calSaveTri(){
   toast('✅ Planejamento salvo', name+' · '+sprints.length+' sprints');
 }
 
-// carrega o exemplo 3º/4º TRI da apresentação
+// recarrega o planejamento padrão (2º/3º/4º TRI com as datas dos prints)
 function calSeedExample(){
   calLoad();
-  if(calData.length && !confirm('Isto adiciona os trimestres de exemplo (3º e 4º TRI). Continuar?')) return;
-  var ex=[
-    {id:calUid(),name:'3º Trimestre',open:true,sprints:[
-      {name:'SPRINT 1',month:'JULHO',start:'2026-06-22',end:'2026-07-05'},
-      {name:'SPRINT 2',month:'JULHO',start:'2026-07-06',end:'2026-07-19'},
-      {name:'SPRINT 3',month:'AGOSTO',start:'2026-07-20',end:'2026-08-02'},
-      {name:'SPRINT 4',month:'AGOSTO',start:'2026-08-03',end:'2026-08-16'},
-      {name:'SPRINT 5',month:'SETEMBRO',start:'2026-08-17',end:'2026-08-30'},
-      {name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-31',end:'2026-09-13'}
-    ]},
-    {id:calUid(),name:'4º Trimestre',open:false,sprints:[
-      {name:'SPRINT 1',month:'OUTUBRO',start:'2026-09-14',end:'2026-09-27'},
-      {name:'SPRINT 2',month:'OUTUBRO',start:'2026-09-28',end:'2026-10-11'},
-      {name:'SPRINT 3',month:'NOVEMBRO',start:'2026-10-12',end:'2026-10-25'},
-      {name:'SPRINT 4',month:'NOVEMBRO',start:'2026-10-26',end:'2026-11-08'},
-      {name:'SPRINT 5',month:'DEZEMBRO',start:'2026-11-09',end:'2026-11-22'},
-      {name:'SPRINT 6',month:'DEZEMBRO',start:'2026-11-23',end:'2026-12-06'}
-    ]}
-  ];
-  calData=calData.concat(ex); calSave(); renderCalendar();
-  toast('↺ Exemplo carregado','3º e 4º TRI · 12 sprints');
+  if(calData.length && !confirm('Isto substitui o planejamento atual pelo padrão (2º, 3º e 4º TRI). Continuar?')) return;
+  calData=calDefaultData(); calSave(); renderCalendar();
+  toast('↺ Planejamento padrão carregado','2º, 3º e 4º TRI · 18 sprints');
 }
 
 </script>
