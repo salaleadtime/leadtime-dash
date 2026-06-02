@@ -2643,18 +2643,20 @@ function gasLoadBacklog(cb){
 function gasSaveBacklog(){
   if(!BK_GAS_URL || !backlogSnaps.length || _gasBacklogSaving) return;
   _gasBacklogSaving=true;
+  // mode:'no-cors' contorna o bloqueio CORS do Apps Script (a gravação chega ao
+  // servidor; a resposta é opaca e não pode ser lida). O servidor faz o merge por id.
   fetch(BK_GAS_URL, {
     method:'POST',
+    mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:'action=saveBacklog&payload='+encodeURIComponent(JSON.stringify(backlogSnaps))
   })
-  .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
   .then(function(){
-    toast('☁️ Backlog publicado!','O time já pode visualizar no dashboard.');
+    toast('☁️ Backlog publicado','Sincronizando com o servidor…');
+    // reconfere com o servidor (traz a união e converge todos os clientes)
+    setTimeout(function(){ gasLoadBacklog(function(err,n){ if(!err) renderBacklogView(); }); }, 2500);
   })
-  .catch(function(err){
-    toast('⚠️ Falha ao publicar backlog','Erro: '+(err&&err.message||'sem conexão'),'err');
-  })
+  .catch(function(){ /* falha de rede real; o backlog continua salvo localmente */ })
   .finally(function(){ _gasBacklogSaving=false; });
 }
 
@@ -4171,6 +4173,9 @@ setInterval(function(){
 
 // Pré-carrega o html2canvas para que "Copiar" funcione já no 1º clique (sem perder o gesto do usuário)
 setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL); }catch(e){} }, 2500);
+
+// Reconfere o backlog com o servidor periodicamente — janelas abertas convergem sozinhas
+setInterval(function(){ try{ if(BK_GAS_URL) gasLoadBacklog(function(){}); }catch(e){} }, 120000);
 
 // ═══════════════════════════════════════
 // CALENDÁRIO — Planejamento Anual (acordeão de trimestres)
