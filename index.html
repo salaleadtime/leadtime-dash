@@ -1300,7 +1300,7 @@ function _jbMergeAndRender(msg){
     Object.keys(existing).forEach(function(id){
       if(!allData.find(function(r){return r.id===id;})) allData.push(existing[id]);
     });
-    if(bkSnaps.length){ backlogSnaps=bkSnaps; saveBacklogSnaps(); }
+    if(bkSnaps.length){ mergeBacklog(bkSnaps); saveBacklogSnaps(); }
     saveLocal(); renderAll();
     setSyncLabel('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     if(msg) toast('☁️ '+msg,allData.length+' épicos sincronizados em tempo real.');
@@ -2575,6 +2575,31 @@ function loadBacklogSnaps(){
   }catch(e){ backlogSnaps=[]; }
 }
 
+// Identidade de um snapshot: usa o id global quando existir; senão cai no seq (legado)
+function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }
+
+// Merge NÃO-destrutivo: une snapshots vindos de qualquer fonte (servidor, nuvem, arquivo)
+// sem nunca apagar o que já temos. Em colisão de identidade, mantém o MAIS completo
+// (mais histórias). Devolve quantos foram adicionados. Substitui a antiga sobrescrita
+// (backlogSnaps = bkSnaps) que derrubava importações novas (ex.: 178 -> 71).
+function mergeBacklog(incoming){
+  if(!Array.isArray(incoming) || !incoming.length) return 0;
+  var byKey={};
+  backlogSnaps.forEach(function(s){ byKey[snapKey(s)]=s; });
+  var added=0;
+  incoming.forEach(function(s){
+    if(!s) return;
+    var k=snapKey(s);
+    var ex=byKey[k];
+    if(!ex){ backlogSnaps.push(s); byKey[k]=s; added++; return; }
+    // mesma identidade -> fica com o snapshot que tiver mais histórias
+    var nNew=(s.stories?s.stories.length:0), nOld=(ex.stories?ex.stories.length:0);
+    if(nNew>nOld){ var idx=backlogSnaps.indexOf(ex); if(idx>=0) backlogSnaps[idx]=s; byKey[k]=s; }
+  });
+  backlogSnaps.sort(function(a,b){ return (a.seq||0)-(b.seq||0); });
+  return added;
+}
+
 // JSONP helper — evita bloqueio CORS; GAS responde com callback(data)
 function _gasJsonp(url, cb){
   var name='_gasJP_'+Date.now();
@@ -2602,13 +2627,8 @@ function gasLoadBacklog(cb){
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(json){
       if(json && json.ok && Array.isArray(json.backlog) && json.backlog.length){
-        var existSeqs=new Set(backlogSnaps.map(function(s){ return s.seq; }));
-        var added=0;
-        json.backlog.forEach(function(s){
-          if(!existSeqs.has(s.seq)){ backlogSnaps.push(s); added++; }
-        });
+        var added=mergeBacklog(json.backlog);
         if(added>0){
-          backlogSnaps.sort(function(a,b){ return a.seq-b.seq; });
           try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
           renderBacklogView();
         }
@@ -2696,13 +2716,8 @@ function importBacklogJson(file){
       var data=JSON.parse(e.target.result);
       var snaps=data.snaps||(Array.isArray(data)?data:null);
       if(!snaps||!snaps.length) throw new Error('formato inválido');
-      // Merge: mantém snapshots locais que não existem no arquivo
-      var existingSeqs=new Set(backlogSnaps.map(function(s){return s.seq;}));
-      var added=0;
-      snaps.forEach(function(s){
-        if(!existingSeqs.has(s.seq)){ backlogSnaps.push(s); added++; }
-      });
-      backlogSnaps.sort(function(a,b){return a.seq-b.seq;});
+      // Merge não-destrutivo (une por id/seq, mantém o mais completo)
+      var added=mergeBacklog(snaps);
       saveBacklogSnaps();
       renderBacklogView();
       toast('Backlog importado!', snaps.length+' snapshots carregados'+(added?' · '+added+' novos':'· já estavam atualizados')+'. ');
@@ -2780,7 +2795,9 @@ function loadBacklogXlsx(file){
         return;
       }
       var nextSeq=(backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].seq:0)+1;
-      backlogSnaps.push({seq:nextSeq,stories:stories});
+      // id global e único: evita colisão de identidade entre navegadores diferentes
+      var snapId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+      backlogSnaps.push({id:snapId,seq:nextSeq,stories:stories,importedAt:new Date().toISOString()});
       saveBacklogSnaps();
 
       var bkUpName=$id('bkUpName'); if(bkUpName) bkUpName.textContent=file.name;
@@ -4121,7 +4138,7 @@ var SEED=[
       var epics=Array.isArray(data)?data:(data&&data.epics?data.epics:[]);
       var bkSnaps=(!Array.isArray(data)&&data&&Array.isArray(data.backlog))?data.backlog:[];
       allData=epics.map(makeRow);
-      if(bkSnaps.length){ backlogSnaps=bkSnaps; saveBacklogSnaps(); }
+      if(bkSnaps.length){ mergeBacklog(bkSnaps); saveBacklogSnaps(); }
       saveLocal(); renderAll(normalizeTab(loadTab()));
       setSyncLabel('✅ Nuvem sincronizada · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     });
