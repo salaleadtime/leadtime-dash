@@ -1,4 +1,4 @@
-name: Fix Calendar Default
+name: Fix Dashboard Source
 
 on:
   push:
@@ -9,21 +9,28 @@ permissions:
   contents: write
 
 jobs:
-  fix-calendar-default:
+  fix-dashboard-source:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
-      - name: Patch calendar default rendering
+      - name: Patch dashboard source
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          old = """function calLoad(){
+          def replace_once(old, new):
+              global s
+              if old in s:
+                  s = s.replace(old, new, 1)
+                  return True
+              return False
+
+          replace_once("""function calLoad(){
   if(calData!==null) return calData;
   var raw=null;
   try{ raw=localStorage.getItem(CAL_KEY); }catch(e){}
@@ -35,31 +42,62 @@ jobs:
   try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
   if(!Array.isArray(calData)) calData=[];
   return calData;
-}"""
-
-          new = """function calLoad(){
+}""", """function calLoad(){
   if(Array.isArray(calData) && calData.length) return calData;
   var raw=null;
   try{ raw=localStorage.getItem(CAL_KEY); }catch(e){}
   if(raw!==null){
     try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
   }
-  // Primeira carga, cache vazio ou dado inválido: mostra o planejamento padrão automaticamente.
   if(!Array.isArray(calData) || !calData.length){
     calData=calDefaultData();
     calSave();
   }
   return calData;
-}"""
+}""")
 
-          if old not in s:
-              raise SystemExit('Bloco calLoad esperado não encontrado; nenhuma alteração aplicada.')
-
-          s = s.replace(old, new, 1)
           s = s.replace("{name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-21',end:'2026-09-13'}", "{name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-31',end:'2026-09-13'}")
+
+          if 'function getCurrentBacklogSnapshot()' not in s:
+              replace_once("""function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }""", """function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }
+function snapStoryCount(s){ return (s&&Array.isArray(s.stories)) ? s.stories.length : 0; }
+function snapTime(s){ var t=Date.parse((s&&s.importedAt)||''); return isNaN(t)?0:t; }
+function compareBacklogSnaps(a,b){
+  var ca=snapStoryCount(a), cb=snapStoryCount(b);
+  if(ca!==cb) return ca-cb;
+  var ta=snapTime(a), tb=snapTime(b);
+  if(ta!==tb) return ta-tb;
+  var sa=Number(a&&a.seq)||0, sb=Number(b&&b.seq)||0;
+  return sa-sb;
+}
+function sortBacklogSnaps(){ backlogSnaps.sort(compareBacklogSnaps); }
+function getCurrentBacklogSnapshot(){ if(!backlogSnaps.length) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-1]; }
+function getPreviousBacklogSnapshot(){ if(backlogSnaps.length<2) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-2]; }
+function maxBacklogStoryCount(snaps){ return (snaps||[]).reduce(function(m,s){ return Math.max(m,snapStoryCount(s)); },0); }""")
+
+          replace_once("""  backlogSnaps.sort(function(a,b){ return (a.seq||0)-(b.seq||0); });
+  return added;""", """  sortBacklogSnaps();
+  return added;""")
+          replace_once("""      var nextSeq=(backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].seq:0)+1;""", """      var nextSeq=backlogSnaps.reduce(function(m,s){ return Math.max(m,Number(s&&s.seq)||0); },0)+1;""")
+          replace_once("""      backlogSnaps.push({id:snapId,seq:nextSeq,stories:stories,importedAt:new Date().toISOString()});
+      saveBacklogSnaps();""", """      backlogSnaps.push({id:snapId,seq:nextSeq,stories:stories,importedAt:new Date().toISOString()});
+      sortBacklogSnaps();
+      saveBacklogSnaps();""")
+          replace_once("""  var cur=backlogSnaps[backlogSnaps.length-1];
+  var prev=backlogSnaps.length>1?backlogSnaps[backlogSnaps.length-2]:null;
+  var stories=cur.stories;""", """  sortBacklogSnaps();
+  var cur=getCurrentBacklogSnapshot();
+  var prev=getPreviousBacklogSnapshot();
+  var stories=(cur&&Array.isArray(cur.stories))?cur.stories:[];""")
+          replace_once("""  if(bkEl){ var bkCur=backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].stories.length:0; bkEl.textContent=bkCur||''; }""", """  if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?snapStoryCount(bkCurSnap):0; bkEl.textContent=bkCur||''; }""")
+          replace_once("""    if(backlogSnaps.length){
+      var bkLastSnap=backlogSnaps[backlogSnaps.length-1];""", """    if(backlogSnaps.length){
+      sortBacklogSnaps();
+      var bkLastSnap=getCurrentBacklogSnapshot();""")
+
           p.write_text(s, encoding='utf-8')
           PY
-      - name: Commit fix
+      - name: Commit source fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -68,5 +106,5 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "fix: carregar calendário padrão automaticamente"
+          git commit -m "fix: corrigir seleção de snapshot do backlog"
           git push
