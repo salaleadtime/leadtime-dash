@@ -1,0 +1,72 @@
+name: Fix Calendar Default
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-calendar-default:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Patch calendar default rendering
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old = """function calLoad(){
+  if(calData!==null) return calData;
+  var raw=null;
+  try{ raw=localStorage.getItem(CAL_KEY); }catch(e){}
+  if(raw===null){            // primeira vez: carrega o planejamento padrão (2º/3º/4º TRI)
+    calData=calDefaultData();
+    calSave();
+    return calData;
+  }
+  try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
+  if(!Array.isArray(calData)) calData=[];
+  return calData;
+}"""
+
+          new = """function calLoad(){
+  if(Array.isArray(calData) && calData.length) return calData;
+  var raw=null;
+  try{ raw=localStorage.getItem(CAL_KEY); }catch(e){}
+  if(raw!==null){
+    try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
+  }
+  // Primeira carga, cache vazio ou dado inválido: mostra o planejamento padrão automaticamente.
+  if(!Array.isArray(calData) || !calData.length){
+    calData=calDefaultData();
+    calSave();
+  }
+  return calData;
+}"""
+
+          if old not in s:
+              raise SystemExit('Bloco calLoad esperado não encontrado; nenhuma alteração aplicada.')
+
+          s = s.replace(old, new, 1)
+          s = s.replace("{name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-21',end:'2026-09-13'}", "{name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-31',end:'2026-09-13'}")
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "fix: carregar calendário padrão automaticamente"
+          git push
