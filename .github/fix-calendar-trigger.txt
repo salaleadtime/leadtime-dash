@@ -1,1 +1,1 @@
-trigger deploy after JSONP backlog fix
+run deploy after stories sync update
