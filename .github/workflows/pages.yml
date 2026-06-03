@@ -37,7 +37,6 @@ jobs:
               else:
                   print('SKIP:', label)
 
-          # Calendário: carregar padrão automaticamente quando cache estiver vazio/inválido
           rep("""function calLoad(){
   if(calData!==null) return calData;
   var raw=null;
@@ -57,7 +56,6 @@ jobs:
   if(raw!==null){
     try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
   }
-  // Primeira carga, cache vazio ou dado inválido: mostra o planejamento padrão automaticamente.
   if(!Array.isArray(calData) || !calData.length){
     calData=calDefaultData();
     calSave();
@@ -67,17 +65,17 @@ jobs:
 
           s = s.replace("{name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-21',end:'2026-09-13'}", "{name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-31',end:'2026-09-13'}")
 
-          # Backlog/Refinamento: escolher snapshot atual por data de importação e republicar local mais completo
           if 'function getCurrentBacklogSnapshot()' not in s:
               rep("""function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }""", """function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }
 function snapStoryCount(s){ return (s&&Array.isArray(s.stories)) ? s.stories.length : 0; }
 function snapTime(s){ var t=Date.parse((s&&s.importedAt)||''); return isNaN(t)?0:t; }
 function compareBacklogSnaps(a,b){
+  var ca=snapStoryCount(a), cb=snapStoryCount(b);
+  if(ca!==cb) return ca-cb;
   var ta=snapTime(a), tb=snapTime(b);
   if(ta!==tb) return ta-tb;
   var sa=Number(a&&a.seq)||0, sb=Number(b&&b.seq)||0;
-  if(sa!==sb) return sa-sb;
-  return snapStoryCount(a)-snapStoryCount(b);
+  return sa-sb;
 }
 function sortBacklogSnaps(){ backlogSnaps.sort(compareBacklogSnaps); }
 function getCurrentBacklogSnapshot(){ if(!backlogSnaps.length) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-1]; }
@@ -125,7 +123,6 @@ function maxBacklogStoryCount(snaps){ return (snaps||[]).reduce(function(m,s){ r
         try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
         renderBacklogView();
         updateTabCounts();
-        // Se este navegador tem uma carga mais completa (ex.: 178) que o servidor (ex.: 71), republica para a janela anônima/time convergir.
         if(localMax>serverMax && !_gasBacklogSaving){
           setTimeout(function(){ gasSaveBacklog(); },500);
         }
