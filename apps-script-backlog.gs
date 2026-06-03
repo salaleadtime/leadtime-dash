@@ -1,8 +1,13 @@
 /************************************************************************
- * Lead Time SALA — Backlog Store (Google Apps Script / backend)
+ * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  * ---------------------------------------------------------------------
- * Centraliza os snapshots de backlog no servidor para que TODAS as
- * janelas/navegadores do time vejam o mesmo número (sem export/import).
+ * Centraliza os snapshots de Backlog e as Estórias (aba Qtd Story/Épicos)
+ * no servidor, para que TODAS as janelas/navegadores do time vejam o mesmo
+ * número (sem export/import manual).
+ *
+ * Armazenamento: abas OCULTAS da própria planilha (_backlog_chunks e
+ * _stories_chunks). O JSON é gravado em pedaços (chunks) porque uma célula
+ * do Sheets tem limite de ~50.000 caracteres.
  *
  * IMPORTANTE
  * Este arquivo é a FONTE do código do Apps Script. Depois de atualizar aqui,
@@ -11,62 +16,71 @@
  *
  * Instalação / atualização:
  * 1. Abra o projeto do Apps Script usado em BK_GAS_URL.
- * 2. Substitua/adicione as funções abaixo sem duplicar doGet/doPost.
- * 3. Execute a função autorizarDriveUmaVez() uma vez e aceite as permissões.
+ * 2. Cole este conteúdo (sem duplicar doGet/doPost).
+ * 3. Execute autorizarPlanilhaUmaVez() uma vez e aceite as permissões.
  * 4. Implantar > Gerenciar implantações > Editar lápis.
- * 5. Versão: Nova versão > Implantar.
+ * 5. Versão: ESCOLHA "Nova versão" (não reutilize uma versão antiga, senão
+ *    o código editado NÃO é publicado) > Implantar.
  * 6. Executar como: Eu | Quem pode acessar: Qualquer pessoa.
  ************************************************************************/
 
-var BACKLOG_FILE = 'leadtime_backlog_store.json';
-var STORIES_FILE = 'leadtime_stories_store.json';
-var BACKLOG_SCRIPT_VERSION = '2026-06-03-stories-persist-v3';
+var BACKLOG_SCRIPT_VERSION = '2026-06-03-backlog-sheet-chunks-v3';
 
-function autorizarDriveUmaVez() {
-  var files = DriveApp.getFilesByName(BACKLOG_FILE);
-  var found = files.hasNext();
-  var stFiles = DriveApp.getFilesByName(STORIES_FILE);
-  var stFound = stFiles.hasNext();
-  return 'Drive autorizado. Backlog existente: ' + found + ' · Estórias existentes: ' + stFound;
+var BACKLOG_SHEET = '_backlog_chunks';
+var STORIES_SHEET = '_stories_chunks';
+var CHUNK_SIZE = 45000;
+
+function autorizarPlanilhaUmaVez() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrCreateSheet_(BACKLOG_SHEET);
+  sheet.getRange('A1').setValue('[]');
+  return 'Planilha autorizada com sucesso.';
 }
 
 function doGet(e) {
   var action = getParam_(e, 'action');
+  var callback = getParam_(e, 'callback');
 
   if (action === 'health') {
-    var data = readStore();
-    return jsonOut({
+    var data = readBacklogStore_();
+
+    return jsonOut_({
       ok: true,
       version: BACKLOG_SCRIPT_VERSION,
       snapshots: data.length,
       maxStories: maxStoryCount_(data),
       currentStories: currentSnap_(data) ? storyCount_(currentSnap_(data)) : 0,
-      stories: readStories_().length
-    }, e);
+      stories: readJsonFromSheet_(STORIES_SHEET, []).length
+    }, callback);
   }
 
   if (action === 'getBacklog') {
-    var backlog = readStore();
-    return jsonOut({
+    var backlog = readBacklogStore_();
+
+    return jsonOut_({
       ok: true,
       version: BACKLOG_SCRIPT_VERSION,
       backlog: backlog,
       snapshots: backlog.length,
       maxStories: maxStoryCount_(backlog)
-    }, e);
+    }, callback);
   }
 
   if (action === 'getStories') {
-    var stories = readStories_();
-    return jsonOut({
+    var stories = readJsonFromSheet_(STORIES_SHEET, []);
+
+    return jsonOut_({
       ok: true,
       version: BACKLOG_SCRIPT_VERSION,
-      stories: stories,
-      count: stories.length
-    }, e);
+      stories: stories
+    }, callback);
   }
 
-  return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action }, e);
+  return jsonOut_({
+    ok: true,
+    version: BACKLOG_SCRIPT_VERSION,
+    data: []
+  }, callback);
 }
 
 function doPost(e) {
@@ -75,18 +89,22 @@ function doPost(e) {
 
     if (action === 'saveBacklog') {
       var payload = getParam_(e, 'payload');
-      if (!payload && e && e.postData && e.postData.contents) {
-        payload = parseBody_(e.postData.contents).payload || e.postData.contents;
+      var incoming = [];
+
+      try {
+        incoming = JSON.parse(payload || '[]');
+      } catch (err) {
+        incoming = [];
       }
 
-      var incoming = JSON.parse(payload || '[]');
       if (!Array.isArray(incoming)) incoming = [];
 
-      var before = readStore();
-      var merged = mergeSnaps(before, incoming);
-      writeStore(merged);
+      var before = readBacklogStore_();
+      var merged = mergeSnaps_(before, incoming);
 
-      return jsonOut({
+      writeBacklogStore_(merged);
+
+      return jsonOut_({
         ok: true,
         version: BACKLOG_SCRIPT_VERSION,
         beforeSnapshots: before.length,
@@ -94,184 +112,261 @@ function doPost(e) {
         savedSnapshots: merged.length,
         savedMaxStories: maxStoryCount_(merged),
         currentStories: currentSnap_(merged) ? storyCount_(currentSnap_(merged)) : 0
-      }, e);
+      });
     }
 
     if (action === 'saveStories') {
-      var stPayload = getParam_(e, 'payload');
-      if (!stPayload && e && e.postData && e.postData.contents) {
-        stPayload = parseBody_(e.postData.contents).payload || e.postData.contents;
+      var payloadStories = getParam_(e, 'payload') || '[]';
+
+      try {
+        var parsedStories = JSON.parse(payloadStories);
+        if (!Array.isArray(parsedStories)) parsedStories = [];
+        // Proteção: nunca apaga o store por um payload vazio (cliente sem dados).
+        // O front-end também guarda contra isso, mas reforçamos no servidor.
+        if (parsedStories.length === 0) {
+          var existing = readJsonFromSheet_(STORIES_SHEET, []);
+          return jsonOut_({
+            ok: true,
+            version: BACKLOG_SCRIPT_VERSION,
+            skipped: 'payload vazio',
+            savedStories: existing.length
+          });
+        }
+        writeJsonToSheet_(STORIES_SHEET, parsedStories);
+
+        return jsonOut_({
+          ok: true,
+          version: BACKLOG_SCRIPT_VERSION,
+          savedStories: parsedStories.length
+        });
+      } catch (err) {
+        return jsonOut_({
+          ok: false,
+          version: BACKLOG_SCRIPT_VERSION,
+          error: 'payload inválido: ' + String(err && err.message || err)
+        });
       }
-
-      var incomingStories = JSON.parse(stPayload || '[]');
-      if (!Array.isArray(incomingStories)) incomingStories = [];
-
-      var beforeStories = readStories_();
-      var mergedStories = mergeStories_(beforeStories, incomingStories);
-      writeStories_(mergedStories);
-
-      return jsonOut({
-        ok: true,
-        version: BACKLOG_SCRIPT_VERSION,
-        beforeStories: beforeStories.length,
-        incomingStories: incomingStories.length,
-        savedStories: mergedStories.length
-      }, e);
     }
 
-    return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action }, e);
+    return jsonOut_({
+      ok: false,
+      version: BACKLOG_SCRIPT_VERSION,
+      error: 'unknown action: ' + action
+    });
   } catch (err) {
-    return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.stack || err) }, e);
+    return jsonOut_({
+      ok: false,
+      version: BACKLOG_SCRIPT_VERSION,
+      error: String(err && err.stack || err)
+    });
   }
 }
 
 function getParam_(e, name) {
-  if (e && e.parameter && e.parameter[name] != null) return e.parameter[name];
+  if (e && e.parameter && e.parameter[name] != null) {
+    return e.parameter[name];
+  }
+
   if (e && e.postData && e.postData.contents) {
     var parsed = parseBody_(e.postData.contents);
-    if (parsed[name] != null) return parsed[name];
+
+    if (parsed[name] != null) {
+      return parsed[name];
+    }
   }
+
   return '';
 }
 
 function parseBody_(body) {
   var out = {};
-  String(body || '').split('&').forEach(function (part) {
+
+  String(body || '').split('&').forEach(function(part) {
     if (!part) return;
+
     var eq = part.indexOf('=');
     var k = eq >= 0 ? part.slice(0, eq) : part;
     var v = eq >= 0 ? part.slice(eq + 1) : '';
-    try { k = decodeURIComponent(k.replace(/\+/g, ' ')); } catch (e) {}
-    try { v = decodeURIComponent(v.replace(/\+/g, ' ')); } catch (e) {}
+
+    try {
+      k = decodeURIComponent(k.replace(/\+/g, ' '));
+    } catch (e) {}
+
+    try {
+      v = decodeURIComponent(v.replace(/\+/g, ' '));
+    } catch (e) {}
+
     out[k] = v;
   });
+
   return out;
 }
 
-/* ---- Merge não-destrutivo por identidade ---- */
-function snapKey(s) {
-  return (s && s.id) ? ('id:' + s.id) : ('seq:' + (s ? s.seq : ''));
+function readBacklogStore_() {
+  var data = readJsonFromSheet_(BACKLOG_SHEET, []);
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  return [];
 }
+
+function writeBacklogStore_(arr) {
+  writeJsonToSheet_(BACKLOG_SHEET, arr || []);
+}
+
+function readJsonFromSheet_(sheetName, fallback) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) return fallback;
+
+    var lastRow = sheet.getLastRow();
+
+    if (!lastRow) return fallback;
+
+    var values = sheet.getRange(1, 1, lastRow, 1).getValues();
+    // String() em cada célula: evita que um chunk lido como Number quebre o join.
+    var json = values.map(function(row) {
+      return row[0] == null ? '' : String(row[0]);
+    }).join('');
+
+    if (!json) return fallback;
+
+    var parsed = JSON.parse(json);
+
+    return parsed;
+  } catch (err) {
+    return fallback;
+  }
+}
+
+function writeJsonToSheet_(sheetName, data) {
+  var json = JSON.stringify(data || []);
+  var sheet = getOrCreateSheet_(sheetName);
+
+  sheet.clearContents();
+
+  var chunks = [];
+
+  for (var i = 0; i < json.length; i += CHUNK_SIZE) {
+    chunks.push([json.slice(i, i + CHUNK_SIZE)]);
+  }
+
+  if (!chunks.length) {
+    chunks = [['[]']];
+  }
+
+  var range = sheet.getRange(1, 1, chunks.length, 1);
+  // Força formato de texto para o Sheets não reinterpretar chunks como número/data.
+  range.setNumberFormat('@');
+  range.setValues(chunks);
+
+  try {
+    sheet.hideSheet();
+  } catch (e) {}
+}
+
+function getOrCreateSheet_(sheetName) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  return sheet;
+}
+
+function snapKey_(s) {
+  return s && s.id ? 'id:' + s.id : 'seq:' + (s ? s.seq : '');
+}
+
 function storyCount_(s) {
   return s && Array.isArray(s.stories) ? s.stories.length : 0;
 }
+
 function snapTime_(s) {
   var t = Date.parse((s && s.importedAt) || '');
+
   return isNaN(t) ? 0 : t;
 }
+
 function compareSnaps_(a, b) {
-  var ca = storyCount_(a), cb = storyCount_(b);
+  var ca = storyCount_(a);
+  var cb = storyCount_(b);
+
   if (ca !== cb) return ca - cb;
-  var ta = snapTime_(a), tb = snapTime_(b);
+
+  var ta = snapTime_(a);
+  var tb = snapTime_(b);
+
   if (ta !== tb) return ta - tb;
+
   return (Number(a && a.seq) || 0) - (Number(b && b.seq) || 0);
 }
+
 function currentSnap_(arr) {
   var copy = (arr || []).slice().sort(compareSnaps_);
+
   return copy.length ? copy[copy.length - 1] : null;
 }
+
 function maxStoryCount_(arr) {
-  return (arr || []).reduce(function (m, s) { return Math.max(m, storyCount_(s)); }, 0);
+  return (arr || []).reduce(function(m, s) {
+    return Math.max(m, storyCount_(s));
+  }, 0);
 }
 
-function mergeSnaps(base, incoming) {
+function mergeSnaps_(base, incoming) {
   var byKey = {};
-  (base || []).forEach(function (s) {
-    if (s) byKey[snapKey(s)] = s;
+
+  (base || []).forEach(function(s) {
+    if (s) {
+      byKey[snapKey_(s)] = s;
+    }
   });
 
-  (incoming || []).forEach(function (s) {
+  (incoming || []).forEach(function(s) {
     if (!s) return;
-    var k = snapKey(s);
+
+    var k = snapKey_(s);
     var ex = byKey[k];
+
     if (!ex) {
       byKey[k] = s;
       return;
     }
 
-    // Mesma identidade: mantém o snapshot com mais histórias; empate fica com o mais recente.
-    var nNew = storyCount_(s), nOld = storyCount_(ex);
+    var nNew = storyCount_(s);
+    var nOld = storyCount_(ex);
+
     if (nNew > nOld || (nNew === nOld && snapTime_(s) > snapTime_(ex))) {
       byKey[k] = s;
     }
   });
 
-  var out = Object.keys(byKey).map(function (k) { return byKey[k]; });
+  var out = Object.keys(byKey).map(function(k) {
+    return byKey[k];
+  });
+
   out.sort(compareSnaps_);
+
   return out;
 }
 
-/* ---- Estórias (Qtd Story/Épicos): merge não-destrutivo por id ---- */
-// Cada estória é {id, epic, resumo, status, squad}. Une por id; em colisão,
-// a versão recebida (importação mais recente) vence, preservando estórias de
-// outras squads que não estavam no payload atual.
-function mergeStories_(base, incoming) {
-  var byId = {};
-  var order = [];
-  function add(s, overwrite) {
-    if (!s || !s.id) return;
-    var k = String(s.id);
-    if (!(k in byId)) order.push(k);
-    if (overwrite || !(k in byId)) byId[k] = s;
-  }
-  (base || []).forEach(function (s) { add(s, false); });
-  (incoming || []).forEach(function (s) { add(s, true); });
-  return order.map(function (k) { return byId[k]; });
-}
-
-function getStoriesFile_() {
-  var it = DriveApp.getFilesByName(STORIES_FILE);
-  return it.hasNext() ? it.next() : null;
-}
-function readStories_() {
-  var f = getStoriesFile_();
-  if (!f) return [];
-  try {
-    var data = JSON.parse(f.getBlob().getDataAsString() || '[]');
-    return Array.isArray(data) ? data : [];
-  } catch (e) {
-    return [];
-  }
-}
-function writeStories_(arr) {
-  var json = JSON.stringify(arr || []);
-  var f = getStoriesFile_();
-  if (f) f.setContent(json);
-  else DriveApp.createFile(STORIES_FILE, json, MimeType.PLAIN_TEXT);
-}
-
-/* ---- Armazenamento: arquivo JSON no Drive ---- */
-function getStoreFile() {
-  var it = DriveApp.getFilesByName(BACKLOG_FILE);
-  return it.hasNext() ? it.next() : null;
-}
-function readStore() {
-  var f = getStoreFile();
-  if (!f) return [];
-  try {
-    var data = JSON.parse(f.getBlob().getDataAsString() || '[]');
-    return Array.isArray(data) ? data : [];
-  } catch (e) {
-    return [];
-  }
-}
-function writeStore(arr) {
-  var json = JSON.stringify(arr || []);
-  var f = getStoreFile();
-  if (f) f.setContent(json);
-  else DriveApp.createFile(BACKLOG_FILE, json, MimeType.PLAIN_TEXT);
-}
-
-/* ---- Resposta JSON / JSONP ---- */
-function jsonOut(obj, e) {
+function jsonOut_(obj, callback) {
   var out = ContentService.createTextOutput();
-  var cb = e && e.parameter && e.parameter.callback;
-  if (cb) {
-    out.setContent(cb + '(' + JSON.stringify(obj) + ')');
+
+  if (callback) {
+    out.setContent(callback + '(' + JSON.stringify(obj) + ')');
     out.setMimeType(ContentService.MimeType.JAVASCRIPT);
   } else {
     out.setContent(JSON.stringify(obj));
     out.setMimeType(ContentService.MimeType.JSON);
   }
+
   return out;
 }
