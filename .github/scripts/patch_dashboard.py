@@ -187,6 +187,88 @@ rep(
 'gasLoadBacklog JSONP corrigido'
 )
 
+# Estórias: usa JSONP para leitura e no-cors para gravação, igual ao Backlog.
+rep(
+"""function gasLoadStories(cb){
+  if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  fetch(BK_GAS_URL+'?action=getStories&t='+Date.now())
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(json){
+      if(json && json.ok && Array.isArray(json.stories)){
+        allStories=json.stories;
+        try{ localStorage.setItem(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
+        renderStoryView();
+        updateTabCounts();
+        var upN=$id('svUpName'); if(upN) upN.textContent='Sincronizado';
+        var upS=$id('svUpSub'); if(upS) upS.textContent=allStories.length+' estórias carregadas do servidor';
+        var upSv=$id('svUpSaved'); if(upSv) upSv.classList.remove('hidden');
+        var upSvT=$id('svUpSavedTxt'); if(upSvT) upSvT.textContent='Servidor · '+allStories.length+' estórias';
+        if(cb) cb(null, allStories.length);
+      } else {
+        if(cb) cb(null, 0);
+      }
+    })
+    .catch(function(err){ if(cb) cb(err.message||'erro'); });
+}""",
+"""function gasLoadStories(cb){
+  if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
+    if(err){ if(cb) cb(err); return; }
+    if(json && json.ok && Array.isArray(json.stories)){
+      allStories=json.stories;
+      try{ localStorage.setItem(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
+      renderStoryView();
+      updateTabCounts();
+      var upN=$id('svUpName'); if(upN) upN.textContent='Sincronizado';
+      var upS=$id('svUpSub'); if(upS) upS.textContent=allStories.length+' estórias carregadas do servidor';
+      var upSv=$id('svUpSaved'); if(upSv) upSv.classList.remove('hidden');
+      var upSvT=$id('svUpSavedTxt'); if(upSvT) upSvT.textContent='Servidor · '+allStories.length+' estórias';
+      if(cb) cb(null, allStories.length);
+    } else {
+      if(cb) cb(null, 0);
+    }
+  });
+}""",
+'gasLoadStories JSONP'
+)
+
+rep(
+"""function gasSaveStories(){
+  if(!BK_GAS_URL || !allStories.length || _gasStoriesSaving) return;
+  _gasStoriesSaving=true;
+  fetch(BK_GAS_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories))
+  })
+  .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+  .then(function(){
+    toast('☁️ Estórias publicadas!','O time já pode visualizar as estórias.');
+  })
+  .catch(function(err){
+    toast('⚠️ Falha ao publicar estórias','Erro: '+(err&&err.message||'sem conexão'),'err');
+  })
+  .finally(function(){ _gasStoriesSaving=false; });
+}""",
+"""function gasSaveStories(){
+  if(!BK_GAS_URL || !allStories.length || _gasStoriesSaving) return;
+  _gasStoriesSaving=true;
+  fetch(BK_GAS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories))
+  })
+  .then(function(){
+    toast('☁️ Estórias publicadas','Sincronizando com o servidor…');
+    setTimeout(function(){ gasLoadStories(function(err,n){ if(!err) renderStoryView(); }); }, 2500);
+  })
+  .catch(function(){ /* mantém salvo localmente */ })
+  .finally(function(){ _gasStoriesSaving=false; });
+}""",
+'gasSaveStories no-cors'
+)
+
 rep(
 """  var cur=backlogSnaps[backlogSnaps.length-1];
   var prev=backlogSnaps.length>1?backlogSnaps[backlogSnaps.length-2]:null;
