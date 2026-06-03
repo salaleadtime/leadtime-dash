@@ -4,80 +4,163 @@
  * Centraliza os snapshots de backlog no servidor para que TODAS as
  * janelas/navegadores do time vejam o mesmo número (sem export/import).
  *
- * O frontend:
- *   - PUBLICA  via POST  action=saveBacklog&payload=<JSON dos snapshots>
- *     (em mode:'no-cors' — a gravação chega, a resposta é ignorada)
- *   - LÊ       via GET   ?action=getBacklog   ->  { ok:true, backlog:[...] }
+ * IMPORTANTE
+ * Este arquivo é a FONTE do código do Apps Script. Depois de atualizar aqui,
+ * é preciso copiar este conteúdo para o projeto em https://script.google.com
+ * que responde pela URL BK_GAS_URL e publicar uma NOVA VERSÃO do Web App.
  *
- * Este script faz MERGE por id (mantém o snapshot mais completo) e guarda
- * a união num arquivo JSON no seu Google Drive — sem limite de tamanho de
- * célula. Nada é sobrescrito de forma destrutiva.
- *
- * ─── COMO INSTALAR (uma vez) ─────────────────────────────────────────
- * 1. Abra https://script.google.com e crie/abra o projeto do Web App
- *    que hoje responde pela URL BK_GAS_URL do dashboard.
- * 2. Cole TODO este conteúdo (substituindo as funções getBacklog/saveBacklog
- *    existentes, ou adicionando se não houver). Mantenha as suas funções
- *    de Stories/Sheets, se existirem — só não duplique doGet/doPost.
- * 3. Implantar > Gerenciar implantações > (sua implantação) > Editar (lápis)
- *    > Versão: "Nova versão" > Implantar.
- *      • Executar como: Eu
- *      • Quem pode acessar: Qualquer pessoa
- *    Usar "Nova versão" na MESMA implantação mantém a URL /exec igual,
- *    então não é preciso mudar nada no dashboard.
- * 4. Autorize o acesso ao Drive quando solicitado.
- *
- * Se você criar uma implantação NOVA (URL diferente), me avise a nova URL
- * que eu atualizo a constante BK_GAS_URL no index.html.
+ * Instalação / atualização:
+ * 1. Abra o projeto do Apps Script usado em BK_GAS_URL.
+ * 2. Substitua/adicione as funções abaixo sem duplicar doGet/doPost.
+ * 3. Implantar > Gerenciar implantações > Editar lápis.
+ * 4. Versão: Nova versão > Implantar.
+ * 5. Executar como: Eu | Quem pode acessar: Qualquer pessoa.
  ************************************************************************/
 
 var BACKLOG_FILE = 'leadtime_backlog_store.json';
+var BACKLOG_SCRIPT_VERSION = '2026-06-03-backlog-persist-v2';
 
 function doGet(e) {
-  var action = e && e.parameter && e.parameter.action;
-  if (action === 'getBacklog') {
-    return jsonOut({ ok: true, backlog: readStore() }, e);
+  var action = getParam_(e, 'action');
+
+  if (action === 'health') {
+    var data = readStore();
+    return jsonOut({
+      ok: true,
+      version: BACKLOG_SCRIPT_VERSION,
+      snapshots: data.length,
+      maxStories: maxStoryCount_(data),
+      currentStories: currentSnap_(data) ? storyCount_(currentSnap_(data)) : 0
+    }, e);
   }
-  // ... mantenha aqui outros GETs que você já tenha (ex.: getStories) ...
-  return jsonOut({ ok: false, error: 'unknown action' }, e);
+
+  if (action === 'getBacklog') {
+    var backlog = readStore();
+    return jsonOut({
+      ok: true,
+      version: BACKLOG_SCRIPT_VERSION,
+      backlog: backlog,
+      snapshots: backlog.length,
+      maxStories: maxStoryCount_(backlog)
+    }, e);
+  }
+
+  // Mantenha aqui outros GETs do seu projeto, como getStories, se existirem.
+  return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action }, e);
 }
 
 function doPost(e) {
   try {
-    var action = e.parameter.action;
+    var action = getParam_(e, 'action');
+
     if (action === 'saveBacklog') {
-      var incoming = JSON.parse(e.parameter.payload || '[]');
-      var merged = mergeSnaps(readStore(), incoming);
+      var payload = getParam_(e, 'payload');
+      if (!payload && e && e.postData && e.postData.contents) {
+        payload = parseBody_(e.postData.contents).payload || e.postData.contents;
+      }
+
+      var incoming = JSON.parse(payload || '[]');
+      if (!Array.isArray(incoming)) incoming = [];
+
+      var before = readStore();
+      var merged = mergeSnaps(before, incoming);
       writeStore(merged);
-      return jsonOut({ ok: true, count: merged.length });
+
+      return jsonOut({
+        ok: true,
+        version: BACKLOG_SCRIPT_VERSION,
+        beforeSnapshots: before.length,
+        incomingSnapshots: incoming.length,
+        savedSnapshots: merged.length,
+        savedMaxStories: maxStoryCount_(merged),
+        currentStories: currentSnap_(merged) ? storyCount_(currentSnap_(merged)) : 0
+      }, e);
     }
-    // ... mantenha aqui outros POSTs que você já tenha (ex.: saveStories) ...
-    return jsonOut({ ok: false, error: 'unknown action' });
+
+    // Mantenha aqui outros POSTs do seu projeto, como saveStories, se existirem.
+    return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action }, e);
   } catch (err) {
-    return jsonOut({ ok: false, error: String(err) });
+    return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.stack || err) }, e);
   }
 }
 
-/* ---- Merge não-destrutivo por identidade (id global; fallback seq) ---- */
-function snapKey(s) { return (s && s.id) ? ('id:' + s.id) : ('seq:' + (s ? s.seq : '')); }
+function getParam_(e, name) {
+  if (e && e.parameter && e.parameter[name] != null) return e.parameter[name];
+  if (e && e.postData && e.postData.contents) {
+    var parsed = parseBody_(e.postData.contents);
+    if (parsed[name] != null) return parsed[name];
+  }
+  return '';
+}
 
-function mergeSnaps(base, incoming) {
-  var byKey = {};
-  (base || []).forEach(function (s) { if (s) byKey[snapKey(s)] = s; });
-  (incoming || []).forEach(function (s) {
-    if (!s) return;
-    var k = snapKey(s), ex = byKey[k];
-    if (!ex) { byKey[k] = s; return; }
-    var nNew = (s.stories ? s.stories.length : 0);
-    var nOld = (ex.stories ? ex.stories.length : 0);
-    if (nNew > nOld) byKey[k] = s; // mantém o mais completo
+function parseBody_(body) {
+  var out = {};
+  String(body || '').split('&').forEach(function (part) {
+    if (!part) return;
+    var eq = part.indexOf('=');
+    var k = eq >= 0 ? part.slice(0, eq) : part;
+    var v = eq >= 0 ? part.slice(eq + 1) : '';
+    try { k = decodeURIComponent(k.replace(/\+/g, ' ')); } catch (e) {}
+    try { v = decodeURIComponent(v.replace(/\+/g, ' ')); } catch (e) {}
+    out[k] = v;
   });
-  var out = Object.keys(byKey).map(function (k) { return byKey[k]; });
-  out.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
   return out;
 }
 
-/* ---- Armazenamento: arquivo JSON no Drive (sem limite de célula) ---- */
+/* ---- Merge não-destrutivo por identidade ---- */
+function snapKey(s) {
+  return (s && s.id) ? ('id:' + s.id) : ('seq:' + (s ? s.seq : ''));
+}
+function storyCount_(s) {
+  return s && Array.isArray(s.stories) ? s.stories.length : 0;
+}
+function snapTime_(s) {
+  var t = Date.parse((s && s.importedAt) || '');
+  return isNaN(t) ? 0 : t;
+}
+function compareSnaps_(a, b) {
+  var ca = storyCount_(a), cb = storyCount_(b);
+  if (ca !== cb) return ca - cb;
+  var ta = snapTime_(a), tb = snapTime_(b);
+  if (ta !== tb) return ta - tb;
+  return (Number(a && a.seq) || 0) - (Number(b && b.seq) || 0);
+}
+function currentSnap_(arr) {
+  var copy = (arr || []).slice().sort(compareSnaps_);
+  return copy.length ? copy[copy.length - 1] : null;
+}
+function maxStoryCount_(arr) {
+  return (arr || []).reduce(function (m, s) { return Math.max(m, storyCount_(s)); }, 0);
+}
+
+function mergeSnaps(base, incoming) {
+  var byKey = {};
+  (base || []).forEach(function (s) {
+    if (s) byKey[snapKey(s)] = s;
+  });
+
+  (incoming || []).forEach(function (s) {
+    if (!s) return;
+    var k = snapKey(s);
+    var ex = byKey[k];
+    if (!ex) {
+      byKey[k] = s;
+      return;
+    }
+
+    // Mesma identidade: mantém o snapshot com mais histórias; empate fica com o mais recente.
+    var nNew = storyCount_(s), nOld = storyCount_(ex);
+    if (nNew > nOld || (nNew === nOld && snapTime_(s) > snapTime_(ex))) {
+      byKey[k] = s;
+    }
+  });
+
+  var out = Object.keys(byKey).map(function (k) { return byKey[k]; });
+  out.sort(compareSnaps_);
+  return out;
+}
+
+/* ---- Armazenamento: arquivo JSON no Drive ---- */
 function getStoreFile() {
   var it = DriveApp.getFilesByName(BACKLOG_FILE);
   return it.hasNext() ? it.next() : null;
@@ -85,17 +168,21 @@ function getStoreFile() {
 function readStore() {
   var f = getStoreFile();
   if (!f) return [];
-  try { return JSON.parse(f.getBlob().getDataAsString() || '[]'); }
-  catch (e) { return []; }
+  try {
+    var data = JSON.parse(f.getBlob().getDataAsString() || '[]');
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
 }
 function writeStore(arr) {
-  var json = JSON.stringify(arr);
+  var json = JSON.stringify(arr || []);
   var f = getStoreFile();
   if (f) f.setContent(json);
   else DriveApp.createFile(BACKLOG_FILE, json, MimeType.PLAIN_TEXT);
 }
 
-/* ---- Resposta JSON (com suporte opcional a JSONP via &callback=) ---- */
+/* ---- Resposta JSON / JSONP ---- */
 function jsonOut(obj, e) {
   var out = ContentService.createTextOutput();
   var cb = e && e.parameter && e.parameter.callback;
