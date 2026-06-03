@@ -19,12 +19,15 @@
  ************************************************************************/
 
 var BACKLOG_FILE = 'leadtime_backlog_store.json';
-var BACKLOG_SCRIPT_VERSION = '2026-06-03-backlog-persist-v2';
+var STORIES_FILE = 'leadtime_stories_store.json';
+var BACKLOG_SCRIPT_VERSION = '2026-06-03-stories-persist-v3';
 
 function autorizarDriveUmaVez() {
   var files = DriveApp.getFilesByName(BACKLOG_FILE);
   var found = files.hasNext();
-  return 'Drive autorizado. Arquivo existente: ' + found;
+  var stFiles = DriveApp.getFilesByName(STORIES_FILE);
+  var stFound = stFiles.hasNext();
+  return 'Drive autorizado. Backlog existente: ' + found + ' · Estórias existentes: ' + stFound;
 }
 
 function doGet(e) {
@@ -37,7 +40,8 @@ function doGet(e) {
       version: BACKLOG_SCRIPT_VERSION,
       snapshots: data.length,
       maxStories: maxStoryCount_(data),
-      currentStories: currentSnap_(data) ? storyCount_(currentSnap_(data)) : 0
+      currentStories: currentSnap_(data) ? storyCount_(currentSnap_(data)) : 0,
+      stories: readStories_().length
     }, e);
   }
 
@@ -52,7 +56,16 @@ function doGet(e) {
     }, e);
   }
 
-  // Mantenha aqui outros GETs do seu projeto, como getStories, se existirem.
+  if (action === 'getStories') {
+    var stories = readStories_();
+    return jsonOut({
+      ok: true,
+      version: BACKLOG_SCRIPT_VERSION,
+      stories: stories,
+      count: stories.length
+    }, e);
+  }
+
   return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action }, e);
 }
 
@@ -84,7 +97,28 @@ function doPost(e) {
       }, e);
     }
 
-    // Mantenha aqui outros POSTs do seu projeto, como saveStories, se existirem.
+    if (action === 'saveStories') {
+      var stPayload = getParam_(e, 'payload');
+      if (!stPayload && e && e.postData && e.postData.contents) {
+        stPayload = parseBody_(e.postData.contents).payload || e.postData.contents;
+      }
+
+      var incomingStories = JSON.parse(stPayload || '[]');
+      if (!Array.isArray(incomingStories)) incomingStories = [];
+
+      var beforeStories = readStories_();
+      var mergedStories = mergeStories_(beforeStories, incomingStories);
+      writeStories_(mergedStories);
+
+      return jsonOut({
+        ok: true,
+        version: BACKLOG_SCRIPT_VERSION,
+        beforeStories: beforeStories.length,
+        incomingStories: incomingStories.length,
+        savedStories: mergedStories.length
+      }, e);
+    }
+
     return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action }, e);
   } catch (err) {
     return jsonOut({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.stack || err) }, e);
@@ -165,6 +199,45 @@ function mergeSnaps(base, incoming) {
   var out = Object.keys(byKey).map(function (k) { return byKey[k]; });
   out.sort(compareSnaps_);
   return out;
+}
+
+/* ---- Estórias (Qtd Story/Épicos): merge não-destrutivo por id ---- */
+// Cada estória é {id, epic, resumo, status, squad}. Une por id; em colisão,
+// a versão recebida (importação mais recente) vence, preservando estórias de
+// outras squads que não estavam no payload atual.
+function mergeStories_(base, incoming) {
+  var byId = {};
+  var order = [];
+  function add(s, overwrite) {
+    if (!s || !s.id) return;
+    var k = String(s.id);
+    if (!(k in byId)) order.push(k);
+    if (overwrite || !(k in byId)) byId[k] = s;
+  }
+  (base || []).forEach(function (s) { add(s, false); });
+  (incoming || []).forEach(function (s) { add(s, true); });
+  return order.map(function (k) { return byId[k]; });
+}
+
+function getStoriesFile_() {
+  var it = DriveApp.getFilesByName(STORIES_FILE);
+  return it.hasNext() ? it.next() : null;
+}
+function readStories_() {
+  var f = getStoriesFile_();
+  if (!f) return [];
+  try {
+    var data = JSON.parse(f.getBlob().getDataAsString() || '[]');
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    return [];
+  }
+}
+function writeStories_(arr) {
+  var json = JSON.stringify(arr || []);
+  var f = getStoriesFile_();
+  if (f) f.setContent(json);
+  else DriveApp.createFile(STORIES_FILE, json, MimeType.PLAIN_TEXT);
 }
 
 /* ---- Armazenamento: arquivo JSON no Drive ---- */
