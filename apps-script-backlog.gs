@@ -12,13 +12,20 @@
  * Instalação / atualização:
  * 1. Abra o projeto do Apps Script usado em BK_GAS_URL.
  * 2. Substitua/adicione as funções abaixo sem duplicar doGet/doPost.
- * 3. Implantar > Gerenciar implantações > Editar lápis.
- * 4. Versão: Nova versão > Implantar.
- * 5. Executar como: Eu | Quem pode acessar: Qualquer pessoa.
+ * 3. Execute a função autorizarDriveUmaVez() uma vez e aceite as permissões.
+ * 4. Implantar > Gerenciar implantações > Editar lápis.
+ * 5. Versão: Nova versão > Implantar.
+ * 6. Executar como: Eu | Quem pode acessar: Qualquer pessoa.
  ************************************************************************/
 
 var BACKLOG_FILE = 'leadtime_backlog_store.json';
 var BACKLOG_SCRIPT_VERSION = '2026-06-03-backlog-persist-v2';
+
+function autorizarDriveUmaVez() {
+  var files = DriveApp.getFilesByName(BACKLOG_FILE);
+  var found = files.hasNext();
+  return 'Drive autorizado. Arquivo existente: ' + found;
+}
 
 function doGet(e) {
   var action = getParam_(e, 'action');
