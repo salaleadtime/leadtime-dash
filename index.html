@@ -2372,7 +2372,7 @@ function updateTabCounts(){
   var svEl=$id('tabCtSv');
   if(svEl) svEl.textContent=allStories.length||'';
   var bkEl=$id('tabCtBk');
-  if(bkEl){ var bkCur=backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].stories.length:0; bkEl.textContent=bkCur||''; }
+  if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?snapStoryCount(bkCurSnap):0; bkEl.textContent=bkCur||''; }
 }
 
 // ═══════════════════════════════════════
@@ -2577,6 +2577,20 @@ function loadBacklogSnaps(){
 
 // Identidade de um snapshot: usa o id global quando existir; senão cai no seq (legado)
 function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }
+function snapStoryCount(s){ return (s&&Array.isArray(s.stories)) ? s.stories.length : 0; }
+function snapTime(s){ var t=Date.parse((s&&s.importedAt)||''); return isNaN(t)?0:t; }
+function compareBacklogSnaps(a,b){
+  var ca=snapStoryCount(a), cb=snapStoryCount(b);
+  if(ca!==cb) return ca-cb;
+  var ta=snapTime(a), tb=snapTime(b);
+  if(ta!==tb) return ta-tb;
+  var sa=Number(a&&a.seq)||0, sb=Number(b&&b.seq)||0;
+  return sa-sb;
+}
+function sortBacklogSnaps(){ backlogSnaps.sort(compareBacklogSnaps); }
+function getCurrentBacklogSnapshot(){ if(!backlogSnaps.length) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-1]; }
+function getPreviousBacklogSnapshot(){ if(backlogSnaps.length<2) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-2]; }
+function maxBacklogStoryCount(snaps){ return (snaps||[]).reduce(function(m,s){ return Math.max(m,snapStoryCount(s)); },0); }
 
 // Merge NÃO-destrutivo: une snapshots vindos de qualquer fonte (servidor, nuvem, arquivo)
 // sem nunca apagar o que já temos. Em colisão de identidade, mantém o MAIS completo
@@ -2596,7 +2610,7 @@ function mergeBacklog(incoming){
     var nNew=(s.stories?s.stories.length:0), nOld=(ex.stories?ex.stories.length:0);
     if(nNew>nOld){ var idx=backlogSnaps.indexOf(ex); if(idx>=0) backlogSnaps[idx]=s; byKey[k]=s; }
   });
-  backlogSnaps.sort(function(a,b){ return (a.seq||0)-(b.seq||0); });
+  sortBacklogSnaps();
   return added;
 }
 
@@ -2623,17 +2637,21 @@ function _gasJsonp(url, cb){
 
 function gasLoadBacklog(cb){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  var localMax=maxBacklogStoryCount(backlogSnaps);
   fetch(BK_GAS_URL+'?action=getBacklog&t='+Date.now())
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(json){
       if(json && json.ok && Array.isArray(json.backlog) && json.backlog.length){
-        var added=mergeBacklog(json.backlog);
-        if(added>0){
-          try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
-          renderBacklogView();
-        }
+        var serverMax=maxBacklogStoryCount(json.backlog);
+        mergeBacklog(json.backlog);
+        sortBacklogSnaps();
+        try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+        renderBacklogView();
+        updateTabCounts();
+        if(localMax>serverMax && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
         if(cb) cb(null, json.backlog.length);
       } else {
+        if(backlogSnaps.length && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
         if(cb) cb(null, 0);
       }
     })
@@ -2796,10 +2814,11 @@ function loadBacklogXlsx(file){
         toast('Nenhuma história encontrada','O arquivo não contém histórias válidas.','err');
         return;
       }
-      var nextSeq=(backlogSnaps.length?backlogSnaps[backlogSnaps.length-1].seq:0)+1;
+      var nextSeq=backlogSnaps.reduce(function(m,s){ return Math.max(m,Number(s&&s.seq)||0); },0)+1;
       // id global e único: evita colisão de identidade entre navegadores diferentes
       var snapId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
       backlogSnaps.push({id:snapId,seq:nextSeq,stories:stories,importedAt:new Date().toISOString()});
+      sortBacklogSnaps();
       saveBacklogSnaps();
 
       var bkUpName=$id('bkUpName'); if(bkUpName) bkUpName.textContent=file.name;
@@ -2835,9 +2854,10 @@ function renderBacklogView(){
     return;
   }
 
-  var cur=backlogSnaps[backlogSnaps.length-1];
-  var prev=backlogSnaps.length>1?backlogSnaps[backlogSnaps.length-2]:null;
-  var stories=cur.stories;
+  sortBacklogSnaps();
+  var cur=getCurrentBacklogSnapshot();
+  var prev=getPreviousBacklogSnapshot();
+  var stories=(cur&&Array.isArray(cur.stories))?cur.stories:[];
 
   // Count per squad
   var curSquadCnt={}, prevSquadCnt={};
@@ -4067,7 +4087,8 @@ var SEED=[
     // Restore backlog snapshots
     loadBacklogSnaps();
     if(backlogSnaps.length){
-      var bkLastSnap=backlogSnaps[backlogSnaps.length-1];
+      sortBacklogSnaps();
+      var bkLastSnap=getCurrentBacklogSnapshot();
       var bkN=$id('bkUpName'); if(bkN) bkN.textContent='Dados salvos localmente';
       var bkS=$id('bkUpSub'); if(bkS) bkS.textContent='#'+bkLastSnap.seq+' · '+bkLastSnap.stories.length+' histórias · recarregadas automaticamente';
       var bkSv=$id('bkUpSaved'); if(bkSv) bkSv.classList.remove('hidden');
@@ -4193,16 +4214,16 @@ function calBR(s,withYear){ var d=calParse(s); if(!d) return '—'; var dd=Strin
 function calToday(){ var t=new Date(); t.setHours(0,0,0,0); return t; }
 
 function calLoad(){
-  if(calData!==null) return calData;
+  if(Array.isArray(calData) && calData.length) return calData;
   var raw=null;
   try{ raw=localStorage.getItem(CAL_KEY); }catch(e){}
-  if(raw===null){            // primeira vez: carrega o planejamento padrão (2º/3º/4º TRI)
+  if(raw!==null){
+    try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
+  }
+  if(!Array.isArray(calData) || !calData.length){
     calData=calDefaultData();
     calSave();
-    return calData;
   }
-  try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
-  if(!Array.isArray(calData)) calData=[];
   return calData;
 }
 function calSave(){ try{ localStorage.setItem(CAL_KEY, JSON.stringify(calData)); }catch(e){} }
@@ -4224,7 +4245,7 @@ function calDefaultData(){
       {name:'SPRINT 3',month:'AGOSTO',start:'2026-07-20',end:'2026-08-02'},
       {name:'SPRINT 4',month:'AGOSTO',start:'2026-08-03',end:'2026-08-16'},
       {name:'SPRINT 5',month:'SETEMBRO',start:'2026-08-17',end:'2026-08-30'},
-      {name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-21',end:'2026-09-13'}
+      {name:'SPRINT 6',month:'SETEMBRO',start:'2026-08-31',end:'2026-09-13'}
     ]},
     {id:calUid(),name:'4º Trimestre',sprints:[
       {name:'SPRINT 1',month:'OUTUBRO',start:'2026-09-14',end:'2026-09-27'},
