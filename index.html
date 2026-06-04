@@ -2467,35 +2467,50 @@ function storyStatusClass(status){
 }
 
 // Detecta colunas na planilha de Estórias do Jira
+// Aceita tanto exports antigos (Epic Link) quanto modernos (Parent / Item pai),
+// e tolera variações de nome da coluna de chave (Chave, Issue key, Key, ID).
+function isChaveCol(c){ return c.indexOf('chave')>=0 || c.indexOf('issue key')>=0 || c==='key'; }
+function isEpicCol(c){ return c.indexOf('epic')>=0 || c.indexOf('epico')>=0; }
+function isParentCol(c){ return c==='parent' || c.indexOf('item pai')>=0 || c.indexOf('parent')>=0 || c==='pai' || c.indexOf('superior')>=0; }
 function detectStoriesFormat(wb){
   var sheetNames=wb.SheetNames;
   for(var s=0;s<sheetNames.length;s++){
     var ws=wb.Sheets[sheetNames[s]];
     if(!ws) continue;
     var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-    for(var i=0;i<Math.min(5,rows.length);i++){
+    for(var i=0;i<Math.min(8,rows.length);i++){
       var row=rows[i];
       if(!row||!row.length) continue;
-      var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase();});
-      // Precisa ter "chave" (story ID) e "epic" (link ao épico pai)
-      var hasChave=cells.some(function(c){return c.indexOf('chave')>=0||c==='key'||c==='id'&&c.length<5;});
-      var hasEpic=cells.some(function(c){return c.indexOf('epic')>=0||c.indexOf('epico')>=0;});
-      if(hasChave&&hasEpic){
-        var map={id:-1,epic:-1,resumo:-1,status:-1,squad:-1,criado:-1,tipo:-1};
+      var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase().trim();});
+      // Precisa ter "chave" (story ID) e um vínculo ao épico (Epic Link OU Parent)
+      var hasChave=cells.some(function(c){return isChaveCol(c)||c==='id';});
+      var hasLink=cells.some(function(c){return isEpicCol(c)||isParentCol(c);});
+      if(hasChave&&hasLink){
+        var map={id:-1,epic:-1,parent:-1,resumo:-1,status:-1,squad:-1,criado:-1,tipo:-1};
+        // id: prioriza Chave/Issue key/Key; só cai em "ID" (numérico interno) se não houver chave
+        cells.forEach(function(c,j){ if(map.id<0&&isChaveCol(c)) map.id=j; });
+        if(map.id<0) cells.forEach(function(c,j){ if(map.id<0&&c==='id') map.id=j; });
         cells.forEach(function(c,j){
-          if(map.id<0&&(c==='chave'||c==='key'||c==='chave do item')) map.id=j;
-          else if(map.epic<0&&(c.indexOf('epic')>=0||c.indexOf('epico')>=0)) map.epic=j;
+          if(map.epic<0&&isEpicCol(c)) map.epic=j;
+          else if(map.parent<0&&isParentCol(c)) map.parent=j;
           else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
           else if(map.status<0&&(c.indexOf('situacao')>=0||c==='status'||c.indexOf('estado')>=0)) map.status=j;
-          else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('time')>=0)) map.squad=j;
+          else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('equipe')>=0||c==='time')) map.squad=j;
           else if(map.criado<0&&(c.indexOf('criado')>=0||c.indexOf('created')>=0)) map.criado=j;
           else if(map.tipo<0&&(c.indexOf('tipo')>=0||c.indexOf('type')>=0)) map.tipo=j;
         });
-        if(map.id>=0&&map.epic>=0) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
+        if(map.id>=0&&(map.epic>=0||map.parent>=0)) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
       }
     }
   }
   return null;
+}
+// Extrai a chave Jira (ex.: PROJ-123) de uma célula que pode ser URL, "KEY Resumo" ou a própria chave
+function extractJiraKey(v){
+  var s=(v||'').toString().trim();
+  if(!s) return '';
+  var m=s.match(/[A-Z][A-Z0-9]*-\d+/);
+  return m?m[0]:s;
 }
 
 // Carrega planilha de Estórias
@@ -2518,18 +2533,27 @@ function loadStoriesXlsx(file){
       var rows=det.rows;
       var m=det.map;
       var stories=[];
+      var idsSemVinculo=0;
       for(var i=det.hrow+1;i<rows.length;i++){
         var row=rows[i];
         if(!row||!row.length) continue;
-        var id=(row[m.id]||'').toString().trim();
-        var epic=(row[m.epic]||'').toString().trim();
-        if(!id||!epic) continue;
-        // Pega apenas o ID do épico (sem URL)
-        epic=epic.replace(/.*\/([A-Z]+-\d+).*/,'$1').trim();
+        var id=extractJiraKey(row[m.id]);
+        if(!id) continue;
+        // Vínculo ao épico: usa Epic Link; se vazio, cai no Parent/Item pai (Jira moderno)
+        var epicRaw=m.epic>=0?(row[m.epic]||'').toString().trim():'';
+        if(!epicRaw&&m.parent>=0) epicRaw=(row[m.parent]||'').toString().trim();
+        var epic=extractJiraKey(epicRaw);
+        if(!epic){ idsSemVinculo++; continue; }
         var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
         var status=m.status>=0?(row[m.status]||'').toString().trim():'';
         var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
         stories.push({id:id,epic:epic,resumo:resumo,status:status,squad:squad});
+      }
+      if(!stories.length){
+        toast('Nenhuma estória com vínculo de épico',
+          (idsSemVinculo?idsSemVinculo+' linha(s) lidas, mas ':'')+'nenhuma tinha "Epic Link" nem "Parent" preenchido. '+
+          'Reexporte do Jira incluindo a coluna do épico pai (Epic Link ou Parent).','err');
+        return;
       }
       allStories=stories;
       saveStoriesLocal();
