@@ -823,10 +823,40 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
 </div>
 </div>
+<style>
+/* ── Componentes executivos do Dashboard (aditivos, prefixados) ── */
+/* Ritmo da meta (frase-manchete) */
+.xp-card{display:flex;gap:16px;align-items:center;background:#fff;border:1px solid var(--border);border-left:4px solid #e11d48;border-radius:var(--rad);box-shadow:var(--shadow-sm);padding:14px 18px;margin-bottom:1rem;flex-wrap:wrap}
+.xp-ico{width:54px;height:54px;border-radius:14px;background:var(--as);display:flex;align-items:center;justify-content:center;font-size:27px;flex-shrink:0}
+.xp-main{flex:1;min-width:240px}
+.xp-txt{font-size:19px;font-weight:800;line-height:1.3;letter-spacing:-.2px;color:var(--tx)}
+.xp-txt b{color:var(--r)}
+.xp-sub{font-size:12px;color:var(--tx2);margin-top:4px}
+.xp-chips{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.xp-chip{font-size:11px;background:#f1f5f9;border:1px solid var(--border);border-radius:20px;padding:5px 11px;white-space:nowrap}
+.xp-chip-l{color:var(--tx2)}
+.xp-chip b{font-weight:800}
+/* Régua de estouro (timeline) */
+.xr-panel{background:#fff;border:1px solid var(--border);border-radius:var(--rad);box-shadow:var(--shadow-sm);padding:1rem 1.2rem;margin-bottom:1rem}
+.xr-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;flex-wrap:wrap;gap:6px}
+.xr-t{font-size:13.5px;font-weight:800}
+.xr-cnt{font-size:10.5px;color:var(--tx3);font-weight:600}
+.xr-tl{position:relative;height:120px;margin:30px 10px 6px}
+.xr-axis{position:absolute;left:0;right:0;top:78px;height:4px;border-radius:3px}
+.xr-meta{position:absolute;top:48px;bottom:8px;width:2px;background:#0f172a;z-index:2}
+.xr-meta span{position:absolute;top:-20px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.xr-dot{position:absolute;top:71px;width:17px;height:17px;border-radius:50%;border:3px solid #fff;transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:3}
+.xr-tag{position:absolute;transform:translateX(-50%);font-size:9px;font-weight:700;white-space:nowrap;text-align:center;color:var(--tx2)}
+.xr-id{font-family:ui-monospace,monospace;color:#7a0000}
+.xr-scale{position:absolute;left:0;right:0;top:88px;display:flex;justify-content:space-between;font-size:9px;color:var(--tx3)}
+.xr-empty{font-size:12px;color:var(--tx3);text-align:center;padding:1.5rem}
+</style>
 <div class="pane" id="pane-db">
 <div class="db" id="dbContent">
 
   <div id="triBanner"></div>
+
+  <div id="metaPace"></div>
 
   <div>
     <div class="sec-lbl">Visão do Trimestre</div>
@@ -837,6 +867,8 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     <div class="sec-lbl">Lead Time por Squad · Trimestre Atual</div>
     <div class="sgrid" id="squadCards"></div>
   </div>
+
+  <div id="runwayTimeline"></div>
 
   <div class="g2">
     <div class="panel">
@@ -1724,11 +1756,103 @@ function inTrimester(dateStr,tri){
 
 function renderDash(){
   renderTriBanner();
+  renderMetaPace();
   renderKPI();
   renderSquads();
+  renderRunwayTimeline();
   renderDeliveries();
   renderRisks();
   renderPanorama();
+}
+
+// ── Ritmo da meta (frase-manchete) ──────────────────────────
+// "Para manter a meta, entregue N épicos nos próximos XX dias."
+// Base: épicos ATIVOS (sem Data Fim). Para cada um, faltam (META - lt) dias
+// até estourar. A manchete usa a menor janela (7/14/30d) com algum épico.
+function renderMetaPace(){
+  var el=$id('metaPace'); if(!el) return;
+  var act=activeEpics();
+  if(!act.length){ el.innerHTML=''; return; }
+  var salv=act.filter(function(r){return (META-r.lt)>0;}).sort(function(a,b){return (META-a.lt)-(META-b.lt);});
+  var estourados=act.length-salv.length;
+  var cnt=function(d){ return salv.filter(function(r){return (META-r.lt)<=d;}).length; };
+  var in7=cnt(7), in14=cnt(14), in30=cnt(30);
+  var hd;
+  if(!salv.length){
+    // Sem salváveis: ou está tudo no verde, ou todos já passaram da meta.
+    if(estourados){
+      var e=estourados!==1;
+      hd='<div class="xp-txt" style="color:var(--r)">⚠ '+(e?'Os '+estourados+' épicos ativos já':'O épico ativo já')+' passaram da meta de '+META+'d.</div>'+
+         '<div class="xp-sub">Foco em concluir os mais antigos primeiro para reduzir o lead time médio — a régua abaixo mostra a ordem.</div>';
+    } else {
+      hd='<div class="xp-txt">✅ Nenhum épico ativo em risco de estourar a meta nos próximos 30 dias.</div>'+
+         '<div class="xp-sub">Tudo dentro do prazo. 🎉</div>';
+    }
+  } else {
+    var win = in7>0?7:(in14>0?14:30);
+    var n   = in7>0?in7:(in14>0?in14:in30);
+    var weekly=Math.round(in30/4.3*10)/10; // ritmo p/ zerar a fila de risco em ~30d
+    var s=n!==1;
+    hd='<div class="xp-txt">Para manter a meta de '+META+'d, entregue <b>'+n+' épico'+(s?'s':'')+'</b> nos próximos <b>'+win+' dias</b>.</div>'+
+       '<div class="xp-sub">Senão, '+n+' épico'+(s?'s':'')+' que hoje est'+(s?'ão':'á')+' no prazo vira'+(s?'m':'')+' crítico'+(s?'s':'')+'.'+(in30?' Ritmo p/ zerar a fila de risco: ~'+weekly+' épico/semana.':'')+'</div>';
+  }
+  el.innerHTML=
+    '<div class="xp-card">'+
+      '<div class="xp-ico">🏁</div>'+
+      '<div class="xp-main">'+hd+
+        '<div class="xp-chips">'+
+          xpChip('7 dias',in7,'#dc2626')+
+          xpChip('14 dias',in14,'#d97706')+
+          xpChip('30 dias',in30,'#16a34a')+
+          '<span class="xp-chip"><span class="xp-chip-l">Já estourados</span> <b style="color:#475569">'+estourados+'</b></span>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+}
+function xpChip(lbl,val,color){
+  return '<span class="xp-chip"><span class="xp-chip-l">Próximos '+lbl+'</span> <b style="color:'+color+'">'+val+' épico'+(val!==1?'s':'')+'</b></span>';
+}
+
+// ── Régua de Estouro (timeline "onda rumo à meta") ──────────
+// Cada épico ativo é uma bolinha posicionada pelo lead time atual numa régua
+// 0 → meta → estourado. Cores seguem o semáforo oficial (verde/âmbar/vermelho).
+function renderRunwayTimeline(){
+  var el=$id('runwayTimeline'); if(!el) return;
+  var act=activeEpics();
+  if(!act.length){ el.innerHTML=''; return; }
+  var sorted=act.slice().sort(function(a,b){return a.lt-b.lt;});
+  var maxLt=sorted[sorted.length-1].lt;
+  // Escala limitada a ~2× a meta (120d): evita que um épico muito antigo
+  // comprima todos à esquerda. Quem passa disso ancora na borda direita.
+  var scaleMax=Math.max(80,Math.min(Math.ceil((maxLt+8)/20)*20,120)); // múltiplo de 20 → ticks alinham
+  var capped=maxLt>scaleMax;
+  var metaPct=META/scaleMax*100;
+  var g40=40/scaleMax*100, g62=metaPct;
+  var axis='linear-gradient(90deg,#16a34a 0%,#16a34a '+g40.toFixed(1)+'%,#d97706 '+g40.toFixed(1)+'%,#d97706 '+g62.toFixed(1)+'%,#dc2626 '+g62.toFixed(1)+'%,#dc2626 100%)';
+  var ticks='';
+  for(var t=0;t<=scaleMax;t+=20){ ticks+='<span>'+(t===scaleMax&&capped?'≥'+t:t)+(t===scaleMax?'d':'')+'</span>'; }
+  var dots=sorted.map(function(r,i){
+    var pct=Math.min(r.lt/scaleMax*100,99); // ancora na borda quem excede a escala
+    var col=r.lt>=META?'#dc2626':r.lt>=40?'#d97706':'#16a34a';
+    var rem=META-r.lt;
+    var remTxt=rem>0?('estoura em '+rem+'d'):(rem===0?'estoura hoje':'estourou há '+(-rem)+'d');
+    var tagTop=(i%2===0)?'top:96px':'top:28px'; // alterna abaixo/acima p/ evitar sobreposição
+    var sid=r.id.replace('SLOPC-','#');
+    var tip=esc(r.id)+' · '+esc(r.squad||'—')+' · '+r.lt+'d — '+remTxt+(r.resumo?(' · '+esc(r.resumo)):'');
+    return '<div class="xr-dot" style="left:'+pct.toFixed(1)+'%;background:'+col+'" title="'+tip+'"></div>'+
+      '<div class="xr-tag" style="left:'+pct.toFixed(1)+'%;'+tagTop+'"><span class="xr-id">'+esc(sid)+'</span><br>'+r.lt+'d</div>';
+  }).join('');
+  el.innerHTML=
+    '<div class="xr-panel">'+
+      '<div class="xr-hd"><span class="xr-t">🌊 Radar de Estouro · Fila rumo à meta</span>'+
+        '<span class="xr-cnt">'+act.length+' épico'+(act.length!==1?'s':'')+' ativo'+(act.length!==1?'s':'')+' · posição = dias decorridos</span></div>'+
+      '<div class="xr-tl">'+
+        '<div class="xr-meta" style="left:'+metaPct.toFixed(1)+'%"><span>META '+META+'d</span></div>'+
+        '<div class="xr-axis" style="background:'+axis+'"></div>'+
+        '<div class="xr-scale">'+ticks+'</div>'+
+        dots+
+      '</div>'+
+    '</div>';
 }
 
 function renderTriBanner(){
