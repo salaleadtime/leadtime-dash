@@ -1824,9 +1824,10 @@ function xpChip(lbl,val,color){
   return '<span class="xp-chip"><span class="xp-chip-l">'+lbl+'</span> <b style="color:'+color+'">'+val+'</b></span>';
 }
 
-// ── Régua de Estouro (timeline "onda rumo à meta") ──────────
-// Cada épico ativo é uma bolinha posicionada pelo lead time atual numa régua
-// 0 → meta → estourado. Cores seguem o semáforo oficial (verde/âmbar/vermelho).
+// ── Régua de lead time dos épicos abertos ───────────────────
+// Cada épico ativo é uma bolinha posicionada pelo lead time atual (dias
+// decorridos) numa régua 0 → 62 → além. A linha de 62d é a MÉDIA-meta do
+// trimestre: os pontos à direita dela são os que puxam a média para cima.
 function renderRunwayTimeline(){
   var el=$id('runwayTimeline'); if(!el) return;
   var act=activeEpics();
@@ -1842,23 +1843,27 @@ function renderRunwayTimeline(){
   var axis='linear-gradient(90deg,#16a34a 0%,#16a34a '+g40.toFixed(1)+'%,#d97706 '+g40.toFixed(1)+'%,#d97706 '+g62.toFixed(1)+'%,#dc2626 '+g62.toFixed(1)+'%,#dc2626 100%)';
   var ticks='';
   for(var t=0;t<=scaleMax;t+=20){ ticks+='<span>'+(t===scaleMax&&capped?'≥'+t:t)+(t===scaleMax?'d':'')+'</span>'; }
+  var acima=0;
   var dots=sorted.map(function(r,i){
     var pct=Math.min(r.lt/scaleMax*100,99); // ancora na borda quem excede a escala
     var col=r.lt>=META?'#dc2626':r.lt>=40?'#d97706':'#16a34a';
     var rem=META-r.lt;
-    var remTxt=rem>0?('estoura em '+rem+'d'):(rem===0?'estoura hoje':'estourou há '+(-rem)+'d');
+    if(rem<0) acima++;
+    var remTxt=rem>0?('a '+rem+'d da meta'):(rem===0?'na meta de '+META+'d':(-rem)+'d acima da meta · puxa a média');
     var tagTop=(i%2===0)?'top:96px':'top:28px'; // alterna abaixo/acima p/ evitar sobreposição
     var sid=r.id.replace('SLOPC-','#');
     var tip=esc(r.id)+' · '+esc(r.squad||'—')+' · '+r.lt+'d — '+remTxt+(r.resumo?(' · '+esc(r.resumo)):'');
     return '<div class="xr-dot" style="left:'+pct.toFixed(1)+'%;background:'+col+'" title="'+tip+'"></div>'+
       '<div class="xr-tag" style="left:'+pct.toFixed(1)+'%;'+tagTop+'"><span class="xr-id">'+esc(sid)+'</span><br>'+r.lt+'d</div>';
   }).join('');
+  var sub=act.length+' aberto'+(act.length!==1?'s':'')+' · posição = dias decorridos'+
+          (acima?' · '+acima+' acima de '+META+'d puxa'+(acima!==1?'m':'')+' a média':'');
   el.innerHTML=
     '<div class="xr-panel">'+
-      '<div class="xr-hd"><span class="xr-t">🌊 Radar de Estouro · Fila rumo à meta</span>'+
-        '<span class="xr-cnt">'+act.length+' épico'+(act.length!==1?'s':'')+' ativo'+(act.length!==1?'s':'')+' · posição = dias decorridos</span></div>'+
+      '<div class="xr-hd"><span class="xr-t">🌊 Lead time dos épicos abertos</span>'+
+        '<span class="xr-cnt">'+sub+'</span></div>'+
       '<div class="xr-tl">'+
-        '<div class="xr-meta" style="left:'+metaPct.toFixed(1)+'%"><span>META '+META+'d</span></div>'+
+        '<div class="xr-meta" style="left:'+metaPct.toFixed(1)+'%"><span>MÉDIA-META '+META+'d</span></div>'+
         '<div class="xr-axis" style="background:'+axis+'"></div>'+
         '<div class="xr-scale">'+ticks+'</div>'+
         dots+
