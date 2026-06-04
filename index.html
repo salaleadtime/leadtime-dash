@@ -2472,6 +2472,8 @@ function storyStatusClass(status){
 function isChaveCol(c){ return c.indexOf('chave')>=0 || c.indexOf('issue key')>=0 || c==='key'; }
 function isEpicCol(c){ return c.indexOf('epic')>=0 || c.indexOf('epico')>=0; }
 function isParentCol(c){ return c==='parent' || c.indexOf('item pai')>=0 || c.indexOf('parent')>=0 || c==='pai' || c.indexOf('superior')>=0; }
+// Coluna com o NOME do épico pai (não a chave): "Nome do épico", "Epic Name", "Parent summary"…
+function isEpicNameCol(c){ return c.indexOf('nome do epico')>=0 || c.indexOf('epic name')>=0 || c.indexOf('parent summary')>=0 || c.indexOf('resumo do item pai')>=0 || c.indexOf('nome do item pai')>=0; }
 function detectStoriesFormat(wb){
   var sheetNames=wb.SheetNames;
   for(var s=0;s<sheetNames.length;s++){
@@ -2486,14 +2488,17 @@ function detectStoriesFormat(wb){
       var hasChave=cells.some(function(c){return isChaveCol(c)||c==='id';});
       var hasLink=cells.some(function(c){return isEpicCol(c)||isParentCol(c);});
       if(hasChave&&hasLink){
-        var map={id:-1,epic:-1,parent:-1,resumo:-1,status:-1,squad:-1,criado:-1,tipo:-1};
+        var map={id:-1,epic:-1,parent:-1,epicName:-1,resumo:-1,status:-1,squad:-1,criado:-1,tipo:-1};
         // id: prioriza Chave/Issue key/Key; só cai em "ID" (numérico interno) se não houver chave
         cells.forEach(function(c,j){ if(map.id<0&&isChaveCol(c)) map.id=j; });
         if(map.id<0) cells.forEach(function(c,j){ if(map.id<0&&c==='id') map.id=j; });
+        // nome do épico pai: passo dedicado, antes do resumo da estória
+        cells.forEach(function(c,j){ if(map.epicName<0&&isEpicNameCol(c)) map.epicName=j; });
         cells.forEach(function(c,j){
+          if(j===map.epicName) return;
           if(map.epic<0&&isEpicCol(c)) map.epic=j;
           else if(map.parent<0&&isParentCol(c)) map.parent=j;
-          else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
+          else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)&&c.indexOf('pai')<0&&c.indexOf('epico')<0) map.resumo=j;
           else if(map.status<0&&(c.indexOf('situacao')>=0||c==='status'||c.indexOf('estado')>=0)) map.status=j;
           else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('equipe')>=0||c==='time')) map.squad=j;
           else if(map.criado<0&&(c.indexOf('criado')>=0||c.indexOf('created')>=0)) map.criado=j;
@@ -2511,6 +2516,14 @@ function extractJiraKey(v){
   if(!s) return '';
   var m=s.match(/[A-Z][A-Z0-9]*-\d+/);
   return m?m[0]:s;
+}
+// Extrai o NOME do épico de uma célula "CHAVE Resumo do épico" (texto após a chave).
+// Retorna '' para URL ou para a chave pura (sem resumo).
+function extractEpicName(v){
+  var s=(v||'').toString().trim();
+  if(!s||/^https?:/i.test(s)) return '';
+  var after=s.replace(/^\s*[A-Z][A-Z0-9]*-\d+[\s:\-–]*/, '').trim();
+  return (after&&after!==s)?after:'';
 }
 
 // Carrega planilha de Estórias
@@ -2544,10 +2557,13 @@ function loadStoriesXlsx(file){
         if(!epicRaw&&m.parent>=0) epicRaw=(row[m.parent]||'').toString().trim();
         var epic=extractJiraKey(epicRaw);
         if(!epic){ idsSemVinculo++; continue; }
+        // Nome do épico: coluna dedicada, senão o texto após a chave na célula de vínculo
+        var epicName=m.epicName>=0?(row[m.epicName]||'').toString().trim():'';
+        if(!epicName) epicName=extractEpicName(epicRaw);
         var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
         var status=m.status>=0?(row[m.status]||'').toString().trim():'';
         var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
-        stories.push({id:id,epic:epic,resumo:resumo,status:status,squad:squad});
+        stories.push({id:id,epic:epic,epicName:epicName,resumo:resumo,status:status,squad:squad});
       }
       if(!stories.length){
         toast('Nenhuma estória com vínculo de épico',
@@ -3193,7 +3209,9 @@ function svKpiItem(color,val,lbl,sub,extra){
 function svEpicRow(ep,stories){
   var epicRec=allData.find(function(r){return r.id===ep;});
   var sq=(epicRec&&epicRec.squad)||((stories[0]&&stories[0].squad)||'');
+  // Nome do épico: 1) aba Épicos; 2) nome vindo do export de estórias (Parent "CHAVE Resumo")
   var resumo=(epicRec&&epicRec.resumo)||'';
+  if(!resumo){ var named=stories.find(function(s){return s&&s.epicName;}); if(named) resumo=named.epicName; }
   var accent=getSquadAccent(sq);
   var total=stories.length;
   var isEmpty=total===0;
