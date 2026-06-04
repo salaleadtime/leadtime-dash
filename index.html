@@ -2884,7 +2884,12 @@ function loadBacklogXlsx(file){
 }
 
 function isRefined(story){
-  return story.labels ? stripAcc(story.labels).toLowerCase().indexOf('refinad')>=0 : false;
+  // Conta como Refinada SOMENTE quando existe o rótulo/label exato "Refinada".
+  // (Antes casava o trecho "refinad", o que pegava variações; agora exige o
+  //  token exato, ignorando acento/maiúsculas — "Validada", "Refinadas" etc.
+  //  não contam.)
+  if(!story.labels) return false;
+  return stripAcc(String(story.labels)).toLowerCase().split(/[\s,;|]+/).indexOf('refinada')>=0;
 }
 
 function renderBacklogView(){
@@ -3014,7 +3019,7 @@ function renderBacklogView(){
     '<div class="sv-kpi" style="margin-bottom:1rem">'+
       svKpiItem('#7a0000',totalBacklog,'Total Backlog','importação #'+cur.seq)+
       svKpiItem('#3b82f6',squads.length,'Squads com Backlog','grupos ativos')+
-      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo Refinado no Jira')+
+      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo "Refinada" no Jira')+
       svKpiItem('#f59e0b',backlogSnaps.length,'Importações','snapshots históricos')+
     '</div>'+
     '<div class="bk-delta-bar">'+
