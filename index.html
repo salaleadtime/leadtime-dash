@@ -1765,52 +1765,63 @@ function renderDash(){
   renderPanorama();
 }
 
-// ── Ritmo da meta (frase-manchete) ──────────────────────────
-// "Para manter a meta, entregue N épicos nos próximos XX dias."
-// Base: épicos ATIVOS (sem Data Fim). Para cada um, faltam (META - lt) dias
-// até estourar. A manchete usa a menor janela (7/14/30d) com algum épico.
+// ── Previsibilidade da meta (frase-manchete) ────────────────
+// Modelo estatístico: a meta de 62d é a MÉDIA de lead time do trimestre.
+// média projetada = (Σ lt dos entregues no TRI + Σ lt atual dos abertos)
+//                   / (nº entregues + nº abertos)
+// Resolve até que data entregar os abertos para a média ficar ≤ META.
+// (entregar tudo até essa data ⇒ média ≤ META; depois dela, estoura)
 function renderMetaPace(){
   var el=$id('metaPace'); if(!el) return;
-  var act=activeEpics();
-  if(!act.length){ el.innerHTML=''; return; }
-  var salv=act.filter(function(r){return (META-r.lt)>0;}).sort(function(a,b){return (META-a.lt)-(META-b.lt);});
-  var estourados=act.length-salv.length;
-  var cnt=function(d){ return salv.filter(function(r){return (META-r.lt)<=d;}).length; };
-  var in7=cnt(7), in14=cnt(14), in30=cnt(30);
-  var hd;
-  if(!salv.length){
-    // Sem salváveis: ou está tudo no verde, ou todos já passaram da meta.
-    if(estourados){
-      var e=estourados!==1;
-      hd='<div class="xp-txt" style="color:var(--r)">⚠ '+(e?'Os '+estourados+' épicos ativos já':'O épico ativo já')+' passaram da meta de '+META+'d.</div>'+
-         '<div class="xp-sub">Foco em concluir os mais antigos primeiro para reduzir o lead time médio — a régua abaixo mostra a ordem.</div>';
-    } else {
-      hd='<div class="xp-txt">✅ Nenhum épico ativo em risco de estourar a meta nos próximos 30 dias.</div>'+
-         '<div class="xp-sub">Tudo dentro do prazo. 🎉</div>';
-    }
+  if(!allData.length){ el.innerHTML=''; return; }
+  var tri=getCurrentTrimester();
+  var del=allData.filter(function(r){return inTrimester(r.fim,tri);}); // entregues no TRI (lt travado)
+  var act=activeEpics();                                               // abertos (lt ainda crescendo)
+  var d=del.length, n=act.length, tot=d+n;
+  if(!tot){ el.innerHTML=''; return; }
+  var Sd=del.reduce(function(s,r){return s+r.lt;},0);
+  var So=act.reduce(function(s,r){return s+r.lt;},0);
+  var avgNow=Math.round((Sd+So)/tot);   // média se tudo aberto fosse entregue hoje
+  var avgDel=d?Math.round(Sd/d):0;      // média só dos entregues (= KPI "LT Médio TRI")
+  var hd, accent;
+  if(!n){
+    // Trimestre sem épicos abertos: nada a projetar, só o status da média entregue.
+    var ok0=avgDel<META;
+    accent=ok0?'#16a34a':'#dc2626';
+    hd='<div class="xp-txt"'+(ok0?'':' style="color:var(--r)"')+'>'+(ok0?'✅ ':'⚠ ')+
+         'Trimestre com média de <b>'+avgDel+'d</b> em '+d+' entrega'+(d!==1?'s':'')+' — '+(ok0?'dentro':'acima')+' da meta de '+META+'d.</div>'+
+       '<div class="xp-sub">Nenhum épico aberto no momento. Média trava conforme as próximas entregas.</div>';
   } else {
-    var win = in7>0?7:(in14>0?14:30);
-    var n   = in7>0?in7:(in14>0?in14:in30);
-    var weekly=Math.round(in30/4.3*10)/10; // ritmo p/ zerar a fila de risco em ~30d
-    var s=n!==1;
-    hd='<div class="xp-txt">Para manter a meta de '+META+'d, entregue <b>'+n+' épico'+(s?'s':'')+'</b> nos próximos <b>'+win+' dias</b>.</div>'+
-       '<div class="xp-sub">Senão, '+n+' épico'+(s?'s':'')+' que hoje est'+(s?'ão':'á')+' no prazo vira'+(s?'m':'')+' crítico'+(s?'s':'')+'.'+(in30?' Ritmo p/ zerar a fila de risco: ~'+weekly+' épico/semana.':'')+'</div>';
+    // dias a partir de hoje até a média projetada atingir exatamente META
+    var delta=(META*tot - Sd - So)/n;
+    if(delta>=0){
+      var dd=Math.floor(delta);
+      var today=new Date(); today.setHours(0,0,0,0);
+      var dl=new Date(today.getTime()+dd*86400000);
+      var ddmm=('0'+dl.getDate()).slice(-2)+'/'+('0'+(dl.getMonth()+1)).slice(-2);
+      accent='#16a34a';
+      hd='<div class="xp-txt">Para fechar o trimestre na meta de '+META+'d, entregue o'+(n!==1?'s '+n:'')+' épico'+(n!==1?'s':'')+' aberto'+(n!==1?'s':'')+' até <b>'+ddmm+'</b> <b>('+dd+' dia'+(dd!==1?'s':'')+')</b>.</div>'+
+         '<div class="xp-sub">Média projetada hoje (entregues + abertos): '+avgNow+'d. Cada dia de atraso aproxima a média da meta.</div>';
+    } else {
+      accent='#dc2626';
+      hd='<div class="xp-txt" style="color:var(--r)">⚠ Mesmo entregando o'+(n!==1?'s '+n:'')+' épico'+(n!==1?'s':'')+' aberto'+(n!==1?'s':'')+' hoje, a média do trimestre fecha em <b>'+avgNow+'d</b> — acima da meta de '+META+'d.</div>'+
+         '<div class="xp-sub">O lead time já travado dos '+d+' entregue'+(d!==1?'s':'')+' (média '+avgDel+'d) não deixa margem neste trimestre. Foco em reduzir o lead time dos próximos.</div>';
+    }
   }
   el.innerHTML=
-    '<div class="xp-card">'+
+    '<div class="xp-card" style="border-left-color:'+accent+'">'+
       '<div class="xp-ico">🏁</div>'+
       '<div class="xp-main">'+hd+
         '<div class="xp-chips">'+
-          xpChip('7 dias',in7,'#dc2626')+
-          xpChip('14 dias',in14,'#d97706')+
-          xpChip('30 dias',in30,'#16a34a')+
-          '<span class="xp-chip"><span class="xp-chip-l">Já estourados</span> <b style="color:#475569">'+estourados+'</b></span>'+
+          xpChip('Entregues no TRI',d+(d?' · média '+avgDel+'d':''),'#16a34a')+
+          xpChip('Abertos (em andamento)',''+n,'#d97706')+
+          xpChip('Média projetada',avgNow+'d / meta '+META+'d',avgNow<META?'#16a34a':'#dc2626')+
         '</div>'+
       '</div>'+
     '</div>';
 }
 function xpChip(lbl,val,color){
-  return '<span class="xp-chip"><span class="xp-chip-l">Próximos '+lbl+'</span> <b style="color:'+color+'">'+val+' épico'+(val!==1?'s':'')+'</b></span>';
+  return '<span class="xp-chip"><span class="xp-chip-l">'+lbl+'</span> <b style="color:'+color+'">'+val+'</b></span>';
 }
 
 // ── Régua de Estouro (timeline "onda rumo à meta") ──────────
