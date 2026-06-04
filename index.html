@@ -2620,12 +2620,17 @@ function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }
 function snapStoryCount(s){ return (s&&Array.isArray(s.stories)) ? s.stories.length : 0; }
 function snapTime(s){ var t=Date.parse((s&&s.importedAt)||''); return isNaN(t)?0:t; }
 function compareBacklogSnaps(a,b){
-  var ca=snapStoryCount(a), cb=snapStoryCount(b);
-  if(ca!==cb) return ca-cb;
+  // Ordena CRONOLOGICAMENTE: a importação mais recente é a "atual".
+  // Antes ordenava por quantidade de histórias (ca-cb), o que fazia uma
+  // importação nova com MENOS histórias nunca virar a atual — o Total/Refinadas
+  // ficava preso no snapshot maior e "não atualizava o número". O nº de
+  // histórias refinadas pode legitimamente cair ou subir entre importações,
+  // então a recência (importedAt; seq como desempate) é o critério correto.
   var ta=snapTime(a), tb=snapTime(b);
   if(ta!==tb) return ta-tb;
   var sa=Number(a&&a.seq)||0, sb=Number(b&&b.seq)||0;
-  return sa-sb;
+  if(sa!==sb) return sa-sb;
+  return snapStoryCount(a)-snapStoryCount(b);
 }
 function sortBacklogSnaps(){ backlogSnaps.sort(compareBacklogSnaps); }
 function getCurrentBacklogSnapshot(){ if(!backlogSnaps.length) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-1]; }
