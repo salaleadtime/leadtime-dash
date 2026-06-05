@@ -1775,47 +1775,42 @@ function renderMetaPace(){
   var el=$id('metaPace'); if(!el) return;
   if(!allData.length){ el.innerHTML=''; return; }
   var tri=getCurrentTrimester();
-  var del=allData.filter(function(r){return inTrimester(r.fim,tri);}); // entregues no TRI (lt travado)
-  var act=activeEpics();                                               // abertos (lt ainda crescendo)
-  var d=del.length, n=act.length, tot=d+n;
-  if(!tot){ el.innerHTML=''; return; }
-  var Sd=del.reduce(function(s,r){return s+r.lt;},0);
-  var So=act.reduce(function(s,r){return s+r.lt;},0);
-  var avgNow=Math.round((Sd+So)/tot);   // média se tudo aberto fosse entregue hoje
-  var avgDel=d?Math.round(Sd/d):0;      // média só dos entregues (= KPI "LT Médio TRI")
-  var hd, accent;
-  if(!n){
-    // Trimestre sem épicos abertos: nada a projetar, só o status da média entregue.
-    var ok0=avgDel<META;
-    accent=ok0?'#16a34a':'#dc2626';
-    hd='<div class="xp-txt"'+(ok0?'':' style="color:var(--r)"')+'>'+(ok0?'✅ ':'⚠ ')+
-         'Trimestre com média de <b>'+avgDel+'d</b> em '+d+' entrega'+(d!==1?'s':'')+' — '+(ok0?'dentro':'acima')+' da meta de '+META+'d.</div>'+
-       '<div class="xp-sub">Nenhum épico aberto no momento. Média trava conforme as próximas entregas.</div>';
+  var del=allData.filter(function(r){ return inTrimester(r.fim,tri); });
+  var d=del.length;
+  if(!d){ el.innerHTML=''; return; }
+  var Sd=del.reduce(function(s,r){ return s+r.lt; },0);
+  var avgDel=Math.round(Sd/d);
+  var desvio=d*(avgDel-META);
+  var EXPECTED_LT=30;
+  var ganho=META-EXPECTED_LT; // 32d de ganho por entrega rápida
+  var necessario=desvio>0 ? Math.ceil(desvio/ganho) : 0;
+  var prazoDate=tri.to;
+  var ddmm=('0'+prazoDate.getDate()).slice(-2)+'/'+('0'+(prazoDate.getMonth()+1)).slice(-2);
+  var diasRestantes=tri.remaining;
+  var sugA=Math.floor(diasRestantes*0.85);
+  var sugB=sugA+1;
+  var desvioSigned=(desvio>0?'+':'')+Math.round(desvio)+'d';
+  var accent, hd;
+  if(desvio<=0){
+    accent='#16a34a';
+    hd='<div class="xp-txt">✅ Trimestre no ritmo — média atual de <b>'+avgDel+'d</b> está abaixo da meta de <b>'+META+'d</b>. Sem necessidade de recuperação estatística.</div>'+
+       '<div class="xp-sub">Desvio acumulado: '+Math.round(desvio)+'d. Continue entregando no ritmo para fechar o trimestre dentro da meta.</div>';
   } else {
-    // dias a partir de hoje até a média projetada atingir exatamente META
-    var delta=(META*tot - Sd - So)/n;
-    if(delta>=0){
-      var dd=Math.floor(delta);
-      var today=new Date(); today.setHours(0,0,0,0);
-      var dl=new Date(today.getTime()+dd*86400000);
-      var ddmm=('0'+dl.getDate()).slice(-2)+'/'+('0'+(dl.getMonth()+1)).slice(-2);
-      accent='#16a34a';
-      hd='<div class="xp-txt">Para fechar o trimestre na meta de '+META+'d, entregue o'+(n!==1?'s '+n:'')+' épico'+(n!==1?'s':'')+' aberto'+(n!==1?'s':'')+' até <b>'+ddmm+'</b> <b>('+dd+' dia'+(dd!==1?'s':'')+')</b>.</div>'+
-         '<div class="xp-sub">Média projetada hoje (entregues + abertos): '+avgNow+'d. Cada dia de atraso aproxima a média da meta.</div>';
-    } else {
-      accent='#dc2626';
-      hd='<div class="xp-txt" style="color:var(--r)">⚠ Mesmo entregando o'+(n!==1?'s '+n:'')+' épico'+(n!==1?'s':'')+' aberto'+(n!==1?'s':'')+' hoje, a média do trimestre fecha em <b>'+avgNow+'d</b> — acima da meta de '+META+'d.</div>'+
-         '<div class="xp-sub">O lead time já travado dos '+d+' entregue'+(d!==1?'s':'')+' (média '+avgDel+'d) não deixa margem neste trimestre. Foco em reduzir o lead time dos próximos.</div>';
-    }
+    accent='#dc2626';
+    hd='<div class="xp-txt" style="color:var(--r)">Para recuperar a meta de '+META+'d no trimestre, são necessárias <b>'+necessario+' novas entregas</b> com LT ≈ '+EXPECTED_LT+'d até <b>'+ddmm+'</b> <b>('+diasRestantes+' dias)</b>.</div>'+
+       '<div class="xp-sub">Desvio acumulado: +'+Math.round(desvio)+'d ('+d+' entrega'+(d!==1?'s':'')+' com média '+avgDel+'d). Ganho estimado por entrega rápida: '+ganho+'d.</div>';
   }
   el.innerHTML=
     '<div class="xp-card" style="border-left-color:'+accent+'">'+
       '<div class="xp-ico">🏁</div>'+
       '<div class="xp-main">'+hd+
         '<div class="xp-chips">'+
-          xpChip('Entregues no TRI',d+(d?' · média '+avgDel+'d':''),'#16a34a')+
-          xpChip('Abertos (em andamento)',''+n,'#d97706')+
-          xpChip('Média projetada',avgNow+'d / meta '+META+'d',avgNow<META?'#16a34a':'#dc2626')+
+          xpChip('Entregues no TRI '+tri.q,d+' · média '+avgDel+'d','#16a34a')+
+          xpChip('Desvio atual',desvioSigned,desvio<=0?'#16a34a':'#dc2626')+
+          xpChip('Meta',META+'d','#6366f1')+
+          xpChip('Necessário',necessario+' novas entregas',necessario===0?'#16a34a':'#dc2626')+
+          xpChip('Prazo',ddmm+' · '+diasRestantes+' dias','#d97706')+
+          xpChip('Sugestão por épico',sugA+' / '+sugB+' dias','#0ea5e9')+
         '</div>'+
       '</div>'+
     '</div>';
