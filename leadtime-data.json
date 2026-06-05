@@ -86,7 +86,7 @@
     "ini": "2026-01-27",
     "fim": null,
     "dataPrevista": null,
-    "chg": "CHG0916531",
+    "chg": "",
     "impedimento": "Risco identificado: Serão realizados dois deploys: um por nossa equipe e outro pela Net Empresa. Após ambos os deploys, serão realizados os testes. Este processo exige atenção para garantir a integração e a execução correta de ambos os deploys.",
     "lt": 89
   },
