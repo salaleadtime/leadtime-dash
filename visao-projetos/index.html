@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SALA — Visão de Projetos</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1923;--bg-card:#112240;--border:#1e3a5f;
+  --txt:#c8d8ee;--txt2:#6b8caa;
+  --green:#7fddbb;--gd:#1a9b6a;
+  --badge-bg:#085041;--badge-txt:#9FE1CB;
+  --red:#e53e3e;--yellow:#d69e2e;
+  --sw:224px;
+}
+html,body{height:100%;font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--txt);overflow:hidden}
+/* ---------- HEADER ---------- */
+.hdr{position:fixed;top:0;left:0;right:0;height:56px;background:linear-gradient(90deg,#0a1628,#112240);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:100}
+.hdr-back{color:var(--txt2);text-decoration:none;font-size:12px;padding:4px 9px;border:1px solid var(--border);border-radius:4px;transition:.15s}
+.hdr-back:hover{color:var(--txt);border-color:var(--gd)}
+.hdr-badge{background:var(--badge-bg);color:var(--badge-txt);font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;letter-spacing:.5px}
+.hdr-title{font-size:15px;font-weight:600}
+.hdr-actions{margin-left:auto;display:flex;gap:7px}
+/* ---------- BUTTONS ---------- */
+.btn{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--txt2);font-size:12px;font-family:inherit;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn:hover{color:var(--txt);border-color:var(--gd)}
+.btn-sm{padding:4px 9px;font-size:11px}
+.btn-primary{background:var(--gd);border-color:var(--gd);color:#fff}
+.btn-primary:hover{background:#158a5d}
+.btn-danger{background:#7b1d1d;border-color:#c53030;color:#fc8181}
+.btn-danger:hover{background:#9b2c2c}
+/* ---------- LAYOUT ---------- */
+.layout{display:flex;position:fixed;top:56px;bottom:0;left:0;right:0}
+/* ---------- SIDEBAR ---------- */
+.sb{width:var(--sw);background:#0a1628;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;flex-shrink:0}
+.sb-group{font-size:10px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:1px;padding:14px 12px 5px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:13px;color:var(--txt2);border-left:3px solid transparent;transition:.12s;user-select:none;position:relative}
+.sb-item:hover{background:rgba(127,221,187,.06);color:var(--txt)}
+.sb-item.active{background:rgba(26,155,106,.12);border-left-color:var(--gd);color:var(--green)}
+.sb-item.dim{opacity:.42}
+.sb-sub{padding-left:28px}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-g{background:var(--gd)}.dot-y{background:var(--yellow)}.dot-r{background:var(--red)}.dot-e{background:#1e3a5f;border:1px dashed var(--txt2)}
+.sb-chevron{margin-left:auto;font-size:10px;color:var(--txt2);transition:.2s}
+.sb-chevron.open{transform:rotate(90deg)}
+.sb-hr{border:none;border-top:1px solid var(--border);margin:6px 0}
+.sb-foot{margin-top:auto;padding:10px 12px 14px}
+/* ---------- MAIN ---------- */
+.main{flex:1;overflow-y:auto;overflow-x:hidden;padding:22px 24px}
+/* ---------- ASIDE ---------- */
+.aside{width:258px;flex-shrink:0;border-left:1px solid var(--border);overflow-y:auto;padding:18px 14px}
+/* ---------- KPI ROW ---------- */
+.kpi-row{display:flex;gap:10px;margin-bottom:18px}
+.kpi{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px 14px 12px}
+.kpi-val{font-size:28px;font-weight:700;line-height:1}
+.kpi-lbl{font-size:11px;color:var(--txt2);margin-top:3px}
+/* ---------- FUNNEL ---------- */
+.funnel{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:18px}
+.funnel-hd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);margin-bottom:12px}
+.funnel-track{display:flex;align-items:center;gap:0}
+.funnel-step{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
+.funnel-n{font-size:22px;font-weight:700}
+.funnel-lbl{font-size:10px;color:var(--txt2)}
+.funnel-bar{width:100%;height:8px;border-radius:2px;margin-bottom:2px}
+.funnel-arr{color:var(--txt2);font-size:14px;padding:0 2px;margin-bottom:16px}
+/* ---------- SQUAD GRID ---------- */
+.sq-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.sq-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative;transition:.15s}
+.sq-card:hover{border-color:#2a5a8f}
+.sq-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+.bar-g{background:var(--gd)}.bar-y{background:var(--yellow)}.bar-r{background:var(--red)}.bar-gr{background:#1e3a5f}
+.sq-body{padding:14px 14px 12px 18px}
+.sq-card.dim{opacity:.48}
+.sq-name{font-size:14px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600}
+.tag-obf{background:#1a3a5c;color:#7fb3dd}
+.tag-sub{background:#1a3a2c;color:var(--green)}
+.tag-nd{background:#1e3a5f;color:var(--txt2)}
+.sq-ctrs{display:flex;gap:14px;margin-bottom:9px}
+.ctr{text-align:center}
+.ctr-v{font-size:18px;font-weight:700}
+.ctr-l{font-size:9px;color:var(--txt2);margin-top:1px}
+.prog-wrap{height:4px;background:#1e3a5f;border-radius:2px;margin-bottom:9px}
+.prog-fill{height:100%;border-radius:2px;background:var(--gd)}
+.sq-flags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}
+.flag{font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600}
+.flag-imp{background:#3d1515;color:#fc8181}
+.flag-dep{background:#2a1745;color:#b794f4}
+.flag-blk{background:#3d2510;color:#fbd38d}
+.sq-meta{font-size:11px;color:var(--txt2);display:flex;justify-content:space-between;align-items:center;gap:4px}
+/* ---------- ALERT BANNER ---------- */
+.alert-banner{background:linear-gradient(90deg,#6b1515,#8b2020);border:1px solid #c53030;border-radius:6px;padding:10px 14px;margin-bottom:18px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
+/* ---------- ASIDE ITEMS ---------- */
+.aside-sec{margin-bottom:18px}
+.aside-hd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);margin-bottom:9px}
+.alert-it{background:#180c0c;border:1px solid #4a1d1d;border-radius:6px;padding:9px 10px;margin-bottom:7px;font-size:12px}
+.alert-it-sq{font-weight:700;color:#fc8181;margin-bottom:2px}
+.alert-it-desc{color:var(--txt2);line-height:1.4}
+.dec-it{display:flex;gap:7px;margin-bottom:9px;font-size:12px}
+.dec-num{width:20px;height:20px;border-radius:50%;background:#1e3a5f;color:var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.dec-txt{color:var(--txt2);line-height:1.4}
+.ow-it{display:flex;align-items:center;gap:7px;margin-bottom:7px;font-size:12px}
+.urg{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:700}
+.urg-c{background:#3d1515;color:#fc8181}
+.urg-a{background:#2d1c00;color:#fbd38d}
+.urg-p{background:#0d2d1a;color:var(--green)}
+/* ---------- TABLE ---------- */
+.tbl-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.tbl-hdr{padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.tbl-title{font-size:14px;font-weight:600}
+.tbl-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--txt2);display:flex;gap:14px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--txt2);border-bottom:1px solid var(--border);background:rgba(0,0,0,.2);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid rgba(30,58,95,.4);color:var(--txt);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(127,221,187,.03)}
+/* ---------- STATUS & RISK PILLS ---------- */
+.sp{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;white-space:nowrap}
+.sp-bl{background:#1a2a3a;color:var(--txt2)}
+.sp-dv{background:#0d2744;color:#7fb3dd}
+.sp-hm{background:#1a2d1a;color:var(--green)}
+.sp-bk{background:#3d1515;color:#fc8181}
+.sp-pr{background:#0d3b2d;color:#4fd1a0}
+.rk-a{color:#fc8181;font-weight:600}
+.rk-m{color:#fbd38d;font-weight:600}
+.rk-b{color:var(--green);font-weight:600}
+/* ---------- PAGE HEADER ---------- */
+.pg-hd{margin-bottom:18px}
+.pg-title{font-size:20px;font-weight:700;margin-bottom:3px}
+.pg-sub{font-size:13px;color:var(--txt2)}
+/* ---------- SECTION HEADER ---------- */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-title{font-size:14px;font-weight:600}
+/* ---------- TOGGLE TABS ---------- */
+.tabs{display:flex;gap:4px;margin-bottom:16px}
+.tab{padding:6px 16px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--txt2);font-size:12px;font-family:inherit;cursor:pointer;transition:.15s}
+.tab.active{background:var(--gd);border-color:var(--gd);color:#fff}
+/* ---------- GUARDIAN CARDS ---------- */
+.grd-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px}
+.grd-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px}
+.grd-id{font-size:11px;color:var(--txt2);font-family:monospace}
+.grd-days{font-size:20px;font-weight:700;color:var(--red);text-align:right;white-space:nowrap}
+.grd-days span{font-size:11px;font-weight:400;color:var(--txt2);display:block}
+.dep-tag{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:600}
+.dep-chg{background:#2a1745;color:#b794f4}
+.dep-ti{background:#0d2744;color:#7fb3dd}
+.dep-api{background:#1a3a2c;color:var(--green)}
+.dep-ok{background:#0d3b2d;color:#4fd1a0}
+/* ---------- GANTT ---------- */
+.gantt-wrap{overflow-x:auto}
+.gantt-hd-row{display:flex;margin-bottom:4px}
+.gantt-label-col{width:180px;flex-shrink:0}
+.gantt-dates{flex:1;display:flex;position:relative;height:22px}
+.gantt-date-mark{position:absolute;font-size:10px;color:var(--txt2);transform:translateX(-50%)}
+.gantt-row{display:flex;align-items:center;margin-bottom:6px}
+.gantt-lbl{width:180px;flex-shrink:0;font-size:12px;color:var(--txt2);padding-right:10px}
+.gantt-track{flex:1;height:26px;background:#0d1e35;border-radius:4px;position:relative;overflow:hidden}
+.gantt-bar{position:absolute;top:4px;height:18px;border-radius:3px}
+.gantt-today-line{position:absolute;top:0;bottom:0;width:2px;background:#e53e3e;z-index:2}
+.gantt-bar-lbl{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden}
+/* ---------- RISK MATRIX ---------- */
+.risk-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+.risk-lv{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;text-align:center}
+.risk-lv-a{background:#3d1515;color:#fc8181}
+.risk-lv-m{background:#2d1c00;color:#fbd38d}
+.risk-lv-b{background:#0d3b2d;color:#4fd1a0}
+/* ---------- EMPTY STATE ---------- */
+.empty{text-align:center;padding:60px 20px;color:var(--txt2)}
+.empty-ico{font-size:44px;margin-bottom:14px}
+.empty h3{font-size:17px;color:var(--txt);margin-bottom:6px}
+/* ---------- MODAL ---------- */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:#0d1e35;border:1px solid var(--border);border-radius:10px;padding:22px;width:520px;max-width:92vw;max-height:82vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:16px}
+.fg{margin-bottom:13px}
+.flbl{font-size:10px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:block}
+.fi,.fsel,.fta{width:100%;background:#0a1628;border:1px solid var(--border);border-radius:4px;color:var(--txt);padding:8px 10px;font-family:inherit;font-size:13px;transition:.15s}
+.fi:focus,.fsel:focus,.fta:focus{outline:none;border-color:var(--gd)}
+.fsel option{background:#0a1628}
+.fta{min-height:72px;resize:vertical}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* ---------- SCROLLBAR ---------- */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a4a7a}
+/* ---------- MISC ---------- */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;background:var(--border);color:var(--txt2)}
+.mt4{margin-top:4px}.mt8{margin-top:8px}.mb4{margin-bottom:4px}.mb8{margin-bottom:8px}
+.fw7{font-weight:700}.fs12{font-size:12px}.fs11{font-size:11px}.c2{color:var(--txt2)}
+.row{display:flex;align-items:center;gap:8px}
+.flex1{flex:1}
+a.link{color:var(--green);text-decoration:none;font-size:12px}
+a.link:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <a href="https://salaleadtime.github.io/leadtime-dash" class="hdr-back">← Lead Time</a>
+  <span class="hdr-badge">SALA</span>
+  <span class="hdr-title">Visão de Projetos</span>
+  <div class="hdr-actions">
+    <button class="btn" onclick="triggerImport()">⬆ Importar Jira XLSX</button>
+    <button class="btn" onclick="exportCSV()">⬇ Exportar CSV</button>
+    <button class="btn btn-primary" onclick="copyBriefing()">📋 Copiar briefing</button>
+  </div>
+  <input type="file" id="jiraInput" accept=".xlsx,.xls" style="display:none" onchange="handleJiraFile(event)">
+</header>
+
+<div class="layout">
+  <nav class="sb" id="sidebar"></nav>
+  <main class="main" id="main"></main>
+  <aside class="aside" id="aside" style="display:none"></aside>
+</div>
+
+<div class="modal-ov" id="modalOv" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+// =====================================================================
+// DEFAULT DATA
+// =====================================================================
+const DEFAULT = {
+  squads:{
+    expresso1:{
+      name:'Expresso-1',status:'yellow',responsible:'Sandra',role:'PO',
+      frentes:{
+        obf:{
+          name:'OBF',impediment:'HML instável desde 04/06',
+          stories:[
+            {id:'SLOPC-35106',summary:'Checklist Capitalização',assignee:'Hudysson',status:'Em Dev',deadline:'13/06',risk:'Alto',notes:''},
+            {id:'SLOPC-32210',summary:'Módulo Solicitação ajuste submódulos',assignee:'Caio',status:'HML',deadline:'13/06',risk:'Médio',notes:''},
+            {id:'SLOPC-34197',summary:'Compos Reneg retirar avalista',assignee:'Hudysson',status:'HML',deadline:'16/06',risk:'Médio',notes:''},
+            {id:'SLOPC-35869',summary:'Relatório não finalizadas',assignee:'Caio',status:'Backlog',deadline:'20/06',risk:'Baixo',notes:''},
+            {id:'SLOPC-34698',summary:'Capitalização carga automática',assignee:'Felipe',status:'Em Dev',deadline:'20/06',risk:'Baixo',notes:''}
+          ]
+        },
+        subsidios:{
+          name:'Subsídios',impediment:null,note:'Aguarda validação Sandra (PO)',
+          stories:[
+            {id:'SLOPC-35147',summary:'Ações Passivas Pendente Regularização',assignee:'Fabiana',status:'HML',deadline:'20/06',risk:'Baixo',notes:''},
+            {id:'SLOPC-34857',summary:'Processos Judiciais BPO IBM',assignee:'Felipe',status:'HML',deadline:'20/06',risk:'Médio',notes:''},
+            {id:'SLOPC-36037',summary:'Jornada devolução de cadastro',assignee:'Felipe',status:'Em Dev',deadline:'25/06',risk:'Médio',notes:''}
+          ]
+        }
+      }
+    },
+    guardioes:{
+      name:'Guardiões',status:'red',responsible:'Everton',role:'Tech Lead',
+      stories:[
+        {id:'SLOPC-37201',summary:'Integração CAB aprovação mudança',assignee:'Everton',status:'Bloqueado',deadline:'11/06',risk:'Alto',dependency:'Change Management',daysStopped:6,dependencyStatus:'Aguardando',notes:''},
+        {id:'SLOPC-37088',summary:'Fluxo Atendimento ajuste regra negócio',assignee:'Caio',status:'Bloqueado',deadline:'16/06',risk:'Alto',dependency:'TI Infraestrutura (HML) + APIs Bradesco',daysStopped:4,dependencyStatus:'Bloqueado',notes:''},
+        {id:'SLOPC-36944',summary:'Consulta contrato novo endpoint',assignee:'Fabiana',status:'Em Dev',deadline:'20/06',risk:'Baixo',dependency:'APIs Bradesco',daysStopped:0,dependencyStatus:'Resolvido',dependencyResolvedAt:'05/06',notes:''}
+      ]
+    },
+    inter:{name:'Inter',status:'empty',stories:[]},
+    contact:{name:'Contact',status:'empty',stories:[]}
+  },
+  risks:[
+    {id:1,squad:'Guardiões',description:'Bloqueio Change Management pode atrasar entrega CAB',probability:'Alta',impact:'Alto',level:'Alto',action:'Escalar para gestão imediatamente',notes:''},
+    {id:2,squad:'Expresso-1',description:'HML instável pode impactar validações OBF com prazo 13/06',probability:'Média',impact:'Alto',level:'Médio',action:'Acionar TI para estabilizar ambiente',notes:''},
+    {id:3,squad:'Guardiões',description:'APIs Bradesco sem SLA definido para disponibilidade',probability:'Baixa',impact:'Médio',level:'Baixo',action:'Acompanhar com fornecedor semanalmente',notes:''}
+  ],
+  nextSteps:[
+    {id:1,priority:1,squad:'Guardiões',action:'Escalar bloqueio Change Management para gestão',responsible:'Everton',deadline:'08/06',status:'Urgente',notes:''},
+    {id:2,priority:2,squad:'Guardiões',action:'Cobrar TI Infraestrutura sobre ambiente HML',responsible:'Caio',deadline:'09/06',status:'Pendente',notes:''},
+    {id:3,priority:3,squad:'Expresso-1',action:'Validar estabilidade HML com PO Sandra',responsible:'Sandra',deadline:'10/06',status:'Pendente',notes:''},
+    {id:4,priority:4,squad:'Expresso-1',action:'Finalizar review SLOPC-32210 para Produção',responsible:'Hudysson',deadline:'13/06',status:'Programado',notes:''}
+  ],
+  escalations:[
+    {id:1,description:'Aprovação CAB bloqueada há 6 dias sem resposta do Change Management',squad:'Guardiões',urgency:'Crítica',context:'SLOPC-37201 parado. Integração não pode avançar sem aprovação formal.',decision:'Autorizar escalada formal ou acionar responsável direto do Change Mgmt',notes:''},
+    {id:2,description:'HML instável impede validação de 3 histórias OBF com prazo 13/06',squad:'Expresso-1',urgency:'Alta',context:'Ambiente HML fora do ar intermitentemente desde 04/06. Caio e Hudysson bloqueados.',decision:'Acionar TI urgente ou solicitar ambiente alternativo para HML',notes:''}
+  ]
+};
+
+// =====================================================================
+// STATE
+// =====================================================================
+let D = loadData();
+let view = 'visao-geral';
+let subView = null;
+let expTab = 'obf';
+let sidebarOpen = {expresso1: false};
+
+// =====================================================================
+// PERSISTENCE
+// =====================================================================
+function loadData(){
+  try{const s=localStorage.getItem('sala_vp');if(s)return JSON.parse(s);}catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT));
+}
+function saveData(){
+  try{localStorage.setItem('sala_vp',JSON.stringify(D));}catch(e){}
+}
+function resetData(){
+  if(!confirm('Apagar todos os dados e voltar ao padrão inicial?'))return;
+  localStorage.removeItem('sala_vp');
+  D=JSON.parse(JSON.stringify(DEFAULT));
+  navigate('visao-geral');
+}
+
+// =====================================================================
+// HELPERS
+// =====================================================================
+function spClass(s){return{Backlog:'sp-bl','Em Dev':'sp-dv',HML:'sp-hm',Bloqueado:'sp-bk','Produção':'sp-pr'}[s]||'sp-bl'}
+function rkClass(r){return{Alto:'rk-a',Médio:'rk-m',Baixo:'rk-b'}[r]||''}
+function sp(s){return`<span class="sp ${spClass(s)}">${s}</span>`}
+function rk(r){return`<span class="${rkClass(r)}">${r}</span>`}
+function dotCls(s){return{green:'dot-g',yellow:'dot-y',red:'dot-r',empty:'dot-e'}[s]||'dot-e'}
+function barCls(s){return{green:'bar-g',yellow:'bar-y',red:'bar-r',empty:'bar-gr'}[s]||'bar-gr'}
+
+function allStories(){
+  const rows=[];
+  const e=D.squads.expresso1;
+  Object.keys(e.frentes).forEach(fk=>{
+    e.frentes[fk].stories.forEach(s=>rows.push({...s,squad:'Expresso-1',frente:e.frentes[fk].name,squadKey:'expresso1',frenteKey:fk}));
+  });
+  D.squads.guardioes.stories.forEach(s=>rows.push({...s,squad:'Guardiões',frente:'—',squadKey:'guardioes',frenteKey:null}));
+  return rows;
+}
+
+function funnelCounts(){
+  const c={Backlog:0,'Em Dev':0,HML:0,Bloqueado:0,'Produção':0};
+  allStories().forEach(s=>{if(c[s.status]!==undefined)c[s.status]++;});
+  return c;
+}
+
+function squadCounts(stories){
+  const c={Backlog:0,'Em Dev':0,HML:0,Bloqueado:0,'Produção':0};
+  stories.forEach(s=>{if(c[s.status]!==undefined)c[s.status]++;});
+  const total=stories.length;
+  const done=c['Produção'];
+  return{...c,total,pct:total?Math.round((done/total)*100):0};
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// =====================================================================
+// NAVIGATION
+// =====================================================================
+function navigate(v,sv){
+  view=v; subView=sv||null;
+  if(v==='expresso1')sidebarOpen.expresso1=true;
+  renderSidebar();
+  renderMain();
+}
+
+// =====================================================================
+// SIDEBAR
+// =====================================================================
+function renderSidebar(){
+  const sq=D.squads;
+  const e1open=sidebarOpen.expresso1;
+  const isActive=(v,sv)=>view===v&&(sv?subView===sv:true);
+  const item=(v,sv,dot,label,cls='')=>{
+    const a=isActive(v,sv)?'active':'';
+    return`<div class="sb-item ${a} ${cls}" onclick="navigate('${v}'${sv?`,'${sv}'`:''})">`+
+      `<span class="sb-dot ${dot}"></span><span>${label}</span></div>`;
+  };
+
+  let h=`<div class="sb-group">Squads</div>`;
+  // Visão Geral
+  h+=item('visao-geral',null,'dot-y','★ Visão Geral');
+  // Expresso-1 expandable
+  const e1a=view==='expresso1'?'active':'';
+  h+=`<div class="sb-item ${e1a}" onclick="toggleE1()"><span class="sb-dot dot-y"></span><span>Expresso-1</span><span class="sb-chevron ${e1open?'open':''}">▶</span></div>`;
+  if(e1open){
+    const oba=view==='expresso1'&&subView==='obf'?'active':'';
+    const sba=view==='expresso1'&&subView==='subsidios'?'active':'';
+    h+=`<div class="sb-item sb-sub ${oba}" onclick="navigate('expresso1','obf')"><span class="sb-dot dot-y"></span><span>OBF</span></div>`;
+    h+=`<div class="sb-item sb-sub ${sba}" onclick="navigate('expresso1','subsidios')"><span class="sb-dot dot-g"></span><span>Subsídios</span></div>`;
+  }
+  h+=item('guardioes',null,'dot-r','Guardiões');
+  h+=item('inter',null,'dot-e','Inter','dim');
+  h+=item('contact',null,'dot-e','Contact','dim');
+
+  h+=`<hr class="sb-hr"><div class="sb-group">Gestão</div>`;
+  h+=item('backlog',null,'dot-y','Backlog Geral');
+  h+=item('dependencias',null,'dot-r','Dependências');
+  h+=item('responsaveis',null,'dot-y','Responsáveis');
+  h+=item('prazos',null,'dot-y','Prazos & Estimativas');
+  h+=item('impedimentos',null,'dot-r','Impedimentos & Bloqueios');
+  h+=item('riscos',null,'dot-y','Riscos');
+  h+=item('proximos',null,'dot-g','Próximos Passos');
+  h+=item('escalacoes',null,'dot-r','Escalações para Gestão');
+
+  h+=`<div class="sb-foot"><button class="btn btn-danger btn-sm" style="width:100%" onclick="resetData()">🗑 Limpar dados</button></div>`;
+  document.getElementById('sidebar').innerHTML=h;
+}
+
+function toggleE1(){
+  sidebarOpen.expresso1=!sidebarOpen.expresso1;
+  if(sidebarOpen.expresso1&&view!=='expresso1')navigate('expresso1','obf');
+  else renderSidebar();
+}
+
+// =====================================================================
+// MAIN RENDER DISPATCHER
+// =====================================================================
+function renderMain(){
+  const aside=document.getElementById('aside');
+  aside.style.display='none';
+  aside.innerHTML='';
+  const screens={
+    'visao-geral':renderVisaoGeral,
+    'expresso1':renderExpresso1,
+    'guardioes':renderGuardioes,
+    'inter':()=>renderEmptySquad('Inter'),
+    'contact':()=>renderEmptySquad('Contact'),
+    'backlog':renderBacklog,
+    'dependencias':renderDependencias,
+    'responsaveis':renderResponsaveis,
+    'prazos':renderPrazos,
+    'impedimentos':renderImpedimentos,
+    'riscos':renderRiscos,
+    'proximos':renderProximos,
+    'escalacoes':renderEscalacoes
+  };
+  const fn=screens[view];
+  if(fn)fn();
+  else document.getElementById('main').innerHTML='<div class="empty"><div class="empty-ico">🚧</div><h3>Em construção</h3></div>';
+}
+
+// =====================================================================
+// VISÃO GERAL
+// =====================================================================
+function renderVisaoGeral(){
+  const fc=funnelCounts();
+  const e1=D.squads.expresso1;
+  const gd=D.squads.guardioes;
+  const allSt=[...Object.values(e1.frentes).flatMap(f=>f.stories),...gd.stories];
+  const hasRed=gd.status==='red';
+
+  // KPI data
+  const squads=[{s:'green',name:'Expresso-1 Subsídios'},{s:'yellow',name:'Expresso-1 OBF'},{s:'red',name:'Guardiões'},{s:'empty',name:'Inter'},{s:'empty',name:'Contact'}];
+  const activeSquads=squads.filter(s=>s.s!=='empty');
+  const greens=activeSquads.filter(s=>s.s==='green').length;
+  const yellows=activeSquads.filter(s=>s.s==='yellow').length;
+  const reds=activeSquads.filter(s=>s.s==='red').length;
+  const pendDec=D.escalations.length;
+
+  // Funnel max for bar heights
+  const fmax=Math.max(...Object.values(fc),1);
+
+  let h='';
+  if(hasRed) h+=`<div class="alert-banner">⚠️ Atenção: <strong>Guardiões</strong> em status <strong>VERMELHO</strong> — 3 histórias bloqueadas com dependências externas sem resposta.</div>`;
+
+  // KPIs
+  h+=`<div class="kpi-row">
+    <div class="kpi"><div class="kpi-val">${activeSquads.length}</div><div class="kpi-lbl">Squads ativas</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--gd)">${greens}</div><div class="kpi-lbl">🟢 Verde</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--yellow)">${yellows}</div><div class="kpi-lbl">🟡 Amarelo</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:var(--red)">${reds}</div><div class="kpi-lbl">🔴 Vermelho</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#b794f4">${pendDec}</div><div class="kpi-lbl">📋 Decisões pendentes</div></div>
+  </div>`;
+
+  // Funnel
+  const fsteps=[
+    {key:'Backlog',color:'#1e3a5f',label:'Backlog'},
+    {key:'Em Dev',color:'#1a5580',label:'Dev'},
+    {key:'HML',color:'var(--gd)',label:'HML'},
+    {key:'Bloqueado',color:'var(--red)',label:'Bloqueado'},
+    {key:'Produção',color:'#4fd1a0',label:'Produção'}
+  ];
+  h+=`<div class="funnel"><div class="funnel-hd">Funil de entregas — todas as squads</div><div class="funnel-track">`;
+  fsteps.forEach((st,i)=>{
+    const n=fc[st.key];
+    const hpct=Math.max(20,Math.round((n/fmax)*44));
+    h+=`<div class="funnel-step">
+      <div class="funnel-n" style="color:${st.color}">${n}</div>
+      <div class="funnel-bar" style="background:${st.color};height:${hpct}px"></div>
+      <div class="funnel-lbl">${st.label}</div>
+    </div>`;
+    if(i<fsteps.length-1)h+=`<span class="funnel-arr">→</span>`;
+  });
+  h+=`</div></div>`;
+
+  // Squad cards 2x2
+  h+=`<div class="sq-grid">`;
+  // Expresso-1
+  const obfSt=D.squads.expresso1.frentes.obf.stories;
+  const subSt=D.squads.expresso1.frentes.subsidios.stories;
+  const e1stories=[...obfSt,...subSt];
+  const e1c=squadCounts(e1stories);
+  const e1imp=D.squads.expresso1.frentes.obf.impediment;
+  const e1blk=e1stories.filter(s=>s.status==='Bloqueado').length;
+  h+=`<div class="sq-card" style="cursor:pointer" onclick="navigate('expresso1','obf')">
+    <div class="sq-bar bar-y"></div>
+    <div class="sq-body">
+      <div class="sq-name">Expresso-1 <span class="tag tag-obf">OBF</span><span class="tag tag-sub">Subsídios</span></div>
+      <div class="sq-ctrs">
+        ${['Backlog','Em Dev','HML','Bloqueado','Produção'].map(s=>`<div class="ctr"><div class="ctr-v">${e1c[s]}</div><div class="ctr-l">${s}</div></div>`).join('')}
+      </div>
+      <div class="prog-wrap"><div class="prog-fill" style="width:${e1c.pct}%"></div></div>
+      <div class="sq-flags">
+        ${e1imp?`<span class="flag flag-imp">⚠ Impedimento</span>`:''}
+        ${e1blk>0?`<span class="flag flag-blk">🔒 ${e1blk} Bloqueado${e1blk>1?'s':''}</span>`:''}
+      </div>
+      <div class="sq-meta"><span>PO: Sandra</span><span>${e1c.pct}% entregue</span></div>
+    </div>
+  </div>`;
+
+  // Guardiões
+  const gdc=squadCounts(gd.stories);
+  const gdblk=gd.stories.filter(s=>s.status==='Bloqueado').length;
+  const gddep=gd.stories.filter(s=>s.dependency&&s.dependencyStatus!=='Resolvido').length;
+  h+=`<div class="sq-card" style="cursor:pointer" onclick="navigate('guardioes')">
+    <div class="sq-bar bar-r"></div>
+    <div class="sq-body">
+      <div class="sq-name">Guardiões</div>
+      <div class="sq-ctrs">
+        ${['Backlog','Em Dev','HML','Bloqueado','Produção'].map(s=>`<div class="ctr"><div class="ctr-v">${gdc[s]}</div><div class="ctr-l">${s}</div></div>`).join('')}
+      </div>
+      <div class="prog-wrap"><div class="prog-fill" style="width:${gdc.pct}%;background:var(--red)"></div></div>
+      <div class="sq-flags">
+        ${gdblk>0?`<span class="flag flag-blk">🔒 ${gdblk} Bloqueado${gdblk>1?'s':''}</span>`:''}
+        ${gddep>0?`<span class="flag flag-dep">🔗 ${gddep} Dependência${gddep>1?'s':''}</span>`:''}
+      </div>
+      <div class="sq-meta"><span>TL: Everton</span><span>${gdc.pct}% entregue</span></div>
+    </div>
+  </div>`;
+
+  // Inter (vazio)
+  h+=`<div class="sq-card dim" onclick="navigate('inter')">
+    <div class="sq-bar bar-gr"></div>
+    <div class="sq-body">
+      <div class="sq-name">Inter <span class="tag tag-nd">Sem demandas</span></div>
+      <div class="empty" style="padding:20px 0 10px"><div class="empty-ico" style="font-size:28px">📭</div><p style="font-size:12px">Squad pronta</p></div>
+    </div>
+  </div>`;
+
+  // Contact (vazio)
+  h+=`<div class="sq-card dim" onclick="navigate('contact')">
+    <div class="sq-bar bar-gr"></div>
+    <div class="sq-body">
+      <div class="sq-name">Contact <span class="tag tag-nd">Sem demandas</span></div>
+      <div class="empty" style="padding:20px 0 10px"><div class="empty-ico" style="font-size:28px">📭</div><p style="font-size:12px">Squad pronta</p></div>
+    </div>
+  </div>`;
+
+  h+=`</div>`; // sq-grid
+
+  document.getElementById('main').innerHTML=h;
+
+  // Aside
+  const aside=document.getElementById('aside');
+  aside.style.display='block';
+  let ah=`<div class="aside-sec"><div class="aside-hd">🚨 Alertas críticos</div>`;
+  ah+=`<div class="alert-it"><div class="alert-it-sq">Guardiões — SLOPC-37201</div><div class="alert-it-desc">Change Management sem resposta há 6 dias. Bloqueio em aprovação CAB.</div></div>`;
+  ah+=`<div class="alert-it"><div class="alert-it-sq">Guardiões — SLOPC-37088</div><div class="alert-it-desc">Bloqueio duplo: TI Infraestrutura HML + APIs Bradesco. Prazo 16/06.</div></div>`;
+  ah+=`<div class="alert-it"><div class="alert-it-sq">Expresso-1 OBF</div><div class="alert-it-desc">HML instável desde 04/06 impacta validações com prazo 13/06.</div></div>`;
+  ah+=`</div>`;
+
+  ah+=`<div class="aside-sec"><div class="aside-hd">📋 Decisões para gestão</div>`;
+  D.escalations.forEach((e,i)=>{
+    ah+=`<div class="dec-it"><div class="dec-num">${i+1}</div><div class="dec-txt"><strong style="color:var(--txt)">${e.squad}</strong><br>${escapeHtml(e.description)}</div></div>`;
+  });
+  ah+=`</div>`;
+
+  ah+=`<div class="aside-sec"><div class="aside-hd">⏳ Quem está devendo</div>`;
+  const owing=[
+    {name:'Change Mgmt',area:'TI',action:'Responder aprovação CAB',urgency:'Crítica'},
+    {name:'TI Infraestrutura',area:'TI',action:'Estabilizar HML',urgency:'Alta'},
+    {name:'Sandra',area:'PO',action:'Validar SLOPC-35147 e 34857',urgency:'Pendente'},
+    {name:'Fabiana',area:'Dev',action:'Avançar SLOPC-36944',urgency:'Pendente'}
+  ];
+  owing.forEach(o=>{
+    const uc={Crítica:'urg-c',Alta:'urg-a',Pendente:'urg-p'}[o.urgency]||'urg-p';
+    ah+=`<div class="ow-it"><span class="urg ${uc}">${o.urgency}</span><div><div style="font-size:12px;font-weight:600">${escapeHtml(o.name)}</div><div style="font-size:11px;color:var(--txt2)">${escapeHtml(o.action)}</div></div></div>`;
+  });
+  ah+=`</div>`;
+
+  aside.innerHTML=ah;
+}
+
+// =====================================================================
+// EXPRESSO-1
+// =====================================================================
+function renderExpresso1(){
+  const sv=subView||'obf';
+  const frente=D.squads.expresso1.frentes[sv];
+  if(subView) expTab=sv;
+
+  let h=`<div class="pg-hd"><div class="pg-title">Expresso-1</div><div class="pg-sub">Detalhamento por frente de negócio</div></div>`;
+  h+=`<div class="tabs">
+    <button class="tab ${sv==='obf'?'active':''}" onclick="navigate('expresso1','obf')">OBF</button>
+    <button class="tab ${sv==='subsidios'?'active':''}" onclick="navigate('expresso1','subsidios')">Subsídios</button>
+  </div>`;
+
+  h+=renderStoryTable(frente.stories,'expresso1',sv,frente.name);
+
+  // Footer
+  const c=squadCounts(frente.stories);
+  h+=`<div class="tbl-wrap"><div class="tbl-footer">
+    ${['Backlog','Em Dev','HML','Bloqueado','Produção'].map(s=>`<span><strong>${c[s]}</strong> ${s}</span>`).join(' · ')}
+    <span style="margin-left:auto">${c.pct}% entregue</span>
+    ${frente.impediment?`<span style="color:#fc8181">⚠ ${escapeHtml(frente.impediment)}</span>`:''}
+    ${frente.note?`<span style="color:var(--green)">ℹ ${escapeHtml(frente.note)}</span>`:''}
+  </div></div>`;
+
+  document.getElementById('main').innerHTML=h;
+}
+
+function renderStoryTable(stories, squadKey, frenteKey, title){
+  let h=`<div class="tbl-wrap">
+    <div class="tbl-hdr">
+      <span class="tbl-title">${title}</span>
+      <button class="btn btn-sm btn-primary" onclick="openAddStory('${squadKey}','${frenteKey}')">+ Adicionar história</button>
+    </div>
+    <table>
+      <thead><tr><th>ID Jira</th><th>Resumo</th><th>Responsável</th><th>Status</th><th>Prazo</th><th>Risco</th><th>Ações</th></tr></thead>
+      <tbody>`;
+  if(!stories.length) h+=`<tr><td colspan="7" style="text-align:center;color:var(--txt2);padding:24px">Nenhuma história cadastrada</td></tr>`;
+  stories.forEach((s,i)=>{
+    h+=`<tr>
+      <td><code style="font-size:11px;color:var(--txt2)">${escapeHtml(s.id)}</code></td>
+      <td style="max-width:260px">${escapeHtml(s.summary)}</td>
+      <td>${escapeHtml(s.assignee)}</td>
+      <td>${sp(s.status)}</td>
+      <td style="font-size:12px">${escapeHtml(s.deadline)}</td>
+      <td>${rk(s.risk)}</td>
+      <td><button class="btn btn-sm" onclick="openEditStory('${squadKey}','${frenteKey||''}',${i})">Editar</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  return h;
+}
+
+// =====================================================================
+// GUARDIÕES
+// =====================================================================
+function renderGuardioes(){
+  const stories=D.squads.guardioes.stories;
+  let h=`<div class="pg-hd"><div class="pg-title">Guardiões</div><div class="pg-sub">Foco em dependências externas — ${stories.filter(s=>s.status==='Bloqueado').length} histórias bloqueadas</div></div>`;
+  h+=`<div class="sec-hdr"><span class="sec-title">Histórias e Dependências</span><button class="btn btn-sm btn-primary" onclick="openAddStory('guardioes',null)">+ Adicionar história</button></div>`;
+
+  stories.forEach((s,i)=>{
+    const depTagCls={
+      'Change Management':'dep-chg',
+      'TI Infraestrutura (HML) + APIs Bradesco':'dep-ti',
+      'APIs Bradesco':'dep-api'
+    }[s.dependency]||'dep-api';
+    const depStatusCls={'Resolvido':'dep-ok','Bloqueado':'dep-chg','Aguardando':'dep-ti'}[s.dependencyStatus]||'dep-ti';
+    const isResolved=s.dependencyStatus==='Resolvido';
+
+    h+=`<div class="grd-card" style="${isResolved?'opacity:.7':''}">
+      <div class="grd-hdr">
+        <div>
+          <div class="grd-id">${escapeHtml(s.id)}</div>
+          <div style="font-size:14px;font-weight:600;margin:4px 0">${escapeHtml(s.summary)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+            ${sp(s.status)}
+            ${rk(s.risk)}
+            ${s.dependency?`<span class="dep-tag ${depTagCls}">🔗 ${escapeHtml(s.dependency)}</span>`:''}
+            <span class="dep-tag ${depStatusCls}">${escapeHtml(s.dependencyStatus||'')}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${s.daysStopped>0?`<div class="grd-days">${s.daysStopped}<span>dias parado</span></div>`:
+            isResolved?`<div style="color:var(--green);font-size:12px">✓ Resolvido<br><span style="color:var(--txt2)">em ${escapeHtml(s.dependencyResolvedAt||'')}</span></div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--txt2)">
+        <span>Responsável: <strong style="color:var(--txt)">${escapeHtml(s.assignee)}</strong></span>
+        <span>Prazo: <strong style="color:var(--txt)">${escapeHtml(s.deadline)}</strong></span>
+        <button class="btn btn-sm" onclick="openEditStory('guardioes',null,${i})">Editar</button>
+      </div>
+      ${s.notes?`<div style="margin-top:8px;padding:8px;background:#0a1628;border-radius:4px;font-size:12px;color:var(--txt2)">${escapeHtml(s.notes)}</div>`:''}
+    </div>`;
+  });
+
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// EMPTY SQUAD
+// =====================================================================
+function renderEmptySquad(name){
+  let h=`<div class="pg-hd"><div class="pg-title">${name}</div></div>
+  <div class="empty" style="margin-top:40px">
+    <div class="empty-ico">📭</div>
+    <h3>Squad pronta — sem demandas ativas</h3>
+    <p style="margin-bottom:20px;font-size:13px">Esta squad ainda não possui histórias cadastradas neste ciclo.</p>
+    <button class="btn btn-primary" onclick="openAddStoryEmpty('${name.toLowerCase()}')">+ Adicionar primeira demanda</button>
+  </div>`;
+  document.getElementById('main').innerHTML=h;
+}
+
+function openAddStoryEmpty(sk){
+  alert(`Para adicionar demandas à squad ${sk}, utilize a seção de Backlog Geral ou configure os dados da squad.`);
+}
+
+// =====================================================================
+// BACKLOG GERAL
+// =====================================================================
+function renderBacklog(){
+  const rows=allStories();
+  let h=`<div class="pg-hd"><div class="pg-title">Backlog Geral</div><div class="pg-sub">${rows.length} histórias em todas as squads</div></div>`;
+  h+=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Squad</th><th>Frente</th><th>ID Jira</th><th>Resumo</th><th>Status</th><th>Responsável</th><th>Prazo</th><th>Risco</th><th></th></tr></thead>
+    <tbody>`;
+  rows.forEach((s,i)=>{
+    h+=`<tr>
+      <td style="font-weight:600">${escapeHtml(s.squad)}</td>
+      <td><span class="tag ${s.frente==='OBF'?'tag-obf':'tag-sub'}">${escapeHtml(s.frente)}</span></td>
+      <td><code style="font-size:11px;color:var(--txt2)">${escapeHtml(s.id)}</code></td>
+      <td style="max-width:240px">${escapeHtml(s.summary)}</td>
+      <td>${sp(s.status)}</td>
+      <td>${escapeHtml(s.assignee)}</td>
+      <td style="font-size:12px">${escapeHtml(s.deadline)}</td>
+      <td>${rk(s.risk)}</td>
+      <td><button class="btn btn-sm" onclick="openEditStory('${s.squadKey}','${s.frenteKey||''}',${s.squadKey==='guardioes'?i-D.squads.expresso1.frentes.obf.stories.length-D.squads.expresso1.frentes.subsidios.stories.length:s.frenteKey==='obf'?i:i-D.squads.expresso1.frentes.obf.stories.length})">Editar</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// DEPENDÊNCIAS
+// =====================================================================
+function renderDependencias(){
+  const deps=D.squads.guardioes.stories.filter(s=>s.dependency);
+  let h=`<div class="pg-hd"><div class="pg-title">Dependências</div><div class="pg-sub">Todas as dependências externas ativas</div></div>`;
+  h+=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Squad</th><th>Área dependente</th><th>História</th><th>Descrição</th><th>Dias parado</th><th>Impacto</th><th>Responsável</th><th>Status</th></tr></thead>
+    <tbody>`;
+  if(!deps.length) h+=`<tr><td colspan="8" style="text-align:center;color:var(--txt2);padding:24px">Nenhuma dependência registrada</td></tr>`;
+  deps.forEach(s=>{
+    const depStatusCls={'Resolvido':'sp-pr','Bloqueado':'sp-bk','Aguardando':'sp-dv'}[s.dependencyStatus]||'sp-bl';
+    h+=`<tr>
+      <td style="font-weight:600">Guardiões</td>
+      <td>${escapeHtml(s.dependency)}</td>
+      <td><code style="font-size:11px;color:var(--txt2)">${escapeHtml(s.id)}</code></td>
+      <td style="max-width:220px">${escapeHtml(s.summary)}</td>
+      <td style="${s.daysStopped>0?'color:var(--red);font-weight:700':'color:var(--green)'}">${s.daysStopped>0?s.daysStopped+'d':'—'}</td>
+      <td>${rk(s.risk)}</td>
+      <td>${escapeHtml(s.assignee)}</td>
+      <td><span class="sp ${depStatusCls}">${escapeHtml(s.dependencyStatus||'')}</span></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// RESPONSÁVEIS
+// =====================================================================
+function renderResponsaveis(){
+  const rows=[];
+  allStories().forEach(s=>{
+    if(s.status!=='Produção'){
+      const urgency=s.risk==='Alto'?'Urgente':s.risk==='Médio'?'Pendente':'Normal';
+      rows.push({name:s.assignee,area:'Dev',action:`Avançar ${s.id}`,squad:s.squad,urgency,days:'—'});
+    }
+  });
+  // Add PO
+  rows.push({name:'Sandra',area:'PO',action:'Validar histórias Subsídios em HML',squad:'Expresso-1',urgency:'Pendente',days:'3'});
+  rows.push({name:'Change Mgmt',area:'TI',action:'Aprovar mudança CAB (SLOPC-37201)',squad:'Guardiões',urgency:'Urgente',days:'6'});
+
+  let h=`<div class="pg-hd"><div class="pg-title">Responsáveis</div><div class="pg-sub">Quem está devendo ação</div></div>`;
+  h+=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Nome</th><th>Área</th><th>Ação pendente</th><th>Squad</th><th>Urgência</th><th>Dias em aberto</th></tr></thead>
+    <tbody>`;
+  rows.forEach(r=>{
+    const uc={Urgente:'urg-c',Pendente:'urg-a',Normal:'urg-p'}[r.urgency]||'urg-p';
+    h+=`<tr>
+      <td style="font-weight:600">${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.area)}</td>
+      <td>${escapeHtml(r.action)}</td>
+      <td>${escapeHtml(r.squad)}</td>
+      <td><span class="urg ${uc}">${r.urgency}</span></td>
+      <td>${r.days}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// PRAZOS & ESTIMATIVAS (GANTT)
+// =====================================================================
+function renderPrazos(){
+  const START=new Date('2026-06-01');
+  const END=new Date('2026-07-15');
+  const TODAY=new Date('2026-06-07');
+  const total=END-START;
+  const todayPct=((TODAY-START)/total)*100;
+
+  function pct(dateStr){
+    if(!dateStr)return 0;
+    const parts=dateStr.split('/');
+    const d=new Date(`2026-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+    return Math.min(100,Math.max(0,((d-START)/total)*100));
+  }
+
+  const items=[
+    {label:'Expresso-1 / OBF',squad:'Expresso-1',color:'#d69e2e',startDate:'2026-05-20',deadline:'13/06'},
+    {label:'Expresso-1 / OBF (2)',squad:'Expresso-1',color:'#d69e2e',startDate:'2026-05-27',deadline:'16/06'},
+    {label:'Expresso-1 / OBF (3)',squad:'Expresso-1',color:'#d69e2e',startDate:'2026-06-01',deadline:'20/06'},
+    {label:'Expresso-1 / Subsídios',squad:'Expresso-1',color:'var(--gd)',startDate:'2026-05-25',deadline:'20/06'},
+    {label:'Expresso-1 / Subsídios (2)',squad:'Expresso-1',color:'var(--gd)',startDate:'2026-06-01',deadline:'25/06'},
+    {label:'Guardiões — CAB',squad:'Guardiões',color:'var(--red)',startDate:'2026-06-01',deadline:'11/06'},
+    {label:'Guardiões — Fluxo',squad:'Guardiões',color:'var(--red)',startDate:'2026-06-01',deadline:'16/06'},
+    {label:'Guardiões — Endpoint',squad:'Guardiões',color:'#7fb3dd',startDate:'2026-06-01',deadline:'20/06'},
+  ];
+
+  // Date marks
+  const marks=['01/Jun','07/Jun','15/Jun','22/Jun','01/Jul','15/Jul'];
+  const markPcts=[0,((new Date('2026-06-07')-START)/total)*100,((new Date('2026-06-15')-START)/total)*100,((new Date('2026-06-22')-START)/total)*100,((new Date('2026-07-01')-START)/total)*100,100];
+
+  let h=`<div class="pg-hd"><div class="pg-title">Prazos & Estimativas</div><div class="pg-sub">Linha do tempo por frente — linha vermelha = hoje (07/06)</div></div>`;
+  h+=`<div class="tbl-wrap" style="padding:16px">`;
+
+  // Date header
+  h+=`<div style="display:flex;margin-bottom:4px"><div style="width:190px;flex-shrink:0"></div><div style="flex:1;position:relative;height:20px">`;
+  marks.forEach((m,i)=>{
+    h+=`<span style="position:absolute;left:${markPcts[i]}%;transform:translateX(-50%);font-size:10px;color:var(--txt2);white-space:nowrap">${m}</span>`;
+  });
+  h+=`</div></div>`;
+
+  items.forEach(it=>{
+    const startPct=((new Date(it.startDate)-START)/total)*100;
+    const endPct=pct(it.deadline);
+    const width=Math.max(2,endPct-startPct);
+    const isPast=pct(it.deadline)<todayPct;
+    h+=`<div class="gantt-row">
+      <div class="gantt-lbl" style="font-size:11px;line-height:1.3">${escapeHtml(it.label)}</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:${startPct}%;width:${width}%;background:${it.color};opacity:${isPast?'.6':'1'}">
+          <div class="gantt-bar-lbl" style="color:#fff">${it.deadline}</div>
+        </div>
+        <div class="gantt-today-line" style="left:${todayPct}%"></div>
+      </div>
+    </div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// IMPEDIMENTOS & BLOQUEIOS
+// =====================================================================
+function renderImpedimentos(){
+  const items=[
+    {squad:'Expresso-1',frente:'OBF',description:'HML instável — validações impedidas',type:'Impedimento',since:'04/06',impact:'Alto',responsible:'TI Infraestrutura'},
+    {squad:'Guardiões',frente:'—',description:'Aprovação CAB pendente — Change Management sem resposta',type:'Bloqueio',since:'01/06',impact:'Alto',responsible:'Change Management'},
+    {squad:'Guardiões',frente:'—',description:'Ambiente HML instável bloqueia SLOPC-37088',type:'Bloqueio',since:'03/06',impact:'Alto',responsible:'TI Infraestrutura'},
+  ];
+  let h=`<div class="pg-hd"><div class="pg-title">Impedimentos & Bloqueios</div><div class="pg-sub">${items.length} itens ativos</div></div>`;
+  h+=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Squad</th><th>Frente</th><th>Descrição</th><th>Tipo</th><th>Desde</th><th>Impacto</th><th>Responsável solução</th></tr></thead>
+    <tbody>`;
+  items.forEach(it=>{
+    const typeCls=it.type==='Bloqueio'?'sp-bk':'sp-dv';
+    h+=`<tr>
+      <td style="font-weight:600">${escapeHtml(it.squad)}</td>
+      <td>${escapeHtml(it.frente)}</td>
+      <td>${escapeHtml(it.description)}</td>
+      <td><span class="sp ${typeCls}">${it.type}</span></td>
+      <td style="font-size:12px">${escapeHtml(it.since)}</td>
+      <td>${rk(it.impact)}</td>
+      <td>${escapeHtml(it.responsible)}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// RISCOS
+// =====================================================================
+function renderRiscos(){
+  let h=`<div class="pg-hd"><div class="pg-title">Riscos</div><div class="pg-sub">Matriz de riscos consolidada</div></div>`;
+  h+=`<div class="sec-hdr"><span></span><button class="btn btn-sm btn-primary" onclick="openAddRisk()">+ Adicionar risco</button></div>`;
+
+  D.risks.forEach((r,i)=>{
+    const lvCls={'Alto':'risk-lv-a','Médio':'risk-lv-m','Baixo':'risk-lv-b'}[r.level]||'risk-lv-b';
+    h+=`<div class="risk-card">
+      <div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <span style="font-weight:600;font-size:13px">${escapeHtml(r.squad)}</span>
+          <span class="chip">${escapeHtml(r.probability)} prob.</span>
+          <span class="chip">${escapeHtml(r.impact)} impacto</span>
+        </div>
+        <div style="font-size:13px;margin-bottom:6px">${escapeHtml(r.description)}</div>
+        <div style="font-size:12px;color:var(--txt2)">Plano: ${escapeHtml(r.action)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="risk-lv ${lvCls}">${r.level}</div>
+        <button class="btn btn-sm" onclick="openEditRisk(${i})">Editar</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// PRÓXIMOS PASSOS
+// =====================================================================
+function renderProximos(){
+  let h=`<div class="pg-hd"><div class="pg-title">Próximos Passos</div><div class="pg-sub">Ações imediatas priorizadas</div></div>`;
+  h+=`<div class="sec-hdr"><span></span><button class="btn btn-sm btn-primary" onclick="openAddStep()">+ Adicionar ação</button></div>`;
+  h+=`<div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Squad</th><th>Ação</th><th>Responsável</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+    <tbody>`;
+  D.nextSteps.sort((a,b)=>a.priority-b.priority).forEach((s,i)=>{
+    const sc={Urgente:'sp-bk',Pendente:'sp-dv',Programado:'sp-hm',Concluído:'sp-pr'}[s.status]||'sp-bl';
+    h+=`<tr>
+      <td style="font-weight:700;color:var(--txt2)">${s.priority}</td>
+      <td style="font-weight:600">${escapeHtml(s.squad)}</td>
+      <td>${escapeHtml(s.action)}</td>
+      <td>${escapeHtml(s.responsible)}</td>
+      <td style="font-size:12px">${escapeHtml(s.deadline)}</td>
+      <td><span class="sp ${sc}">${s.status}</span></td>
+      <td><button class="btn btn-sm" onclick="openEditStep(${i})">Editar</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// ESCALAÇÕES
+// =====================================================================
+function renderEscalacoes(){
+  let h=`<div class="pg-hd"><div class="pg-title">Escalações para Gestão</div><div class="pg-sub">O que precisa de decisão da gestão</div></div>`;
+  h+=`<div class="sec-hdr"><span></span><button class="btn btn-sm btn-primary" onclick="openAddEscalation()">+ Adicionar escalação</button></div>`;
+
+  D.escalations.forEach((e,i)=>{
+    const uc={Crítica:'urg-c',Alta:'urg-a',Média:'urg-p'}[e.urgency]||'urg-p';
+    h+=`<div class="tbl-wrap" style="margin-bottom:14px">
+      <div class="tbl-hdr">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:20px;font-weight:700;color:var(--txt2)">${i+1}</span>
+          <div>
+            <div style="font-weight:600">${escapeHtml(e.squad)}</div>
+            <div style="font-size:12px;color:var(--txt2)">${escapeHtml(e.description)}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="urg ${uc}">${e.urgency}</span>
+          <button class="btn btn-sm" onclick="openEditEscalation(${i})">Editar</button>
+        </div>
+      </div>
+      <div style="padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div class="flbl" style="margin-bottom:3px">Contexto</div>
+          <div style="font-size:12px;color:var(--txt2)">${escapeHtml(e.context)}</div>
+        </div>
+        <div>
+          <div class="flbl" style="margin-bottom:3px">Decisão necessária</div>
+          <div style="font-size:12px;color:var(--txt)">${escapeHtml(e.decision)}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('main').innerHTML=h;
+}
+
+// =====================================================================
+// MODALS — STORY
+// =====================================================================
+function getStoriesRef(squadKey, frenteKey){
+  if(squadKey==='guardioes') return D.squads.guardioes.stories;
+  return D.squads.expresso1.frentes[frenteKey].stories;
+}
+
+function openEditStory(squadKey, frenteKey, idx){
+  const stories=getStoriesRef(squadKey,frenteKey);
+  const s=stories[idx];
+  if(!s)return;
+  const isGuard=squadKey==='guardioes';
+  let h=`<div class="modal-title">Editar história — ${escapeHtml(s.id)}</div>`;
+  h+=storyFormHTML(s,isGuard);
+  h+=`<div class="modal-acts">
+    <button class="btn" onclick="confirmDeleteStory('${squadKey}','${frenteKey}',${idx})">🗑 Excluir</button>
+    <button class="btn" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveStory('${squadKey}','${frenteKey}',${idx},false)">Salvar</button>
+  </div>`;
+  showModal(h);
+}
+
+function openAddStory(squadKey, frenteKey){
+  const isGuard=squadKey==='guardioes';
+  let h=`<div class="modal-title">Nova história</div>`;
+  h+=storyFormHTML(null,isGuard);
+  h+=`<div class="modal-acts">
+    <button class="btn" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveStory('${squadKey}','${frenteKey||'obf'}',-1,true)">Adicionar</button>
+  </div>`;
+  showModal(h);
+}
+
+function storyFormHTML(s, isGuard){
+  const v=s||{id:'',summary:'',assignee:'',status:'Backlog',deadline:'',risk:'Médio',dependency:'',dependencyStatus:'Aguardando',daysStopped:0,notes:''};
+  let h=`
+  <div class="fg"><label class="flbl">ID Jira</label><input class="fi" id="f-id" value="${escapeHtml(v.id)}"></div>
+  <div class="fg"><label class="flbl">Resumo</label><input class="fi" id="f-summary" value="${escapeHtml(v.summary)}"></div>
+  <div class="fg"><label class="flbl">Responsável</label><input class="fi" id="f-assignee" value="${escapeHtml(v.assignee)}"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="fg"><label class="flbl">Status</label>
+      <select class="fsel" id="f-status">
+        ${['Backlog','Em Dev','HML','Bloqueado','Produção'].map(s=>`<option ${v.status===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fg"><label class="flbl">Risco</label>
+      <select class="fsel" id="f-risk">
+        ${['Alto','Médio','Baixo'].map(r=>`<option ${v.risk===r?'selected':''}>${r}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+  <div class="fg"><label class="flbl">Prazo (DD/MM)</label><input class="fi" id="f-deadline" value="${escapeHtml(v.deadline)}"></div>`;
+  if(isGuard){
+    h+=`
+    <div class="fg"><label class="flbl">Área dependente</label><input class="fi" id="f-dep" value="${escapeHtml(v.dependency||'')}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="fg"><label class="flbl">Status dependência</label>
+        <select class="fsel" id="f-depstatus">
+          ${['Aguardando','Bloqueado','Resolvido'].map(s=>`<option ${(v.dependencyStatus||'')=== s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg"><label class="flbl">Dias parado</label><input class="fi" type="number" id="f-days" value="${v.daysStopped||0}"></div>
+    </div>`;
+  }
+  h+=`<div class="fg"><label class="flbl">Notas</label><textarea class="fta" id="f-notes">${escapeHtml(v.notes||'')}</textarea></div>`;
+  return h;
+}
+
+function saveStory(squadKey, frenteKey, idx, isNew){
+  const stories=getStoriesRef(squadKey,frenteKey);
+  const isGuard=squadKey==='guardioes';
+  const obj={
+    id:document.getElementById('f-id').value.trim(),
+    summary:document.getElementById('f-summary').value.trim(),
+    assignee:document.getElementById('f-assignee').value.trim(),
+    status:document.getElementById('f-status').value,
+    risk:document.getElementById('f-risk').value,
+    deadline:document.getElementById('f-deadline').value.trim(),
+    notes:document.getElementById('f-notes').value.trim()
+  };
+  if(isGuard){
+    obj.dependency=document.getElementById('f-dep').value.trim();
+    obj.dependencyStatus=document.getElementById('f-depstatus').value;
+    obj.daysStopped=parseInt(document.getElementById('f-days').value)||0;
+  }
+  if(isNew)stories.push(obj);
+  else stories[idx]={...stories[idx],...obj};
+  saveData();
+  closeModal();
+  renderMain();
+}
+
+function confirmDeleteStory(squadKey,frenteKey,idx){
+  if(!confirm('Excluir esta história?'))return;
+  const stories=getStoriesRef(squadKey,frenteKey);
+  stories.splice(idx,1);
+  saveData();
+  closeModal();
+  renderMain();
+}
+
+// =====================================================================
+// MODALS — RISK
+// =====================================================================
+function openAddRisk(){
+  let h=`<div class="modal-title">Novo Risco</div>${riskFormHTML(null)}
+  <div class="modal-acts"><button class="btn" onclick="closeModal()">Cancelar</button>
+  <button class="btn btn-primary" onclick="saveRisk(-1,true)">Adicionar</button></div>`;
+  showModal(h);
+}
+function openEditRisk(i){
+  let h=`<div class="modal-title">Editar Risco</div>${riskFormHTML(D.risks[i])}
+  <div class="modal-acts"><button class="btn" onclick="deleteRisk(${i})">🗑 Excluir</button>
+  <button class="btn" onclick="closeModal()">Cancelar</button>
+  <button class="btn btn-primary" onclick="saveRisk(${i},false)">Salvar</button></div>`;
+  showModal(h);
+}
+function riskFormHTML(r){
+  const v=r||{squad:'',description:'',probability:'Média',impact:'Médio',level:'Médio',action:'',notes:''};
+  return`<div class="fg"><label class="flbl">Squad</label><input class="fi" id="r-squad" value="${escapeHtml(v.squad)}"></div>
+  <div class="fg"><label class="flbl">Descrição do risco</label><textarea class="fta" id="r-desc">${escapeHtml(v.description)}</textarea></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+    <div class="fg"><label class="flbl">Probabilidade</label>
+      <select class="fsel" id="r-prob">${['Alta','Média','Baixa'].map(x=>`<option ${v.probability===x?'selected':''}>${x}</option>`).join('')}</select>
+    </div>
+    <div class="fg"><label class="flbl">Impacto</label>
+      <select class="fsel" id="r-imp">${['Alto','Médio','Baixo'].map(x=>`<option ${v.impact===x?'selected':''}>${x}</option>`).join('')}</select>
+    </div>
+    <div class="fg"><label class="flbl">Nível</label>
+      <select class="fsel" id="r-lv">${['Alto','Médio','Baixo'].map(x=>`<option ${v.level===x?'selected':''}>${x}</option>`).join('')}</select>
+    </div>
+  </div>
+  <div class="fg"><label class="flbl">Plano de ação</label><input class="fi" id="r-action" value="${escapeHtml(v.action)}"></div>`;
+}
+function saveRisk(i,isNew){
+  const obj={id:isNew?Date.now():D.risks[i].id,squad:document.getElementById('r-squad').value.trim(),description:document.getElementById('r-desc').value.trim(),probability:document.getElementById('r-prob').value,impact:document.getElementById('r-imp').value,level:document.getElementById('r-lv').value,action:document.getElementById('r-action').value.trim(),notes:''};
+  if(isNew)D.risks.push(obj);else D.risks[i]=obj;
+  saveData();closeModal();renderMain();
+}
+function deleteRisk(i){if(!confirm('Excluir?'))return;D.risks.splice(i,1);saveData();closeModal();renderMain();}
+
+// =====================================================================
+// MODALS — NEXT STEPS
+// =====================================================================
+function openAddStep(){
+  let h=`<div class="modal-title">Nova Ação</div>${stepFormHTML(null)}
+  <div class="modal-acts"><button class="btn" onclick="closeModal()">Cancelar</button>
+  <button class="btn btn-primary" onclick="saveStep(-1,true)">Adicionar</button></div>`;
+  showModal(h);
+}
+function openEditStep(i){
+  let h=`<div class="modal-title">Editar Ação</div>${stepFormHTML(D.nextSteps[i])}
+  <div class="modal-acts"><button class="btn" onclick="deleteStep(${i})">🗑 Excluir</button>
+  <button class="btn" onclick="closeModal()">Cancelar</button>
+  <button class="btn btn-primary" onclick="saveStep(${i},false)">Salvar</button></div>`;
+  showModal(h);
+}
+function stepFormHTML(s){
+  const v=s||{priority:D.nextSteps.length+1,squad:'',action:'',responsible:'',deadline:'',status:'Pendente',notes:''};
+  return`<div style="display:grid;grid-template-columns:80px 1fr;gap:10px">
+    <div class="fg"><label class="flbl">Prioridade</label><input class="fi" type="number" id="st-pri" value="${v.priority}"></div>
+    <div class="fg"><label class="flbl">Squad</label><input class="fi" id="st-squad" value="${escapeHtml(v.squad)}"></div>
+  </div>
+  <div class="fg"><label class="flbl">Ação</label><input class="fi" id="st-action" value="${escapeHtml(v.action)}"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+    <div class="fg"><label class="flbl">Responsável</label><input class="fi" id="st-resp" value="${escapeHtml(v.responsible)}"></div>
+    <div class="fg"><label class="flbl">Prazo</label><input class="fi" id="st-dl" value="${escapeHtml(v.deadline)}"></div>
+    <div class="fg"><label class="flbl">Status</label>
+      <select class="fsel" id="st-status">${['Urgente','Pendente','Programado','Concluído'].map(x=>`<option ${v.status===x?'selected':''}>${x}</option>`).join('')}</select>
+    </div>
+  </div>`;
+}
+function saveStep(i,isNew){
+  const obj={id:isNew?Date.now():D.nextSteps[i].id,priority:parseInt(document.getElementById('st-pri').value)||1,squad:document.getElementById('st-squad').value.trim(),action:document.getElementById('st-action').value.trim(),responsible:document.getElementById('st-resp').value.trim(),deadline:document.getElementById('st-dl').value.trim(),status:document.getElementById('st-status').value,notes:''};
+  if(isNew)D.nextSteps.push(obj);else D.nextSteps[i]=obj;
+  saveData();closeModal();renderMain();
+}
+function deleteStep(i){if(!confirm('Excluir?'))return;D.nextSteps.splice(i,1);saveData();closeModal();renderMain();}
+
+// =====================================================================
+// MODALS — ESCALATIONS
+// =====================================================================
+function openAddEscalation(){
+  let h=`<div class="modal-title">Nova Escalação</div>${escFormHTML(null)}
+  <div class="modal-acts"><button class="btn" onclick="closeModal()">Cancelar</button>
+  <button class="btn btn-primary" onclick="saveEsc(-1,true)">Adicionar</button></div>`;
+  showModal(h);
+}
+function openEditEscalation(i){
+  let h=`<div class="modal-title">Editar Escalação</div>${escFormHTML(D.escalations[i])}
+  <div class="modal-acts"><button class="btn" onclick="deleteEsc(${i})">🗑 Excluir</button>
+  <button class="btn" onclick="closeModal()">Cancelar</button>
+  <button class="btn btn-primary" onclick="saveEsc(${i},false)">Salvar</button></div>`;
+  showModal(h);
+}
+function escFormHTML(e){
+  const v=e||{squad:'',description:'',urgency:'Alta',context:'',decision:'',notes:''};
+  return`<div class="fg"><label class="flbl">Squad</label><input class="fi" id="e-squad" value="${escapeHtml(v.squad)}"></div>
+  <div class="fg"><label class="flbl">Descrição</label><input class="fi" id="e-desc" value="${escapeHtml(v.description)}"></div>
+  <div class="fg"><label class="flbl">Urgência</label>
+    <select class="fsel" id="e-urg">${['Crítica','Alta','Média'].map(x=>`<option ${v.urgency===x?'selected':''}>${x}</option>`).join('')}</select>
+  </div>
+  <div class="fg"><label class="flbl">Contexto</label><textarea class="fta" id="e-ctx">${escapeHtml(v.context)}</textarea></div>
+  <div class="fg"><label class="flbl">Decisão necessária</label><textarea class="fta" id="e-dec">${escapeHtml(v.decision)}</textarea></div>`;
+}
+function saveEsc(i,isNew){
+  const obj={id:isNew?Date.now():D.escalations[i].id,squad:document.getElementById('e-squad').value.trim(),description:document.getElementById('e-desc').value.trim(),urgency:document.getElementById('e-urg').value,context:document.getElementById('e-ctx').value.trim(),decision:document.getElementById('e-dec').value.trim(),notes:''};
+  if(isNew)D.escalations.push(obj);else D.escalations[i]=obj;
+  saveData();closeModal();renderMain();
+}
+function deleteEsc(i){if(!confirm('Excluir?'))return;D.escalations.splice(i,1);saveData();closeModal();renderMain();}
+
+// =====================================================================
+// MODAL CORE
+// =====================================================================
+function showModal(html){
+  document.getElementById('modalBox').innerHTML=html;
+  document.getElementById('modalOv').style.display='flex';
+}
+function closeModal(){
+  document.getElementById('modalOv').style.display='none';
+}
+
+// =====================================================================
+// IMPORT JIRA XLSX
+// =====================================================================
+function triggerImport(){document.getElementById('jiraInput').click();}
+
+function handleJiraFile(ev){
+  const file=ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      let imported=0;
+      rows.forEach(row=>{
+        const id=String(row['Issue key']||row['ID']||row['Key']||'').trim();
+        const summary=String(row['Summary']||row['Resumo']||'').trim();
+        const assignee=String(row['Assignee']||row['Responsável']||'').trim();
+        const rawStatus=String(row['Status']||'').trim();
+        const deadline=String(row['Due Date']||row['Prazo']||'').trim();
+        const rawRisk=String(row['Priority']||row['Prioridade']||row['Risk']||'Médio').trim();
+        if(!id&&!summary)return;
+        const statusMap={'To Do':'Backlog','In Progress':'Em Dev','In Review':'HML','Done':'Produção','Blocked':'Bloqueado'};
+        const riskMap={'Highest':'Alto','High':'Alto','Medium':'Médio','Low':'Baixo','Lowest':'Baixo'};
+        const status=statusMap[rawStatus]||rawStatus||'Backlog';
+        const risk=riskMap[rawRisk]||rawRisk||'Médio';
+        const story={id,summary,assignee,status,deadline,risk,notes:'(importado via XLSX)'};
+        D.squads.expresso1.frentes.obf.stories.push(story);
+        imported++;
+      });
+      saveData();
+      alert(`${imported} histórias importadas para Expresso-1 / OBF.\nRevise e mova as histórias conforme necessário.`);
+      navigate('expresso1','obf');
+    }catch(err){alert('Erro ao importar arquivo: '+err.message);}
+    ev.target.value='';
+  };
+  reader.readAsBinaryString(file);
+}
+
+// =====================================================================
+// EXPORT CSV
+// =====================================================================
+function exportCSV(){
+  const rows=allStories();
+  const BOM='﻿';
+  const cols=['Squad','Frente','ID Jira','Resumo','Responsável','Status','Prazo','Risco','Notas'];
+  const csvRows=[cols.map(c=>`"${c}"`).join(';')];
+  rows.forEach(r=>{
+    csvRows.push([r.squad,r.frente,r.id,r.summary,r.assignee,r.status,r.deadline,r.risk,r.notes||'']
+      .map(v=>`"${String(v||'').replace(/"/g,'""')}"`)
+      .join(';'));
+  });
+  const blob=new Blob([BOM+csvRows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`sala-visao-projetos-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// =====================================================================
+// COPY BRIEFING
+// =====================================================================
+function copyBriefing(){
+  const e1=D.squads.expresso1;
+  const gd=D.squads.guardioes;
+  const obfSt=e1.frentes.obf.stories;
+  const subSt=e1.frentes.subsidios.stories;
+  const obfBlk=obfSt.filter(s=>s.status==='Bloqueado').length;
+  const gdBlk=gd.stories.filter(s=>s.status==='Bloqueado').length;
+
+  const lines=[
+    `📊 BRIEFING — SALA | Visão de Projetos | ${new Date().toLocaleDateString('pt-BR')}`,
+    ``,
+    `▶ EXPRESSO-1 — Status: AMARELO`,
+    `  OBF (${obfSt.length} histórias): ${obfBlk} bloqueada(s)`,
+    `  • Impedimento ativo: ${e1.frentes.obf.impediment||'nenhum'}`,
+    `  Histórias em foco:`,
+    ...obfSt.filter(s=>s.status!=='Produção').map(s=>`    – ${s.id} | ${s.summary} | ${s.assignee} | ${s.status} | Prazo ${s.deadline} | Risco ${s.risk}`),
+    ``,
+    `  Subsídios (${subSt.length} histórias):`,
+    `  ${e1.frentes.subsidios.note||''}`,
+    ...subSt.filter(s=>s.status!=='Produção').map(s=>`    – ${s.id} | ${s.summary} | ${s.assignee} | ${s.status} | Prazo ${s.deadline}`),
+    ``,
+    `▶ GUARDIÕES — Status: VERMELHO`,
+    `  ${gdBlk} história(s) bloqueada(s) por dependências externas:`,
+    ...gd.stories.filter(s=>s.status==='Bloqueado').map(s=>`    🔒 ${s.id} | ${s.summary} | Dep: ${s.dependency||'—'} | ${s.daysStopped||0} dias parado`),
+    ``,
+    `▶ ESCALAÇÕES PARA GESTÃO (${D.escalations.length}):`,
+    ...D.escalations.map((e,i)=>`  ${i+1}. [${e.urgency}] ${e.squad}: ${e.description}\n     → Decisão: ${e.decision}`),
+    ``,
+    `▶ PRÓXIMAS AÇÕES:`,
+    ...D.nextSteps.slice(0,4).map(s=>`  ${s.priority}. ${s.squad} | ${s.action} | ${s.responsible} | ${s.deadline} | ${s.status}`),
+    ``,
+    `Gerado automaticamente pelo painel SALA — Visão de Projetos`
+  ];
+  const text=lines.join('\n');
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>alert('Briefing copiado! Cole no Teams ou e-mail.'));
+  }else{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Briefing copiado!');
+  }
+}
+
+// =====================================================================
+// INIT
+// =====================================================================
+renderSidebar();
+navigate('visao-geral');
+</script>
+</body>
+</html>
