@@ -51,6 +51,9 @@ body{font-family:'Inter',ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe U
 .tbtn.green{background:linear-gradient(135deg,#16a34a,#15803d);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.35)}
 .tbtn.white{background:#fff;color:#7a0000;border-color:transparent;font-weight:700}
 .tbtn.white:hover{background:#fff5f5}
+.tbtn.cloud-on{background:#dcfce7;border-color:#86efac;color:#15803d}
+.tbtn.cloud-on:hover{background:#bbf7d0;color:#166534}
+.top-sync{color:rgba(255,255,255,.85);font-size:10px;font-weight:600;display:flex;align-items:center;gap:5px;white-space:nowrap}
 
 /* ── WRAP + LAYOUT ── */
 .wrap{max-width:1640px;margin:0 auto;padding:18px 1.6rem 70px}
@@ -287,7 +290,12 @@ tbody tr:last-child td{border-bottom:none}
     <span class="top-sub">SALA · Transformação Digital · Entregas por Squad</span>
   </div>
   <div class="top-gap"></div>
+  <span class="top-sync" id="syncLbl"></span>
   <span class="top-meta" id="impMeta">Sem importação Jira</span>
+  <button class="tbtn" id="jbBtn" onclick="openJB()" title="Sincronizar em tempo real com o time (nuvem JSONBin)">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
+    <span id="jbBtnLabel">☁️ Nuvem</span>
+  </button>
   <input type="file" id="jiraFile" accept=".xlsx,.xls" class="hidden" onchange="onJiraFile(event)">
   <button class="tbtn" onclick="document.getElementById('jiraFile').click()" title="Importar export do Jira (Product Backlog · .xlsx) para preencher histórias e refinadas por squad">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -447,6 +455,49 @@ tbody tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- MODAL JSONBIN (Nuvem Tempo Real) -->
+<div class="overlay" id="jbOv">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-hd">
+      <h2>☁️ Nuvem em Tempo Real</h2>
+      <button class="close-x" onclick="closeJB()">×</button>
+    </div>
+    <div style="padding:18px 22px">
+      <p style="font-size:12.5px;color:var(--tx2);line-height:1.6;margin-bottom:14px">
+        Sincronize as demandas e histórias com <b>todo o time</b> usando o
+        <a href="https://jsonbin.io" target="_blank" rel="noopener" style="color:var(--accent);font-weight:700">jsonbin.io</a> (grátis).
+        Só <b>você</b> precisa de uma chave para <b>editar</b>; o time visualiza apenas com o link.
+      </p>
+      <ol style="font-size:11.5px;color:var(--tx2);line-height:1.7;margin:0 0 14px 18px">
+        <li>Crie uma conta grátis em <b>jsonbin.io</b></li>
+        <li>Vá em <b>API Keys</b> e copie sua <b>Master Key</b></li>
+        <li>Cole abaixo e clique em <b>Ativar Nuvem</b></li>
+        <li>Compartilhe a <b>URL do navegador</b> (já vem com o ID) — o time vê tudo automaticamente</li>
+      </ol>
+      <div class="field full" style="margin-bottom:12px">
+        <label>🔑 Master Key (JSONBin)</label>
+        <input type="password" id="jbKey" placeholder="$2a$10$..." autocomplete="off">
+        <span class="hint">Fica salva apenas no <b>seu</b> navegador. O time não precisa de chave para visualizar.</span>
+      </div>
+      <div class="field full" id="jbBinRow" style="display:none;margin-bottom:12px">
+        <label>📦 Bin ID <span class="hint">(compartilhe com o time)</span></label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="jbBinId" placeholder="Gerado ao ativar" readonly style="background:var(--accent-soft);color:var(--accent);font-family:monospace;font-size:11px">
+          <button class="btn" style="padding:8px 11px" onclick="jbCopyBin()">📋</button>
+        </div>
+        <span class="hint" id="jbBinHint">Cole esse Bin ID no chat para que o time acesse automaticamente.</span>
+      </div>
+      <div id="jbResult" style="display:none;border-radius:8px;padding:9px 11px;font-size:11.5px;font-weight:600;margin-bottom:12px"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" id="jbTestBtn" onclick="testJB()">Testar chave</button>
+      <div class="gap"></div>
+      <button class="btn" onclick="closeJB()">Fechar</button>
+      <button class="btn btn-pri" id="jbConnectBtn" onclick="connectJB()">☁️ Ativar Nuvem</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -524,8 +575,8 @@ function storiesFor(squadId,subId){
 }
 
 /* ════════════════ PERSISTENCE ════════════════ */
-function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(demands));}catch(e){}}
-function saveStories(){try{localStorage.setItem(STORIES_KEY,JSON.stringify(stories));}catch(e){}}
+function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(demands));}catch(e){}jbAutoSave();}
+function saveStories(){try{localStorage.setItem(STORIES_KEY,JSON.stringify(stories));}catch(e){}jbAutoSave();}
 function load(){
   try{var raw=localStorage.getItem(STORE_KEY);if(raw){demands=JSON.parse(raw);}else{demands=seed();save();}}catch(e){demands=seed();}
   try{var rs=localStorage.getItem(STORIES_KEY);if(rs){stories=JSON.parse(rs);}}catch(e){stories=[];}
@@ -1031,12 +1082,147 @@ function toast(msg,isErr){
   t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on');},2800);
 }
 
+/* ════════════════ NUVEM (JSONBin) ════════════════
+   Leitura pública (sem chave, via Bin ID na URL #vp=).
+   Escrita requer Master Key — só quem ativa precisa.        */
+var JB_CFG='sala_visao_jsonbin_v1';
+var JB_API='https://api.jsonbin.io/v3';
+var JB={key:'',binId:''};
+var _jbTimer=null,_jbBusy=false;
+
+function setSync(txt){var el=$id('syncLbl');if(el)el.textContent=txt||'';}
+function jbConfigured(){return !!JB.binId;}
+function jbLoadConfig(){
+  try{var c=JSON.parse(localStorage.getItem(JB_CFG)||'{}');if(c.key)JB.key=c.key;if(c.binId)JB.binId=c.binId;}catch(e){}
+  if(!JB.binId){var m=location.hash.match(/[#&]vp=([^&]+)/);if(m)JB.binId=decodeURIComponent(m[1]);}
+  if(JB.binId&&location.hash.indexOf('vp=')<0){try{history.replaceState(null,'',location.pathname+'#vp='+encodeURIComponent(JB.binId));}catch(e){}}
+}
+function jbSaveConfig(){
+  try{localStorage.setItem(JB_CFG,JSON.stringify({key:JB.key,binId:JB.binId}));}catch(e){}
+  if(JB.binId){try{history.replaceState(null,'',location.pathname+'#vp='+encodeURIComponent(JB.binId));}catch(e){}}
+}
+function jbUpdateBtn(){
+  var b=$id('jbBtn'),l=$id('jbBtnLabel');if(!b||!l)return;
+  if(jbConfigured()){b.classList.add('cloud-on');l.textContent=JB.key?'☁️ Nuvem ✓':'☁️ Nuvem (leitura)';}
+  else{b.classList.remove('cloud-on');l.textContent='☁️ Nuvem';}
+}
+function jbLoad(cb){
+  if(!JB.binId){cb('não configurado');return;}
+  fetch(JB_API+'/b/'+JB.binId+'/latest',{headers:{'X-Bin-Meta':'false'}})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(j){cb(null,(j&&j.record!==undefined)?j.record:j);})
+    .catch(function(e){cb(e.message||'falha ao ler nuvem');});
+}
+function jbSave(){
+  if(!jbConfigured()||!JB.key)return;
+  clearTimeout(_jbTimer);_jbBusy=true;setSync('🔄 Salvando…');
+  fetch(JB_API+'/b/'+JB.binId,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':JB.key,'X-Bin-Versioning':'false'},
+    body:JSON.stringify({demands:demands,stories:stories,_v:1})
+  })
+  .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.message||'HTTP '+r.status);});return r.json();})
+  .then(function(){setSync('✅ Nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));})
+  .catch(function(){setSync('⚠️ Offline — salvo localmente');})
+  .then(function(){_jbBusy=false;});
+}
+function jbAutoSave(){
+  if(!jbConfigured()||!JB.key)return;
+  clearTimeout(_jbTimer);setSync('💾 Aguardando…');
+  _jbTimer=setTimeout(jbSave,4000);
+}
+function jbMerge(data,announce){
+  if(!data)return;
+  var cloudDem=Array.isArray(data)?data:(data.demands||[]);
+  var cloudSt=(!Array.isArray(data)&&data.stories)?data.stories:null;
+  // demandas: nuvem é a base; preserva demandas locais ainda não enviadas (id ausente na nuvem)
+  var ids={};cloudDem.forEach(function(d){if(d&&d.id)ids[d.id]=1;});
+  var localOnly=demands.filter(function(d){return d&&d.id&&!ids[d.id];});
+  demands=cloudDem.concat(localOnly);
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(demands));}catch(e){}
+  // histórias: usa as da nuvem quando houver
+  if(cloudSt&&cloudSt.length){stories=cloudSt;stories.forEach(function(s){s._cls=classifyStory(s);});try{localStorage.setItem(STORIES_KEY,JSON.stringify(stories));}catch(e){}}
+  renderSidebar();render();updateImpMeta();
+  if(announce)toast(announce);
+  // se sou dono e havia demandas locais não enviadas, sobe a versão mesclada
+  if(JB.key&&localOnly.length)jbSave();
+}
+function jbSync(announce){
+  if(!jbConfigured())return;
+  setSync('🔄 Sincronizando…');
+  jbLoad(function(err,data){
+    if(err){setSync('⚠️ '+err);return;}
+    jbMerge(data,announce);
+    setSync((JB.key?'✅ Nuvem · ':'👁️ Leitura · ')+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+  });
+}
+function openJB(){
+  jbLoadConfig();
+  $id('jbKey').value=JB.key||'';$id('jbBinId').value=JB.binId||'';
+  $id('jbBinRow').style.display=JB.binId?'block':'none';
+  $id('jbResult').style.display='none';
+  $id('jbOv').classList.add('on');
+}
+function closeJB(){$id('jbOv').classList.remove('on');}
+function jbResult(type,msg){
+  var el=$id('jbResult');el.style.display='block';
+  el.style.background=type==='ok'?'#dcfce7':type==='warn'?'#fffbeb':'#fef2f2';
+  el.style.color=type==='ok'?'#15803d':type==='warn'?'#92400e':'#dc2626';
+  el.style.border='1px solid '+(type==='ok'?'#86efac':type==='warn'?'#fde68a':'#fecaca');
+  el.innerHTML=msg;
+}
+function jbCopyBin(){var v=$id('jbBinId').value;if(v&&navigator.clipboard)navigator.clipboard.writeText(v).then(function(){toast('Bin ID copiado');});}
+function testJB(){
+  var key=$id('jbKey').value.trim();
+  if(!key){jbResult('err','❌ Insira sua Master Key do JSONBin.');return;}
+  $id('jbTestBtn').textContent='Testando…';$id('jbTestBtn').disabled=true;
+  fetch(JB_API+'/b',{headers:{'X-Master-Key':key}})
+  .then(function(r){
+    $id('jbTestBtn').textContent='Testar chave';$id('jbTestBtn').disabled=false;
+    if(r.ok)jbResult('ok','✅ Chave válida! Clique em <b>Ativar Nuvem</b>.');
+    else if(r.status===401)jbResult('err','❌ Chave inválida. Confira a <b>Master Key</b>.');
+    else jbResult('warn','⚠️ Código '+r.status+'. Tente ativar mesmo assim.');
+  })
+  .catch(function(){$id('jbTestBtn').textContent='Testar chave';$id('jbTestBtn').disabled=false;jbResult('err','❌ Falha de rede.');});
+}
+function connectJB(){
+  var key=$id('jbKey').value.trim();
+  var existing=$id('jbBinId').value.trim();
+  if(!key){jbResult('err','❌ Insira sua Master Key.');return;}
+  $id('jbConnectBtn').textContent='Conectando…';$id('jbConnectBtn').disabled=true;
+  if(existing){
+    JB.key=key;JB.binId=existing;jbSaveConfig();jbUpdateBtn();
+    $id('jbConnectBtn').textContent='☁️ Ativar Nuvem';$id('jbConnectBtn').disabled=false;closeJB();
+    jbSync('Nuvem reconectada ✓');return;
+  }
+  fetch(JB_API+'/b',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':'VisaoProjetos-SALA','X-Collection-Name':'sala-visao-projetos'},
+    body:JSON.stringify({demands:demands,stories:stories,_v:1})
+  })
+  .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.message||'HTTP '+r.status);});return r.json();})
+  .then(function(j){
+    JB.key=key;JB.binId=j.metadata.id;jbSaveConfig();jbUpdateBtn();
+    $id('jbConnectBtn').textContent='☁️ Ativar Nuvem';$id('jbConnectBtn').disabled=false;
+    $id('jbBinId').value=JB.binId;$id('jbBinRow').style.display='block';
+    setSync('✅ Nuvem ativada · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    toast('☁️ Nuvem ativada! Compartilhe a URL do navegador com o time.');
+    jbResult('ok','✅ Ativada! <b>Copie a URL do navegador</b> (já inclui o ID) e envie ao time. Eles verão tudo automaticamente.');
+  })
+  .catch(function(e){$id('jbConnectBtn').textContent='☁️ Ativar Nuvem';$id('jbConnectBtn').disabled=false;jbResult('err','❌ Erro: '+e.message);});
+}
+
 /* ════════════════ INIT ════════════════ */
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();closeJB();}});
 $id('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+$id('jbOv').addEventListener('click',function(e){if(e.target===this)closeJB();});
 fillSelects();load();
 stories.forEach(function(s){s._cls=classifyStory(s);});
 renderSidebar();render();updateImpMeta();
+jbLoadConfig();jbUpdateBtn();
+if(jbConfigured())jbSync();
+// repuxa da nuvem periodicamente (a cada 45s) quando não estou salvando
+setInterval(function(){if(jbConfigured()&&!_jbBusy)jbSync();},45000);
 </script>
 </body>
 </html>
