@@ -2263,6 +2263,7 @@
     }
     let rows = [];
     let sourceName = 'Acomp Geral Todas Squads.xlsx';
+    let importDateTime = new Date();
     let selectedSquadState = 'Contact';
     let deliveries = JSON.parse(localStorage.getItem('jiraDashboardDeliveries') || '[]');
     let editingDeliveryIndex = null;
@@ -2561,9 +2562,8 @@
     function renderAll(){
       const squad = getSelectedSquad();
       $('selectedSquadLabel').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}`;
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('pt-BR');
-      const timeStr = now.toLocaleTimeString('pt-BR');
+      const dateStr = importDateTime.toLocaleDateString('pt-BR');
+      const timeStr = importDateTime.toLocaleTimeString('pt-BR');
       $('baseInfo').textContent = `${dateStr} • ${timeStr}`;
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
@@ -3251,6 +3251,7 @@
     function resetBase(){
       rows = structuredClone(initialData);
       sourceName = 'Acomp Geral Todas Squads.xlsx';
+      importDateTime = new Date();
       closeOperationalEditor();
       setupFilters();
       renderAll();
@@ -3276,6 +3277,7 @@
           rows = normalizeMatrix(matrix);
         }
         sourceName = file.name;
+        importDateTime = new Date(file.lastModified);
         setupFilters();
         renderAll();
         alert('Importação concluída.');
