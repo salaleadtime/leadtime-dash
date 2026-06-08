@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Opções de Card — Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6fb;--card:#fff;--border:#e2e8f0;--border-soft:#edf1f8;
+  --tx:#0f172a;--tx2:#475569;--tx3:#94a3b8;
+  --accent:#cc0000;--accent2:#7a0000;--accent-soft:#fff5f5;--accent-br:#fecaca;
+  --r:#dc2626;--rs:#fef2f2;--rb:#fecaca;
+  --a:#d97706;--as:#fffbeb;--ab:#fde68a;--at:#78350f;
+  --g:#16a34a;--gs:#f0fdf4;--gb:#bbf7d0;--gt:#14532d;
+  --b:#2563eb;--bs:#eff6ff;--bb:#bfdbfe;--bt:#1e3a8a;
+  --v:#7c3aed;--vs:#f5f3ff;--vb:#ddd6fe;--vt:#4c1d95;
+  --rad:12px;--rads:8px;
+  --shadow-sm:0 1px 3px rgba(15,23,42,.07),0 1px 2px rgba(15,23,42,.04);
+  --shadow-md:0 4px 16px rgba(15,23,42,.09),0 1px 3px rgba(15,23,42,.06);
+}
+body{font-family:'Inter',sans-serif;font-size:13px;background:var(--bg);color:var(--tx);line-height:1.5;padding:32px 24px 80px;-webkit-font-smoothing:antialiased}
+.page-title{font-size:22px;font-weight:900;color:var(--tx);margin-bottom:6px}
+.page-sub{font-size:13px;color:var(--tx3);margin-bottom:40px}
+.option-block{margin-bottom:52px}
+.option-label{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px}
+.opt-num{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}
+.opt-num.a{background:linear-gradient(135deg,#cc0000,#a80028)}
+.opt-num.b{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+.opt-num.c{background:linear-gradient(135deg,#7c3aed,#6d28d9)}
+.opt-title{font-size:16px;font-weight:800;color:var(--tx)}
+.opt-desc{font-size:11.5px;color:var(--tx3);font-weight:500;margin-top:1px}
+.cards-preview{display:grid;gap:12px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.badge.sq-a{background:#d97706;color:#fff}
+.badge.sq-r{background:#dc2626;color:#fff}
+.badge.sq-b{background:#2563eb;color:#fff}
+.badge.sq-v{background:#7c3aed;color:#fff}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap;border:1px solid transparent}
+.pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.p-b{background:var(--bs);color:#2563eb;border-color:var(--bb)}
+.p-a{background:var(--as);color:#b45309;border-color:var(--ab)}
+.p-g{background:var(--gs);color:#16a34a;border-color:var(--gb)}
+.dep-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--as);color:var(--at);border:1px solid var(--ab)}
+.flag-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:12px}
+.flag-icon.imp{background:var(--as)}
+.flag-icon.esc{background:var(--rs)}
+.flag-icon.rsk{background:#fff7ed}
+
+/* ══════════════════════════════════════════
+   OPÇÃO A — Lista Compacta (horizontal row)
+   Cada demanda = 1 linha densa + expandível
+   ══════════════════════════════════════════ */
+.opt-a-card{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow-sm);overflow:hidden;
+  transition:box-shadow .15s;
+}
+.opt-a-card:hover{box-shadow:var(--shadow-md)}
+.opt-a-row{
+  display:grid;
+  grid-template-columns:16px 1fr 160px 110px 120px 90px auto;
+  align-items:center;gap:12px;
+  padding:11px 14px;
+  cursor:pointer;
+}
+.opt-a-row:hover{background:#f8fafc}
+.opt-a-accent{width:3px;height:28px;border-radius:2px;flex-shrink:0}
+.opt-a-name{font-size:12.5px;font-weight:700;color:var(--tx);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.opt-a-squad{display:flex;gap:5px;align-items:center}
+.opt-a-date{font-size:11px;color:var(--tx2)}
+.opt-a-date span{font-size:9px;color:var(--tx3);display:block}
+.opt-a-status{}
+.opt-a-flags{display:flex;gap:4px}
+.opt-a-actions{display:flex;gap:4px}
+.iconb{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--tx3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.opt-a-divider{height:1px;background:var(--border-soft);margin:0 14px}
+
+/* ══════════════════════════════════════════
+   OPÇÃO B — Card Médio (2 colunas, sem datas redundantes)
+   Mais compacto que o atual, info mais densa
+   ══════════════════════════════════════════ */
+.opt-b-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.opt-b-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow-sm);overflow:hidden;
+  display:flex;flex-direction:column;
+  border-left:4px solid var(--ca,#cbd5e1);
+}
+.opt-b-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.opt-b-hd{padding:11px 13px 8px;display:flex;flex-direction:column;gap:7px}
+.opt-b-name{font-size:13px;font-weight:800;color:var(--tx);line-height:1.3;cursor:pointer}
+.opt-b-name:hover{color:var(--accent)}
+.opt-b-tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.opt-b-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 13px 9px}
+.meta-box{padding:6px 9px;border-radius:8px;background:#fafbfd;border:1px solid var(--border-soft)}
+.meta-box .mk{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3)}
+.meta-box .mv{font-size:11.5px;font-weight:700;color:var(--tx);margin-top:1px}
+.meta-box.red{background:var(--rs);border-color:var(--rb)}.meta-box.red .mv{color:var(--r)}
+.meta-box.hl{background:var(--accent-soft);border-color:var(--accent-br)}.meta-box.hl .mv{color:var(--accent2)}
+.opt-b-footer{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border-soft);background:#fafbfd;margin-top:auto}
+.opt-b-next{font-size:11px;color:var(--tx2);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.opt-b-next b{color:var(--g)}
+.est-chip{font-size:9.5px;font-weight:700;color:var(--tx3);background:#f1f5f9;padding:2px 7px;border-radius:6px;white-space:nowrap}
+
+/* ══════════════════════════════════════════
+   OPÇÃO C — Micro Card (kanban-style)
+   Extremamente compacto, foco no essencial
+   Visual de Post-it / Kanban
+   ══════════════════════════════════════════ */
+.opt-c-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.opt-c-card{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow-sm);overflow:hidden;
+  display:flex;flex-direction:column;gap:0;
+}
+.opt-c-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.opt-c-top{height:3px}
+.opt-c-body{padding:10px 11px;display:flex;flex-direction:column;gap:6px}
+.opt-c-name{font-size:12px;font-weight:800;color:var(--tx);line-height:1.3;cursor:pointer}
+.opt-c-name:hover{color:var(--accent)}
+.opt-c-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.opt-c-date{font-size:10px;font-weight:700;color:var(--tx3)}
+.opt-c-date.late{color:var(--r)}
+.opt-c-date.ok{color:var(--g)}
+.opt-c-next{font-size:10.5px;color:var(--tx2);border-left:2px solid var(--g);padding-left:7px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.opt-c-footer{display:flex;align-items:center;justify-content:space-between;padding:6px 11px;border-top:1px solid var(--border-soft);background:#fafbfd}
+.opt-c-resp{font-size:9.5px;color:var(--tx3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.opt-c-actions{display:flex;gap:3px}
+.resp-chip{font-size:9px;font-weight:600;background:#f1f5f9;color:var(--tx2);padding:1px 6px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="page-title">Opções de Card — Escolha o modelo</div>
+<div class="page-sub">3 propostas de layout para os cartões de demanda. Abra no navegador e escolha a que preferir.</div>
+
+<!-- ══════ OPÇÃO A ══════ -->
+<div class="option-block">
+  <div class="option-label">
+    <div class="opt-num a">A</div>
+    <div>
+      <div class="opt-title">Lista Compacta — Horizontal</div>
+      <div class="opt-desc">Cada demanda é uma linha densa. Mais demandas visíveis de uma vez. Clique expande os detalhes.</div>
+    </div>
+  </div>
+
+  <div class="opt-a-card">
+    <!-- Header da lista -->
+    <div style="display:grid;grid-template-columns:16px 1fr 160px 110px 120px 90px auto;gap:12px;padding:8px 14px;background:#f8fafc;border-bottom:1px solid var(--border-soft)">
+      <div></div>
+      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)">Projeto / Demanda</div>
+      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)">Squad</div>
+      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)">Entrega</div>
+      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)">Status</div>
+      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3)">Alertas</div>
+      <div></div>
+    </div>
+
+    <!-- Linha 1 -->
+    <div class="opt-a-row">
+      <div class="opt-a-accent" style="background:#d97706"></div>
+      <div>
+        <div class="opt-a-name">Subsídios — Nova régua de cálculo OBF</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">👉 Reunião de alinhamento com Subsídios (09/06)</div>
+      </div>
+      <div class="opt-a-squad">
+        <span class="badge sq-a">Expresso-1 · Subsídios</span>
+      </div>
+      <div class="opt-a-date">
+        <span>Entrega</span>
+        15/07/2026
+      </div>
+      <span class="pill p-b">Em Desenvolvimento</span>
+      <div class="opt-a-flags">
+        <span class="flag-icon imp" title="Impedimento">⛔</span>
+        <span class="flag-icon rsk" title="Risco">⚠️</span>
+        <span class="flag-icon esc" title="Escalar">🚨</span>
+      </div>
+      <div class="opt-a-actions">
+        <div class="iconb">✏️</div>
+        <div class="iconb">🗑</div>
+      </div>
+    </div>
+    <div class="opt-a-divider"></div>
+
+    <!-- Linha 2 -->
+    <div class="opt-a-row">
+      <div class="opt-a-accent" style="background:#d97706"></div>
+      <div>
+        <div class="opt-a-name">OBF — Automação de baixa de benefícios</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">👉 Validar massa de testes em homologação</div>
+      </div>
+      <div class="opt-a-squad">
+        <span class="badge sq-a">Expresso-1 · OBF</span>
+      </div>
+      <div class="opt-a-date">
+        <span>Entrega</span>
+        <span style="color:#dc2626;font-size:11px;font-weight:700">12/06/2026 (5d)</span>
+      </div>
+      <span class="pill p-a">Homologação</span>
+      <div class="opt-a-flags">
+        <span class="flag-icon rsk" title="Risco">⚠️</span>
+        <span class="dep-tag" style="font-size:9px">🔗 1 dep.</span>
+      </div>
+      <div class="opt-a-actions">
+        <div class="iconb">✏️</div>
+        <div class="iconb">🗑</div>
+      </div>
+    </div>
+    <div class="opt-a-divider"></div>
+
+    <!-- Linha 3 -->
+    <div class="opt-a-row">
+      <div class="opt-a-accent" style="background:#dc2626"></div>
+      <div>
+        <div class="opt-a-name">Guardiões — Monitoramento de fraude em tempo real</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">👉 Rodar testes de carga no ambiente de homologação</div>
+      </div>
+      <div class="opt-a-squad">
+        <span class="badge sq-r">Guardiões</span>
+      </div>
+      <div class="opt-a-date">
+        <span>Entrega</span>
+        20/06/2026
+      </div>
+      <span class="pill p-a">Em Testes / QA</span>
+      <div class="opt-a-flags">
+        <span class="flag-icon rsk" title="Risco">⚠️</span>
+      </div>
+      <div class="opt-a-actions">
+        <div class="iconb">✏️</div>
+        <div class="iconb">🗑</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ OPÇÃO B ══════ -->
+<div class="option-block">
+  <div class="option-label">
+    <div class="opt-num b">B</div>
+    <div>
+      <div class="opt-title">Card Médio — Borda lateral colorida</div>
+      <div class="opt-desc">Card compacto com borda esquerda colorida por squad. 2 datas em destaque + próximo passo no footer. ~30% menor que o atual.</div>
+    </div>
+  </div>
+
+  <div class="opt-b-grid">
+    <!-- Card 1 -->
+    <div class="opt-b-card" style="--ca:#d97706">
+      <div class="opt-b-hd">
+        <div class="opt-b-name">Subsídios — Nova régua de cálculo OBF</div>
+        <div class="opt-b-tags">
+          <span class="badge sq-a">Expresso-1 · Subsídios</span>
+          <span class="pill p-b">Em Desenvolvimento</span>
+          <span class="dep-tag">🔗 2 dep.</span>
+        </div>
+      </div>
+      <div class="opt-b-meta">
+        <div class="meta-box">
+          <div class="mk">📅 Entrega</div>
+          <div class="mv">15/07/2026</div>
+        </div>
+        <div class="meta-box hl">
+          <div class="mk">🏁 Conclusão</div>
+          <div class="mv">30/08/2026</div>
+        </div>
+      </div>
+      <div class="opt-b-footer">
+        <div class="opt-b-next"><b>👉</b> Reunião de alinhamento com Subsídios (09/06)</div>
+        <span class="est-chip">3 sprints · 21 SP</span>
+        <span style="font-size:13px">⛔</span>
+        <span style="font-size:13px">🚨</span>
+        <div class="iconb">✏️</div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="opt-b-card" style="--ca:#d97706">
+      <div class="opt-b-hd">
+        <div class="opt-b-name">OBF — Automação de baixa de benefícios</div>
+        <div class="opt-b-tags">
+          <span class="badge sq-a">Expresso-1 · OBF</span>
+          <span class="pill p-a">Homologação</span>
+          <span class="dep-tag">🔗 1 dep.</span>
+        </div>
+      </div>
+      <div class="opt-b-meta">
+        <div class="meta-box red">
+          <div class="mk">📅 Entrega</div>
+          <div class="mv">12/06/2026 (5d)</div>
+        </div>
+        <div class="meta-box hl">
+          <div class="mk">🏁 Conclusão</div>
+          <div class="mv">30/06/2026</div>
+        </div>
+      </div>
+      <div class="opt-b-footer">
+        <div class="opt-b-next"><b>👉</b> Validar massa de testes em homologação</div>
+        <span class="est-chip">2 sprints · 13 SP</span>
+        <span style="font-size:13px">⚠️</span>
+        <div class="iconb">✏️</div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="opt-b-card" style="--ca:#dc2626">
+      <div class="opt-b-hd">
+        <div class="opt-b-name">Guardiões — Monitoramento de fraude em tempo real</div>
+        <div class="opt-b-tags">
+          <span class="badge sq-r">Guardiões</span>
+          <span class="pill p-a">Em Testes / QA</span>
+        </div>
+      </div>
+      <div class="opt-b-meta">
+        <div class="meta-box">
+          <div class="mk">📅 Entrega</div>
+          <div class="mv">20/06/2026</div>
+        </div>
+        <div class="meta-box hl">
+          <div class="mk">🏁 Conclusão</div>
+          <div class="mv">31/07/2026</div>
+        </div>
+      </div>
+      <div class="opt-b-footer">
+        <div class="opt-b-next"><b>👉</b> Rodar testes de carga no ambiente</div>
+        <span class="est-chip">2 sprints · 13 SP</span>
+        <span style="font-size:13px">⚠️</span>
+        <div class="iconb">✏️</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ OPÇÃO C ══════ -->
+<div class="option-block">
+  <div class="option-label">
+    <div class="opt-num c">C</div>
+    <div>
+      <div class="opt-title">Micro Card — Kanban compacto</div>
+      <div class="opt-desc">Estilo post-it/kanban. Máximo de cards na tela. Só o essencial visível — nome, status, data crítica e próximo passo.</div>
+    </div>
+  </div>
+
+  <div class="opt-c-grid">
+    <!-- Card 1 -->
+    <div class="opt-c-card">
+      <div class="opt-c-top" style="background:#d97706"></div>
+      <div class="opt-c-body">
+        <div class="opt-c-row">
+          <span class="badge sq-a" style="font-size:9px">Subsídios</span>
+          <span class="pill p-b" style="font-size:9px;padding:2px 6px">Em Dev</span>
+          <span class="dep-tag" style="font-size:8.5px">🔗 2</span>
+        </div>
+        <div class="opt-c-name">Subsídios — Nova régua de cálculo OBF</div>
+        <div class="opt-c-row">
+          <span class="opt-c-date">📅 15/07</span>
+          <span class="opt-c-date">🏁 30/08</span>
+          <span style="font-size:11px">⛔ ⚠️ 🚨</span>
+        </div>
+        <div class="opt-c-next">Reunião de alinhamento com Subsídios (09/06)</div>
+      </div>
+      <div class="opt-c-footer">
+        <div class="opt-c-resp"><span class="resp-chip">Ana Couto</span> <span class="resp-chip">Bruno Lima</span></div>
+        <div class="opt-c-actions"><div class="iconb" style="width:22px;height:22px;font-size:11px">✏️</div></div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="opt-c-card">
+      <div class="opt-c-top" style="background:#d97706"></div>
+      <div class="opt-c-body">
+        <div class="opt-c-row">
+          <span class="badge sq-a" style="font-size:9px">OBF</span>
+          <span class="pill p-a" style="font-size:9px;padding:2px 6px">Homolog.</span>
+          <span class="dep-tag" style="font-size:8.5px">🔗 1</span>
+        </div>
+        <div class="opt-c-name">OBF — Automação de baixa de benefícios</div>
+        <div class="opt-c-row">
+          <span class="opt-c-date late">📅 12/06 ⚠️5d</span>
+          <span class="opt-c-date">🏁 30/06</span>
+        </div>
+        <div class="opt-c-next">Validar massa de testes em homologação dentro do SLA</div>
+      </div>
+      <div class="opt-c-footer">
+        <div class="opt-c-resp"><span class="resp-chip">Bruno Lima</span></div>
+        <div class="opt-c-actions"><div class="iconb" style="width:22px;height:22px;font-size:11px">✏️</div></div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="opt-c-card">
+      <div class="opt-c-top" style="background:#dc2626"></div>
+      <div class="opt-c-body">
+        <div class="opt-c-row">
+          <span class="badge sq-r" style="font-size:9px">Guardiões</span>
+          <span class="pill p-a" style="font-size:9px;padding:2px 6px">QA</span>
+        </div>
+        <div class="opt-c-name">Guardiões — Monitoramento de fraude em tempo real</div>
+        <div class="opt-c-row">
+          <span class="opt-c-date">📅 20/06</span>
+          <span class="opt-c-date">🏁 31/07</span>
+          <span style="font-size:11px">⚠️</span>
+        </div>
+        <div class="opt-c-next">Rodar testes de carga no ambiente de homologação</div>
+      </div>
+      <div class="opt-c-footer">
+        <div class="opt-c-resp"><span class="resp-chip">Carla Dias</span> <span class="resp-chip">Diego Souza</span></div>
+        <div class="opt-c-actions"><div class="iconb" style="width:22px;height:22px;font-size:11px">✏️</div></div>
+      </div>
+    </div>
+
+    <!-- Card 4 placeholder -->
+    <div class="opt-c-card">
+      <div class="opt-c-top" style="background:#7c3aed"></div>
+      <div class="opt-c-body">
+        <div class="opt-c-row">
+          <span class="badge sq-v" style="font-size:9px">Inter</span>
+          <span class="pill" style="font-size:9px;padding:2px 6px;background:var(--rs);color:var(--r);border:1px solid var(--rb)">Pausado</span>
+        </div>
+        <div class="opt-c-name">Inter — Integração open finance fase 2</div>
+        <div class="opt-c-row">
+          <span class="opt-c-date late">📅 10/06 ⚠️</span>
+          <span class="opt-c-date">🏁 15/09</span>
+          <span style="font-size:11px">🚧 🚨</span>
+        </div>
+        <div class="opt-c-next">Cobrar Jurídico sobre status do contrato com parceiro</div>
+      </div>
+      <div class="opt-c-footer">
+        <div class="opt-c-resp"><span class="resp-chip">Eduardo Reis</span></div>
+        <div class="opt-c-actions"><div class="iconb" style="width:22px;height:22px;font-size:11px">✏️</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Legenda -->
+<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;max-width:560px">
+  <div style="font-size:13px;font-weight:800;color:var(--tx);margin-bottom:10px">📋 Resumo das opções</div>
+  <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:5px 8px;color:var(--tx3);font-size:9.5px;font-weight:800;text-transform:uppercase">Opção</th>
+        <th style="text-align:left;padding:5px 8px;color:var(--tx3);font-size:9.5px;font-weight:800;text-transform:uppercase">Densidade</th>
+        <th style="text-align:left;padding:5px 8px;color:var(--tx3);font-size:9.5px;font-weight:800;text-transform:uppercase">Melhor para</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border-soft)">
+        <td style="padding:8px 8px;font-weight:700">🔴 A — Lista</td>
+        <td style="padding:8px 8px;color:var(--tx2)">Alta · ~15 por tela</td>
+        <td style="padding:8px 8px;color:var(--tx2)">Quem prefere ver muitas demandas de uma vez</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border-soft)">
+        <td style="padding:8px 8px;font-weight:700">🔵 B — Card Médio</td>
+        <td style="padding:8px 8px;color:var(--tx2)">Média · ~6 por tela</td>
+        <td style="padding:8px 8px;color:var(--tx2)">Equilíbrio entre detalhe e visibilidade</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 8px;font-weight:700">🟣 C — Micro Kanban</td>
+        <td style="padding:8px 8px;color:var(--tx2)">Alta · ~8 por tela</td>
+        <td style="padding:8px 8px;color:var(--tx2)">Visual rápido estilo quadro kanban</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
