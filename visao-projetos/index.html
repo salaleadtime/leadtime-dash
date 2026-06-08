@@ -442,6 +442,28 @@ tbody tr:last-child td{border-bottom:none}
 .fc-prog-bar{flex:1;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden}
 .fc-prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--g),#22c55e)}
 .fc-prog-lbl{font-size:10px;font-weight:700;color:var(--tx3);white-space:nowrap}
+/* ── OPERATIONAL LIST (filtrável) ── */
+.op-filters{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--rad);margin-bottom:14px;flex-wrap:wrap}
+.op-filters-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);flex-shrink:0}
+.op-filter-btn{padding:6px 12px;border:1px solid var(--border);background:#fff;color:var(--tx2);font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;border-radius:6px;transition:all .15s}
+.op-filter-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 6px rgba(204,0,0,.2)}
+.op-filter-btn:hover:not(.on){border-color:var(--border2);color:var(--tx);background:#f8fafc}
+.op-list{display:flex;flex-direction:column;gap:0;background:var(--card);border:1px solid var(--border);border-radius:var(--rad);box-shadow:var(--shadow-sm);overflow:hidden}
+.op-row{display:grid;grid-template-columns:100px 1fr 120px 140px 160px auto;gap:12px;align-items:start;padding:12px 16px;border-bottom:1px solid var(--border-soft);transition:background .1s}
+.op-row:last-child{border-bottom:none}
+.op-row:hover{background:#fafbfd}
+.op-row-key{font-family:ui-monospace,SFMono-Regular,monospace;font-size:10.5px;color:var(--accent);font-weight:700;word-break:break-all}
+.op-row-key a{color:inherit;text-decoration:none}.op-row-key a:hover{text-decoration:underline}
+.op-row-info{display:flex;flex-direction:column;gap:4px}
+.op-row-title{font-size:12.5px;font-weight:700;color:var(--tx);line-height:1.3}
+.op-row-status{display:inline-flex;align-items:center;gap:4px}
+.op-row-dates{display:flex;flex-direction:column;gap:4px;font-size:10.5px}
+.op-row-date{display:flex;align-items:center;gap:6px}
+.op-row-date label{font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--tx3);font-size:9px;width:50px;flex-shrink:0}
+.op-row-date input{padding:4px 8px;border-radius:5px;border:1px solid var(--border2);font-family:inherit;font-size:11px;color:var(--tx);background:#fff;outline:none}
+.op-row-date input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(204,0,0,.08)}
+.op-row-sla{display:flex;flex-direction:column;gap:4px}
+.op-row-flags{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 </style>
 
 </head>
@@ -858,6 +880,7 @@ function renderSidebar(){
 }
 function selectSquad(id,sub){
   activeSquad=id;activeSub=sub||'';
+  opStatusFilter='';
   renderSidebar();render();
 }
 
@@ -2266,10 +2289,16 @@ function renderEntregaTab(data){
     '<button class="imp-btn" onclick="openModal()">＋ Nova Demanda</button></div>';
   return '<div class="fc-wrap">'+blocks.join('')+'</div>';
 }
+/* ════════════════ OPERATIONAL LIST FILTER ════════════════ */
+var opStatusFilter='';
+function setOpFilter(st){
+  opStatusFilter=(opStatusFilter===st)?'':st;
+  render();
+}
 function renderOperacionalTab(){
   if(activeSquad==='all'){
     return '<div class="empty"><div class="ico">👆</div><h3>Selecione uma Squad</h3>'+
-      '<p>Clique em uma das squads acima para ver o painel operacional com SLA de homologação, datas de desenvolvimento e histórias refinadas.</p></div>';
+      '<p>Clique em uma das squads acima para ver o painel operacional com datas, SLA e histórias.</p></div>';
   }
   var sts=storiesFor(activeSquad,activeSub);
   if(!sts.length){
@@ -2277,15 +2306,96 @@ function renderOperacionalTab(){
       '<p>Importe um export do Jira (.xlsx) para visualizar o painel operacional desta squad.</p>'+
       '<button class="imp-btn" onclick="document.getElementById(\'jiraFile\').click()">⬆ Importar Jira</button></div>';
   }
-  var h=renderMiniChart(activeSquad,activeSub);
-  h+=renderHomologSection(sts,activeSquad);
-  h+=renderDevQASections(sts);
-  h+=renderRefinedSection(sts);
-  var hasOp=sts.some(function(s){return isHomologStory(s)||isDevStory(s)||isQAStory(s)||isBacklogRefined(s);});
-  if(!hasOp){
-    h+='<div class="empty" style="padding:30px 20px"><div class="ico">🔍</div><h3>Nenhuma história em status operacional</h3>'+
-      '<p>Não há histórias em Homologação, Desenvolvimento, QA ou refinadas no Product Backlog para esta squad.</p></div>';
+
+  // Collect unique statuses from stories
+  var statusSet={};
+  sts.forEach(function(s){var st=(s.status||'—').trim();statusSet[st]=1;});
+  var statusList=Object.keys(statusSet).sort();
+
+  // Filter by selected status
+  var filtered=opStatusFilter?sts.filter(function(s){return (s.status||'—').trim()===opStatusFilter;}):sts;
+
+  var h='<div class="op-filters">';
+  h+='<span class="op-filters-lbl">Filtro por status:</span>';
+  h+='<button class="op-filter-btn'+(opStatusFilter===''?' on':'')+'" onclick="setOpFilter(\'\')">Todos ('+sts.length+')</button>';
+  statusList.forEach(function(st){
+    var cnt=sts.filter(function(s){return (s.status||'—').trim()===st;}).length;
+    h+='<button class="op-filter-btn'+(opStatusFilter===st?' on':'')+'" onclick="setOpFilter(\''+st.replace(/'/g,'\\\'')+'\')" title="'+esc(st)+'">'+esc(st.length>16?st.slice(0,15)+'…':st)+' ('+cnt+')</button>';
+  });
+  h+='</div>';
+
+  if(!filtered.length){
+    h+='<div class="empty" style="padding:40px 20px"><div class="ico">🔍</div><h3>Nenhuma história com este status</h3></div>';
+    return h;
   }
+
+  h+='<div class="op-list">';
+  filtered.forEach(function(s){
+    var op=getOp(s.id);
+    var safeId=s.id.replace(/[^a-zA-Z0-9]/g,'_');
+    var isHomolog=isHomologStory(s);
+    var isDev=isDevStory(s);
+    var isQA=isQAStory(s);
+
+    h+='<div class="op-row">';
+
+    // Key
+    h+='<div class="op-row-key"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a></div>';
+
+    // Title + Status
+    h+='<div class="op-row-info">';
+    h+='<div class="op-row-title">'+esc(s.resumo||s.epicName||'—')+'</div>';
+    h+='<div class="op-row-status">';
+    h+='<span class="pill p-x" style="font-size:9px;padding:2px 7px">'+esc((s.status||'—').trim())+'</span>';
+    if(s.points)h+='<span style="font-size:9px;background:#f1f5f9;padding:2px 7px;border-radius:5px;color:var(--tx3)">'+s.points+'SP</span>';
+    if(isRefined(s))h+='<span class="badge-ref">🃏 Refinada</span>';
+    h+='</div></div>';
+
+    // Dates (conditional by status)
+    h+='<div class="op-row-dates">';
+    if(isHomolog){
+      h+='<div class="op-row-date">';
+      h+='<label>entrada:</label>';
+      h+='<input type="date" value="'+(op.homologDate||'')+'" onchange="setOpField(\''+s.id+'\',\'homologDate\',this.value)">';
+      h+='</div>';
+    }else if(isDev){
+      h+='<div class="op-row-date">';
+      h+='<label>início:</label>';
+      h+='<input type="date" value="'+(op.startDate||'')+'" onchange="setOpField(\''+s.id+'\',\'startDate\',this.value)">';
+      h+='</div>';
+    }else if(isQA){
+      h+='<div class="op-row-date">';
+      h+='<label>entrada:</label>';
+      h+='<input type="date" value="'+(op.qaDate||'')+'" onchange="setOpField(\''+s.id+'\',\'qaDate\',this.value)">';
+      h+='</div>';
+    }else{
+      h+='<span style="font-size:11px;color:var(--tx3)">—</span>';
+    }
+    h+='</div>';
+
+    // SLA or Dates
+    h+='<div class="op-row-sla">';
+    if(isHomolog){
+      h+='<div id="sla_'+safeId+'">'+slaTag(op.homologDate||'')+'</div>';
+    }else if(isDev && op.endDate){
+      h+='<span style="font-size:10px;color:var(--tx3)">Previsão:</span>';
+      h+='<span style="font-size:11px;font-weight:600;color:var(--tx)">'+fmtDate(op.endDate)+'</span>';
+    }else if(isQA && op.qaDate){
+      h+='<span style="font-size:10px;color:var(--tx3)">Entrada QA:</span>';
+      h+='<span style="font-size:11px;font-weight:600;color:var(--tx)">'+fmtDate(op.qaDate)+'</span>';
+    }else{
+      h+='<span style="font-size:11px;color:var(--tx3)">sem datas</span>';
+    }
+    h+='</div>';
+
+    // Flags + Edit
+    h+='<div class="op-row-flags">';
+    h+='<button class="iconb" title="Editar" onclick="openModal(\''+s.id+'\')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+    h+='</div>';
+
+    h+='</div>';
+  });
+  h+='</div>';
   return h;
 }
 
