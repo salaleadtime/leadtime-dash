@@ -1932,8 +1932,7 @@
         <button class="tab" data-view="operacional" onclick="switchView('operacional')">Visão Operacional</button>
       </div>
       <div class="data-source">
-        <div><b>Base carregada:</b> <span id="sourceName">Acomp Geral Todas Squads.xlsx</span></div>
-        <div><span id="rowCount">0 histórias</span> • Atualizado em tela após importação</div>
+        <div><b>Base carregada:</b> <span id="baseInfo">Data e Hora</span></div>
       </div>
     </section>
 
@@ -2562,8 +2561,10 @@
     function renderAll(){
       const squad = getSelectedSquad();
       $('selectedSquadLabel').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}`;
-      $('sourceName').textContent = sourceName;
-      $('rowCount').textContent = `${rows.length} histórias`;
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR');
+      const timeStr = now.toLocaleTimeString('pt-BR');
+      $('baseInfo').textContent = `${dateStr} • ${timeStr}`;
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
       try { renderOperational(); } catch(error) { console.error('Erro ao renderizar Operacional:', error); }
