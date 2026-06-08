@@ -3012,28 +3012,62 @@
 
 
     function openOperationalEditor(key, focusField){
-      const raw = rows.find(r => storyKey(r) === String(key || '').toUpperCase());
-      if(!raw) return;
-      const r = applyOperationalUpdate(raw);
-      const update = operationalUpdates[storyKey(raw)] || {};
-      editingOperationalKey = storyKey(raw);
-      $('opEditorTitle').textContent = `${r.chave} • ${r.resumo}`;
-      $('opEditOwner').value = update.responsavel ?? r.responsavel ?? '';
-      $('opEditDebtor').value = update.devedor ?? r.devedor ?? '';
-      $('opEditDue').value = update.prazo ?? r.prazo ?? '';
-      $('opEditChangeDate').value = update.changeData || toDateInput(r.changeData);
-      $('opEditHomologDate').value = update.homologacaoData || toDateInput(r.homologacaoData);
-      $('opEditRisk').value = update.risco ?? '';
-      $('opEditBlock').value = update.bloqueio ?? '';
-      $('opEditDep').value = update.dependencia ?? '';
-      $('opEditNext').value = update.proximo ?? r.proximo ?? '';
-      $('opEditNote').value = update.executiveNote ?? r.executiveNote ?? '';
-      $('operationalEditor').classList.add('show');
-      $('operationalEditor').scrollIntoView({behavior:'smooth', block:'start'});
-      setTimeout(() => {
-        const target = (focusField === 'homologacao' || isHomologation(r)) ? $('opEditHomologDate') : $('opEditOwner');
-        if(target) target.focus();
-      }, 250);
+      try {
+        const raw = rows.find(r => storyKey(r) === String(key || '').toUpperCase());
+        if(!raw) {
+          console.error('História não encontrada:', key);
+          return;
+        }
+        const r = applyOperationalUpdate(raw);
+        const update = operationalUpdates[storyKey(raw)] || {};
+        editingOperationalKey = storyKey(raw);
+
+        const elements = {
+          opEditorTitle: $('opEditorTitle'),
+          opEditOwner: $('opEditOwner'),
+          opEditDebtor: $('opEditDebtor'),
+          opEditDue: $('opEditDue'),
+          opEditChangeDate: $('opEditChangeDate'),
+          opEditHomologDate: $('opEditHomologDate'),
+          opEditRisk: $('opEditRisk'),
+          opEditBlock: $('opEditBlock'),
+          opEditDep: $('opEditDep'),
+          opEditNext: $('opEditNext'),
+          opEditNote: $('opEditNote'),
+          operationalEditor: $('operationalEditor')
+        };
+
+        for(const [name, el] of Object.entries(elements)){
+          if(!el) console.error(`Elemento não encontrado: ${name}`);
+        }
+
+        if(!elements.opEditorTitle || !elements.operationalEditor) {
+          console.error('Elementos críticos não encontrados');
+          return;
+        }
+
+        elements.opEditorTitle.textContent = `${r.chave} • ${r.resumo}`;
+        if(elements.opEditOwner) elements.opEditOwner.value = update.responsavel ?? r.responsavel ?? '';
+        if(elements.opEditDebtor) elements.opEditDebtor.value = update.devedor ?? r.devedor ?? '';
+        if(elements.opEditDue) elements.opEditDue.value = update.prazo ?? r.prazo ?? '';
+        if(elements.opEditChangeDate) elements.opEditChangeDate.value = update.changeData || toDateInput(r.changeData);
+        if(elements.opEditHomologDate) elements.opEditHomologDate.value = update.homologacaoData || toDateInput(r.homologacaoData);
+        if(elements.opEditRisk) elements.opEditRisk.value = update.risco ?? '';
+        if(elements.opEditBlock) elements.opEditBlock.value = update.bloqueio ?? '';
+        if(elements.opEditDep) elements.opEditDep.value = update.dependencia ?? '';
+        if(elements.opEditNext) elements.opEditNext.value = update.proximo ?? r.proximo ?? '';
+        if(elements.opEditNote) elements.opEditNote.value = update.executiveNote ?? r.executiveNote ?? '';
+
+        elements.operationalEditor.classList.add('show');
+        elements.operationalEditor.scrollIntoView({behavior:'smooth', block:'start'});
+
+        setTimeout(() => {
+          const target = (focusField === 'homologacao' || isHomologation(r)) ? elements.opEditHomologDate : elements.opEditOwner;
+          if(target) target.focus();
+        }, 250);
+      } catch(error){
+        console.error('Erro ao abrir editor operacional:', error);
+      }
     }
 
     function saveOperationalUpdate(){
