@@ -1907,11 +1907,258 @@ function closeRmPanel(panelId){
   var btn=$id('rmb_'+panelId);if(btn)btn.classList.remove('active');
 }
 
+/* ════════════════ TABS ════════════════ */
+var activeTab='entrega';
+function setTab(t,el){
+  activeTab=t;
+  var btns=document.querySelectorAll('.tab-btn');
+  btns.forEach(function(b){b.classList.remove('on');});
+  el.classList.add('on');
+  render();
+}
+
+/* ════════════════ OPERATIONAL DATA (dates per story) ════════════════ */
+var OP_STORE='sala_visao_op_v1';
+var opData={};
+function loadOp(){try{var r=localStorage.getItem(OP_STORE);if(r)opData=JSON.parse(r);}catch(e){opData={};}}
+function saveOp(){try{localStorage.setItem(OP_STORE,JSON.stringify(opData));}catch(e){}}
+function getOp(id){return opData[id]||{};}
+function setOpField(id,field,val){
+  if(!opData[id])opData[id]={};
+  opData[id][field]=val;
+  saveOp();
+  if(field==='homologDate'){
+    var safeId=id.replace(/[^a-zA-Z0-9]/g,'_');
+    var el=$id('sla_'+safeId);
+    if(el)el.innerHTML=slaTag(val);
+  }
+}
+
+/* ════════════════ BUSINESS DAYS ════════════════ */
+function addBizDays(dateStr,days){
+  if(!dateStr)return '';
+  var d=new Date(dateStr+'T00:00:00');
+  var count=0;
+  while(count<days){d.setDate(d.getDate()+1);if(d.getDay()!==0&&d.getDay()!==6)count++;}
+  return d.toISOString().slice(0,10);
+}
+function bizDaysLeft(dateStr){
+  if(!dateStr)return null;
+  var today=new Date();today.setHours(0,0,0,0);
+  var target=new Date(dateStr+'T00:00:00');
+  var diff=Math.round((target-today)/86400000);
+  if(diff===0)return 0;
+  var dir=diff>0?1:-1;
+  var count=0;var cur=new Date(today);
+  for(var i=0;i<400;i++){
+    cur.setDate(cur.getDate()+dir);
+    if(cur.getDay()!==0&&cur.getDay()!==6)count+=dir;
+    if(cur.getTime()===target.getTime())break;
+  }
+  return count;
+}
+function slaTag(homologDate){
+  if(!homologDate)return '<span class="sla-empty">⏳ informe a data de entrada</span>';
+  var due=addBizDays(homologDate,3);
+  var left=bizDaysLeft(due);
+  if(left===null)return '';
+  if(left<0)return '<span class="sla-over">🚨 SLA estourado '+Math.abs(left)+'du · venceu '+fmtDate(due)+'</span>';
+  if(left===0)return '<span class="sla-warn">⚠️ SLA vence hoje ('+fmtDate(due)+')</span>';
+  if(left===1)return '<span class="sla-warn">⚠️ Vence amanhã '+fmtDate(due)+'</span>';
+  return '<span class="sla-ok">✅ SLA ok · prazo '+fmtDate(due)+' ('+left+'du restantes)</span>';
+}
+
+/* ════════════════ STORY STATUS CLASSIFIERS ════════════════ */
+function isHomologStory(s){
+  return stripAcc((s.status||'').toLowerCase()).indexOf('homolog')>=0;
+}
+function isDevStory(s){
+  var st=stripAcc((s.status||'').toLowerCase());
+  return st.indexOf('desenvolvimento')>=0||st.indexOf('in progress')>=0||st==='em dev'||st==='dev'||
+    (st.indexOf('dev')>=0&&st.length<10);
+}
+function isQAStory(s){
+  var st=stripAcc((s.status||'').toLowerCase());
+  return st.indexOf('qa')>=0||st==='em testes'||st.indexOf('em teste')>=0||st.indexOf('testes')>=0;
+}
+function isBacklogRefined(s){
+  if(!isRefined(s))return false;
+  var st=stripAcc((s.status||'').toLowerCase());
+  return st.indexOf('product backlog')>=0||st==='backlog'||st.indexOf('a fazer')>=0||st.indexOf('to do')>=0||st.indexOf('todo')>=0;
+}
+function squadPO(squadId){
+  for(var i=0;i<demands.length;i++){
+    var d=demands[i];if(d.squad!==squadId)continue;
+    var rs=d.responsaveis||[];
+    for(var j=0;j<rs.length;j++){
+      var r=rs[j];
+      if(r.toLowerCase().indexOf('po')>=0||r.toLowerCase().indexOf('product owner')>=0){
+        return r.replace(/\s*\(PO\)\s*/i,'').replace(/\s*\(Product Owner\)\s*/i,'').trim();
+      }
+    }
+  }
+  return null;
+}
+
+/* ════════════════ MINI CHART ════════════════ */
+function renderMiniChart(squadId,subId){
+  var sts=storiesFor(squadId,subId);
+  if(!sts.length)return '';
+  var groups={};
+  sts.forEach(function(s){var k=(s.status||'—').trim();groups[k]=(groups[k]||0)+1;});
+  var keys=Object.keys(groups).sort(function(a,b){return groups[b]-groups[a];});
+  var total=sts.length;
+  var sq=squadById(squadId);var color=sq?sq.color:'#94a3b8';
+  if(subId){var sub=subById(squadId,subId);if(sub)color=sub.color||color;}
+  var h='<div class="mini-chart-wrap">';
+  h+='<div class="mini-chart-title"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+color+'"></span> Distribuição de Histórias · '+total+' total</div>';
+  keys.forEach(function(k){
+    var cnt=groups[k];var pct=Math.round(cnt/total*100);var bc=getStatusBarColor(k);
+    h+='<div class="mini-bar">';
+    h+='<span class="mini-bar-label" title="'+esc(k)+'">'+esc(k.length>24?k.slice(0,23)+'…':k)+'</span>';
+    h+='<div class="mini-bar-track"><div class="mini-bar-fill" style="width:'+pct+'%;background:'+bc+'"></div></div>';
+    h+='<span class="mini-bar-cnt">'+cnt+'</span>';
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+/* ════════════════ OPERATIONAL SECTIONS ════════════════ */
+function renderHomologSection(sts,squadId){
+  var list=sts.filter(isHomologStory);
+  if(!list.length)return '';
+  var po=squadPO(squadId);
+  var h='<div class="op-section">';
+  h+='<div class="op-section-hd"><span class="ttl">🧪 Em Homologação</span><span class="cnt">'+list.length+'</span>';
+  if(po)h+=' <span class="op-po">PO: '+esc(po)+'</span>';
+  h+=' <span class="op-hint">SLA 3 dias úteis a partir da entrada</span>';
+  h+='</div>';
+  list.forEach(function(s){
+    var op=getOp(s.id);
+    var safeId=s.id.replace(/[^a-zA-Z0-9]/g,'_');
+    h+='<div class="op-story">';
+    h+='<div class="op-story-key"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a></div>';
+    h+='<div>';
+    h+='<div class="op-story-sum">'+esc(s.resumo||s.epicName||'—')+'</div>';
+    h+='<div class="op-story-fields">';
+    h+='<div class="op-field"><label>Entrada homol.:</label>';
+    h+='<input type="date" value="'+(op.homologDate||'')+'" onchange="setOpField(\''+s.id+'\',\'homologDate\',this.value)"></div>';
+    h+='<span id="sla_'+safeId+'">'+slaTag(op.homologDate||'')+'</span>';
+    h+='</div></div></div>';
+  });
+  h+='</div>';
+  return h;
+}
+function renderDevQASections(sts){
+  function section(list,icon,lbl){
+    if(!list.length)return '';
+    var h='<div class="op-section">';
+    h+='<div class="op-section-hd"><span class="ttl">'+icon+' '+lbl+'</span><span class="cnt">'+list.length+'</span></div>';
+    list.forEach(function(s){
+      var op=getOp(s.id);
+      h+='<div class="op-story">';
+      h+='<div class="op-story-key"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a></div>';
+      h+='<div>';
+      h+='<div class="op-story-sum">'+esc(s.resumo||s.epicName||'—')+'</div>';
+      h+='<div class="op-story-fields">';
+      h+='<div class="op-field"><label>Início:</label><input type="date" value="'+(op.startDate||'')+'" onchange="setOpField(\''+s.id+'\',\'startDate\',this.value)"></div>';
+      h+='<div class="op-field"><label>Previsão conclusão:</label><input type="date" value="'+(op.endDate||'')+'" onchange="setOpField(\''+s.id+'\',\'endDate\',this.value)"></div>';
+      h+='</div></div></div>';
+    });
+    h+='</div>';
+    return h;
+  }
+  return section(sts.filter(isDevStory),'🔵','Em Desenvolvimento')+
+         section(sts.filter(isQAStory),'🟡','Em QA / Testes');
+}
+function renderRefinedSection(sts){
+  var list=sts.filter(isBacklogRefined);
+  if(!list.length)return '';
+  var h='<div class="op-section">';
+  h+='<div class="op-section-hd"><span class="ttl">🃏 Refinadas · Product Backlog</span><span class="cnt">'+list.length+'</span>';
+  h+=' <span class="op-hint">prontas para sprint</span></div>';
+  list.forEach(function(s){
+    var pts=s.points?('<span style="font-size:9px;background:#f1f5f9;padding:1px 5px;border-radius:3px;color:var(--tx3);margin-left:6px">'+s.points+'SP</span>'):'';
+    h+='<div class="op-story">';
+    h+='<div class="op-story-key"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a></div>';
+    h+='<div style="display:flex;align-items:center;gap:7px;padding:3px 0;flex-wrap:wrap">';
+    h+='<span class="op-story-sum" style="margin:0">'+esc(s.resumo||s.epicName||'—')+'</span>';
+    h+=pts+'<span class="badge-ref">🃏 Refinada</span>';
+    h+='</div></div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+/* ════════════════ RENDER TABS ════════════════ */
+function simpleCardHTML(d){
+  var sq=squadById(d.squad)||{nome:'—',color:'#94a3b8'};
+  var sub=d.sub?subById(d.squad,d.sub):null;
+  var st=statusById(d.status);
+  var done=(d.status==='entregue'||d.status==='producao');
+  var hasBloq=!!(d.bloqueios&&d.bloqueios.trim());
+  var hasEsc=!!(d.escalar&&d.escalar.trim());
+  var barColor=hasEsc?'#dc2626':hasBloq?'#f97316':sq.color;
+  var dl=daysUntil(d.prazo);
+  var dtCls=dl!==null&&dl<0&&!done?'late':dl!==null&&dl<=3&&!done?'soon':'';
+  var h='<div class="ecard"><div class="ecard-bar" style="background:'+barColor+'"></div>';
+  h+='<div class="ecard-body">';
+  h+='<div class="ecard-name" onclick="openModal(\''+d.id+'\')">'+esc(d.projeto)+'</div>';
+  h+='<div class="ecard-tags">';
+  h+='<span class="sqbadge" style="background:'+sq.color+'"><span class="d"></span>'+esc(sq.nome)+(sub?' · '+esc(sub.nome):'')+'</span>';
+  h+='<span class="pill '+st.cls+'">'+esc(st.nome)+'</span>';
+  if(hasEsc)h+='<span class="flag esc">🚨 Escalar</span>';
+  if(hasBloq)h+='<span style="font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:6px;background:var(--rs);color:var(--rt);border:1px solid var(--rb)">🚧 Bloqueado</span>';
+  h+='</div>';
+  if(d.prazo||d.fimProjeto){
+    h+='<div class="ecard-dates">';
+    if(d.prazo)h+='<span class="ecard-dt '+dtCls+'">📅 '+dateLabel(d.prazo)+'</span>';
+    if(d.fimProjeto)h+='<span class="ecard-dt">🏁 '+fmtDate(d.fimProjeto)+'</span>';
+    h+='</div>';
+  }
+  if(d.proximo)h+='<div class="ecard-next"><b>👉</b> '+esc(d.proximo)+'</div>';
+  h+='</div>';
+  h+='<div class="ecard-ft"><div class="gap"></div>';
+  h+='<button class="iconb" title="Editar" onclick="openModal(\''+d.id+'\')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+  h+='<button class="iconb del" title="Excluir" onclick="removeDemand(\''+d.id+'\')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
+  h+='</div></div>';
+  return h;
+}
+function renderEntregaTab(data){
+  if(!data.length)return '<div class="empty"><div class="ico">🗂️</div><h3>Nenhuma demanda</h3>'+
+    '<p>Clique em <b>＋ Nova Demanda</b> para começar.</p>'+
+    '<button class="imp-btn" onclick="openModal()">＋ Nova Demanda</button></div>';
+  return '<div class="grid">'+data.map(simpleCardHTML).join('')+'</div>';
+}
+function renderOperacionalTab(){
+  if(activeSquad==='all'){
+    return '<div class="empty"><div class="ico">👆</div><h3>Selecione uma Squad</h3>'+
+      '<p>Clique em uma das squads acima para ver o painel operacional com SLA de homologação, datas de desenvolvimento e histórias refinadas.</p></div>';
+  }
+  var sts=storiesFor(activeSquad,activeSub);
+  if(!sts.length){
+    return '<div class="empty"><div class="ico">📋</div><h3>Sem histórias importadas</h3>'+
+      '<p>Importe um export do Jira (.xlsx) para visualizar o painel operacional desta squad.</p>'+
+      '<button class="imp-btn" onclick="document.getElementById(\'jiraFile\').click()">⬆ Importar Jira</button></div>';
+  }
+  var h=renderMiniChart(activeSquad,activeSub);
+  h+=renderHomologSection(sts,activeSquad);
+  h+=renderDevQASections(sts);
+  h+=renderRefinedSection(sts);
+  var hasOp=sts.some(function(s){return isHomologStory(s)||isDevStory(s)||isQAStory(s)||isBacklogRefined(s);});
+  if(!hasOp){
+    h+='<div class="empty" style="padding:30px 20px"><div class="ico">🔍</div><h3>Nenhuma história em status operacional</h3>'+
+      '<p>Não há histórias em Homologação, Desenvolvimento, QA ou refinadas no Product Backlog para esta squad.</p></div>';
+  }
+  return h;
+}
+
 /* ════════════════ INIT ════════════════ */
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();closeJB();}});
 $id('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 $id('jbOv').addEventListener('click',function(e){if(e.target===this)closeJB();});
-fillSelects();load();
+fillSelects();load();loadOp();
 stories.forEach(function(s){s._cls=classifyStory(s);});
 renderSidebar();render();updateImpMeta();
 jbLoadConfig();jbUpdateBtn();
