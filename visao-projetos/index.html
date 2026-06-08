@@ -59,38 +59,22 @@ body{font-family:'Inter',ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe U
 .wrap{max-width:1640px;margin:0 auto;padding:18px 1.6rem 70px}
 .crumb{display:inline-flex;align-items:center;gap:6px;color:var(--tx3);font-size:11.5px;font-weight:600;text-decoration:none;margin-bottom:14px;transition:color .15s}
 .crumb:hover{color:var(--accent)}
-.layout{display:grid;grid-template-columns:248px 1fr;gap:18px;align-items:start}
-@media(max-width:900px){.layout{grid-template-columns:1fr}}
 
-/* ── SIDEBAR ── */
-.sidebar{position:sticky;top:88px;background:var(--card);border:1px solid var(--border);border-radius:var(--rad);box-shadow:var(--shadow-sm);overflow:hidden}
-@media(max-width:900px){.sidebar{position:static}}
-.sb-hd{padding:12px 14px 9px;font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between}
-.sb-hd .imp{font-size:9px;color:var(--accent);font-weight:700;cursor:pointer}
-.sb-list{padding:6px}
-.sb-item{display:flex;flex-direction:column;border-radius:9px;margin-bottom:2px;cursor:pointer;transition:background .12s;user-select:none}
-.sb-item:hover{background:#f8fafc}
-.sb-item.on{background:var(--accent-soft)}
-.sb-row{display:flex;align-items:center;gap:9px;padding:9px 11px}
-.sb-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--sc,#cbd5e1);box-shadow:0 0 0 3px var(--scs,rgba(203,213,225,.18))}
-.sb-name{font-size:12.5px;font-weight:700;color:var(--tx);flex:1;line-height:1.15}
-.sb-item.on .sb-name{color:var(--accent2)}
-.sb-item.muted .sb-name{color:var(--tx3);font-weight:600}
-.sb-arrow{color:var(--tx3);font-size:9px;transition:transform .18s;flex-shrink:0}
-.sb-item.open .sb-arrow{transform:rotate(90deg)}
-.sb-counts{display:flex;flex-wrap:wrap;gap:5px;padding:0 11px 9px 29px}
-.sb-mini{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px;background:#f1f5f9;color:var(--tx2);border:1px solid var(--border-soft);white-space:nowrap}
-.sb-mini.ref{background:var(--gs);color:var(--gt);border-color:var(--gb)}
-.sb-mini.dem{background:var(--accent-soft);color:var(--accent2);border-color:var(--accent-br)}
-.sb-subs{display:none;padding:0 6px 6px}
-.sb-item.open .sb-subs{display:block}
-.sb-sub{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 26px;border-radius:8px;cursor:pointer;transition:background .12s}
-.sb-sub:hover{background:#f1f5f9}
-.sb-sub.on{background:var(--accent-soft)}
-.sb-sub .sb-dot{width:7px;height:7px}
-.sb-sub-name{font-size:11.5px;font-weight:600;color:var(--tx2);flex:1}
-.sb-sub.on .sb-sub-name{color:var(--accent2);font-weight:700}
-.sb-sub-cnt{font-size:9px;font-weight:700;color:var(--tx3)}
+/* ── SQUAD BAR (horizontal) ── */
+.squad-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--rad);box-shadow:var(--shadow-sm)}
+.squad-bar-label{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);flex-shrink:0;margin-right:2px}
+.sq-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--tx2);transition:all .13s;white-space:nowrap;user-select:none}
+.sq-chip:hover{border-color:var(--border2);color:var(--tx);background:#f8fafc}
+.sq-chip.on{border-color:transparent;color:#fff}
+.sq-chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sq-chip-counts{display:flex;gap:4px}
+.sq-chip-cnt{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.25);color:inherit}
+.sq-chip.on .sq-chip-cnt{background:rgba(255,255,255,.22);color:#fff}
+.sq-chip:not(.on) .sq-chip-cnt{background:#f1f5f9;color:var(--tx3)}
+.sq-sub-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;padding-left:4px}
+.sq-sub-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:11px;font-weight:600;color:var(--tx2);transition:all .13s;white-space:nowrap;user-select:none}
+.sq-sub-chip:hover{border-color:var(--border2);background:#f8fafc}
+.sq-sub-chip.on{border-color:transparent;color:#fff}
 
 /* ── MAIN ── */
 .main{min-width:0}
@@ -386,22 +370,18 @@ tbody tr:last-child td{border-bottom:none}
     Voltar ao Lead Time
   </a>
 
-  <div class="layout">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sb-hd"><span>Squads</span><span class="imp" onclick="document.getElementById('jiraFile').click()">＋ Jira</span></div>
-      <div class="sb-list" id="sbList"></div>
-    </aside>
+  <!-- SQUAD BAR horizontal -->
+  <div id="squadBar" class="squad-bar"></div>
+  <div id="subBar" class="sq-sub-bar" style="display:none"></div>
 
-    <!-- MAIN -->
-    <div class="main">
-      <div class="kpis" id="kpis"></div>
+  <div class="main">
+    <div class="kpis" id="kpis"></div>
 
-      <div class="toolbar">
-        <div class="search">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="search" placeholder="Buscar projeto, responsável, dependência…" oninput="render()">
-        </div>
+    <div class="toolbar">
+      <div class="search">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search" placeholder="Buscar projeto, responsável, dependência…" oninput="render()">
+      </div>
         <div class="top-gap"></div>
         <div class="seg" id="viewSeg">
           <button class="on" data-view="cards" onclick="setView('cards',this)">▦ Cartões</button>
@@ -415,7 +395,6 @@ tbody tr:last-child td{border-bottom:none}
       <div id="storiesPanel"></div>
       <div id="content"></div>
     </div>
-  </div>
 </div>
 
 <!-- MODAL -->
@@ -605,8 +584,6 @@ var stories=[];
 var activeSquad='all';
 var activeSub='';
 var view='cards';
-var openSquads={};
-
 function $id(x){return document.getElementById(x);}
 function squadById(id){for(var i=0;i<SQUADS.length;i++)if(SQUADS[i].id===id)return SQUADS[i];return null;}
 function subById(sq,id){var s=squadById(sq);if(!s)return null;for(var i=0;i<s.subs.length;i++)if(s.subs[i].id===id)return s.subs[i];return null;}
@@ -733,51 +710,52 @@ function squadStats(squadId,subId){
 }
 function renderSidebar(){
   var all={total:stories.length,ref:stories.filter(isRefined).length,dem:demands.length};
-  var html='<div class="sb-item'+(activeSquad==='all'?' on':'')+'" onclick="selectSquad(\'all\',\'\')">'+
-    '<div class="sb-row"><span class="sb-dot" style="--sc:#7a0000;--scs:rgba(122,0,0,.15)"></span>'+
-    '<span class="sb-name">★ Visão Geral</span></div>'+
-    '<div class="sb-counts"><span class="sb-mini">📋 '+all.total+' hist</span>'+
-    '<span class="sb-mini ref">🃏 '+all.ref+'</span><span class="sb-mini dem">🎯 '+all.dem+'</span></div></div>';
-
-  html+=SQUADS.map(function(sq){
+  // ── Squad bar horizontal ──
+  var bar='<span class="squad-bar-label">Squads</span>';
+  // Chip "Visão Geral"
+  var allOn=activeSquad==='all';
+  bar+='<div class="sq-chip'+(allOn?' on':'')+'" style="'+(allOn?'background:#7a0000;border-color:#7a0000':'')+'" onclick="selectSquad(\'all\',\'\')">'+
+    '<span class="sq-chip-dot" style="background:'+(allOn?'rgba(255,255,255,.5)':'#7a0000')+'"></span>'+
+    '★ Todas'+
+    '<span class="sq-chip-cnt">🎯 '+all.dem+'</span>'+
+    '</div>';
+  SQUADS.forEach(function(sq){
     var s=squadStats(sq.id,'');
-    var muted=(s.total===0&&s.dem===0);
-    var isOpen=openSquads[sq.id];
-    var hasSubs=sq.subs.length>0;
-    var on=(activeSquad===sq.id&&!activeSub);
-    var row='<div class="sb-item'+(on?' on':'')+(muted?' muted':'')+(isOpen?' open':'')+'">'+
-      '<div class="sb-row" onclick="clickSquad(\''+sq.id+'\','+hasSubs+')">'+
-        '<span class="sb-dot" style="--sc:'+(muted?'#cbd5e1':sq.color)+';--scs:'+(muted?'rgba(203,213,225,.2)':'rgba(0,0,0,.06)')+'"></span>'+
-        '<span class="sb-name">'+esc(sq.nome)+'</span>'+
-        (hasSubs?'<span class="sb-arrow">&#9658;</span>':'')+
+    var on=(activeSquad===sq.id);
+    bar+='<div class="sq-chip'+(on?' on':'')+'" style="'+(on?'background:'+sq.color+';border-color:'+sq.color:'')+'" onclick="selectSquad(\''+sq.id+'\',\'\')">'+
+      '<span class="sq-chip-dot" style="background:'+(on?'rgba(255,255,255,.5)':sq.color)+'"></span>'+
+      esc(sq.nome)+
+      '<div class="sq-chip-counts">'+
+        '<span class="sq-chip-cnt">📋 '+s.total+'</span>'+
+        (s.ref?'<span class="sq-chip-cnt">🃏 '+s.ref+'</span>':'')+
+        (s.dem?'<span class="sq-chip-cnt">🎯 '+s.dem+'</span>':'')+
       '</div>'+
-      '<div class="sb-counts">'+
-        '<span class="sb-mini">📋 '+s.total+' hist</span>'+
-        '<span class="sb-mini ref">🃏 '+s.ref+'</span>'+
-        '<span class="sb-mini dem">🎯 '+s.dem+'</span>'+
       '</div>';
-    if(hasSubs){
-      row+='<div class="sb-subs">'+sq.subs.map(function(sub){
-        var ss=squadStats(sq.id,sub.id);
-        var subOn=(activeSquad===sq.id&&activeSub===sub.id);
-        return '<div class="sb-sub'+(subOn?' on':'')+'" onclick="event.stopPropagation();selectSquad(\''+sq.id+'\',\''+sub.id+'\')">'+
-          '<span class="sb-dot" style="--sc:'+sub.color+'"></span>'+
-          '<span class="sb-sub-name">'+esc(sub.nome)+'</span>'+
-          '<span class="sb-sub-cnt">📋 '+ss.total+' · 🃏 '+ss.ref+'</span></div>';
-      }).join('')+'</div>';
-    }
-    row+='</div>';
-    return row;
-  }).join('');
-  $id('sbList').innerHTML=html;
-}
-function clickSquad(id,hasSubs){
-  if(hasSubs)openSquads[id]=!openSquads[id];
-  selectSquad(id,'');
+  });
+  $id('squadBar').innerHTML=bar;
+
+  // Sub-frente chips (only when a squad with subs is selected)
+  var subBarEl=$id('subBar');
+  var sq=activeSquad!=='all'?squadById(activeSquad):null;
+  if(sq&&sq.subs.length){
+    var subHtml=sq.subs.map(function(sub){
+      var ss=squadStats(sq.id,sub.id);
+      var subOn=(activeSub===sub.id);
+      return '<div class="sq-sub-chip'+(subOn?' on':'')+'" style="'+(subOn?'background:'+sub.color+';border-color:'+sub.color:'')+'" onclick="selectSquad(\''+sq.id+'\',\''+sub.id+'\')">'+
+        '<span class="sq-chip-dot" style="background:'+(subOn?'rgba(255,255,255,.5)':sub.color)+';width:7px;height:7px"></span>'+
+        esc(sub.nome)+
+        '<span class="sq-chip-cnt" style="background:'+(subOn?'rgba(255,255,255,.22)':'#f1f5f9')+';color:'+(subOn?'#fff':'var(--tx3)')+'">📋 '+ss.total+(ss.ref?' · 🃏 '+ss.ref:'')+'</span>'+
+        '</div>';
+    }).join('');
+    subBarEl.innerHTML=subHtml;
+    subBarEl.style.display='flex';
+  }else{
+    subBarEl.style.display='none';
+    subBarEl.innerHTML='';
+  }
 }
 function selectSquad(id,sub){
   activeSquad=id;activeSub=sub||'';
-  if(id!=='all'&&sub)openSquads[id]=true;
   renderSidebar();render();
 }
 
