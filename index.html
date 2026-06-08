@@ -96,8 +96,8 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .tab-ct{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:#e8edf5;color:var(--tx2);min-width:20px;text-align:center}
 .tabbt.on .tab-ct{background:#fff5f5;color:#cc0000}
 
-/* ── DESTAQUE coluna Data Fim (6ª coluna da tabela Épicos) ── */
-#pane-ep table thead th:nth-child(6){
+/* ── DESTAQUE coluna Data Fim (7ª coluna da tabela Épicos) ── */
+#pane-ep table thead th:nth-child(7){
   background:#990000;
   position:relative;
 }
@@ -743,7 +743,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
       <table>
         <thead><tr>
           <th>ID Épico</th><th>Squad</th><th>Resumo</th><th>Status</th>
-          <th>Data Início</th><th class="th-fim">📅 Data Fim</th><th>Data Prevista</th><th>CHG</th>
+          <th>Data Início</th><th>Data Prevista</th><th class="th-fim">📅 Data Fim</th><th>CHG</th>
           <th id="thLT" onclick="toggleSortLT()" style="cursor:pointer;user-select:none;white-space:nowrap" title="Clique para ordenar por Lead Time">Lead Time <span id="ltSortIco" style="font-size:10px;opacity:.6">⇅</span></th><th>Impedimentos</th>
         </tr></thead>
         <tbody id="tblBody"></tbody>
@@ -2102,8 +2102,8 @@ function renderTbl(){
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-i="'+gi+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
       '<td style="min-width:195px;max-width:255px">'+
