@@ -1984,10 +1984,10 @@
           <strong id="kpiDep">0</strong>
           <small>Dependências externas, áreas envolvidas ou temas técnicos.</small>
         </article>
-        <article class="kpi" onclick="openResponsibleInfo()">
-          <span>Responsáveis</span>
-          <strong id="kpiResp">--</strong>
-          <small id="respNote">Campo não localizado na planilha Jira.</small>
+        <article class="kpi" onclick="openHomologationInfo()">
+          <span>Em homologação</span>
+          <strong id="kpiHomolog">0</strong>
+          <small id="homologNote">Histórias com status de homologação.</small>
         </article>
       </div>
 
@@ -2577,16 +2577,14 @@
       const refinada = data.filter(r=>r.refinada).length;
       const bloq = data.filter(r=>r.bloqueio).length;
       const dep = data.filter(r=>r.dependencia).length;
-      const hasResponsible = data.some(r => normalize(r.responsavel));
-      const respCount = hasResponsible ? unique(data.map(r=>r.responsavel)).length : '--';
+      const homolog = data.filter(r=>isHomologation(r)).length;
 
       $('kpiTotal').textContent = total;
       $('kpiPB').textContent = pb;
       $('kpiRefinada').textContent = refinada;
       $('kpiBloq').textContent = bloq;
       $('kpiDep').textContent = dep;
-      $('kpiResp').textContent = respCount;
-      $('respNote').textContent = hasResponsible ? 'Responsáveis encontrados na importação.' : 'Campo não localizado na planilha Jira.';
+      $('kpiHomolog').textContent = homolog;
       $('chartBadge').textContent = `${total} histórias`;
 
       renderChart('chartStatus', countBy(data, r=>r.situacao).slice(0,5), data, (r, label)=>r.situacao === label, ['red','blue','amber','green']);
@@ -3007,10 +3005,9 @@
       $('backdrop').classList.remove('show');
     }
 
-    function openResponsibleInfo(){
-      const data = filteredBySquad().filter(r=>normalize(r.responsavel));
-      if(data.length) openList('Histórias com responsável informado', data);
-      else openList('Responsáveis não encontrados na extração', []);
+    function openHomologationInfo(){
+      const data = filteredBySquad().filter(r=>isHomologation(r));
+      openList('Histórias em homologação', data);
     }
 
 
