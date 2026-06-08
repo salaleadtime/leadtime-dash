@@ -408,15 +408,6 @@ tbody tr:last-child td{border-bottom:none}
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="search" placeholder="Buscar projeto, responsável, dependência…" oninput="render()">
       </div>
-        <div class="top-gap"></div>
-        <div class="seg" id="viewSeg">
-          <button class="on" data-view="cards" onclick="setView('cards',this)">▦ Cartões</button>
-          <button data-view="chart" onclick="setView('chart',this)">📊 Gráfico</button>
-          <button data-view="plan" onclick="setView('plan',this)">🗺️ Plano</button>
-          <button data-view="roadmap" onclick="setView('roadmap',this)">📅 Roadmap</button>
-          <button data-view="table" onclick="setView('table',this)">▤ Tabela</button>
-          <button data-view="esc" onclick="setView('esc',this)">🚨 Escalação</button>
-        </div>
       </div>
 
       <div id="storiesPanel"></div>
@@ -442,7 +433,7 @@ tbody tr:last-child td{border-bottom:none}
         <select id="f-squad" onchange="onSquadChange()"></select>
       </div>
       <div class="field">
-        <label>🔖 Sub-frente (Expresso-1)</label>
+        <label>🔖 Sub-frente (Expresso)</label>
         <select id="f-sub"></select>
       </div>
       <div class="field">
@@ -584,7 +575,7 @@ var STORE_KEY='sala_visao_projetos_v2';
 var STORIES_KEY='sala_visao_stories_v1';
 
 var SQUADS=[
-  {id:'expresso', nome:'Expresso-1', color:'#d97706', cls:'p-a', labels:['expresso','expr','subsid','subsídio','obf'], subs:[
+  {id:'expresso', nome:'Expresso', color:'#d97706', cls:'p-a', labels:['expresso','expr','subsid','subsídio','obf'], subs:[
       {id:'obf',       nome:'OBF',       color:'#d97706', labels:['obf']},
       {id:'subsidios', nome:'Subsídios', color:'#16a34a', labels:['subsid','subsídio','subsidio']}
   ]},
@@ -744,19 +735,12 @@ function renderSidebar(){
   bar+='<div class="sq-chip'+(allOn?' on':'')+'" style="'+(allOn?'background:#7a0000;border-color:#7a0000':'')+'" onclick="selectSquad(\'all\',\'\')">'+
     '<span class="sq-chip-dot" style="background:'+(allOn?'rgba(255,255,255,.5)':'#7a0000')+'"></span>'+
     '★ Todas'+
-    '<span class="sq-chip-cnt">🎯 '+all.dem+'</span>'+
     '</div>';
   SQUADS.forEach(function(sq){
-    var s=squadStats(sq.id,'');
     var on=(activeSquad===sq.id);
     bar+='<div class="sq-chip'+(on?' on':'')+'" style="'+(on?'background:'+sq.color+';border-color:'+sq.color:'')+'" onclick="selectSquad(\''+sq.id+'\',\'\')">'+
       '<span class="sq-chip-dot" style="background:'+(on?'rgba(255,255,255,.5)':sq.color)+'"></span>'+
       esc(sq.nome)+
-      '<div class="sq-chip-counts">'+
-        '<span class="sq-chip-cnt">📋 '+s.total+'</span>'+
-        (s.ref?'<span class="sq-chip-cnt">🃏 '+s.ref+'</span>':'')+
-        (s.dem?'<span class="sq-chip-cnt">🎯 '+s.dem+'</span>':'')+
-      '</div>'+
       '</div>';
   });
   $id('squadBar').innerHTML=bar;
@@ -771,7 +755,6 @@ function renderSidebar(){
       return '<div class="sq-sub-chip'+(subOn?' on':'')+'" style="'+(subOn?'background:'+sub.color+';border-color:'+sub.color:'')+'" onclick="selectSquad(\''+sq.id+'\',\''+sub.id+'\')">'+
         '<span class="sq-chip-dot" style="background:'+(subOn?'rgba(255,255,255,.5)':sub.color)+';width:7px;height:7px"></span>'+
         esc(sub.nome)+
-        '<span class="sq-chip-cnt" style="background:'+(subOn?'rgba(255,255,255,.22)':'#f1f5f9')+';color:'+(subOn?'#fff':'var(--tx3)')+'">📋 '+ss.total+(ss.ref?' · 🃏 '+ss.ref:'')+'</span>'+
         '</div>';
     }).join('');
     subBarEl.innerHTML=subHtml;
