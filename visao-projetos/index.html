@@ -973,19 +973,18 @@
     }
 
     #operationalTable{
-      min-width:1370px;
+      min-width:1260px;
     }
 
-    #operationalTable td:nth-child(1){width:110px;}
-    #operationalTable td:nth-child(2){width:210px;}
-    #operationalTable td:nth-child(3){width:360px;}
-    #operationalTable td:nth-child(4){width:115px;}
-    #operationalTable td:nth-child(5){width:90px;}
-    #operationalTable td:nth-child(6){width:120px;}
-    #operationalTable td:nth-child(7){width:145px;}
-    #operationalTable td:nth-child(8){width:120px;}
-    #operationalTable td:nth-child(9){width:190px;}
-    #operationalTable td:nth-child(10){width:92px;}
+    #operationalTable td:nth-child(1){width:210px;}
+    #operationalTable td:nth-child(2){width:360px;}
+    #operationalTable td:nth-child(3){width:115px;}
+    #operationalTable td:nth-child(4){width:90px;}
+    #operationalTable td:nth-child(5){width:120px;}
+    #operationalTable td:nth-child(6){width:145px;}
+    #operationalTable td:nth-child(7){width:120px;}
+    #operationalTable td:nth-child(8){width:190px;}
+    #operationalTable td:nth-child(9){width:92px;}
 
     .drawer{
       position:fixed;
@@ -2220,7 +2219,6 @@
           <table id="operationalTable">
             <thead>
               <tr>
-                <th>Data Prevista</th>
                 <th>Épico - Chave</th>
                 <th>História</th>
                 <th>Status</th>
@@ -2880,7 +2878,6 @@
         const editedBadge = r.updatedByUser ? '<span class="badge gray">Editado</span>' : '';
         const sla = homologationSlaInfo(r);
         return `<tr onclick="openOperationalEditor('${escapeJs(key)}')">
-          <td>${escapeHtml(r.prazo || '—')}</td>
           <td class="epic-key-cell">
             <a class="jira-key-link epic-link" href="${escapeAttr(getJiraUrl(extractJiraKey(r.epic)))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir épico ${escapeAttr(extractJiraKey(r.epic) || r.epic || 'Sem épico')} no Jira">${escapeHtml(extractJiraKey(r.epic) || r.epic || 'Sem épico')}</a>
             <span class="epic-key-sep">—</span>
