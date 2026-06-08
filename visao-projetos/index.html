@@ -141,10 +141,10 @@ body{font-family:'Inter',ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe U
 .stories-empty{padding:26px 16px;text-align:center;color:var(--tx3);font-size:12px}
 .stories-empty .imp-btn{margin-top:10px}
 
-/* ── CARDS (compactos) ── */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:13px}
+/* ── CARDS ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .card{position:relative;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:var(--rad);box-shadow:var(--shadow-sm);overflow:hidden;transition:transform .15s,box-shadow .15s,border-color .15s}
-.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--border2)}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--border2)}
 .card-top{height:3px;background:var(--ca,var(--accent))}
 .card-hd{padding:11px 13px 9px}
 .card-proj{font-size:13px;font-weight:800;letter-spacing:-.2px;line-height:1.25;color:var(--tx);cursor:pointer}
@@ -161,7 +161,29 @@ body{font-family:'Inter',ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe U
 .p-v{background:var(--vs);color:#7c3aed;border-color:var(--vb)}
 .p-x{background:#f1f5f9;color:#64748b;border-color:#cbd5e1}
 
-/* date strip */
+/* card sections: bloqueios / dependencias / riscos */
+.card-sections{display:flex;flex-direction:column}
+.csec{padding:8px 13px;border-top:1px solid var(--border-soft)}
+.csec-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.csec-txt{font-size:11.5px;line-height:1.5}
+.csec.blq{background:#fff5f5}.csec.blq .csec-lbl{color:var(--rt)}.csec.blq .csec-txt{color:#7f1d1d;font-weight:600}
+.csec.imp{background:var(--as)}.csec.imp .csec-lbl{color:var(--at)}.csec.imp .csec-txt{color:var(--at)}
+.csec.dep{background:#fafbff}.csec.dep .csec-lbl{color:#3730a3}
+.csec.rsk{background:#fff7ed}.csec.rsk .csec-lbl{color:#9a3412}.csec.rsk .csec-txt{color:#7c2d12}
+.csec.esc{background:var(--accent-soft)}.csec.esc .csec-lbl{color:var(--accent2)}.csec.esc .csec-txt{color:var(--accent2);font-weight:600}
+.csec.ok{background:var(--gs)}.csec.ok .csec-lbl{color:var(--gt)}
+.cross-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--vs);color:var(--vt);text-transform:none;letter-spacing:0}
+.owe-line{font-size:11px;color:var(--at);margin-top:5px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip-t{font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;background:#f1f5f9;color:var(--tx2);border:1px solid var(--border-soft)}
+.chip-t.dep{background:var(--bs);color:#1e40af;border-color:var(--bb)}
+.chip-t.dep.cross{background:var(--vs);color:var(--vt);border-color:var(--vb)}
+
+/* card next step */
+.nx{font-size:11.5px;color:var(--tx);background:#f0fdf4;border:1px solid var(--gb);border-radius:8px;padding:7px 10px;margin:0 13px 10px}
+.nx b{color:#15803d}
+
+/* date strip (kept for table/escHTML) */
 .dates{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 13px 10px}
 .dbox{background:#fafbfd;border:1px solid var(--border-soft);border-radius:8px;padding:6px 8px}
 .dbox .dl{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);display:flex;align-items:center;gap:3px}
@@ -171,40 +193,13 @@ body{font-family:'Inter',ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe U
 .dbox.ok{background:var(--gs);border-color:var(--gb)}.dbox.ok .dv{color:#16a34a}
 .dbox.hl{background:var(--accent-soft);border-color:var(--accent-br)}
 .dbox.hl .dl{color:var(--accent)}.dbox.hl .dv{color:var(--accent2);font-weight:800}
-
-/* alert chips row */
-.flags{display:flex;flex-wrap:wrap;gap:5px;padding:0 13px 10px}
 .flag{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:6px;cursor:help}
-.flag.imp{background:var(--as);color:#b45309;border:1px solid var(--ab)}
-.flag.blq{background:var(--rs);color:#dc2626;border:1px solid var(--rb)}
-.flag.rsk{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
-.flag.esc{background:var(--accent);color:#fff;border:1px solid transparent}
-.flag.owe{background:#fffbeb;color:#92400e;border:1px solid var(--ab)}
-
-/* compact info lines */
-.lines{padding:0 13px 6px;display:flex;flex-direction:column;gap:7px}
-.line .ll{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);display:flex;align-items:center;gap:4px;margin-bottom:3px}
-.chips{display:flex;flex-wrap:wrap;gap:4px}
-.chip-t{font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;background:#f1f5f9;color:var(--tx2);border:1px solid var(--border-soft)}
-.chip-t.dep{background:var(--bs);color:#1e40af;border-color:var(--bb)}
-.chip-t.resp{background:var(--accent-soft);color:var(--accent2);border-color:var(--accent-br)}
-.nx{font-size:11.5px;color:var(--tx);background:#f0fdf4;border:1px solid var(--gb);border-radius:8px;padding:6px 9px}
-.nx b{color:#15803d}
-
-/* expandable details */
-.det{display:none;padding:2px 13px 10px;border-top:1px dashed var(--border);margin-top:4px}
-.card.exp .det{display:flex;flex-direction:column;gap:8px}
-.det-row .dk{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--tx3);margin-bottom:2px}
-.det-row .dv2{font-size:11.5px;color:var(--tx2);line-height:1.45}
-.det-row.esc{background:var(--accent-soft);border-radius:8px;padding:7px 9px}
-.det-row.esc .dk{color:var(--accent)}
+.flag.esc{background:var(--accent);color:#fff;border:1px solid transparent;padding:2px 8px}
 
 /* footer */
 .card-ft{display:flex;align-items:center;gap:6px;padding:8px 11px;border-top:1px solid var(--border-soft);background:#fafbfd;margin-top:auto}
-.est{font-size:10px;font-weight:700;color:var(--tx2);display:inline-flex;align-items:center;gap:4px}
+.est{font-size:10px;font-weight:700;color:var(--tx3);display:inline-flex;align-items:center;gap:4px}
 .card-ft .gap{flex:1}
-.lnk{font-size:10px;font-weight:700;color:var(--tx3);background:none;border:none;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:3px;padding:3px 6px;border-radius:6px}
-.lnk:hover{color:var(--accent);background:var(--accent-soft)}
 .iconb{width:26px;height:26px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--tx3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .14s}
 .iconb:hover{color:var(--tx);border-color:var(--border2)}
 .iconb.del:hover{color:#dc2626;border-color:var(--rb);background:var(--rs)}
@@ -877,62 +872,89 @@ function cardHTML(d){
   var sq=squadById(d.squad)||{nome:'—',color:'#94a3b8'};
   var sub=d.sub?subById(d.squad,d.sub):null;
   var st=statusById(d.status);
-  var resp=(d.responsaveis||[]).filter(Boolean);
   var deps=(d.dependencias||[]).filter(Boolean);
-  var sla=slaHomolog(d);
   var done=(d.status==='entregue'||d.status==='producao');
-  var hasCrossSquadDep=deps.some(function(dep){return isCrossSquadDep(dep);});
+  var hasCross=deps.some(function(dep){return isCrossSquadDep(dep);});
+  var hasBloq=!!(d.bloqueios&&d.bloqueios.trim());
+  var hasImp=!!(d.impedimentos&&d.impedimentos.trim());
+  var hasRsk=!!(d.riscos&&d.riscos.trim());
+  var hasEsc=!!(d.escalar&&d.escalar.trim());
+  var hasAnyIssue=hasBloq||hasImp||deps.length||d.deveQuem||hasRsk||hasEsc;
 
-  var h='<div class="card"><div class="card-top" style="--ca:'+sq.color+'"></div>';
+  var h='<div class="card"><div class="card-top" style="--ca:'+(hasBloq?'#dc2626':hasRsk?'#f97316':sq.color)+'"></div>';
+
+  /* ── Cabeçalho ── */
   h+='<div class="card-hd"><div class="card-proj" onclick="openModal(\''+d.id+'\')">'+esc(d.projeto)+'</div>';
   h+='<div class="card-tags">'+
      '<span class="sqbadge" style="background:'+sq.color+'"><span class="d"></span>'+esc(sq.nome)+(sub?' · '+esc(sub.nome):'')+'</span>'+
      '<span class="pill '+st.cls+'">'+esc(st.nome)+'</span>'+
-     (deps.length?'<span class="dep-tag" title="'+esc(deps.join(', '))+'">'+(hasCrossSquadDep?'🔀':'🔗')+' '+deps.length+' dep.</span>':'')+
+     (hasEsc?'<span class="flag esc">🚨 Escalar</span>':'')+
      '</div></div>';
 
-  // Only the 2 most important dates
-  var hasDates=d.prazo||d.fimProjeto;
-  if(hasDates){
-    h+='<div class="dates" style="grid-template-columns:'+(d.prazo&&d.fimProjeto?'1fr 1fr':'1fr')+'">';
-    if(d.prazo)h+=dbox('📅 Entrega',d.prazo,'',done);
-    if(d.fimProjeto)h+=dbox('🏁 Conclusão',d.fimProjeto,'hl');
+  /* ── Seções de situação ── */
+  h+='<div class="card-sections">';
+
+  // Bloqueio
+  if(hasBloq){
+    h+='<div class="csec blq">';
+    h+='<div class="csec-lbl">🚧 Bloqueio</div>';
+    h+='<div class="csec-txt">'+esc(d.bloqueios)+'</div>';
+    h+='</div>';
+  }
+  // Impedimento
+  if(hasImp){
+    h+='<div class="csec imp">';
+    h+='<div class="csec-lbl">⛔ Impedimento</div>';
+    h+='<div class="csec-txt">'+esc(d.impedimentos)+'</div>';
+    h+='</div>';
+  }
+  // Dependências
+  if(deps.length||d.deveQuem){
+    h+='<div class="csec dep">';
+    h+='<div class="csec-lbl">'+(hasCross?'🔀 Dependências cross-squad':'🔗 Dependências')+(hasCross?'<span class="cross-badge">cross-squad</span>':'')+'</div>';
+    if(deps.length){
+      h+='<div class="chips">'+deps.map(function(dep){
+        var cross=isCrossSquadDep(dep);
+        return '<span class="chip-t dep'+(cross?' cross':'')+'" title="'+(cross?'Dependência entre squads':'Dependência externa')+'">'+esc(dep)+'</span>';
+      }).join('')+'</div>';
+    }
+    if(d.deveQuem)h+='<div class="owe-line">⏳ Aguardando <b>'+esc(d.deveQuem)+'</b>'+(d.deveTipo?' — '+esc(d.deveTipo):'')+'</div>';
+    h+='</div>';
+  }
+  // Riscos
+  if(hasRsk){
+    h+='<div class="csec rsk">';
+    h+='<div class="csec-lbl">⚠️ Risco</div>';
+    h+='<div class="csec-txt">'+esc(d.riscos)+'</div>';
+    h+='</div>';
+  }
+  // Escalação
+  if(hasEsc){
+    h+='<div class="csec esc">';
+    h+='<div class="csec-lbl">🚨 Escalar para gestão</div>';
+    h+='<div class="csec-txt">'+esc(d.escalar)+'</div>';
+    h+='</div>';
+  }
+  // Sem problemas
+  if(!hasAnyIssue){
+    h+='<div class="csec ok">';
+    h+='<div class="csec-lbl">✅ Sem bloqueios, dependências ou riscos</div>';
     h+='</div>';
   }
 
-  // Compact icon-only alert flags (full text in tooltip)
-  var flags='';
-  if(d.deveQuem)flags+='<span class="flag owe" title="Devendo: '+esc(d.deveQuem)+(d.deveTipo?' — '+esc(d.deveTipo):'')+'">⏳ '+esc(d.deveQuem)+'</span>';
-  if(d.impedimentos&&d.impedimentos.trim())flags+='<span class="flag imp" title="'+esc(d.impedimentos)+'">⛔</span>';
-  if(d.bloqueios&&d.bloqueios.trim())flags+='<span class="flag blq" title="'+esc(d.bloqueios)+'">🚧</span>';
-  if(d.riscos&&d.riscos.trim())flags+='<span class="flag rsk" title="'+esc(d.riscos)+'">⚠️</span>';
-  if(d.escalar&&d.escalar.trim())flags+='<span class="flag esc" title="'+esc(d.escalar)+'">🚨</span>';
-  if(flags)h+='<div class="flags">'+flags+'</div>';
+  h+='</div>'; /* /card-sections */
 
-  h+='<div class="lines">';
-  if(d.proximo)h+='<div class="line"><div class="nx"><b>👉</b> '+esc(d.proximo)+'</div></div>';
-  if(resp.length)h+='<div class="line"><div class="ll">👥</div><div class="chips">'+resp.map(function(r){return '<span class="chip-t resp">'+esc(r)+'</span>';}).join('')+'</div></div>';
-  h+='</div>';
+  /* ── Próximo passo ── */
+  if(d.proximo)h+='<div class="nx"><b>👉</b> '+esc(d.proximo)+'</div>';
 
-  // Expandable: all extra detail
-  h+='<div class="det">';
-  if(d.homologacao&&sla)h+='<div class="det-row"><div class="dk">🧪 SLA Homologação</div><div class="dv2">Entrada: '+esc(fmtDate(d.homologacao))+' · Vence: '+esc(fmtDate(sla.due))+(sla.left<0?' <span style="color:#dc2626">⚠️ '+Math.abs(sla.left)+'d atraso</span>':' ('+sla.left+'d)')+'</div></div>';
-  if(d.deploy)h+='<div class="det-row"><div class="dk">🚀 Deploy Produção</div><div class="dv2">'+esc(fmtDate(d.deploy))+'</div></div>';
-  if(deps.length){
-    var depItems=deps.map(function(dep){
-      var cross=isCrossSquadDep(dep);
-      return '<span class="chip-t dep'+(cross?' cross-squad-dep':'')+'" title="'+(cross?'Dependência entre squads':'Dependência externa')+'">'+esc(dep)+'</span>';
-    }).join('');
-    h+='<div class="det-row"><div class="dk">🔗 Dependências'+(hasCrossSquadDep?' <span style="color:var(--v);font-weight:800">· cross-squad</span>':'')+'</div><div class="chips" style="margin-top:4px">'+depItems+'</div></div>';
+  /* ── Footer: datas + ações ── */
+  h+='<div class="card-ft">';
+  if(d.prazo){
+    var dl=daysUntil(d.prazo);
+    h+='<span class="est" style="color:'+(dl!==null&&dl<0&&!done?'#dc2626':dl!==null&&dl<=3&&!done?'#d97706':'var(--tx3)')+'">📅 '+dateLabel(d.prazo)+'</span>';
   }
-  if(d.impedimentos)h+='<div class="det-row"><div class="dk">⛔ Impedimentos</div><div class="dv2">'+esc(d.impedimentos)+'</div></div>';
-  if(d.bloqueios)h+='<div class="det-row"><div class="dk">🚧 Bloqueios</div><div class="dv2">'+esc(d.bloqueios)+'</div></div>';
-  if(d.riscos)h+='<div class="det-row"><div class="dk">⚠️ Riscos</div><div class="dv2">'+esc(d.riscos)+'</div></div>';
-  if(d.escalar)h+='<div class="det-row esc"><div class="dk">🚨 Escalar para gestão</div><div class="dv2">'+esc(d.escalar)+'</div></div>';
-  h+='</div>';
-
-  h+='<div class="card-ft"><span class="est">⏱️ '+(d.estimativa?esc(d.estimativa):'—')+'</span><div class="gap"></div>'+
-     '<button class="lnk" onclick="toggleExp(this)">＋ detalhes</button>'+
+  if(d.fimProjeto)h+='<span class="est">🏁 '+fmtDate(d.fimProjeto)+'</span>';
+  h+='<div class="gap"></div>'+
      '<button class="iconb" title="Editar" onclick="openModal(\''+d.id+'\')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
      '<button class="iconb del" title="Excluir" onclick="removeDemand(\''+d.id+'\')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>'+
      '</div></div>';
