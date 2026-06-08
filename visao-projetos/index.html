@@ -1904,6 +1904,7 @@
         </label>
         <button class="btn btn-ghost" onclick="print()">Salvar / PDF</button>
         <button class="btn btn-white" onclick="resetBase()">Voltar base inicial</button>
+        <a class="btn btn-white" href="../" style="text-decoration:none;">&#8592; Voltar para SALA</a>
       </div>
     </div>
   </header>
@@ -2646,7 +2647,7 @@
         decisions.push({priority:'Alta', level:'high', title:'Tratar bloqueio ativo', detail:`${blocks.length} história(s) com possível bloqueio. Definir responsável, plano de ação e necessidade de escalonamento.`, data:blocks});
       }
       if(slaStats.overdue){
-        decisions.push({priority:'Alta', level:'high', title:'Regularizar SLA de homologação', detail:`${slaStats.overdue} história(s) com SLA de homologação vencido. Priorizar aceite, ajuste ou retorno do negócio.`, data:data.filter(r=>isHomologation(r) && getHomologationSla(r).overdue)});
+        decisions.push({priority:'Alta', level:'high', title:'Regularizar SLA de homologação', detail:`${slaStats.overdue} história(s) com SLA de homologação vencido. Priorizar aceite, ajuste ou retorno do negócio.`, data:data.filter(r=>isHomologation(r) && homologationSlaInfo(r).overdue)});
       }
       if(prod.length && prodWithoutChange.length){
         decisions.push({priority:'Média', level:'medium', title:'Confirmar Change / Implantação', detail:`${prodWithoutChange.length} item(ns) em rota de produção sem data de Change informada.`, data:prodWithoutChange});
@@ -3186,7 +3187,7 @@
         const keys = new Set(d.stories.map(s=>String(s).toUpperCase()));
         return effectiveRows().filter(r => keys.has(String(r.chave).toUpperCase()));
       }
-      return effectiveRows().filter(r => r.squad === d.squad && lower(r.resumo + ' ' + (r.rotulos||[]).join(' ')).includes(lower((d.name || '').replace('Projeto','').trim())));
+      return effectiveRows().filter(r => (d.squad === '' || sameSquad(r.squad, d.squad)) && lower(r.resumo + ' ' + (r.rotulos||[]).join(' ')).includes(lower((d.name || '').replace('Projeto','').trim())));
     }
 
     function resetBase(){
