@@ -3058,6 +3058,13 @@
         if(elements.opEditNext) elements.opEditNext.value = update.proximo ?? r.proximo ?? '';
         if(elements.opEditNote) elements.opEditNote.value = update.executiveNote ?? r.executiveNote ?? '';
 
+        // Activate operational view if not already active
+        const operacionalView = $('operacional');
+        if(operacionalView && !operacionalView.classList.contains('active')){
+          document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === 'operacional'));
+          document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'operacional'));
+        }
+
         elements.operationalEditor.classList.add('show');
         elements.operationalEditor.scrollIntoView({behavior:'smooth', block:'start'});
 
