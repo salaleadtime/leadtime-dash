@@ -1101,6 +1101,24 @@
       background:#FBE9EE;
       border-color:#F0B7C3;
     }
+    .card-edit-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid #DDE3EE;
+      background:#fff;
+      color:#475569;
+      border-radius:999px;
+      padding:5px 8px;
+      font-size:10px;
+      line-height:1;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+      flex-shrink:0;
+    }
+    .card-edit-btn:hover{background:#F1F5F9;border-color:#94A3B8;}
+    .story-card-head .card-actions{display:flex;gap:5px;align-items:center;flex-shrink:0;}
     .jira-key-link{
       color:var(--red-dark);
       text-decoration:none;
@@ -2960,7 +2978,10 @@
       return `<article class="story-card jira-click" onclick="openJiraIssue('${escapeJs(key)}', event)" title="Abrir ${escapeAttr(key || 'história')} no Jira">
         <div class="story-card-head">
           <h4>${escapeHtml(r.chave)} • ${escapeHtml(r.resumo)}</h4>
-          <a class="jira-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir ${escapeAttr(key)} no Jira">↗</a>
+          <div class="card-actions">
+            <button class="card-edit-btn" onclick="event.stopPropagation(); openOperationalEditor('${escapeJs(key)}')" title="Editar história">&#9998;</button>
+            <a class="jira-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir ${escapeAttr(key)} no Jira">↗</a>
+          </div>
         </div>
         <div class="meta">
           ${renderStatusBadge(r.situacao)}
