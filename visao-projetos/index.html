@@ -6307,7 +6307,7 @@
       $('selectedSquadLabel').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}`;
       $('baseInfo').textContent = importDateTime
         ? `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`
-        : 'não importada';
+        : '';
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
       try { renderOperational(); } catch(error) { console.error('Erro ao renderizar Operacional:', error); }
