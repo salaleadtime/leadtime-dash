@@ -147,47 +147,31 @@
     .base-status-card{
       display:flex;
       align-items:center;
-      gap:10px;
-      width:fit-content;
-      padding:10px 14px;
-      border:1px solid #e7ecf3;
+      gap:6px;
+      padding:6px 10px;
       border-radius:999px;
-      background:#ffffff;
-      box-shadow:0 1px 2px rgba(16, 24, 40, 0.04);
+      background:transparent;
       font-family:Inter, Arial, sans-serif;
     }
-    .base-status-card strong{
-      display:block;
-      font-size:11px;
-      font-weight:800;
-      color:#172033;
-      line-height:1.2;
-    }
     .base-status-card small{
-      display:block;
-      margin-top:2px;
-      font-size:9.5px;
-      color:#667085;
-      line-height:1.2;
+      font-size:10px;
+      color:var(--muted);
+      font-weight:500;
     }
     .base-dot{
-      width:11px;
-      height:11px;
+      width:8px;
+      height:8px;
       border-radius:50%;
       flex:0 0 auto;
-      box-shadow:0 0 0 5px rgba(152, 162, 179, 0.12);
     }
     .base-dot.green{
       background:#12b76a;
-      box-shadow:0 0 0 5px rgba(18, 183, 106, 0.14);
     }
     .base-dot.yellow{
       background:#f79009;
-      box-shadow:0 0 0 5px rgba(247, 144, 9, 0.14);
     }
     .base-dot.red{
       background:#cc092f;
-      box-shadow:0 0 0 5px rgba(204, 9, 47, 0.14);
     }
     .base-dot.gray{
       background:#98a2b3;
@@ -5329,10 +5313,7 @@
         <div><b>Base:</b> <span id="baseInfo">Data e Hora</span></div>
         <div id="statusBaseImportada" class="base-status-card">
           <span class="base-dot gray"></span>
-          <div>
-            <strong>Base ainda não importada</strong>
-            <small>Importe uma base para atualizar o status.</small>
-          </div>
+          <small>—</small>
         </div>
       </div>
     </section>
@@ -5940,29 +5921,21 @@
       if(!container) return;
       const hoje = new Date();
       const diasUteis = calcularDiasUteisEntre(importDateTime, hoje);
-      const dataFormatada = formatarDataHora(importDateTime);
       let classe = "";
-      let titulo = "";
-      let descricao = "";
+      let status = "";
       if(diasUteis === 0){
         classe = "green";
-        titulo = "Base atualizada";
-        descricao = `Última carga realizada hoje, em ${dataFormatada}.`;
+        status = "Atualizada";
       } else if(diasUteis === 1){
         classe = "yellow";
-        titulo = "Base requer atenção";
-        descricao = `Última carga realizada há 1 dia útil, em ${dataFormatada}.`;
+        status = "Atenção";
       } else {
         classe = "red";
-        titulo = "Base desatualizada";
-        descricao = `Última carga realizada há ${diasUteis} dias úteis, em ${dataFormatada}.`;
+        status = "Desatualizada";
       }
       container.innerHTML = `
         <span class="base-dot ${classe}"></span>
-        <div>
-          <strong>${titulo}</strong>
-          <small>${descricao}</small>
-        </div>
+        <small>${status}</small>
       `;
     }
 
