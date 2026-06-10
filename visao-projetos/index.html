@@ -148,15 +148,10 @@
       display:flex;
       align-items:center;
       gap:6px;
-      padding:6px 10px;
+      padding:4px 6px;
       border-radius:999px;
       background:transparent;
-      font-family:Inter, Arial, sans-serif;
-    }
-    .base-status-card small{
-      font-size:10px;
-      color:var(--muted);
-      font-weight:500;
+      cursor:help;
     }
     .base-dot{
       width:8px;
@@ -5311,9 +5306,8 @@
       </div>
       <div class="data-source">
         <div><b>Base:</b> <span id="baseInfo">Data e Hora</span></div>
-        <div id="statusBaseImportada" class="base-status-card">
+        <div id="statusBaseImportada" class="base-status-card" title="">
           <span class="base-dot gray"></span>
-          <small>—</small>
         </div>
       </div>
     </section>
@@ -5919,24 +5913,21 @@
       const container = $('statusBaseImportada');
       if(!container) return;
       let classe = "gray";
-      let status = "Não importada";
+      let titulo = "Nenhuma importação registrada";
       if(importDateTime){
         const diasUteis = calcularDiasUteisEntre(importDateTime, new Date());
+        const dataFormatada = importDateTime.toLocaleDateString('pt-BR') + ' • ' + importDateTime.toLocaleTimeString('pt-BR');
+        titulo = `Última atualização: ${dataFormatada}`;
         if(diasUteis === 0){
           classe = "green";
-          status = "Atualizada";
         } else if(diasUteis === 1){
           classe = "yellow";
-          status = "Atenção";
         } else {
-          classe = "red";
-          status = "Desatualizada";
+          classe = "gray";
         }
       }
-      container.innerHTML = `
-        <span class="base-dot ${classe}"></span>
-        <small>${status}</small>
-      `;
+      container.title = titulo;
+      container.querySelector('.base-dot').className = 'base-dot ' + classe;
     }
 
     function registrarImportacaoBase(){
