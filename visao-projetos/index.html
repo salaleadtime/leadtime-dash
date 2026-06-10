@@ -7894,6 +7894,10 @@
     bindFilterEvents();
     bindSprintImport();
     renderAll();
+    // Garante que a data da importação aparece ao carregar a página
+    if(importDateTime && $('baseInfo')){
+      $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
+    }
   </script>
 </body>
 </html>
