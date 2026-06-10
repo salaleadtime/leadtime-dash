@@ -144,13 +144,10 @@
       gap:16px;
       justify-content:flex-end;
     }
-    .base-status-card{
-      display:flex;
+    .base-line{
+      display:inline-flex;
       align-items:center;
-      gap:6px;
-      padding:4px 6px;
-      border-radius:999px;
-      background:transparent;
+      gap:7px;
       cursor:help;
     }
     .base-dot{
@@ -5305,9 +5302,9 @@
         <button class="tab" data-view="operacional" onclick="switchView('operacional')">Visão Operacional</button>
       </div>
       <div class="data-source">
-        <div><b>Base:</b> <span id="baseInfo">Data e Hora</span></div>
-        <div id="statusBaseImportada" class="base-status-card" title="">
+        <div id="statusBaseImportada" class="base-line" title="">
           <span class="base-dot gray"></span>
+          <span><b>Base:</b> <span id="baseInfo">Data e Hora</span></span>
         </div>
       </div>
     </section>
