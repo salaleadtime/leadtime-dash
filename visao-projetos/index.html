@@ -5270,8 +5270,8 @@
         <button class="tab" data-view="operacional" onclick="switchView('operacional')">Visão Operacional</button>
       </div>
       <div class="data-source">
-        <div><b>Base carregada:</b> <span id="sourceName">Acomp Geral Todas Squads.xlsx</span></div>
-        <div><span id="rowCount">0 histórias</span> • Atualizado em tela após importação</div>
+        <div><b>Base carregada:</b> <span id="baseInfo">Data e Hora</span></div>
+        <div><span id="sourceName">Acomp Geral Todas Squads.xlsx</span> • <span id="rowCount">0 histórias</span></div>
       </div>
     </section>
 
@@ -5794,6 +5794,7 @@
     let rows = [];
     let sprintRows = [];
     let sourceName = 'Acomp Geral Todas Squads.xlsx';
+    let importDateTime = new Date();
     let sprintSourceName = 'ati.xlsx';
     const sprintStartLabel = '08/06/2026';
     const sprintEndLabel = '19/06/2026';
@@ -6198,6 +6199,7 @@
       $('selectedSquadLabel').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}`;
       $('sourceName').textContent = sourceName;
       $('rowCount').textContent = `${rows.length} histórias`;
+      $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
       try { renderOperational(); } catch(error) { console.error('Erro ao renderizar Operacional:', error); }
@@ -7637,6 +7639,7 @@
       sprintRows = structuredClone(initialSprintData);
       sourceName = 'Acomp Geral Todas Squads.xlsx';
       sprintSourceName = 'ati.xlsx';
+      importDateTime = new Date();
       closeOperationalEditor();
       setupFilters();
       renderAll();
@@ -7694,6 +7697,7 @@
         if(!parsed) return;
         rows = parsed;
         sourceName = file.name;
+        importDateTime = file.lastModified ? new Date(file.lastModified) : new Date();
         setupFilters();
         renderAll();
         alert('Importação concluída.');
