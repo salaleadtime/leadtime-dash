@@ -139,6 +139,58 @@
       color:var(--muted);
       text-align:right;
       line-height:1.4;
+      display:flex;
+      align-items:center;
+      gap:16px;
+      justify-content:flex-end;
+    }
+    .base-status-card{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      width:fit-content;
+      padding:10px 14px;
+      border:1px solid #e7ecf3;
+      border-radius:999px;
+      background:#ffffff;
+      box-shadow:0 1px 2px rgba(16, 24, 40, 0.04);
+      font-family:Inter, Arial, sans-serif;
+    }
+    .base-status-card strong{
+      display:block;
+      font-size:11px;
+      font-weight:800;
+      color:#172033;
+      line-height:1.2;
+    }
+    .base-status-card small{
+      display:block;
+      margin-top:2px;
+      font-size:9.5px;
+      color:#667085;
+      line-height:1.2;
+    }
+    .base-dot{
+      width:11px;
+      height:11px;
+      border-radius:50%;
+      flex:0 0 auto;
+      box-shadow:0 0 0 5px rgba(152, 162, 179, 0.12);
+    }
+    .base-dot.green{
+      background:#12b76a;
+      box-shadow:0 0 0 5px rgba(18, 183, 106, 0.14);
+    }
+    .base-dot.yellow{
+      background:#f79009;
+      box-shadow:0 0 0 5px rgba(247, 144, 9, 0.14);
+    }
+    .base-dot.red{
+      background:#cc092f;
+      box-shadow:0 0 0 5px rgba(204, 9, 47, 0.14);
+    }
+    .base-dot.gray{
+      background:#98a2b3;
     }
     .filters{
       background:var(--card);
@@ -5275,6 +5327,13 @@
       </div>
       <div class="data-source">
         <div><b>Base:</b> <span id="baseInfo">Data e Hora</span></div>
+        <div id="statusBaseImportada" class="base-status-card">
+          <span class="base-dot gray"></span>
+          <div>
+            <strong>Base ainda não importada</strong>
+            <small>Importe uma base para atualizar o status.</small>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -5847,6 +5906,69 @@
     const RECOVERY_GOAL = { metaDays:62, preventiveDays:14, neededDeliveries:9, targetLt:30, deadline:'30/06', daysLeft:21 };
     const LEAD_TIME_EPICS = {"SLOPC-26557":{"id":"SLOPC-26557","squad":"Guardiões","resumo":"GCSB - Migrar os microsserviços vinculados aos centros de custo GCSB da cloud TI-Híbrida para a Microsoft Azure - microsserviços: serviços-operacionais","status":"Executado","ini":"2025-10-23","fim":"","dataPrevista":""},"SLOPC-29139":{"id":"SLOPC-29139","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - FRONT END","status":"Executado","ini":"2025-11-04","fim":"","dataPrevista":""},"SLOPC-18909":{"id":"SLOPC-18909","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - BACKEND","status":"Executado","ini":"2025-11-11","fim":"","dataPrevista":""},"SLOPC-29141":{"id":"SLOPC-29141","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - SERVICE NOW","status":"Executado","ini":"2025-12-03","fim":"","dataPrevista":""},"SLOPC-33015":{"id":"SLOPC-33015","squad":"Contact","resumo":"Desenvolver processo para refatoração do ServiceNow para o SAT #AtendeBRA","status":"Concluído","ini":"2026-01-08","fim":"2026-03-30","dataPrevista":"2026-04-15"},"SLOPC-33014":{"id":"SLOPC-33014","squad":"Contact","resumo":"Implementar API para validar e consultar token de celular integrado ao ServiceNow #AtendeBRA","status":"Concluído","ini":"2026-01-08","fim":"2026-03-31","dataPrevista":"2026-04-20"},"SLOPC-33834":{"id":"SLOPC-33834","squad":"Guardiões","resumo":"GCSB - Adequar a segmentação dos clientes 049 de VAREJO/DIGITAL/MEI para EMPRESAS E NEGÓCIOS no sistema GCSB","status":"Em Execução","ini":"2026-01-27","fim":"","dataPrevista":"2026-04-30"},"SLOPC-35324":{"id":"SLOPC-35324","squad":"Guardiões","resumo":"Implementar correção dos apontamentos críticos identificados pelo SonarQube na ferramenta GCSB","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":""},"SLOPC-35433":{"id":"SLOPC-35433","squad":"Expresso","resumo":"Desenvolver novos requisitos para Subsídios MVP2 + Melhorias impeditivas para o ConectaJur","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":""},"SLOPC-35319":{"id":"SLOPC-35319","squad":"Contact","resumo":"Implementar digitalização, consulta e atualização de documentos via GCC integrada ao formulário Operação 200k","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":"2026-05-01"},"SLOPC-35104":{"id":"SLOPC-35104","squad":"Guardiões","resumo":"Implementar Correção dos apontamentos \"Blocker\" na ferramenta GCSB identificados pelo SonarQube","status":"Concluído","ini":"2026-02-23","fim":"2026-03-16","dataPrevista":""},"SLOPC-23768":{"id":"SLOPC-23768","squad":"Expresso","resumo":"Desenvolver na ServiceNow fluxo para o processo Obrigações de Fazer - MVP 2 #9197","status":"Em Execução","ini":"2026-03-13","fim":"","dataPrevista":""},"SLOPC-27305":{"id":"SLOPC-27305","squad":"Interestelar","resumo":"Desenvolver na ServiceNow fluxo para o processo de Fiança - novos requisitos (MVP2) #9193","status":"Em Execução","ini":"2026-03-13","fim":"","dataPrevista":"2026-04-25"},"SLOPC-35373":{"id":"SLOPC-35373","squad":"Guardiões","resumo":"Desenvolvimento de RPA para obtenção de dados de contratos pré-fixados de CDC, Crédito Pessoal e Capital de Giro","status":"Em Execução","ini":"2026-03-16","fim":"","dataPrevista":""},"SLOPC-36323":{"id":"SLOPC-36323","squad":"Guardiões","resumo":"Corrigir apontamentos \"critical\" na ferramenta GCSB identificados pelo SonarQube - Fase 2","status":"Em Execução","ini":"2026-03-17","fim":"","dataPrevista":""}};
 
+    function calcularDiasUteisEntre(dataInicial, dataFinal){
+      const inicio = new Date(dataInicial);
+      const fim = new Date(dataFinal);
+      inicio.setHours(0, 0, 0, 0);
+      fim.setHours(0, 0, 0, 0);
+      let diasUteis = 0;
+      const data = new Date(inicio);
+      while(data < fim){
+        data.setDate(data.getDate() + 1);
+        const diaSemana = data.getDay();
+        const ehSabado = diaSemana === 6;
+        const ehDomingo = diaSemana === 0;
+        if(!ehSabado && !ehDomingo){
+          diasUteis++;
+        }
+      }
+      return diasUteis;
+    }
+
+    function formatarDataHora(data){
+      return data.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function renderStatusBaseImportada(){
+      const container = $('statusBaseImportada');
+      if(!container) return;
+      const hoje = new Date();
+      const diasUteis = calcularDiasUteisEntre(importDateTime, hoje);
+      const dataFormatada = formatarDataHora(importDateTime);
+      let classe = "";
+      let titulo = "";
+      let descricao = "";
+      if(diasUteis === 0){
+        classe = "green";
+        titulo = "Base atualizada";
+        descricao = `Última carga realizada hoje, em ${dataFormatada}.`;
+      } else if(diasUteis === 1){
+        classe = "yellow";
+        titulo = "Base requer atenção";
+        descricao = `Última carga realizada há 1 dia útil, em ${dataFormatada}.`;
+      } else {
+        classe = "red";
+        titulo = "Base desatualizada";
+        descricao = `Última carga realizada há ${diasUteis} dias úteis, em ${dataFormatada}.`;
+      }
+      container.innerHTML = `
+        <span class="base-dot ${classe}"></span>
+        <div>
+          <strong>${titulo}</strong>
+          <small>${descricao}</small>
+        </div>
+      `;
+    }
+
+    function registrarImportacaoBase(){
+      renderStatusBaseImportada();
+    }
 
     function getJiraUrl(key){
       const issueKey = normalize(key).toUpperCase();
@@ -7667,6 +7789,7 @@
       closeOperationalEditor();
       setupFilters();
       renderAll();
+      registrarImportacaoBase();
     }
 
 
@@ -7701,8 +7824,10 @@
           if(!parsed) return;
           sprintRows = parsed.map(row => ({...row, sprintAtual:true}));
           sprintSourceName = file.name;
+          importDateTime = file.lastModified ? new Date(file.lastModified) : new Date();
           setupFilters();
           renderAll();
+          registrarImportacaoBase();
           alert('Importação da sprint concluída.');
         }catch(err){
           console.error(err);
@@ -7724,6 +7849,7 @@
         importDateTime = file.lastModified ? new Date(file.lastModified) : new Date();
         setupFilters();
         renderAll();
+        registrarImportacaoBase();
         alert('Importação concluída.');
       }catch(err){
         console.error(err);
@@ -7868,6 +7994,7 @@
     bindFilterEvents();
     bindSprintImport();
     renderAll();
+    renderStatusBaseImportada();
   </script>
 </body>
 </html>
