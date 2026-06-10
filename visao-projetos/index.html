@@ -78,6 +78,8 @@
       white-space:nowrap;
     }
     .btn:hover{transform:translateY(-1px)}
+    a.btn{display:inline-flex;align-items:center;gap:7px}
+    .btn-icon{width:14px;height:14px;flex:0 0 auto}
     .btn-white{background:#fff;color:var(--red-dark)}
     .btn-ghost{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.28)}
     .btn-red{background:var(--red);color:#fff}
@@ -5253,12 +5255,14 @@
       </div>
       <div class="toolbar">
         <label class="file-label">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
           Importar do Jira
           <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
         </label>
-        <button class="btn btn-ghost" onclick="print()">Salvar / PDF</button>
-        <button class="btn btn-white" onclick="resetBase()">Voltar base inicial</button>
-        <a class="btn btn-white" href="../" style="text-decoration:none;" title="Voltar para SALA">&#8592; SALA</a>
+        <a class="btn btn-white" href="../" style="text-decoration:none;" title="Voltar para SALA">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          SALA
+        </a>
       </div>
     </div>
   </header>
