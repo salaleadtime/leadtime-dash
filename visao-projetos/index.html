@@ -5803,14 +5803,27 @@
     const sprintEndLabel = '19/06/2026';
     let selectedSquadState = 'Contact';
     let sprintFrenteFilter = 'Todas';
-    let deliveries = JSON.parse(localStorage.getItem('jiraDashboardDeliveries') || '[]');
+    function readStoredJSON(storageKey, fallback){
+      const raw = localStorage.getItem(storageKey);
+      if(raw === null) return fallback;
+      try {
+        return JSON.parse(raw);
+      } catch(err) {
+        console.warn(`Valor inválido em localStorage["${storageKey}"], usando padrão.`, err);
+        return fallback;
+      }
+    }
+
+    const deliveriesEverSaved = localStorage.getItem('jiraDashboardDeliveries') !== null;
+    let deliveries = readStoredJSON('jiraDashboardDeliveries', []);
     let editingDeliveryIndex = null;
     let selectedDeliveryStoryKeys = new Set();
-    let operationalUpdates = JSON.parse(localStorage.getItem('jiraDashboardOperationalUpdates') || '{}');
-    let executiveQuickNotes = JSON.parse(localStorage.getItem('jiraDashboardExecutiveQuickNotes') || '{}');
+    let operationalUpdates = readStoredJSON('jiraDashboardOperationalUpdates', {});
+    let executiveQuickNotes = readStoredJSON('jiraDashboardExecutiveQuickNotes', {});
     let editingOperationalKey = null;
 
-    if (!deliveries.length) {
+    if (!Array.isArray(deliveries)) deliveries = [];
+    if (!deliveries.length && !deliveriesEverSaved) {
       deliveries = [
         {
           name:'Projeto OBF',
@@ -5884,17 +5897,22 @@
       const key = storyKey(row);
       const update = operationalUpdates[key];
       if(!update) return row;
+      const bloqueio = updateFlag(update.bloqueio, row.bloqueio);
+      const dependencia = updateFlag(update.dependencia, row.dependencia);
+      // Risco no modo "automático" (sem valor explícito) acompanha bloqueio/dependência,
+      // como na importação, para não congelar um "Alto" antigo após desbloquear.
+      const autoRisco = bloqueio ? 'Alto' : (dependencia ? 'Atenção' : 'Baixo');
       const merged = {
         ...row,
         responsavel: normalize(update.responsavel) || row.responsavel,
         prazo: normalize(update.prazo) || row.prazo,
         changeData: update.changeData ? formatDate(update.changeData) : row.changeData,
         homologacaoData: update.homologacaoData ? formatDate(update.homologacaoData) : row.homologacaoData,
-        devedor: normalize(update.devedor),
+        devedor: normalize(update.devedor) || row.devedor,
         executiveNote: normalize(update.executiveNote) || row.executiveNote,
-        risco: normalize(update.risco) || row.risco,
-        bloqueio: updateFlag(update.bloqueio, row.bloqueio),
-        dependencia: updateFlag(update.dependencia, row.dependencia),
+        risco: normalize(update.risco) || autoRisco,
+        bloqueio,
+        dependencia,
         proximo: normalize(update.proximo) || row.proximo,
         updatedByUser: true
       };
@@ -6229,12 +6247,12 @@
       $('kpiHomolog').textContent = homolog;
       $('chartBadge').textContent = `${total} histórias`;
 
-      renderChart('chartStatus', countBy(data, r=>r.situacao).slice(0,5), data, (r, label)=>r.situacao === label, ['red','blue','amber','green']);
+      renderChart('chartStatus', countBy(data, r=>r.situacao).slice(0,5), data, (r, label)=>(normalize(r.situacao) || 'Não informado') === label, ['red','blue','amber','green']);
       renderChart('chartBacklog', [
         ['Product Backlog', pb],
         ['Refinadas', refinada]
       ], data, (r, label)=> label==='Product Backlog' ? r.product_backlog : r.refinada, ['red','blue']);
-      renderChart('chartRisk', countBy(data, r=>r.risco).slice(0,4), data, (r, label)=>r.risco === label, ['red','blue','green']);
+      renderChart('chartRisk', countBy(data, r=>r.risco).slice(0,4), data, (r, label)=>(normalize(r.risco) || 'Não informado') === label, ['red','blue','green']);
       renderChart('chartBlocksDeps', [
         ['Bloqueios', bloq],
         ['Dependências', dep],
@@ -6857,7 +6875,7 @@
       const max = Math.max(...entries.map(e=>e[1]), 1);
       $('sprintStatusFlow').innerHTML = entries.length ? entries.map(([label, value]) => {
         const width = Math.max(5, Math.round((value / max) * 100));
-        return `<div class="sprint-flow-row" onclick="openList('Sprint atual • ${escapeJs(label)}', filteredSprintRows().filter(r => r.situacao === '${escapeJs(label)}'))">
+        return `<div class="sprint-flow-row" onclick="openList('Sprint atual • ${escapeJs(label)}', filteredSprintRows().filter(r => (String(r.situacao||'').trim() || 'Não informado') === '${escapeJs(label)}'))">
           <div class="sprint-flow-label" title="${escapeAttr(label)}">${escapeHtml(label)}</div>
           <div class="sprint-flow-track"><div class="sprint-flow-fill ${sprintStatusColor(label)}" style="width:${width}%"></div></div>
           <div class="sprint-flow-num">${value}</div>
@@ -7328,8 +7346,13 @@
 
 
     function openOperationalEditor(key, focusField){
-      const raw = rows.find(r => storyKey(r) === String(key || '').toUpperCase());
-      if(!raw) return;
+      const wantedKey = String(key || '').toUpperCase();
+      const raw = rows.find(r => storyKey(r) === wantedKey)
+        || sprintRows.find(r => storyKey(r) === wantedKey);
+      if(!raw){
+        alert('Não localizei essa história na base operacional. Importe a base geral para editá-la.');
+        return;
+      }
       const r = applyOperationalUpdate(raw);
       const update = operationalUpdates[storyKey(raw)] || {};
       editingOperationalKey = storyKey(raw);
@@ -7801,8 +7824,13 @@
     function formatExcelDate(v){
       if(!v) return '';
       if(typeof v === 'number'){
+        // Serial do Excel -> Date em meia-noite UTC. Lê componentes UTC para
+        // não deslocar 1 dia em fusos negativos (ex.: Brasil UTC-3).
         const date = new Date(Math.round((v - 25569) * 86400 * 1000));
-        return date.toLocaleDateString('pt-BR');
+        const dd = String(date.getUTCDate()).padStart(2,'0');
+        const mm = String(date.getUTCMonth() + 1).padStart(2,'0');
+        const yyyy = date.getUTCFullYear();
+        return `${dd}/${mm}/${yyyy}`;
       }
       if(v instanceof Date) return v.toLocaleDateString('pt-BR');
       return normalize(v);
@@ -7825,7 +7853,16 @@
       return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
     function escapeAttr(str){ return escapeHtml(str); }
-    function escapeJs(str){ return String(str ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }
+    // Escapa para uso dentro de string JS delimitada por aspas simples, que por
+    // sua vez fica dentro de um atributo HTML com aspas duplas. Precisa neutralizar
+    // tanto as aspas simples (string JS) quanto as duplas (atributo HTML).
+    function escapeJs(str){
+      return String(str ?? '')
+        .replace(/\\/g,'\\\\')
+        .replace(/'/g,"\\'")
+        .replace(/"/g,'&quot;')
+        .replace(/[\r\n]+/g,' ');
+    }
 
     setupFilters();
     bindFilterEvents();
