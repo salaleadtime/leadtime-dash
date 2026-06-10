@@ -5274,8 +5274,7 @@
         <button class="tab" data-view="operacional" onclick="switchView('operacional')">Visão Operacional</button>
       </div>
       <div class="data-source">
-        <div><b>Base carregada:</b> <span id="baseInfo">Data e Hora</span></div>
-        <div><span id="sourceName">Acomp Geral Todas Squads.xlsx</span> • <span id="rowCount">0 histórias</span></div>
+        <div><b>Base:</b> <span id="baseInfo">Data e Hora</span></div>
       </div>
     </section>
 
@@ -6201,8 +6200,6 @@
         if(exactOption) squadSelect.value = exactOption.value;
       }
       $('selectedSquadLabel').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}`;
-      $('sourceName').textContent = sourceName;
-      $('rowCount').textContent = `${rows.length} histórias`;
       $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
