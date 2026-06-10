@@ -5837,7 +5837,16 @@
     let rows = [];
     let sprintRows = [];
     let sourceName = 'Acomp Geral Todas Squads.xlsx';
-    let importDateTime = new Date();
+    // Data da última importação real. Restaurada do navegador para não
+    // "fingir" que houve carga só por abrir a página.
+    const IMPORT_BASE_KEY = 'data_ultima_importacao_base';
+    let importDateTime = null;
+    (function restaurarUltimaImportacao(){
+      const salvo = localStorage.getItem(IMPORT_BASE_KEY);
+      if(!salvo) return;
+      const d = new Date(salvo);
+      if(!Number.isNaN(d.getTime())) importDateTime = d;
+    })();
     let sprintSourceName = 'ati.xlsx';
     const sprintStartLabel = '08/06/2026';
     const sprintEndLabel = '19/06/2026';
@@ -5906,32 +5915,23 @@
       return diasUteis;
     }
 
-    function formatarDataHora(data){
-      return data.toLocaleString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-    }
-
     function renderStatusBaseImportada(){
       const container = $('statusBaseImportada');
       if(!container) return;
-      const hoje = new Date();
-      const diasUteis = calcularDiasUteisEntre(importDateTime, hoje);
-      let classe = "";
-      let status = "";
-      if(diasUteis === 0){
-        classe = "green";
-        status = "Atualizada";
-      } else if(diasUteis === 1){
-        classe = "yellow";
-        status = "Atenção";
-      } else {
-        classe = "red";
-        status = "Desatualizada";
+      let classe = "gray";
+      let status = "Não importada";
+      if(importDateTime){
+        const diasUteis = calcularDiasUteisEntre(importDateTime, new Date());
+        if(diasUteis === 0){
+          classe = "green";
+          status = "Atualizada";
+        } else if(diasUteis === 1){
+          classe = "yellow";
+          status = "Atenção";
+        } else {
+          classe = "red";
+          status = "Desatualizada";
+        }
       }
       container.innerHTML = `
         <span class="base-dot ${classe}"></span>
@@ -5940,6 +5940,10 @@
     }
 
     function registrarImportacaoBase(){
+      // Carimba o momento da carga e guarda no navegador, para o status
+      // refletir a última importação real mesmo após recarregar a página.
+      importDateTime = new Date();
+      localStorage.setItem(IMPORT_BASE_KEY, importDateTime.toISOString());
       renderStatusBaseImportada();
     }
 
@@ -6313,7 +6317,9 @@
         if(exactOption) squadSelect.value = exactOption.value;
       }
       $('selectedSquadLabel').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}`;
-      $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
+      $('baseInfo').textContent = importDateTime
+        ? `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`
+        : 'não importada';
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
       try { renderOperational(); } catch(error) { console.error('Erro ao renderizar Operacional:', error); }
@@ -7758,11 +7764,13 @@
       sprintRows = structuredClone(initialSprintData);
       sourceName = 'Acomp Geral Todas Squads.xlsx';
       sprintSourceName = 'ati.xlsx';
-      importDateTime = new Date();
+      // Voltar à base de exemplo não conta como carga real.
+      importDateTime = null;
+      localStorage.removeItem(IMPORT_BASE_KEY);
       closeOperationalEditor();
       setupFilters();
       renderAll();
-      registrarImportacaoBase();
+      renderStatusBaseImportada();
     }
 
 
@@ -7797,7 +7805,7 @@
           if(!parsed) return;
           sprintRows = parsed.map(row => ({...row, sprintAtual:true}));
           sprintSourceName = file.name;
-          importDateTime = file.lastModified ? new Date(file.lastModified) : new Date();
+          importDateTime = new Date();
           setupFilters();
           renderAll();
           registrarImportacaoBase();
@@ -7819,7 +7827,7 @@
         if(!parsed) return;
         rows = parsed;
         sourceName = file.name;
-        importDateTime = file.lastModified ? new Date(file.lastModified) : new Date();
+        importDateTime = new Date();
         setupFilters();
         renderAll();
         registrarImportacaoBase();
