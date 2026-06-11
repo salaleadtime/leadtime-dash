@@ -636,6 +636,167 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .hist-revertido-sheets{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
 .hist-deletado{background:#1e293b;color:#f8fafc;border:1px solid #475569}
 
+/* ══════════════════════════════════════════
+   LAYOUT 8 — EXECUTIVO GRAFITE · BRADESCO
+   Override visual apenas — sem alterar lógica
+   ══════════════════════════════════════════ */
+
+/* ── variáveis ── */
+:root{
+  --bg:#F4F5F7;
+  --brad:#CC092F;--bradD:#8C0526;--bradL:#E5325A;
+  --grafite:#23262C;
+  --rad:10px;--rads:7px;
+  --shadow-sm:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.03);
+  --shadow-md:0 3px 12px rgba(15,23,42,.08),0 1px 3px rgba(15,23,42,.05);
+  --shadow-lg:0 8px 32px rgba(15,23,42,.12),0 2px 6px rgba(15,23,42,.06);
+}
+
+/* ── TOPBAR: grafite escuro + borda vermelha ── */
+.top{
+  height:52px;padding:0 1.4rem;gap:10px;
+  background:var(--grafite);
+  border-bottom:3px solid var(--brad);
+  box-shadow:0 2px 16px rgba(0,0,0,.28);
+  overflow:visible;
+}
+.top::after{display:none}
+.top>*{position:relative;z-index:1}
+.top-logo{
+  width:30px;height:30px;border-radius:8px;font-size:11px;
+  background:var(--brad);
+  box-shadow:none;border:none;
+}
+.top-name{font-size:14px;letter-spacing:-.3px}
+.top-sub{font-size:9px;letter-spacing:1px;opacity:.55;margin-top:1px}
+.top-sub::before{display:none}
+.top-sync{font-size:9px}
+.top-sync::before{animation:none}
+.top-meta{
+  background:rgba(204,9,47,.2);color:#ff8da0;
+  border:1px solid rgba(204,9,47,.35);
+  backdrop-filter:none;font-size:9.5px;padding:3px 10px;
+}
+.tbtn{padding:5px 10px;font-size:10.5px;gap:4px;border-radius:6px;backdrop-filter:none}
+.tbtn.green{background:rgba(22,163,74,.22);border-color:rgba(22,163,74,.38);color:#4ade80;box-shadow:none}
+.tbtn.green:hover{background:rgba(22,163,74,.35);box-shadow:none}
+
+/* ── TABS: compactas + border branda ── */
+.tabs{
+  border-bottom:1px solid #e7e9ee;
+  padding:0 1.4rem;
+  top:52px;
+  box-shadow:0 1px 4px rgba(15,23,42,.05);
+}
+.tabbt{padding:11px 17px;font-size:12px;gap:6px;letter-spacing:0}
+.tabbt.on{color:var(--brad);border-bottom-color:var(--brad);background:transparent}
+.tabbt:hover:not(.on){background:#f8f9fb;border-radius:6px 6px 0 0}
+.tab-ct{font-size:9.5px;padding:1px 7px;background:#F1F3F6;color:var(--tx2)}
+.tabbt.on .tab-ct{background:#FBE9ED;color:var(--brad)}
+
+/* ── META BAR: mais compacta ── */
+.metabar{padding:5px 1.4rem;font-size:10px;background:#fff}
+
+/* ── UPLOAD BAR ── */
+.upbar{padding:.28rem 1.4rem}
+
+/* ── ÉPICOS / PANES: padding menor ── */
+.ep{padding:.9rem 1.4rem}
+.db{padding:.9rem 1.4rem;gap:.9rem}
+.cal-wrap{padding:1.1rem 1.4rem 3rem}
+.sec-lbl{font-size:9.5px;color:var(--brad);margin-bottom:.6rem}
+.sec-lbl::after{background:#fecaca}
+
+/* ── FILTER BAR ── */
+.fbar{padding:.65rem .9rem;margin-bottom:.8rem;border-radius:var(--rad)}
+.chip{padding:4px 11px;font-size:10.5px;border-radius:6px}
+.chip.on{background:var(--brad);border-color:var(--brad)}
+.chip:hover{border-color:var(--brad);color:var(--brad)}
+
+/* ── TABLE ── */
+.tc{border-radius:var(--rad)}
+.tc-hd{padding:.6rem .95rem;background:#FAFBFC}
+.tc-hd-t{font-size:11.5px;color:var(--bradD)}
+th{background:var(--bradD);padding:9px 12px;font-size:9px}
+#pane-ep table thead th:nth-child(7){background:#6b0020}
+td{padding:10px 12px}
+tr:hover td{background:#f8f9fc}
+.pag{padding:7px 12px;background:#FAFBFC}
+.pb.on{background:var(--brad);border-color:var(--brad)}
+
+/* ── KPI cards: menores + 3px top ── */
+.kpi{padding:.85rem 1rem;border-radius:var(--rad)}
+.kpi::before{height:3px}
+.kv{font-size:24px;letter-spacing:-1.2px}
+.kl{font-size:9px;margin-bottom:5px}
+.ks{font-size:9.5px;margin-top:4px}
+.kgrid{gap:9px}
+
+/* ── SQUAD cards: menores ── */
+.sc{padding:.85rem;border-radius:var(--rad)}
+.sc-lt{font-size:26px;letter-spacing:-1.5px}
+.sc-nm{font-size:12px}
+.sc-cnt{font-size:9.5px}
+.sc-sub{font-size:9.5px;margin-bottom:.5rem}
+.sc-bar{height:3px;margin-bottom:.45rem}
+.sc-stats{font-size:9.5px}
+.sgrid{gap:9px}
+
+/* ── PANELS ── */
+.panel{padding:.9rem;border-radius:var(--rad)}
+.p-hd{margin-bottom:.6rem;padding-bottom:.55rem}
+.p-t{font-size:12px}
+.g2{gap:9px}
+
+/* ── TRI BANNER ── */
+.tri-banner{padding:.5rem .9rem}
+.tri-q{background:var(--bradD)}
+.tri-prog-fill{background:linear-gradient(90deg,var(--bradD),var(--brad))}
+
+/* ── ST / SV KPI bars ── */
+.st-kpi-bar,.sv-kpi{border-radius:var(--rad)}
+.st-kpi-item,.sv-kpi-item{padding:.7rem .95rem}
+.st-kpi-val,.sv-kpi-val{font-size:21px}
+.st-kpi-item::before,.sv-kpi-item::before{height:3px}
+.sv-kpi-hd-item::before{height:3px}
+.sv-kpi-hd-v{font-size:19px}
+
+/* ── STORY / BACKLOG cards ── */
+.st-card{border-radius:9px}
+.st-card-hd{padding:.5rem .85rem;min-height:38px}
+.bk-squad-card{border-radius:var(--rad)}
+.bk-squad-hd{padding:.7rem .85rem .6rem}
+.bk-squad-cnt{font-size:28px}
+
+/* ── SV table (Qtd Story/Épicos) ── */
+.sv-tbl thead th{padding:9px 12px;font-size:9px;background:var(--bradD)!important}
+.sv-tbl td{padding:8px 12px}
+.sv-tbl-wrap{border-radius:var(--rad)}
+.sv-epic-name{font-size:11.5px}
+
+/* ── CALENDÁRIO ── */
+.cal-tri{border-radius:12px}
+.cal-thead{padding:11px 15px}
+.cal-tbody{border-top-color:var(--bradD)}
+.cal-mname{background:var(--brad)}
+
+/* ── MODAL / TOAST ── */
+.mdl{border-radius:14px}
+.mb.p{background:var(--grafite);border-color:var(--grafite)}
+.toast{border-radius:var(--rad)}
+
+/* ── FAB ── */
+.fab-cap{background:var(--grafite);border-radius:12px;box-shadow:0 4px 18px rgba(35,38,44,.45);border:1px solid rgba(255,255,255,.08)}
+.fab-cap:hover{background:#2e3239;box-shadow:0 6px 24px rgba(35,38,44,.55)}
+
+/* ── MEDIÇÃO hero ── */
+.med-hero{padding:.42rem .85rem}
+.med-hero-icon{font-size:15px;width:26px;height:26px;border-radius:6px}
+.med-hero-t{font-size:11.5px}
+
+/* ── METABAR badge ── */
+.metabar>span:first-child{font-size:9.5px;padding:2px 10px;background:var(--brad)}
+
 </style>
 </head>
 <body>
