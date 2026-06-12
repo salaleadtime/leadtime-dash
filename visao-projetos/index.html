@@ -7859,7 +7859,15 @@
     function normalizeMatrix(matrix){
       const cleaned = matrix.filter(row => row && row.some(cell => normalize(cell)));
       if(!cleaned.length) return [];
-      const headers = cleaned[0].map(h => normalize(h));
+      // O CSV do Jira repete o mesmo nome de coluna (Rótulos, Sprint...).
+      // Sem renomear, a última coluna duplicada sobrescreve as anteriores
+      // e os rótulos/sprints das primeiras colunas se perdem.
+      const headerCounts = {};
+      const headers = cleaned[0].map(h0 => {
+        const h = normalize(h0);
+        headerCounts[h] = (headerCounts[h] || 0) + 1;
+        return headerCounts[h] > 1 ? `${h}_${headerCounts[h]}` : h;
+      });
       const dataRows = cleaned.slice(1);
       const parsed = dataRows.map(row => {
         const raw = {};
