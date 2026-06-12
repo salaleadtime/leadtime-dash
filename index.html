@@ -1462,6 +1462,16 @@ function replaceFromSharedSource(rows){
 // ═══════════════════════════════════════
 // LOCAL STORAGE (auto-save)
 // ═══════════════════════════════════════
+
+// Preenche squad vazio nos épicos a partir das stories carregadas.
+// Necessário quando o arquivo de épicos não traz a coluna Team/Squad.
+function backfillEpicSquads(){
+  if(!allStories||!allStories.length||!allData||!allData.length) return;
+  var epicSquad={};
+  allStories.forEach(function(s){ if(s.epic&&s.squad&&!epicSquad[s.epic]) epicSquad[s.epic]=s.squad; });
+  allData.forEach(function(r){ if(r&&!r.squad&&epicSquad[r.id]) r.squad=epicSquad[r.id]; });
+}
+
 function saveLocal(){
   try{
     normalizeWorkflowAll();
@@ -2716,6 +2726,7 @@ function loadStoriesXlsx(file){
         return;
       }
       allStories=stories;
+      backfillEpicSquads();
       saveStoriesLocal();
       var upName=$id('svUpName'); if(upName) upName.textContent=file.name;
       var upSub=$id('svUpSub'); if(upSub) upSub.textContent=stories.length+' estórias carregadas';
@@ -3012,6 +3023,7 @@ function loadBacklogXlsx(file){
       sortBacklogSnaps();
       saveBacklogSnaps();
 
+      backfillEpicSquads();
       var bkUpName=$id('bkUpName'); if(bkUpName) bkUpName.textContent=file.name;
       var bkUpSub=$id('bkUpSub'); if(bkUpSub) bkUpSub.textContent='#'+nextSeq+' · '+stories.length+' histórias importadas';
       var bkUpSaved=$id('bkUpSaved'); if(bkUpSaved) bkUpSaved.classList.remove('hidden');
@@ -3876,6 +3888,7 @@ function loadXlsx(file){
       }
 
       allData = merged;
+      backfillEpicSquads();
       $id('upName').textContent=file.name;
       $id('upSub').textContent=merged.length+' épicos · '+new Date().toLocaleDateString('pt-BR');
       $id('syncLbl').textContent='arquivo: '+file.name+' ('+det.format.toUpperCase()+')';
