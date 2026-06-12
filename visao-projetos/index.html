@@ -5954,6 +5954,32 @@
     rows = structuredClone(initialData);
     sprintRows = structuredClone(initialSprintData);
 
+    // Bases importadas persistem no navegador. Antes, recarregar a página
+    // voltava silenciosamente para a base de exemplo embutida (ati.xlsx),
+    // mantendo a data de importação salva — números errados com cara de atualizados.
+    const IMPORTED_GENERAL_KEY = 'vpBaseGeralImportada';
+    const IMPORTED_SPRINT_KEY = 'vpBaseSprintImportada';
+    function persistImportedBases(){
+      try{
+        localStorage.setItem(IMPORTED_GENERAL_KEY, JSON.stringify({rows, sourceName}));
+        localStorage.setItem(IMPORTED_SPRINT_KEY, JSON.stringify({rows: sprintRows, sourceName: sprintSourceName}));
+      }catch(err){
+        console.warn('Não foi possível salvar a base importada no navegador.', err);
+      }
+    }
+    (function restaurarBasesImportadas(){
+      const geral = readStoredJSON(IMPORTED_GENERAL_KEY, null);
+      if(geral && Array.isArray(geral.rows) && geral.rows.length){
+        rows = geral.rows.map(applyRefinementRule);
+        if(geral.sourceName) sourceName = geral.sourceName;
+      }
+      const sprint = readStoredJSON(IMPORTED_SPRINT_KEY, null);
+      if(sprint && Array.isArray(sprint.rows) && sprint.rows.length){
+        sprintRows = sprint.rows.map(row => applyRefinementRule({...row, sprintAtual:true}));
+        if(sprint.sourceName) sprintSourceName = sprint.sourceName;
+      }
+    })();
+
     function switchView(view){
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
       document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === view));
@@ -7686,6 +7712,8 @@
       // Voltar à base de exemplo não conta como carga real.
       importDateTime = null;
       localStorage.removeItem(IMPORT_BASE_KEY);
+      localStorage.removeItem(IMPORTED_GENERAL_KEY);
+      localStorage.removeItem(IMPORTED_SPRINT_KEY);
       closeOperationalEditor();
       setupFilters();
       renderAll();
@@ -7753,6 +7781,7 @@
         }
         if(importedSprint){
           importDateTime = new Date();
+          persistImportedBases();
           setupFilters(); renderAll(); registrarImportacaoBase();
           alert('Sprint importada: ' + sprintSourceName);
         } else {
@@ -7781,6 +7810,7 @@
             sourceName = files[0].name;
           }
           importDateTime = new Date();
+          persistImportedBases();
           setupFilters(); renderAll(); registrarImportacaoBase();
           alert('Importação concluída: ' + (type==='sprint'?'Sprint Ativa':'Acompanhamento Geral') + ' (' + files[0].name + ')');
         }catch(err){
@@ -7813,6 +7843,7 @@
           }
         }
         importDateTime = new Date();
+        persistImportedBases();
         setupFilters(); renderAll(); registrarImportacaoBase();
         let msg = '📦 ' + files.length + ' arquivo(s) processado(s).\n';
         if(importedGeneral) msg += '✅ Acompanhamento Geral: ' + sourceName + '\n';
@@ -7830,11 +7861,20 @@
       if(!cleaned.length) return [];
       const headers = cleaned[0].map(h => normalize(h));
       const dataRows = cleaned.slice(1);
-      return dataRows.map(row => {
+      const parsed = dataRows.map(row => {
         const raw = {};
         headers.forEach((h,i)=> raw[h] = row[i] ?? '');
         return applyRefinementRule(normalizeRecord(raw));
       }).filter(r => r.chave || r.resumo);
+      // Nunca contar a mesma história duas vezes: deduplica pela chave Jira.
+      const seen = new Set();
+      return parsed.filter(r => {
+        const key = String(r.chave || '').toUpperCase();
+        if(!key) return true;
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     function normalizeRecord(raw){
@@ -7849,6 +7889,11 @@
       const labels = Object.keys(raw)
         .filter(k => lower(k).includes('rótulo') || lower(k).includes('rotulo') || lower(k).includes('label'))
         .flatMap(k => String(raw[k] ?? '').split(/[;,|]/).map(v => normalize(v)))
+        .filter(v => v && v !== '0');
+      // O Jira exporta a sprint em várias colunas (Sprint, Sprint_2, Sprint_3...).
+      const sprints = Object.keys(raw)
+        .filter(k => lower(k).startsWith('sprint'))
+        .map(k => normalize(raw[k]))
         .filter(v => v && v !== '0');
 
       const situacao = normalize(get('Situação','Status'));
@@ -7882,6 +7927,7 @@
         resumo,
         squad,
         rotulos: labels,
+        sprint: sprints.join(' | '),
         responsavel: normalize(get('Responsável','Assignee','Pessoa atribuída','Atribuído')),
         prazo: formatExcelDate(get('Prazo','Data limite','Due date')),
         estimativa: normalize(get('Estimativa','Story Points','Horas estimadas','Original estimate')),
