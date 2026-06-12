@@ -2700,8 +2700,8 @@ function extractEpicName(v){
 // Carrega planilha de Estórias
 function loadStoriesXlsx(file){
   if(typeof XLSX==='undefined'){
-    toast('Carregando biblioteca...','Aguarde alguns segundos e tente novamente.','warn');
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadStoriesXlsx(file);});
+    // Continua automaticamente quando a biblioteca terminar de carregar
+    loadLib(XLSX_CDN,function(){loadStoriesXlsx(file);});
     return;
   }
   var reader=new FileReader();
@@ -3005,8 +3005,7 @@ function detectBacklogFormat(wb){
 
 function loadBacklogXlsx(file){
   if(typeof XLSX==='undefined'){
-    toast('Carregando biblioteca...','Aguarde alguns segundos e tente novamente.','warn');
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadBacklogXlsx(file);});
+    loadLib(XLSX_CDN,function(){loadBacklogXlsx(file);});
     return;
   }
   var reader=new FileReader();
@@ -3564,8 +3563,7 @@ function detectUnifiedFileType(wb, fileName){
 // Processa múltiplos arquivos: detecta e roteia cada um para o handler correto
 function loadMultipleFiles(files){
   if(typeof XLSX==='undefined'){
-    toast('Carregando biblioteca...','Aguarde e tente novamente.','warn');
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadMultipleFiles(files);});
+    loadLib(XLSX_CDN,function(){loadMultipleFiles(files);});
     return;
   }
   var fileList=Array.from(files);
@@ -3808,8 +3806,7 @@ function detectImportFormat(wb){
 
 function loadXlsx(file){
   if(typeof XLSX==='undefined'){
-    toast('Carregando biblioteca...','Aguarde alguns segundos e tente novamente.','warn');
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadXlsx(file);});
+    loadLib(XLSX_CDN,function(){loadXlsx(file);});
     return;
   }
   var reader=new FileReader();
@@ -4433,12 +4430,24 @@ function loadGS(){
 // ═══════════════════════════════════════
 // LAZY LIB LOADER
 // ═══════════════════════════════════════
+var _libQueue={};
 function loadLib(src,cb){
+  // Evita injetar o mesmo <script> várias vezes: enfileira os callbacks
+  if(_libQueue[src]){ if(cb) _libQueue[src].push(cb); return; }
+  _libQueue[src]=cb?[cb]:[];
   var s=document.createElement('script');
-  s.src=src; s.onload=cb;
-  s.onerror=function(){toast('Erro de rede','Não foi possível carregar a biblioteca.','err');};
+  s.src=src;
+  s.onload=function(){
+    var q=_libQueue[src]; delete _libQueue[src];
+    (q||[]).forEach(function(f){ try{f();}catch(e){} });
+  };
+  s.onerror=function(){ delete _libQueue[src]; toast('Erro de rede','Não foi possível carregar a biblioteca.','err'); };
   document.head.appendChild(s);
 }
+var XLSX_CDN='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+// Pré-carrega o leitor de Excel na abertura da página, para a importação
+// estar pronta no primeiro clique (sem o aviso "Carregando biblioteca...").
+if(typeof XLSX==='undefined') loadLib(XLSX_CDN);
 
 // ═══════════════════════════════════════
 // SEED DATA (fallback inicial)
