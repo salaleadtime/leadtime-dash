@@ -1463,6 +1463,18 @@ function replaceFromSharedSource(rows){
 // LOCAL STORAGE (auto-save)
 // ═══════════════════════════════════════
 
+// Lê o workbook respeitando o encoding: CSV do Jira é UTF-8 (sem BOM) e o
+// XLSX.read em modo 'array' decodifica como Latin-1 — "Épico" virava "Ãpico"
+// e quebrava toda a detecção de tipo. CSV agora é decodificado como UTF-8.
+function readWorkbook(buf, fileName){
+  if(/\.csv$/i.test(fileName||'')){
+    var text=new TextDecoder('utf-8').decode(buf);
+    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    return XLSX.read(text,{type:'string',cellDates:true});
+  }
+  return XLSX.read(buf,{type:'array',cellDates:true});
+}
+
 // ID de épico válido: chave Jira (SLOPC-12345). Rejeita linhas de legenda,
 // notas e células mescladas que viram "épico" ao reimportar o Excel exportado.
 function isValidEpicId(id){
@@ -2707,7 +2719,7 @@ function loadStoriesXlsx(file){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var wb=readWorkbook(e.target.result,file.name);
       // O arquivo de Épicos também tem "Chave do item" + "Epic Link" (vazia)
       // e enganaria o detector de estórias — redireciona para a aba Épicos.
       if(detectUnifiedFileType(wb,file.name)==='epics'){
@@ -2750,7 +2762,7 @@ function loadStoriesXlsx(file){
           var epicosNoArquivo=0;
           for(var t=det.hrow+1;t<rows.length;t++){
             var tv=rows[t]&&rows[t][m.tipo]?stripAcc(rows[t][m.tipo].toString()).toLowerCase():'';
-            if(tv.indexOf('epico')>=0||tv==='epic') epicosNoArquivo++;
+            if(tv.indexOf('pico')>=0||tv==='epic') epicosNoArquivo++;
           }
           if(epicosNoArquivo>0){
             toast('📊 Arquivo de Épicos detectado','Importando na aba Épicos automaticamente.');
@@ -3025,7 +3037,7 @@ function loadBacklogXlsx(file){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var wb=readWorkbook(e.target.result,file.name);
       // Arquivo de Épicos selecionado no botão errado → redireciona.
       if(detectUnifiedFileType(wb,file.name)==='epics'){
         toast('📊 Arquivo de Épicos detectado','Importando na aba Épicos automaticamente.');
@@ -3542,8 +3554,8 @@ function detectUnifiedFileType(wb, fileName){
       for(var k=i+1;k<Math.min(i+41,rows.length);k++){
         var dr=rows[k]; if(!dr) continue;
         var tipo=stripAcc((dr[tipoIdx]||'').toString()).toLowerCase().trim();
-        if(tipo.indexOf('epico')>=0||tipo==='epic') epicCnt++;
-        if(tipo.indexOf('histor')>=0||tipo==='historia'||tipo==='story'){
+        if(tipo.indexOf('pico')>=0||tipo==='epic') epicCnt++;
+        if(tipo.indexOf('hist')>=0||tipo==='historia'||tipo==='story'){
           historiaCnt++;
           var st=statusIdx>=0?stripAcc((dr[statusIdx]||'').toString()).toLowerCase().trim():'';
           if(st==='product backlog') pbCnt++;
@@ -3617,7 +3629,7 @@ function loadMultipleFiles(files){
     var reader=new FileReader();
     reader.onload=function(e){
       try{
-        var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        var wb=readWorkbook(e.target.result,file.name);
         var type=detectUnifiedFileType(wb,file.name);
         if(type==='epics') detected.epics=file;
         else if(type==='stories') detected.stories=file;
@@ -3794,7 +3806,7 @@ function detectImportFormat(wb){
         for(var k=i+1;k<Math.min(i+25,rows.length);k++){
           if(rows[k]&&rows[k][tipoColIdx]){
             var tv=stripAcc((rows[k][tipoColIdx]||'').toString()).toLowerCase().trim();
-            if(tv.indexOf('epico')>=0||tv==='epic'){hasEpicDataRows=true;break;}
+            if(tv.indexOf('pico')>=0||tv==='epic'){hasEpicDataRows=true;break;}
           }
         }
         if(hasEpicDataRows){
@@ -3826,7 +3838,7 @@ function loadXlsx(file){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var wb=readWorkbook(e.target.result,file.name);
       var det=detectImportFormat(wb);
       if(!det){
         // Pode ser um arquivo de estórias/backlog no botão errado → redireciona
@@ -3866,7 +3878,7 @@ function loadXlsx(file){
         // No formato jira_tipo, pula linhas que não sejam do tipo "Épico"
         if(det.format==='jira_tipo'&&det.tipoIdx>=0){
           var tipoVal=stripAcc((r[det.tipoIdx]||'').toString()).toLowerCase().trim();
-          if(tipoVal.indexOf('epico')<0&&tipoVal!=='epic'){stats.skipped++;continue;}
+          if(tipoVal.indexOf('pico')<0&&tipoVal!=='epic'){stats.skipped++;continue;}
         }
         var rawId=m.id>=0 ? r[m.id] : null;
         if(rawId===null||rawId===undefined) continue;
