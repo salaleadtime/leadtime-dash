@@ -5258,10 +5258,10 @@
         <p>Visão estratégica e operacional para acompanhar entregas, bloqueios, dependências e rota de produção.</p>
       </div>
       <div class="toolbar">
-        <label class="file-label">
+        <label class="file-label" title="Selecione um ou mais arquivos do Jira — épicos são ignorados, sprint e geral são detectados automaticamente">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
           JIRA
-          <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
+          <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
         </label>
         <a class="btn btn-white" href="../" style="text-decoration:none;" title="Voltar para SALA">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
@@ -7712,6 +7712,23 @@
       return normalizeMatrix(matrix);
     }
 
+    // Detecta se o arquivo é de sprint (ativo) ou de acompanhamento geral
+    // Retorna 'sprint', 'general' ou 'epics' (ignora épicos nesta visão)
+    function detectVisaoFileType(file, matrix){
+      const fn = lower(normalize(file.name));
+      if(!matrix || !matrix.length) return 'general';
+      // Verifica coluna "Tipo de Item": se tem linhas de Épico → ignora
+      const sample = matrix.slice(0, 5);
+      const hasEpicRows = matrix.slice(0,30).some(r => lower(r.tipo||'').includes('pico'));
+      if(hasEpicRows && !matrix.some(r => lower(r.tipo||'').includes('histor'))) return 'epics';
+      // Heurística de nome de arquivo primeiro
+      if(fn.includes('sprint')) return 'sprint';
+      if(fn.includes('backlog')||fn.includes('acomp')||fn.includes('geral')) return 'general';
+      // Heurística de conteúdo: se a maioria tem sprint não-vazia → sprint
+      const withSprint = matrix.filter(r => r.sprint && normalize(r.sprint));
+      return (withSprint.length / Math.max(matrix.length,1)) >= 0.6 ? 'sprint' : 'general';
+    }
+
     function bindSprintImport(){
       const input = $('sprintFileInput');
       if(!input || input.dataset.bound) return;
@@ -7739,23 +7756,66 @@
     }
 
     $('fileInput').addEventListener('change', async (ev)=>{
-      const file = ev.target.files[0];
-      if(!file) return;
+      const files = Array.from(ev.target.files||[]);
+      if(!files.length) return;
+      ev.target.value = '';
+
+      // Importação simples (1 arquivo): comportamento original
+      if(files.length === 1){
+        try{
+          const parsed = await readJiraFileToRows(files[0]);
+          if(!parsed) return;
+          const type = detectVisaoFileType(files[0], parsed);
+          if(type === 'epics'){ alert('Este arquivo contém Épicos. Use-o no painel SALA (dashboard principal).'); return; }
+          if(type === 'sprint'){
+            sprintRows = parsed.map(r => ({...r, sprintAtual:true}));
+            sprintSourceName = files[0].name;
+          } else {
+            rows = parsed;
+            sourceName = files[0].name;
+          }
+          importDateTime = new Date();
+          setupFilters(); renderAll(); registrarImportacaoBase();
+          alert('Importação concluída: ' + (type==='sprint'?'Sprint Ativa':'Acompanhamento Geral') + ' (' + files[0].name + ')');
+        }catch(err){
+          console.error(err);
+          alert('Não consegui importar o arquivo. Verifique se a planilha segue o padrão de extração do Jira.');
+        }
+        return;
+      }
+
+      // Importação múltipla: detecta e roteia cada arquivo
+      let importedGeneral = false, importedSprint = false, skipped = [];
       try{
-        const parsed = await readJiraFileToRows(file);
-        if(!parsed) return;
-        rows = parsed;
-        sourceName = file.name;
+        for(const file of files){
+          try{
+            const parsed = await readJiraFileToRows(file);
+            if(!parsed || !parsed.length){ skipped.push(file.name + ' (vazio)'); continue; }
+            const type = detectVisaoFileType(file, parsed);
+            if(type === 'epics'){ skipped.push(file.name + ' (épicos — use no SALA)'); continue; }
+            if(type === 'sprint'){
+              sprintRows = parsed.map(r => ({...r, sprintAtual:true}));
+              sprintSourceName = file.name;
+              importedSprint = true;
+            } else {
+              rows = parsed;
+              sourceName = file.name;
+              importedGeneral = true;
+            }
+          }catch(err){
+            skipped.push(file.name + ' (erro: ' + err.message + ')');
+          }
+        }
         importDateTime = new Date();
-        setupFilters();
-        renderAll();
-        registrarImportacaoBase();
-        alert('Importação concluída.');
+        setupFilters(); renderAll(); registrarImportacaoBase();
+        let msg = '📦 ' + files.length + ' arquivo(s) processado(s).\n';
+        if(importedGeneral) msg += '✅ Acompanhamento Geral: ' + sourceName + '\n';
+        if(importedSprint) msg += '✅ Sprint Ativa: ' + sprintSourceName + '\n';
+        if(skipped.length) msg += '⚠️ Ignorados: ' + skipped.join(', ');
+        alert(msg.trim());
       }catch(err){
         console.error(err);
-        alert('Não consegui importar o arquivo. Verifique se a planilha segue o padrão de extração do Jira.');
-      }finally{
-        ev.target.value = '';
+        alert('Erro na importação múltipla: ' + err.message);
       }
     });
 
