@@ -7848,7 +7848,7 @@
       };
       const labels = Object.keys(raw)
         .filter(k => lower(k).includes('rótulo') || lower(k).includes('rotulo') || lower(k).includes('label'))
-        .map(k => normalize(raw[k]))
+        .flatMap(k => String(raw[k] ?? '').split(/[;,|]/).map(v => normalize(v)))
         .filter(v => v && v !== '0');
 
       const situacao = normalize(get('Situação','Status'));
