@@ -2708,6 +2708,13 @@ function loadStoriesXlsx(file){
   reader.onload=function(e){
     try{
       var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      // O arquivo de Épicos também tem "Chave do item" + "Epic Link" (vazia)
+      // e enganaria o detector de estórias — redireciona para a aba Épicos.
+      if(detectUnifiedFileType(wb,file.name)==='epics'){
+        toast('📊 Arquivo de Épicos detectado','Importando na aba Épicos automaticamente.');
+        loadXlsx(file);
+        return;
+      }
       var det=detectStoriesFormat(wb);
       if(!det){
         toast('Formato não reconhecido',
@@ -3006,6 +3013,12 @@ function loadBacklogXlsx(file){
   reader.onload=function(e){
     try{
       var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      // Arquivo de Épicos selecionado no botão errado → redireciona.
+      if(detectUnifiedFileType(wb,file.name)==='epics'){
+        toast('📊 Arquivo de Épicos detectado','Importando na aba Épicos automaticamente.');
+        loadXlsx(file);
+        return;
+      }
       var det=detectBacklogFormat(wb);
       if(!det){
         toast('Formato não reconhecido',
@@ -3805,6 +3818,10 @@ function loadXlsx(file){
       var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
       var det=detectImportFormat(wb);
       if(!det){
+        // Pode ser um arquivo de estórias/backlog no botão errado → redireciona
+        var unified=detectUnifiedFileType(wb,file.name);
+        if(unified==='stories'){ toast('📋 Arquivo de Estórias detectado','Importando na aba Qtd Story/Épicos automaticamente.'); loadStoriesXlsx(file); return; }
+        if(unified==='backlog'){ toast('📥 Arquivo de Backlog detectado','Importando na aba Backlog/Refinamento automaticamente.'); loadBacklogXlsx(file); return; }
         toast('Formato não reconhecido',
           'Colunas esperadas: "Épico" (ID) + "Situação" + "Resumo" (padrão Jira) OU "ID Épico" + "Squad" + "Data Início" (padrão nativo).','err');
         return;
