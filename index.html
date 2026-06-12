@@ -703,13 +703,13 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 <!-- UPLOAD -->
 <div class="upbar" id="upbar">
   <span class="up-ico">📂</span>
-  <span class="up-name" id="upName">Carregar arquivo Excel</span>
-  <span class="up-sub" id="upSub">Arraste ou clique · .xlsx</span>
+  <span class="up-name" id="upName">Épicos Pós-Identificado por Time</span>
+  <span class="up-sub" id="upSub">Export Jira "_Epicos_Pós-Identificado_por_Time" · .xlsx ou .csv</span>
   <span class="up-saved hidden" id="upSaved">💾 <span id="upSavedTxt">Salvo localmente</span></span>
   <input type="file" id="fi" accept=".xlsx,.xls,.csv">
   <input type="file" id="fiAll" accept=".xlsx,.xls,.csv" multiple>
-  <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar apenas o arquivo de Épicos">Selecionar arquivo</button>
-  <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Selecione todos os CSVs de uma vez — épicos, estórias e backlog são detectados automaticamente">📦 Importar Tudo</button>
+  <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
+  <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Selecione os 3 arquivos do dashboard de uma vez: _Epicos + QTD_Epicos_atrelados_a_story + Story_no_Backlog_Refinadas — cada um é detectado automaticamente">📦 Importar Tudo</button>
 </div>
 
 <!-- ══ ÉPICOS PANE ══ -->
@@ -906,10 +906,10 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
   <div class="sv-upbar" id="svUpbar">
     <span style="font-size:13px;flex-shrink:0">📋</span>
-    <span class="sv-up-name" id="svUpName">Carregar planilha de Estórias</span>
-    <span class="sv-up-sub" id="svUpSub">Export Jira · Issue Type = Story · .xlsx</span>
+    <span class="sv-up-name" id="svUpName">QTD Épicos atrelados a Story</span>
+    <span class="sv-up-sub" id="svUpSub">Export Jira "QTD_Epicos_atrelados_a_story" · .xlsx ou .csv</span>
     <span class="up-saved hidden" id="svUpSaved">💾 <span id="svUpSavedTxt">Salvo localmente</span></span>
-    <input type="file" id="fiSv" accept=".xlsx,.xls">
+    <input type="file" id="fiSv" accept=".xlsx,.xls,.csv">
     <button class="up-btn" onclick="document.getElementById('fiSv').click()">Selecionar arquivo</button>
   </div>
 
@@ -931,10 +931,10 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 
   <div class="sv-upbar" id="bkUpbar">
     <span style="font-size:13px;flex-shrink:0">📥</span>
-    <span class="sv-up-name" id="bkUpName">Importar export do Jira — Product Backlog</span>
-    <span class="sv-up-sub" id="bkUpSub">Histórias em backlog · Export Jira filtrado por status · .xlsx</span>
+    <span class="sv-up-name" id="bkUpName">Story no Backlog Refinadas</span>
+    <span class="sv-up-sub" id="bkUpSub">Export Jira "Story_no_Backlog_Refinadas" · cria snapshot de evolução · .xlsx ou .csv</span>
     <span class="up-saved hidden" id="bkUpSaved">💾 <span id="bkUpSavedTxt">Salvo localmente</span></span>
-    <input type="file" id="fiBk" accept=".xlsx,.xls">
+    <input type="file" id="fiBk" accept=".xlsx,.xls,.csv">
     <input type="file" id="fiBkJson" accept=".json" style="display:none">
     <button class="up-btn" onclick="document.getElementById('fiBk').click()">Selecionar arquivo</button>
     <button class="up-btn" style="background:#0f172a" onclick="exportBacklogJson()" title="Baixar todos os snapshots como .json para compartilhar com o time">⬇ Exportar Backlog</button>
@@ -3455,11 +3455,20 @@ function getSquadAccent(sq){
 // ════════════════════════════════════════
 // IMPORTAÇÃO UNIFICADA (multi-arquivo)
 // ════════════════════════════════════════
+//
+// Mapeamento correto dos arquivos Jira → destino:
+//   _Epicos_Pós-Identificado     → 'epics'        → Tab Épicos
+//   QTD_Epicos_atrelados_a_story → 'stories'       → Tab 📋 Qtd Story/Épicos
+//   Story_no_Backlog_Refinadas   → 'backlog'       → Tab Backlog/Refinamento
+//   Sprint_ativa                 → 'sprint_visao'  → Visão de Projetos: Importar Sprint
+//   Acomp._Geral_Todas_Squads    → 'general_visao' → Visão de Projetos: botão JIRA
 
-// Detecta o tipo de um workbook já lido: 'epics', 'stories', 'backlog' ou 'unknown'
+// Detecta o tipo de um workbook já lido
+// Retorna: 'epics' | 'stories' | 'backlog' | 'sprint_visao' | 'general_visao' | 'unknown'
 function detectUnifiedFileType(wb, fileName){
   var fn=stripAcc((fileName||'').toLowerCase());
-  // Percorre abas para achar cabeçalhos
+
+  // Percorre abas para achar cabeçalhos com "Tipo de Item" + "Chave do item"
   for(var s=0;s<wb.SheetNames.length;s++){
     var ws=wb.Sheets[wb.SheetNames[s]];
     if(!ws) continue;
@@ -3471,10 +3480,10 @@ function detectUnifiedFileType(wb, fileName){
       var tipoIdx=cells.findIndex(function(c){return c==='tipo de item'||c==='tipo';});
       var chaveIdx=cells.findIndex(function(c){return isChaveCol(c);});
       if(tipoIdx<0||chaveIdx<0) continue;
-      // Lê até 40 linhas de dados para checar
-      var epicCnt=0,historiaCnt=0,pbCnt=0,sprintCnt=0;
+
+      // Lê até 40 linhas de dados
+      var epicCnt=0,historiaCnt=0,pbCnt=0;
       var statusIdx=cells.findIndex(function(c){return c.indexOf('situac')>=0||c==='status';});
-      var sprintIdx=cells.findIndex(function(c){return c.indexOf('sprint')>=0;});
       for(var k=i+1;k<Math.min(i+41,rows.length);k++){
         var dr=rows[k]; if(!dr) continue;
         var tipo=stripAcc((dr[tipoIdx]||'').toString()).toLowerCase().trim();
@@ -3483,20 +3492,27 @@ function detectUnifiedFileType(wb, fileName){
           historiaCnt++;
           var st=statusIdx>=0?stripAcc((dr[statusIdx]||'').toString()).toLowerCase().trim():'';
           if(st==='product backlog') pbCnt++;
-          if(sprintIdx>=0&&dr[sprintIdx]) sprintCnt++;
         }
       }
+
+      // 1. Arquivo de Épicos: tem linhas "Épico" no Tipo de Item
       if(epicCnt>0) return 'epics';
+
       if(historiaCnt>0){
-        // Nome do arquivo tem prioridade para desambiguação
-        if(fn.indexOf('backlog')>=0||fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'backlog';
-        if(fn.indexOf('sprint')>=0||fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
-        // Heurística de conteúdo: ≥90% Product Backlog → backlog
-        return (historiaCnt>0&&pbCnt/historiaCnt>=0.9)?'backlog':'stories';
+        // 2. Sprint ativa → Visão de Projetos (Importar Sprint do Jira)
+        if(fn.indexOf('sprint')>=0) return 'sprint_visao';
+        // 3. Acomp. Geral → Visão de Projetos (botão JIRA)
+        if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
+        // 4. Story no Backlog → Tab Backlog/Refinamento
+        if(fn.indexOf('backlog')>=0) return 'backlog';
+        // 5. QTD Epicos → Tab Qtd Story/Épicos
+        if(fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
+        // Heurística de conteúdo: ≥90% Product Backlog → backlog; senão → stories
+        return (pbCnt/historiaCnt>=0.9)?'backlog':'stories';
       }
     }
   }
-  // Fallback para detectores já existentes
+  // Fallback para detectores já existentes (formatos anteriores)
   if(detectImportFormat(wb)) return 'epics';
   if(detectStoriesFormat(wb)) return 'stories';
   if(detectBacklogFormat(wb)) return 'backlog';
@@ -3513,18 +3529,33 @@ function loadMultipleFiles(files){
   var fileList=Array.from(files);
   if(!fileList.length) return;
   var pending=fileList.length;
-  var detected={epics:null,stories:null,backlog:[],unknown:[]};
+  var detected={epics:null,stories:null,backlog:[],sprint_visao:[],general_visao:[],unknown:[]};
 
   function processWhenReady(){
     var lines=[];
-    if(detected.epics){loadXlsx(detected.epics);lines.push('📊 Épicos: '+detected.epics.name);}
-    if(detected.stories){loadStoriesXlsx(detected.stories);lines.push('📋 Estórias: '+detected.stories.name);}
-    detected.backlog.forEach(function(f){loadBacklogXlsx(f);lines.push('📥 Backlog: '+f.name);});
+    if(detected.epics){
+      loadXlsx(detected.epics);
+      lines.push('📊 Épicos → Tab Épicos');
+    }
+    if(detected.stories){
+      loadStoriesXlsx(detected.stories);
+      lines.push('📋 QTD Story/Épicos → Tab Qtd Story/Épicos');
+    }
+    detected.backlog.forEach(function(f){
+      loadBacklogXlsx(f);
+      lines.push('📥 Backlog → Tab Backlog/Refinamento');
+    });
+    if(detected.sprint_visao.length){
+      lines.push('⚡ Sprint Ativa → abra a Visão de Projetos e use "Importar Sprint do Jira"');
+    }
+    if(detected.general_visao.length){
+      lines.push('🌐 Acomp. Geral → abra a Visão de Projetos e use o botão "JIRA"');
+    }
     if(detected.unknown.length) lines.push('⚠️ Não identificado: '+detected.unknown.join(', '));
-    if(!detected.epics&&!detected.stories&&!detected.backlog.length){
+    if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.sprint_visao.length&&!detected.general_visao.length){
       toast('Nenhum arquivo reconhecido','Verifique se os arquivos são exports do Jira (.xlsx ou .csv).','err');
     } else {
-      toast('📦 Importação em andamento',lines.join(' · '));
+      toast('📦 Importação Tudo',lines.join(' · '));
     }
   }
 
@@ -3537,6 +3568,8 @@ function loadMultipleFiles(files){
         if(type==='epics') detected.epics=file;
         else if(type==='stories') detected.stories=file;
         else if(type==='backlog') detected.backlog.push(file);
+        else if(type==='sprint_visao') detected.sprint_visao.push(file);
+        else if(type==='general_visao') detected.general_visao.push(file);
         else detected.unknown.push(file.name);
       }catch(err){
         detected.unknown.push(file.name+'(erro)');

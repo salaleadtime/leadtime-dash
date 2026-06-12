@@ -5258,7 +5258,7 @@
         <p>Visão estratégica e operacional para acompanhar entregas, bloqueios, dependências e rota de produção.</p>
       </div>
       <div class="toolbar">
-        <label class="file-label" title="Selecione um ou mais arquivos do Jira — épicos são ignorados, sprint e geral são detectados automaticamente">
+        <label class="file-label" title="Acomp._Geral_Todas_Squads — ou selecione múltiplos arquivos (Acomp.Geral + Sprint_ativa) para importar tudo de uma vez">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
           JIRA
           <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
@@ -5547,9 +5547,9 @@
           </div>
 
           <div class="sprint-actions">
-            <label class="file-label-mini">
-              Importar sprint do Jira
-              <input id="sprintFileInput" type="file" accept=".xlsx,.xls,.csv" />
+            <label class="file-label-mini" title="Arquivo Sprint_ativa do Jira">
+              Importar Sprint do Jira
+              <input id="sprintFileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
             </label>
             <button class="btn btn-soft" onclick="openList('Histórias da sprint atual', filteredSprintRows())">Ver histórias</button>
           </div>
@@ -7734,23 +7734,29 @@
       if(!input || input.dataset.bound) return;
       input.dataset.bound = 'true';
       input.addEventListener('change', async (ev)=>{
-        const file = ev.target.files[0];
-        if(!file) return;
-        try{
-          const parsed = await readJiraFileToRows(file);
-          if(!parsed) return;
-          sprintRows = parsed.map(row => ({...row, sprintAtual:true}));
-          sprintSourceName = file.name;
+        const files = Array.from(ev.target.files||[]);
+        ev.target.value = '';
+        if(!files.length) return;
+        // Aceita múltiplos arquivos: Sprint_ativa vai para sprintRows, outros são ignorados
+        let importedSprint = false;
+        for(const file of files){
+          try{
+            const parsed = await readJiraFileToRows(file);
+            if(!parsed || !parsed.length) continue;
+            const type = detectVisaoFileType(file, parsed);
+            if(type === 'sprint' || files.length === 1){
+              sprintRows = parsed.map(row => ({...row, sprintAtual:true}));
+              sprintSourceName = file.name;
+              importedSprint = true;
+            }
+          }catch(err){ console.error(err); }
+        }
+        if(importedSprint){
           importDateTime = new Date();
-          setupFilters();
-          renderAll();
-          registrarImportacaoBase();
-          alert('Importação da sprint concluída.');
-        }catch(err){
-          console.error(err);
-          alert('Não consegui importar a planilha da sprint. Verifique se ela segue o padrão de extração do Jira.');
-        }finally{
-          ev.target.value = '';
+          setupFilters(); renderAll(); registrarImportacaoBase();
+          alert('Sprint importada: ' + sprintSourceName);
+        } else {
+          alert('Nenhum arquivo de Sprint Ativa encontrado. Use o arquivo "Sprint_ativa" do Jira.');
         }
       });
     }
