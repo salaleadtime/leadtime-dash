@@ -1463,6 +1463,19 @@ function replaceFromSharedSource(rows){
 // LOCAL STORAGE (auto-save)
 // ═══════════════════════════════════════
 
+// ID de épico válido: chave Jira (SLOPC-12345). Rejeita linhas de legenda,
+// notas e células mescladas que viram "épico" ao reimportar o Excel exportado.
+function isValidEpicId(id){
+  if(!id) return false;
+  var t=id.toString().trim();
+  if(!t) return false;
+  if(/\s/.test(t)) return false;          // chaves Jira nunca têm espaço
+  if(t.length>40) return false;           // texto longo = legenda/nota
+  if(/[|=ℹ]/.test(t)) return false;       // caracteres de legenda
+  if(/^\d+$/.test(t)&&t.length<5) return false; // números puros curtos
+  return true;
+}
+
 // Preenche squad vazio nos épicos a partir das stories carregadas.
 // Necessário quando o arquivo de épicos não traz a coluna Team/Squad.
 function backfillEpicSquads(){
@@ -1474,6 +1487,9 @@ function backfillEpicSquads(){
 
 function saveLocal(){
   try{
+    // Expurga linhas-lixo (legendas importadas como épico) que possam ter
+    // entrado por versões antigas ou pela nuvem.
+    allData=allData.filter(function(r){ return r&&r.id&&isValidEpicId(r.id); });
     normalizeWorkflowAll();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
     localStorage.setItem(STORAGE_META, JSON.stringify({savedAt:new Date().toISOString()}));
@@ -1488,6 +1504,7 @@ function loadLocal(){
     var raw=localStorage.getItem(STORAGE_KEY);
     if(!raw) return null;
     var data=JSON.parse(raw);
+    if(Array.isArray(data)) data=data.filter(function(r){ return r&&r.id&&isValidEpicId(r.id); });
     return Array.isArray(data)&&data.length?data:null;
   }catch(e){ return null; }
 }
@@ -3827,8 +3844,8 @@ function loadXlsx(file){
         if(rawId===null||rawId===undefined) continue;
         var id=rawId.toString().trim();
         if(!id) continue;
-        // Aceita IDs no formato SLOPC-XXXXX ou similar (mas não números puros)
-        if(/^\d+$/.test(id) && id.length<5){ stats.skipped++; continue; }
+        // Aceita IDs no formato SLOPC-XXXXX ou similar (rejeita legendas/notas)
+        if(!isValidEpicId(id)){ stats.skipped++; continue; }
 
         var old=existing[id];
 
