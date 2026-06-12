@@ -2744,6 +2744,20 @@ function loadStoriesXlsx(file){
         stories.push({id:id,epic:epic,epicName:epicName,resumo:resumo,status:status,squad:squad});
       }
       if(!stories.length){
+        // Defesa extra: se as linhas lidas são Épicos (Tipo de Item = "Épico"
+        // com Epic Link vazio), é o arquivo de Épicos → importa na aba certa.
+        if(m.tipo>=0){
+          var epicosNoArquivo=0;
+          for(var t=det.hrow+1;t<rows.length;t++){
+            var tv=rows[t]&&rows[t][m.tipo]?stripAcc(rows[t][m.tipo].toString()).toLowerCase():'';
+            if(tv.indexOf('epico')>=0||tv==='epic') epicosNoArquivo++;
+          }
+          if(epicosNoArquivo>0){
+            toast('📊 Arquivo de Épicos detectado','Importando na aba Épicos automaticamente.');
+            loadXlsx(file);
+            return;
+          }
+        }
         toast('Nenhuma estória com vínculo de épico',
           (idsSemVinculo?idsSemVinculo+' linha(s) lidas, mas ':'')+'nenhuma tinha "Epic Link" nem "Parent" preenchido. '+
           'Reexporte do Jira incluindo a coluna do épico pai (Epic Link ou Parent).','err');
