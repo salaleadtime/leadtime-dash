@@ -4590,6 +4590,11 @@ var SEED=[
   jbLoadConfig();
   jbUpdateBtn();
 
+  // Pre-warm do GAS: acorda o servidor o mais cedo possível para que o cold-start
+  // já esteja resolvido quando gasLoadBacklog() disparar logo abaixo (~200 ms depois).
+  // O health endpoint é leve e não retorna dados, só aquece a instância do Apps Script.
+  if(BK_GAS_URL){ try{ _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){}); }catch(e){} }
+
   // BOOT CLOUD-FIRST com render imediato do cache:
   // Renderiza o cache local primeiro para evitar tela em branco no F5,
   // depois o Google Sheets sobrescreve via replaceFromSharedSource (que preserva a aba atual).

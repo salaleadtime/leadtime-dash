@@ -8105,6 +8105,8 @@
     if(importDateTime && $('baseInfo')){
       $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
     }
+    // Pre-warm do GAS para reduzir o cold-start antes de gasLoadAndApplyVpAll()
+    if(_VP_GAS_URL){ try{ _vpGasJsonp(_VP_GAS_URL+'?action=health&t='+Date.now(), function(){}); }catch(e){} }
     // Sincroniza com o servidor ao abrir e a cada 2 min — dados importados por
     // qualquer usuário ficam visíveis para todo o time sem re-importar.
     gasLoadAndApplyVpAll();
