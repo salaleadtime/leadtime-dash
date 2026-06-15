@@ -83,8 +83,6 @@
     .btn-white{background:#fff;color:var(--red-dark)}
     .btn-ghost{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.28)}
     .btn-red{background:var(--red);color:#fff}
-    .btn-excel{background:#217346;color:#fff;border-color:#1a5c38}
-    .btn-excel:hover{background:#1a5c38}
     .btn-soft{background:#F7F8FB;color:var(--text);border:1px solid var(--line)}
     .file-label{
       display:inline-flex;
@@ -5265,11 +5263,10 @@
           JIRA
           <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
         </label>
-        <button class="btn btn-excel" onclick="exportVisaoXlsx()" title="Exportar dados filtrados — layout Bradesco com data/hora da exportação">
+        <button class="btn btn-white" id="btnExcelVp" onclick="exportVisaoXlsx()" title="Exportar dados filtrados — layout Bradesco com data/hora da exportação">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Excel
         </button>
-        <button class="btn btn-white" onclick="gasLoadAndApplyVpAll();this.textContent='🔄 Sincronizando…';var b=this;setTimeout(function(){b.innerHTML='<svg class=\"btn-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"23 4 23 10 17 10\"/><path d=\"M20.49 15a9 9 0 1 1-2.12-9.36L23 10\"/></svg> Atualizar';},3000);" title="Busca dados atualizados do servidor">
+        <button class="btn btn-white" id="btnAtualizarVp" onclick="vpForceRefresh()" title="Busca dados atualizados do servidor">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Atualizar
         </button>
@@ -5869,6 +5866,15 @@
     }
 
     // Carrega todos os dados compartilhados do servidor e aplica se mais recentes
+    function vpForceRefresh(){
+      var btn = document.getElementById('btnAtualizarVp');
+      if(btn){ btn.disabled = true; btn.style.opacity = '.5'; }
+      gasLoadAndApplyVpAll();
+      setTimeout(function(){
+        if(btn){ btn.disabled = false; btn.style.opacity = ''; }
+      }, 3000);
+    }
+
     function gasLoadAndApplyVpAll(){
       gasLoadVpData('vpGeral', function(err, serverData){
         if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
