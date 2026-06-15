@@ -5827,6 +5827,84 @@
       }
     }
 
+    // ─── Sync com servidor (mesmo BK_GAS_URL do dashboard principal) ─────────
+    var _VP_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+
+    function _vpGasJsonp(url, cb){
+      var name='_vpGP_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+      var script=document.createElement('script');
+      var done=false;
+      window[name]=function(data){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb(null,data); };
+      script.onerror=function(){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb('script error'); };
+      script.src=url+'&callback='+name;
+      document.head.appendChild(script);
+    }
+
+    function gasLoadVpData(key, cb){
+      if(!_VP_GAS_URL){ if(cb) cb('no url'); return; }
+      _vpGasJsonp(_VP_GAS_URL+'?action=getVpData&key='+encodeURIComponent(key)+'&t='+Date.now(), function(err,json){
+        if(err){ if(cb) cb(err); return; }
+        if(json && json.ok){ if(cb) cb(null, json.data); }
+        else { if(cb) cb(null, null); }
+      });
+    }
+
+    function gasSaveVpData(key, data){
+      if(!_VP_GAS_URL) return;
+      fetch(_VP_GAS_URL, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'action=saveVpData&key='+encodeURIComponent(key)+'&payload='+encodeURIComponent(JSON.stringify(data))
+      }).catch(function(){});
+    }
+
+    // Carrega todos os dados compartilhados do servidor e aplica se mais recentes
+    function gasLoadAndApplyVpAll(){
+      gasLoadVpData('vpGeral', function(err, serverData){
+        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
+        var local = readStoredJSON('vpBaseGeralImportada', null);
+        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
+        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
+        if(serverTime > localTime){
+          rows = serverData.rows.map(applyRefinementRule);
+          if(serverData.sourceName) sourceName = serverData.sourceName;
+          localStorage.setItem('vpBaseGeralImportada', JSON.stringify(serverData));
+          try{ renderAll(); }catch(e){}
+        }
+      });
+      gasLoadVpData('vpSprint', function(err, serverData){
+        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
+        var local = readStoredJSON('vpBaseSprintImportada', null);
+        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
+        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
+        if(serverTime > localTime){
+          sprintRows = serverData.rows.map(function(row){ return applyRefinementRule(Object.assign({}, row, {sprintAtual:true})); });
+          if(serverData.sourceName) sprintSourceName = serverData.sourceName;
+          localStorage.setItem('vpBaseSprintImportada', JSON.stringify(serverData));
+          try{ renderAll(); }catch(e){}
+        }
+      });
+      gasLoadVpData('vpOpUpdates', function(err, serverData){
+        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
+        operationalUpdates = serverData;
+        localStorage.setItem('jiraDashboardOperationalUpdates', JSON.stringify(operationalUpdates));
+        try{ renderAll(); }catch(e){}
+      });
+      gasLoadVpData('vpQuickNotes', function(err, serverData){
+        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
+        executiveQuickNotes = serverData;
+        localStorage.setItem('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+        try{ renderAll(); }catch(e){}
+      });
+      gasLoadVpData('vpDeliveries', function(err, serverData){
+        if(err || !Array.isArray(serverData)) return;
+        deliveries = serverData;
+        localStorage.setItem('jiraDashboardDeliveries', JSON.stringify(deliveries));
+        try{ renderAll(); }catch(e){}
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const deliveriesEverSaved = localStorage.getItem('jiraDashboardDeliveries') !== null;
     let deliveries = readStoredJSON('jiraDashboardDeliveries', []);
     let editingDeliveryIndex = null;
@@ -5947,6 +6025,7 @@
 
     function saveOperationalUpdates(){
       localStorage.setItem('jiraDashboardOperationalUpdates', JSON.stringify(operationalUpdates));
+      gasSaveVpData('vpOpUpdates', operationalUpdates);
     }
 
     const initialData = initialDataRaw.map(applyRefinementRule);
@@ -5961,8 +6040,13 @@
     const IMPORTED_SPRINT_KEY = 'vpBaseSprintImportada';
     function persistImportedBases(){
       try{
-        localStorage.setItem(IMPORTED_GENERAL_KEY, JSON.stringify({rows, sourceName}));
-        localStorage.setItem(IMPORTED_SPRINT_KEY, JSON.stringify({rows: sprintRows, sourceName: sprintSourceName}));
+        const importedAt = new Date().toISOString();
+        const geralData  = {rows, sourceName, importedAt};
+        const sprintData = {rows: sprintRows, sourceName: sprintSourceName, importedAt};
+        localStorage.setItem(IMPORTED_GENERAL_KEY, JSON.stringify(geralData));
+        localStorage.setItem(IMPORTED_SPRINT_KEY,  JSON.stringify(sprintData));
+        gasSaveVpData('vpGeral',  geralData);
+        gasSaveVpData('vpSprint', sprintData);
       }catch(err){
         console.warn('Não foi possível salvar a base importada no navegador.', err);
       }
@@ -6749,6 +6833,7 @@
       const key = getExecutiveNoteKey();
       executiveQuickNotes[key] = noteEl.value;
       localStorage.setItem('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+      gasSaveVpData('vpQuickNotes', executiveQuickNotes);
       if($('executiveNoteSaved')) $('executiveNoteSaved').textContent = 'Anotação salva automaticamente.';
     }
 
@@ -6756,6 +6841,7 @@
       const key = getExecutiveNoteKey();
       executiveQuickNotes[key] = '';
       localStorage.setItem('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+      gasSaveVpData('vpQuickNotes', executiveQuickNotes);
       if($('executiveQuickNote')) $('executiveQuickNote').value = '';
       if($('executiveNoteSaved')) $('executiveNoteSaved').textContent = 'Anotação limpa.';
     }
@@ -7674,6 +7760,7 @@
 
     function saveDeliveries(){
       localStorage.setItem('jiraDashboardDeliveries', JSON.stringify(deliveries));
+      gasSaveVpData('vpDeliveries', deliveries);
     }
 
     function getDeliveryStories(d){
@@ -8018,6 +8105,10 @@
     if(importDateTime && $('baseInfo')){
       $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
     }
+    // Sincroniza com o servidor ao abrir e a cada 2 min — dados importados por
+    // qualquer usuário ficam visíveis para todo o time sem re-importar.
+    gasLoadAndApplyVpAll();
+    setInterval(gasLoadAndApplyVpAll, 120000);
   </script>
 </body>
 </html>

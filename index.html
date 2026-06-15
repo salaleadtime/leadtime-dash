@@ -4635,6 +4635,8 @@ function _trySheets(silent){
       replaceFromSharedSource(sheetsData);
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
       if(silent) toast('🔄 Dados atualizados','O dashboard recebeu os dados oficiais do Google Sheets.');
+      // Garante que backlog e estórias também sejam atualizados junto com os épicos
+      if(BK_GAS_URL) try{ gasLoadBacklog(function(){}); }catch(e){}
     }, !!silent);
   }
 }

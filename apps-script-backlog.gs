@@ -24,11 +24,24 @@
  * 6. Executar como: Eu | Quem pode acessar: Qualquer pessoa.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-06-03-backlog-sheet-chunks-v3';
+var BACKLOG_SCRIPT_VERSION = '2026-06-15-backlog-sheet-chunks-v4';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
 var CHUNK_SIZE = 45000;
+
+// Visão de Projetos — armazenamento compartilhado por chave
+var VP_SHEET_MAP = {
+  vpGeral:      '_vp_geral',
+  vpSprint:     '_vp_sprint',
+  vpDeliveries: '_vp_deliveries',
+  vpOpUpdates:  '_vp_opupdates',
+  vpQuickNotes: '_vp_quicknotes'
+};
+
+function getVpSheet_(key) {
+  return VP_SHEET_MAP[key] || null;
+}
 
 function autorizarPlanilhaUmaVez() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -74,6 +87,16 @@ function doGet(e) {
       version: BACKLOG_SCRIPT_VERSION,
       stories: stories
     }, callback);
+  }
+
+  if (action === 'getVpData') {
+    var key = getParam_(e, 'key');
+    var sheetName = getVpSheet_(key);
+    if (!sheetName) {
+      return jsonOut_({ ok: false, error: 'chave inválida: ' + key }, callback);
+    }
+    var vpData = readJsonFromSheet_(sheetName, null);
+    return jsonOut_({ ok: true, data: vpData }, callback);
   }
 
   return jsonOut_({
@@ -145,6 +168,22 @@ function doPost(e) {
           version: BACKLOG_SCRIPT_VERSION,
           error: 'payload inválido: ' + String(err && err.message || err)
         });
+      }
+    }
+
+    if (action === 'saveVpData') {
+      var vpKey = getParam_(e, 'key');
+      var vpSheetName = getVpSheet_(vpKey);
+      if (!vpSheetName) {
+        return jsonOut_({ ok: false, error: 'chave inválida: ' + vpKey });
+      }
+      var vpPayload = getParam_(e, 'payload') || 'null';
+      try {
+        var vpData = JSON.parse(vpPayload);
+        writeJsonToSheet_(vpSheetName, vpData);
+        return jsonOut_({ ok: true, key: vpKey });
+      } catch (vpErr) {
+        return jsonOut_({ ok: false, error: 'payload inválido: ' + String(vpErr && vpErr.message || vpErr) });
       }
     }
 
