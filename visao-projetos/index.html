@@ -83,6 +83,8 @@
     .btn-white{background:#fff;color:var(--red-dark)}
     .btn-ghost{background:rgba(255,255,255,.13);color:#fff;border:1px solid rgba(255,255,255,.28)}
     .btn-red{background:var(--red);color:#fff}
+    .btn-excel{background:#217346;color:#fff;border-color:#1a5c38}
+    .btn-excel:hover{background:#1a5c38}
     .btn-soft{background:#F7F8FB;color:var(--text);border:1px solid var(--line)}
     .file-label{
       display:inline-flex;
@@ -5263,6 +5265,14 @@
           JIRA
           <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
         </label>
+        <button class="btn btn-excel" onclick="exportVisaoXlsx()" title="Exportar dados filtrados — layout Bradesco com data/hora da exportação">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Excel
+        </button>
+        <button class="btn btn-white" onclick="gasLoadAndApplyVpAll();this.textContent='🔄 Sincronizando…';var b=this;setTimeout(function(){b.innerHTML='<svg class=\"btn-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"23 4 23 10 17 10\"/><path d=\"M20.49 15a9 9 0 1 1-2.12-9.36L23 10\"/></svg> Atualizar';},3000);" title="Busca dados atualizados do servidor">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
         <a class="btn btn-white" href="../" style="text-decoration:none;" title="Voltar para SALA">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           SALA
@@ -5827,6 +5837,84 @@
       }
     }
 
+    // ─── Sync com servidor (mesmo BK_GAS_URL do dashboard principal) ─────────
+    var _VP_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+
+    function _vpGasJsonp(url, cb){
+      var name='_vpGP_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+      var script=document.createElement('script');
+      var done=false;
+      window[name]=function(data){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb(null,data); };
+      script.onerror=function(){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb('script error'); };
+      script.src=url+'&callback='+name;
+      document.head.appendChild(script);
+    }
+
+    function gasLoadVpData(key, cb){
+      if(!_VP_GAS_URL){ if(cb) cb('no url'); return; }
+      _vpGasJsonp(_VP_GAS_URL+'?action=getVpData&key='+encodeURIComponent(key)+'&t='+Date.now(), function(err,json){
+        if(err){ if(cb) cb(err); return; }
+        if(json && json.ok){ if(cb) cb(null, json.data); }
+        else { if(cb) cb(null, null); }
+      });
+    }
+
+    function gasSaveVpData(key, data){
+      if(!_VP_GAS_URL) return;
+      fetch(_VP_GAS_URL, {
+        method:'POST', mode:'no-cors',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'action=saveVpData&key='+encodeURIComponent(key)+'&payload='+encodeURIComponent(JSON.stringify(data))
+      }).catch(function(){});
+    }
+
+    // Carrega todos os dados compartilhados do servidor e aplica se mais recentes
+    function gasLoadAndApplyVpAll(){
+      gasLoadVpData('vpGeral', function(err, serverData){
+        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
+        var local = readStoredJSON('vpBaseGeralImportada', null);
+        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
+        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
+        if(serverTime > localTime){
+          rows = serverData.rows.map(applyRefinementRule);
+          if(serverData.sourceName) sourceName = serverData.sourceName;
+          localStorage.setItem('vpBaseGeralImportada', JSON.stringify(serverData));
+          try{ renderAll(); }catch(e){}
+        }
+      });
+      gasLoadVpData('vpSprint', function(err, serverData){
+        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
+        var local = readStoredJSON('vpBaseSprintImportada', null);
+        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
+        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
+        if(serverTime > localTime){
+          sprintRows = serverData.rows.map(function(row){ return applyRefinementRule(Object.assign({}, row, {sprintAtual:true})); });
+          if(serverData.sourceName) sprintSourceName = serverData.sourceName;
+          localStorage.setItem('vpBaseSprintImportada', JSON.stringify(serverData));
+          try{ renderAll(); }catch(e){}
+        }
+      });
+      gasLoadVpData('vpOpUpdates', function(err, serverData){
+        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
+        operationalUpdates = serverData;
+        localStorage.setItem('jiraDashboardOperationalUpdates', JSON.stringify(operationalUpdates));
+        try{ renderAll(); }catch(e){}
+      });
+      gasLoadVpData('vpQuickNotes', function(err, serverData){
+        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
+        executiveQuickNotes = serverData;
+        localStorage.setItem('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+        try{ renderAll(); }catch(e){}
+      });
+      gasLoadVpData('vpDeliveries', function(err, serverData){
+        if(err || !Array.isArray(serverData)) return;
+        deliveries = serverData;
+        localStorage.setItem('jiraDashboardDeliveries', JSON.stringify(deliveries));
+        try{ renderAll(); }catch(e){}
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const deliveriesEverSaved = localStorage.getItem('jiraDashboardDeliveries') !== null;
     let deliveries = readStoredJSON('jiraDashboardDeliveries', []);
     let editingDeliveryIndex = null;
@@ -5947,6 +6035,7 @@
 
     function saveOperationalUpdates(){
       localStorage.setItem('jiraDashboardOperationalUpdates', JSON.stringify(operationalUpdates));
+      gasSaveVpData('vpOpUpdates', operationalUpdates);
     }
 
     const initialData = initialDataRaw.map(applyRefinementRule);
@@ -5961,8 +6050,13 @@
     const IMPORTED_SPRINT_KEY = 'vpBaseSprintImportada';
     function persistImportedBases(){
       try{
-        localStorage.setItem(IMPORTED_GENERAL_KEY, JSON.stringify({rows, sourceName}));
-        localStorage.setItem(IMPORTED_SPRINT_KEY, JSON.stringify({rows: sprintRows, sourceName: sprintSourceName}));
+        const importedAt = new Date().toISOString();
+        const geralData  = {rows, sourceName, importedAt};
+        const sprintData = {rows: sprintRows, sourceName: sprintSourceName, importedAt};
+        localStorage.setItem(IMPORTED_GENERAL_KEY, JSON.stringify(geralData));
+        localStorage.setItem(IMPORTED_SPRINT_KEY,  JSON.stringify(sprintData));
+        gasSaveVpData('vpGeral',  geralData);
+        gasSaveVpData('vpSprint', sprintData);
       }catch(err){
         console.warn('Não foi possível salvar a base importada no navegador.', err);
       }
@@ -6749,6 +6843,7 @@
       const key = getExecutiveNoteKey();
       executiveQuickNotes[key] = noteEl.value;
       localStorage.setItem('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+      gasSaveVpData('vpQuickNotes', executiveQuickNotes);
       if($('executiveNoteSaved')) $('executiveNoteSaved').textContent = 'Anotação salva automaticamente.';
     }
 
@@ -6756,6 +6851,7 @@
       const key = getExecutiveNoteKey();
       executiveQuickNotes[key] = '';
       localStorage.setItem('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+      gasSaveVpData('vpQuickNotes', executiveQuickNotes);
       if($('executiveQuickNote')) $('executiveQuickNote').value = '';
       if($('executiveNoteSaved')) $('executiveNoteSaved').textContent = 'Anotação limpa.';
     }
@@ -7674,6 +7770,7 @@
 
     function saveDeliveries(){
       localStorage.setItem('jiraDashboardDeliveries', JSON.stringify(deliveries));
+      gasSaveVpData('vpDeliveries', deliveries);
     }
 
     function getDeliveryStories(d){
@@ -8010,6 +8107,133 @@
         .replace(/[\r\n]+/g,' ');
     }
 
+    // ─── Exportação Excel — Layout Bradesco ──────────────────────────────────
+    function exportVisaoXlsx(){
+      if(typeof XLSX === 'undefined'){
+        alert('Biblioteca Excel ainda carregando. Tente novamente em alguns segundos.');
+        return;
+      }
+      const now = new Date();
+      const dtLabel = now.toLocaleString('pt-BR',{
+        day:'2-digit',month:'2-digit',year:'numeric',
+        hour:'2-digit',minute:'2-digit',second:'2-digit'
+      });
+      const dtFile = now.toISOString().replace(/[:.]/g,'-').slice(0,19);
+
+      const wb = XLSX.utils.book_new();
+
+      // --- Cabeçalho de metadados ---
+      function metaRows(viewName, filterDesc){
+        return [
+          ['Lead Time SALA — Visão de Projetos'],
+          ['Exportado em:', dtLabel],
+          ['Visão:', viewName],
+          ['Filtros:', filterDesc],
+          [] // linha em branco antes dos dados
+        ];
+      }
+
+      function filterDesc(){
+        const squad = getSelectedSquad() || 'Todas';
+        const status = $('statusFilter')?.value || 'Todos';
+        const search = $('searchFilter')?.value || '';
+        const parts = ['Squad: '+squad, 'Status: '+status];
+        if(search) parts.push('Busca: "'+search+'"');
+        return parts.join(' | ');
+      }
+
+      // Converte bool/string de bloqueio para legível
+      function simNao(v){
+        if(v === true || v === 'sim') return 'Sim';
+        if(v === false || v === 'nao') return 'Não';
+        return v || '';
+      }
+
+      // Formata data ISO para pt-BR
+      function fmtDate(d){
+        if(!d) return '';
+        const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
+      }
+
+      // Colunas layout Bradesco (Jira export + campos operacionais do dashboard)
+      const COLS_GERAL = [
+        'Chave do Item','Épico','Resumo','Situação','Squad','Tipo',
+        'Rótulos','Sprint','Estimativa (SP)',
+        'Responsável','Risco','Bloqueio','Dependência',
+        'Próxima Ação','Devedor da Ação',
+        'Prazo','Data de Change','Data de Homologação',
+        'Nota Executiva','Refinada','Product Backlog',
+        'Criado','Atualizado'
+      ];
+
+      function rowToGeralArr(r){
+        return [
+          r.chave||'', r.epic||'', r.resumo||'', r.situacao||'', r.squad||'', r.tipo||'',
+          Array.isArray(r.rotulos)?r.rotulos.join(', '):r.rotulos||'',
+          r.sprint||'', r.estimativa||'',
+          r.responsavel||'', r.risco||'', simNao(r.bloqueio), simNao(r.dependencia),
+          r.proximo||'', r.devedor||'',
+          fmtDate(r.prazo), fmtDate(r.changeData), fmtDate(r.homologacaoData),
+          r.executiveNote||'',
+          r.refinada?'Sim':'Não', r.product_backlog?'Sim':'Não',
+          fmtDate(r.criado), fmtDate(r.atualizado)
+        ];
+      }
+
+      // ── Aba 1: Operacional (filtros aplicados) ────────────────────────────
+      const opData = filteredOperational();
+      const opMeta = metaRows('Operacional — Dados Gerais', filterDesc());
+      const opSheet = XLSX.utils.aoa_to_sheet([
+        ...opMeta,
+        COLS_GERAL,
+        ...opData.map(rowToGeralArr)
+      ]);
+      // Largura das colunas
+      opSheet['!cols'] = [
+        {wch:14},{wch:14},{wch:50},{wch:22},{wch:14},{wch:14},
+        {wch:20},{wch:20},{wch:10},
+        {wch:18},{wch:10},{wch:10},{wch:12},
+        {wch:40},{wch:18},
+        {wch:14},{wch:14},{wch:18},
+        {wch:40},{wch:10},{wch:14},
+        {wch:12},{wch:12}
+      ];
+      XLSX.utils.book_append_sheet(wb, opSheet, 'Operacional');
+
+      // ── Aba 2: Sprint Atual (filtros de squad aplicados) ──────────────────
+      const spData = filteredSprintRows();
+      if(spData.length){
+        const spMeta = metaRows('Sprint Atual', filterDesc());
+        const spSheet = XLSX.utils.aoa_to_sheet([
+          ...spMeta,
+          COLS_GERAL,
+          ...spData.map(rowToGeralArr)
+        ]);
+        spSheet['!cols'] = opSheet['!cols'];
+        XLSX.utils.book_append_sheet(wb, spSheet, 'Sprint Atual');
+      }
+
+      // ── Aba 3: Entregas Finais ────────────────────────────────────────────
+      if(deliveries && deliveries.length){
+        const delCols = ['Nome da Entrega','Squad','Frente','Status','Data Prevista','Data de Change','Responsável','Histórias Vinculadas','Observação'];
+        const delRows = deliveries.map(d => [
+          d.name||'', d.squad||'', d.frente||'', d.status||'',
+          fmtDate(d.date), fmtDate(d.changeDate), d.owner||'',
+          Array.isArray(d.stories)?d.stories.join(', '):'',
+          d.note||''
+        ]);
+        const delMeta = metaRows('Entregas Finais', filterDesc());
+        const delSheet = XLSX.utils.aoa_to_sheet([...delMeta, delCols, ...delRows]);
+        delSheet['!cols'] = [{wch:30},{wch:14},{wch:14},{wch:16},{wch:14},{wch:14},{wch:18},{wch:40},{wch:50}];
+        XLSX.utils.book_append_sheet(wb, delSheet, 'Entregas');
+      }
+
+      const fileName = `VP_Bradesco_${dtFile}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     setupFilters();
     bindFilterEvents();
     bindSprintImport();
@@ -8018,6 +8242,12 @@
     if(importDateTime && $('baseInfo')){
       $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
     }
+    // Pre-warm do GAS para reduzir o cold-start antes de gasLoadAndApplyVpAll()
+    if(_VP_GAS_URL){ try{ _vpGasJsonp(_VP_GAS_URL+'?action=health&t='+Date.now(), function(){}); }catch(e){} }
+    // Sincroniza com o servidor ao abrir e a cada 2 min — dados importados por
+    // qualquer usuário ficam visíveis para todo o time sem re-importar.
+    gasLoadAndApplyVpAll();
+    setInterval(gasLoadAndApplyVpAll, 120000);
   </script>
 </body>
 </html>
