@@ -2612,6 +2612,11 @@ function doRefresh(){
   }else if(jbIsConfigured()){
     _jbMergeAndRender('Dados atualizados');
   }
+  // Força atualização imediata do backlog e estórias do servidor
+  if(BK_GAS_URL){
+    try{ gasLoadBacklog(function(err,n){ if(!err && n>0) renderBacklogView(); }); }catch(e){}
+    try{ gasLoadStories(function(){}); }catch(e){}
+  }
 
   var btn=document.querySelector('.tbtn[onclick="doRefresh()"]');
   if(btn){btn.style.background='#dcfce7';btn.style.borderColor='#86efac';btn.style.color='#15803d';setTimeout(function(){btn.style.background='';btn.style.borderColor='';btn.style.color='';},800);}
