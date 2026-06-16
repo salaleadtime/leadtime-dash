@@ -3800,6 +3800,8 @@ function detectImportFormat(wb){
           else if(map.prev<0 && (c.indexOf('prevista')>=0||c.indexOf('due')>=0||c.indexOf('vencimento')>=0)) map.prev=j;
           else if(map.imp<0 && c.indexOf('impedin')>=0) map.imp=j;
         });
+        // "Data Produção" tem prioridade sobre "Resolved/Fechado" como data fim real
+        cells.forEach(function(c,j){ if(c.indexOf('producao')>=0) map.fim=j; });
         return {format:'jira',hrow:i,sheetName:sn,rows:rows,map:map};
       }
 
@@ -3818,6 +3820,8 @@ function detectImportFormat(wb){
           else if(m.chg<0 && c.indexOf('chg')>=0) m.chg=j;
           else if(m.imp<0 && c.indexOf('impedin')>=0) m.imp=j;
         });
+        // "Data Produção" tem prioridade como data fim real
+        cells.forEach(function(c,j){ if(c.indexOf('producao')>=0) m.fim=j; });
         return {format:'native',hrow:i,sheetName:sn,rows:rows,map:m};
       }
 
@@ -3847,6 +3851,8 @@ function detectImportFormat(wb){
             else if(mt.chg<0&&c.indexOf('chg')>=0) mt.chg=j;
             else if(mt.imp<0&&c.indexOf('impedin')>=0) mt.imp=j;
           });
+          // "Data Produção" tem prioridade sobre "Resolved/Fechado" como data fim real
+          cells.forEach(function(c,j){ if(c.indexOf('producao')>=0) mt.fim=j; });
           return {format:'jira_tipo',tipoIdx:tipoColIdx,hrow:i,sheetName:sn,rows:rows,map:mt};
         }
       }
