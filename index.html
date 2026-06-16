@@ -2491,12 +2491,13 @@ function renderMed(){
   $id('medTblBody').innerHTML=sorted.map(function(r){
     var gi=allData.indexOf(r);
     var lc=ltMap[ltCls(r.lt)];
-    return '<tr>'+
+    var ltAlto=r.lt>100;
+    return '<tr'+(ltAlto?' style="background:#fef9c3"':'')+'>'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data Início"></td>'+
+      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início"></td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
@@ -3847,6 +3848,7 @@ function detectImportFormat(wb){
           else if(map.squad<0 && (c.indexOf('team')>=0||c.indexOf('squad')>=0)) map.squad=j;
           else if(map.resumo<0 && (c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
           // Jira pode ou não ter estes; se tiver, aproveitamos
+          else if(map.ini<0 && c.indexOf('priorizado')>=0) map.ini=j;
           else if(map.fim<0 && (c.indexOf('resolv')>=0||c.indexOf('fechado')>=0||c.indexOf('data fim')>=0)) map.fim=j;
           else if(map.prev<0 && (c.indexOf('prevista')>=0||c.indexOf('due')>=0||c.indexOf('vencimento')>=0)) map.prev=j;
           else if(map.imp<0 && c.indexOf('impedin')>=0) map.imp=j;
@@ -3897,6 +3899,7 @@ function detectImportFormat(wb){
             else if(mt.squad<0&&(c.indexOf('team')>=0||c.indexOf('squad')>=0||c==='time')) mt.squad=j;
             else if(mt.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) mt.resumo=j;
             else if(mt.ini<0&&c.indexOf('inicio')>=0&&c.indexOf('homolog')<0) mt.ini=j;
+            else if(mt.ini<0&&c.indexOf('priorizado')>=0) mt.ini=j;
             else if(mt.fim<0&&(c.indexOf('resolv')>=0||c.indexOf('data fim')>=0||c.indexOf('fechado')>=0)) mt.fim=j;
             else if(mt.prev<0&&(c.indexOf('homolog')>=0||c.indexOf('prevista')>=0||c.indexOf('due')>=0)) mt.prev=j;
             else if(mt.chg<0&&c.indexOf('chg')>=0) mt.chg=j;
