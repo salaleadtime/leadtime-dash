@@ -323,6 +323,9 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .einp:hover{border-color:var(--border2);background:#f8faff}
 .einp:focus{border-color:var(--accent);background:#fff}
 .einp.date{width:118px;cursor:pointer}
+.einp-warn{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}
+.einp-warn:hover{border-color:#f97316!important;background:#ffedd5!important}
+.einp-warn:focus{border-color:#ea580c!important;background:#fff!important}
 .einp.num{width:85px}
 .eimp{width:100%;min-height:30px;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11px;font-family:ui-sans-serif,-apple-system,sans-serif;color:var(--tx2);background:transparent;resize:none;line-height:1.4;overflow:hidden;transition:border-color .13s,background .13s;outline:none}
 .eimp:hover{border-color:var(--border2);background:#f8faff}
@@ -746,6 +749,12 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     <span class="fdate-sep">→</span>
     <input type="date" class="fdate" id="fDateFim" title="Data início máxima">
     <button class="chip fdate-clear" id="fDateClear" onclick="clearDateF()" title="Limpar período">✕</button>
+  </div>
+
+  <div id="semFimAlert" style="display:none;margin-bottom:.6rem;padding:.55rem .9rem;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#9a3412;display:flex;align-items:center;gap:.5rem">
+    <span style="font-size:15px">⚠️</span>
+    <span id="semFimAlertTxt"></span>
+    <span style="color:#c2410c;font-weight:600"> — o LT está sendo contado até hoje, inflando a média.</span>
   </div>
 
   <div class="tc">
@@ -2144,11 +2153,24 @@ function renderTbl(){
   $id('tblTitle').textContent='Épicos ('+tot+')';
   $id('pgInfo').textContent=(Math.min((pg-1)*PG+1,tot))+'–'+(Math.min(pg*PG,tot))+' de '+tot;
 
+  // Alerta: épicos com Data Início mas sem Data Fim (LT contado até hoje)
+  var semFim=allData.filter(function(r){return isValidDate(r.ini)&&!isValidDate(r.fim);});
+  var alertEl=$id('semFimAlert'), alertTxt=$id('semFimAlertTxt');
+  if(alertEl){
+    if(semFim.length){
+      alertEl.style.display='flex';
+      alertTxt.textContent=semFim.length+' épico'+(semFim.length!==1?'s':'')+' com Data Início mas sem Data Fim';
+    } else {
+      alertEl.style.display='none';
+    }
+  }
+
   var ltMap={r:'ltr',a:'lta',g:'ltg'};
   var rows=sl.map(function(r){
     var gi=allData.indexOf(r);
     var lc=ltMap[ltCls(r.lt)];
-    return '<tr>'+
+    var semFimRow=isValidDate(r.ini)&&!isValidDate(r.fim);
+    return '<tr'+(semFimRow?' style="background:#fff7ed"':'')+'>'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div>'+
         (isValidDate(r.fimAntes)?'<div class="era-med-badge" title="Estava em Medição com Data Fim '+esc(r.fimAntes)+'">↩ era Medição · '+esc(r.fimAntes.slice(5).replace('-','/'))+'</div>':'')+
       '</td>'+
@@ -2157,7 +2179,7 @@ function renderTbl(){
       '<td>'+sBadge(r.status)+'</td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-i="'+gi+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
+      '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
       '<td style="min-width:195px;max-width:255px">'+
