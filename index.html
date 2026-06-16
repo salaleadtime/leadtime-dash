@@ -1160,7 +1160,7 @@ var FIM_LOG_KEY='leadtime_sala_v8_fim_log';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-04-27-v28-get-save-confirmado';
+var SEED_VERSION='2026-06-16-v29-recovery';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
@@ -1349,6 +1349,8 @@ function _jbMergeAndRender(msg){
     if(err){ toast('Aviso nuvem',err,'warn'); return; }
     var epics=Array.isArray(data)?data:(data&&data.epics?data.epics:[]);
     var bkSnaps=(!Array.isArray(data)&&data&&Array.isArray(data.backlog))?data.backlog:[];
+    // Proteção: nunca sobrescrever dados locais com nuvem vazia
+    if(!epics.length && allData.length){ setSyncLabel('⚠️ Nuvem vazia — mantendo dados locais'); return; }
     var existing={};
     allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
     allData=epics.map(function(r){
@@ -4564,7 +4566,7 @@ if(typeof XLSX==='undefined') loadLib(XLSX_CDN);
 // SEED DATA (fallback inicial)
 // ═══════════════════════════════════════
 var SEED=[
-  {id:'SLOPC-26557',squad:'Guardiões',resumo:'GCSB - Migrar os microsserviços vinculados aos centros de custo GCSB da cloud TI-Híbrida para a Microsoft Azure - microsserviços: serviços-operacionais',status:'Executado',ini:'2025-10-23',fim:'',dataPrevista:null,chg:'',impedimento:'Devido ao período de freeze do ServiceNow, a implantação não poderá ocorrer dentro da janela originalmente planejada.'},
+  {id:'SLOPC-26557',squad:'Guardiões',resumo:'GCSB - Migrar os microsserviços vinculados aos centros de custo GCSB da cloud TI-Híbrida para a Microsoft Azure - microsserviços: serviços-operacionais',status:'Executado',ini:'2026-05-15',fim:'2026-05-15',dataPrevista:null,chg:'',impedimento:'Devido ao período de freeze do ServiceNow, a implantação não poderá ocorrer dentro da janela originalmente planejada.'},
   {id:'SLOPC-29139',squad:'Guardiões',resumo:'SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - FRONT END',status:'Executado',ini:'2025-11-04',fim:'',dataPrevista:null,chg:'',impedimento:'Foi identificado um problema de infraestrutura que exige ajustes na aplicação pelo time de desenvolvimento antes da mudança de ambiente.'},
   {id:'SLOPC-18909',squad:'Guardiões',resumo:'SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - BACKEND',status:'Executado',ini:'2025-11-11',fim:'',dataPrevista:null,chg:'',impedimento:'Foi identificado um problema de infraestrutura que exige ajustes na aplicação pelo time de desenvolvimento antes da mudança de ambiente.'},
   {id:'SLOPC-29141',squad:'Guardiões',resumo:'SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - SERVICE NOW',status:'Executado',ini:'2025-12-03',fim:'',dataPrevista:null,chg:'',impedimento:'Foi identificado um problema de infraestrutura que exige ajustes na aplicação pelo time de desenvolvimento antes da mudança de ambiente.'},
@@ -4572,11 +4574,11 @@ var SEED=[
   {id:'SLOPC-33014',squad:'Contact',resumo:'Implementar API para validar e consultar token de celular integrado ao ServiceNow #AtendeBRA',status:'Concluído',ini:'2026-01-08',fim:'2026-03-31',dataPrevista:'2026-04-20',chg:'',impedimento:'Devido ao período de freeze do ServiceNow, a implantação não poderá ocorrer dentro da janela originalmente planejada.'},
   {id:'SLOPC-33834',squad:'Guardiões',resumo:'GCSB - Adequar a segmentação dos clientes 049 de VAREJO/DIGITAL/MEI para EMPRESAS E NEGÓCIOS no sistema GCSB',status:'Em Execução',ini:'2026-01-27',fim:'',dataPrevista:'2026-04-30',chg:'',impedimento:'O ambiente de TU (Net Empresa) apresenta instabilidades que estão impedindo a continuidade da homologação.'},
   {id:'SLOPC-35324',squad:'Guardiões',resumo:'Implementar correção dos apontamentos críticos identificados pelo SonarQube na ferramenta GCSB',status:'Em Execução',ini:'2026-03-02',fim:'',dataPrevista:null,chg:'',impedimento:''},
-  {id:'SLOPC-35433',squad:'Expresso',resumo:'Desenvolver novos requisitos para Subsídios MVP2 + Melhorias impeditivas para o ConectaJur',status:'Em Execução',ini:'2026-03-02',fim:'',dataPrevista:null,chg:'',impedimento:''},
-  {id:'SLOPC-35319',squad:'Contact',resumo:'Implementar digitalização, consulta e atualização de documentos via GCC integrada ao formulário Operação 200k',status:'Em Execução',ini:'2026-03-02',fim:'',dataPrevista:'2026-05-01',chg:'',impedimento:''},
+  {id:'SLOPC-35433',squad:'Expresso',resumo:'Desenvolver novos requisitos para Subsídios MVP2 + Melhorias impeditivas para o ConectaJur',status:'Executado',ini:'2026-03-02',fim:'2026-04-30',dataPrevista:null,chg:'',impedimento:''},
+  {id:'SLOPC-35319',squad:'Contact',resumo:'Implementar digitalização, consulta e atualização de documentos via GCC integrada ao formulário Operação 200k',status:'Executado',ini:'2026-03-02',fim:'2026-06-08',dataPrevista:'2026-05-01',chg:'',impedimento:''},
   {id:'SLOPC-35104',squad:'Guardiões',resumo:'Implementar Correção dos apontamentos "Blocker" na ferramenta GCSB identificados pelo SonarQube',status:'Concluído',ini:'2026-02-23',fim:'2026-03-16',dataPrevista:null,chg:'',impedimento:''},
-  {id:'SLOPC-23768',squad:'Expresso',resumo:'Desenvolver na ServiceNow fluxo para o processo Obrigações de Fazer - MVP 2 #9197',status:'Em Execução',ini:'2026-03-13',fim:'',dataPrevista:null,chg:'',impedimento:''},
-  {id:'SLOPC-27305',squad:'Interestelar',resumo:'Desenvolver na ServiceNow fluxo para o processo de Fiança - novos requisitos (MVP2) #9193',status:'Em Execução',ini:'2026-03-13',fim:'',dataPrevista:'2026-04-25',chg:'',impedimento:''},
+  {id:'SLOPC-23768',squad:'Expresso',resumo:'Desenvolver na ServiceNow fluxo para o processo Obrigações de Fazer - MVP 2 #9197',status:'Executado',ini:'2026-03-13',fim:'2026-05-01',dataPrevista:null,chg:'',impedimento:''},
+  {id:'SLOPC-27305',squad:'Interestelar',resumo:'Desenvolver na ServiceNow fluxo para o processo de Fiança - novos requisitos (MVP2) #9193',status:'Executado',ini:'2026-03-13',fim:'2026-06-03',dataPrevista:'2026-04-25',chg:'',impedimento:''},
   {id:'SLOPC-35373',squad:'Guardiões',resumo:'Desenvolvimento de RPA para obtenção de dados de contratos pré-fixados de CDC, Crédito Pessoal e Capital de Giro',status:'Em Execução',ini:'2026-03-16',fim:'',dataPrevista:null,chg:'',impedimento:''},
   {id:'SLOPC-36323',squad:'Guardiões',resumo:'Corrigir apontamentos "critical" na ferramenta GCSB identificados pelo SonarQube - Fase 2',status:'Em Execução',ini:'2026-03-17',fim:'',dataPrevista:null,chg:'',impedimento:''}
 ];
