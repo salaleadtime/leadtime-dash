@@ -4621,6 +4621,12 @@ var SEED=[
 
   function renderBootFromLocal(reason){
     var usedCache=localOrSeed();
+    // Recuperação de emergência: se allData ficou vazio, força SEED
+    if(!allData.length && SEED && SEED.length){
+      allData=SEED.map(makeRow);
+      normalizeWorkflowAll();
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    }
     // Restore stories from localStorage
     loadStoriesLocal();
     // Restore backlog snapshots
