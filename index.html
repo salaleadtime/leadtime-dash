@@ -379,28 +379,19 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .p-t{font-size:12.5px;font-weight:700}
 .p-cnt{font-size:10px;color:var(--tx3)}
 
-/* ─── DELIVERY CARDS (enhanced) ─── */
-.dli{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--border-soft);transition:background .15s;border-radius:6px}
-.dli:last-child{border-bottom:none}
-.dli:hover{background:#f8faff}
-.dli-ico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid transparent}
-.dli-ico.ir{background:var(--rs);border-color:var(--rb)}
-.dli-ico.ia{background:var(--as);border-color:var(--ab)}
-.dli-ico.ig{background:var(--gs);border-color:var(--gb)}
-.dli-body{min-width:0}
-.dli-top{display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap}
-.dli-id{font-family:ui-monospace,monospace;font-size:11px;font-weight:700;color:var(--accent);text-decoration:none}
-.dli-id:hover{text-decoration:underline}
-.dli-sq{font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:20px;background:var(--vs);color:var(--vt);border:1px solid var(--vb)}
-.dli-btm{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--tx2)}
-.dli-date{font-family:ui-monospace,monospace;font-weight:600}
-.dli-dot{color:var(--tx3)}
-.dli-days{font-weight:700}
-.dli-days.r{color:var(--r)}.dli-days.a{color:var(--a)}.dli-days.g{color:var(--g)}
-.dli-pill{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;text-align:center;min-width:72px}
-.dli-pill.r{background:var(--rs);color:var(--rt);border:1px solid var(--rb)}
-.dli-pill.a{background:var(--as);color:var(--at);border:1px solid var(--ab)}
-.dli-pill.g{background:var(--gs);color:var(--gt);border:1px solid var(--gb)}
+/* ─── DELIVERY TABLE ─── */
+.dvt-hd{display:grid;grid-template-columns:80px 110px 1fr 90px;gap:8px;padding:6px 10px;font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;border-bottom:2px solid var(--border-soft)}
+.dvt-row{display:grid;grid-template-columns:80px 110px 1fr 90px;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--border-soft);transition:background .15s}
+.dvt-row:last-child{border-bottom:none}
+.dvt-row:hover{background:#f8faff}
+.dvt-epic{font-family:ui-monospace,monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#fef2f2;color:#7a0000;border:1px solid #fca5a5;text-decoration:none;display:inline-block}
+.dvt-epic:hover{text-decoration:underline}
+.dvt-squad{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dvt-date{font-family:ui-monospace,monospace;font-size:11px;font-weight:600;color:var(--tx2)}
+.dvt-situ{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;text-align:center;display:inline-block;min-width:60px}
+.dvt-situ.r{background:var(--rs);color:var(--rt);border:1px solid var(--rb)}
+.dvt-situ.a{background:var(--as);color:var(--at);border:1px solid var(--ab)}
+.dvt-situ.g{background:var(--gs);color:var(--gt);border:1px solid var(--gb)}
 
 /* risk list */
 .rli{display:grid;grid-template-columns:105px auto 48px;gap:7px;align-items:start;padding:7px 0;border-bottom:1px solid var(--border-soft)}
@@ -907,7 +898,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
   <div class="g2">
     <div class="panel">
       <div class="p-hd">
-        <span class="p-t">🚀 Entregas Previstas</span>
+        <span class="p-t">Datas previstas com status, impacto e próxima ação</span>
         <span class="p-cnt" id="dCnt">—</span>
       </div>
       <div id="dList"></div>
@@ -2045,29 +2036,18 @@ function renderDeliveries(){
     $id('dList').innerHTML='<div class="empty">Nenhuma entrega com data prevista.<br>Preencha "Data Prevista" na aba Épicos.</div>';
     return;
   }
-  $id('dList').innerHTML=list.map(function(r){
+  var hd='<div class="dvt-hd"><span>EPICO</span><span>SQUAD</span><span>DATA PREVISTA</span><span>SITUAÇÃO</span></div>';
+  $id('dList').innerHTML=hd+list.map(function(r){
     var d=r.dataPrevista;
     var diff=Math.floor((parseLocalDate(d)-now)/86400000);
-    var ico=deliveryIco(diff);
-    var pillCls=deliveryCls(diff);
-    var pillLbl=diff===0?'🎯 hoje':diff===1?'🎯 amanhã':diff<0?'⚠ '+Math.abs(diff)+'d atrás':'em '+diff+'d';
-    var daysTxt=diff<0?Math.abs(diff)+'d atrás':diff===0?'hoje':diff===1?'amanhã':diff+' dias';
-    var daysCls=diff<=7?'r':diff<=21?'a':'g';
+    var situCls=diff<0?'r':diff<=21?'a':'g';
+    var situLbl=diff<0?Math.abs(diff)+'d atrás':diff===0?'hoje':diff+'d';
     var shortId=r.id.replace('SLOPC-','#');
-    return '<div class="dli">'+
-      '<div class="dli-ico '+ico.cls+'">'+ico.ico+'</div>'+
-      '<div class="dli-body">'+
-        '<div class="dli-top">'+
-          '<a class="dli-id" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir '+esc(r.id)+' no Jira">'+shortId+'</a>'+
-          '<span class="dli-sq">'+esc(r.squad)+'</span>'+
-        '</div>'+
-        '<div class="dli-btm">'+
-          '<span class="dli-date">📅 '+fmtD(d)+'</span>'+
-          '<span class="dli-dot">·</span>'+
-          '<span class="dli-days '+daysCls+'">'+daysTxt+'</span>'+
-        '</div>'+
-      '</div>'+
-      '<span class="dli-pill '+pillCls+'">'+pillLbl+'</span>'+
+    return '<div class="dvt-row">'+
+      '<span><a class="dvt-epic" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir '+esc(r.id)+' no Jira">'+esc(shortId)+'</a></span>'+
+      '<span class="dvt-squad">'+esc(r.squad)+'</span>'+
+      '<span class="dvt-date">'+fmtD(d)+'</span>'+
+      '<span class="dvt-situ '+situCls+'">'+situLbl+'</span>'+
     '</div>';
   }).join('');
 }
