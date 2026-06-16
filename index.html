@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1474,6 +1477,8 @@ function replaceFromSharedSource(rows){
     if(r&&r.id&&!inIds[r.id]) incoming.push(r);
   });
 
+  // Proteção: nunca substituir dados existentes por lista vazia
+  if(!incoming.length && allData.length) return false;
   allData=incoming;
   saveLocal();
   renderAll(rememberTab());
@@ -2660,9 +2665,20 @@ function doRefresh(){
 
 function renderAll(tabToRestore){
   var tab=normalizeTab(tabToRestore || getActiveTab());
-  normalizeWorkflowAll();
-  renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
-  activateTab(tab);
+  // Recuperação de emergência: se allData vazio, carrega SEED
+  if(!allData.length && SEED && SEED.length){
+    allData=SEED.map(makeRow);
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  }
+  try{
+    normalizeWorkflowAll();
+    renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+    activateTab(tab);
+  }catch(e){
+    console.error('renderAll error:', e);
+    // Tenta render mínimo: só a tabela de épicos
+    try{ pg=1; renderTbl(); activateTab(tab); }catch(e2){ console.error('renderTbl error:', e2); }
+  }
 }
 
 
