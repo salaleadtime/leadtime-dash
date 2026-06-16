@@ -2451,11 +2451,23 @@ function renderMed(){
 
   var n=list.length;
   if(n===0){
-    $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">📊 Nenhum épico encontrado para o filtro selecionado.</div>';
-    $id('medSquads').innerHTML='';
-    $id('medTblBody').innerHTML='';
-    $id('medCnt').textContent='0 épicos';
-    return;
+    // Auto-expand: if date filter is active but returns 0 records, clear dates and show all
+    if(medFilt.dateFrom||medFilt.dateTo){
+      medFilt.dateFrom=''; medFilt.dateTo=''; medTriChip='';
+      var df2=$id('medDateFrom'); if(df2) df2.value='';
+      var dt2=$id('medDateTo');   if(dt2) dt2.value='';
+      syncTriChips();
+      var dc2=$id('medDateClear'); if(dc2) dc2.classList.remove('on');
+      list=all.filter(function(r){return medFilt.squad==='all'||r.squad===medFilt.squad;});
+      n=list.length;
+    }
+    if(n===0){
+      $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">📊 Nenhum épico encontrado para o filtro selecionado.</div>';
+      $id('medSquads').innerHTML='';
+      $id('medTblBody').innerHTML='';
+      $id('medCnt').textContent='0 épicos';
+      return;
+    }
   }
   var lts=list.map(function(r){return r.lt;});
   var avg=Math.round(lts.reduce(function(a,b){return a+b;},0)/n);
@@ -2508,7 +2520,7 @@ function renderMed(){
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início"></td>'+
+      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
