@@ -309,6 +309,14 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .bgray .bdg-dot{background:#64748b}
 .bviolet{background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd}
 .bamber{background:var(--as);color:var(--at);border:1px solid var(--ab)}
+.borange{background:#fff7ed;color:#9a3412;border:1px solid #fdba74}
+.borange .bdg-dot{background:#ea580c;box-shadow:0 0 0 2px rgba(234,88,12,.15)}
+.bcyan{background:#ecfeff;color:#155e75;border:1px solid #67e8f9}
+.bcyan .bdg-dot{background:#0891b2;box-shadow:0 0 0 2px rgba(8,145,178,.15)}
+.bred{background:#fff1f2;color:#9f1239;border:1px solid #fda4af}
+.bred .bdg-dot{background:#e11d48;box-shadow:0 0 0 2px rgba(225,29,72,.15)}
+.bindigo{background:#eef2ff;color:#3730a3;border:1px solid #a5b4fc}
+.bindigo .bdg-dot{background:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.15)}
 
 /* editable inputs */
 .einp{border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11px;font-family:ui-monospace,monospace;color:var(--tx2);background:transparent;transition:border-color .13s,background .13s;outline:none}
@@ -1697,7 +1705,7 @@ function sBadge(s){
   return '<span class="bdg '+cls+'"><span class="bdg-dot"></span>'+esc(t)+'</span>';
 }
 function squadBadge(sq){
-  var m={'Guardiões':'bviolet','Contact':'bblue','Expresso':'bgreen','Interestelar':'bamber'};
+  var m={'Guardiões':'bviolet','Contact':'bblue','Expresso':'bgreen','Interestelar':'bamber','Inception':'borange','TopGun':'bcyan','MadMax':'bred','Terminator':'bindigo'};
   var cls=m[(sq||'').trim()]||'bgray';
   return '<td><span class="bdg '+cls+'">'+esc(sq)+'</span></td>';
 }
@@ -1961,7 +1969,7 @@ function renderSquads(){
   var triEpics=allData.filter(function(r){return inTrimester(r.fim,tri);});
   var prevEpics=allData.filter(function(r){return inTrimester(r.fim,prev);});
   var squads=Array.from(new Set(allData.map(function(r){return r.squad;}))).filter(Boolean).sort();
-  var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706'};
+  var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706','Inception':'#ea580c','TopGun':'#0891b2','MadMax':'#e11d48','Terminator':'#4f46e5'};
   $id('squadCards').innerHTML=squads.map(function(sq){
     var items=triEpics.filter(function(r){return r.squad===sq;});
     var acc=colors[sq]||'#334155';
@@ -2429,7 +2437,7 @@ function renderMed(){
 
   // Squad cards — baseado na lista filtrada
   var squads=Array.from(new Set(list.map(function(r){return r.squad;}))).filter(Boolean).sort();
-  var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706'};
+  var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706','Inception':'#ea580c','TopGun':'#0891b2','MadMax':'#e11d48','Terminator':'#4f46e5'};
   $id('medSquads').innerHTML=squads.map(function(sq){
     var items=list.filter(function(r){return r.squad===sq;});
     if(!items.length) return '';
@@ -3529,8 +3537,8 @@ function toggleSvRow(bodyRowId){
 // Helper: retorna cor do squad
 function squadColor(sq){
   var map={
-    'Guardiões':'bblue','Contact':'bgreen','Expresso':'bamber',
-    'Interestelar':'bviolet'
+    'Guardiões':'bviolet','Contact':'bblue','Expresso':'bgreen','Interestelar':'bamber',
+    'Inception':'borange','TopGun':'bcyan','MadMax':'bred','Terminator':'bindigo'
   };
   return map[sq]||'bgray';
 }
@@ -3538,8 +3546,8 @@ function squadColor(sq){
 // Helper: retorna hex de acento do squad para o rail colorido
 function getSquadAccent(sq){
   var map={
-    'Guardiões':'#3b82f6','Contact':'#16a34a',
-    'Expresso':'#f59e0b','Interestelar':'#7c3aed'
+    'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706',
+    'Inception':'#ea580c','TopGun':'#0891b2','MadMax':'#e11d48','Terminator':'#4f46e5'
   };
   return map[sq]||'#94a3b8';
 }
@@ -3741,7 +3749,13 @@ function normalizeSquad(raw, fallback){
     'expresso':'Expresso',
     'interestelar':'Interestelar',
     'intrstelar':'Interestelar',  // typo conhecido no Jira
-    'intrestelar':'Interestelar'
+    'intrestelar':'Interestelar',
+    'inception':'Inception',
+    'topgun':'TopGun',
+    'top gun':'TopGun',
+    'madmax':'MadMax',
+    'mad max':'MadMax',
+    'terminator':'Terminator'
   };
   if(map[lc]) return map[lc];
   // Fallback por prefixo (tolera typos leves nos primeiros caracteres)
@@ -3749,6 +3763,10 @@ function normalizeSquad(raw, fallback){
   if(lc.indexOf('contac')===0||lc.indexOf('kontak')===0) return 'Contact';
   if(lc.indexOf('expres')===0||lc.indexOf('expr')===0) return 'Expresso';
   if(lc.indexOf('inter')===0||lc.indexOf('intr')===0||lc.indexOf('estelar')>=0) return 'Interestelar';
+  if(lc.indexOf('incep')===0) return 'Inception';
+  if(lc.indexOf('topgun')===0||lc.indexOf('top gun')===0) return 'TopGun';
+  if(lc.indexOf('madmax')===0||lc.indexOf('mad max')===0) return 'MadMax';
+  if(lc.indexOf('termina')===0) return 'Terminator';
   // Se já existe um squad no sistema com mesmo nome (sem acento), usa o do sistema
   if(fallback && stripAcc(fallback).toLowerCase()===lc) return fallback;
   for(var i=0;i<allData.length;i++){
