@@ -751,7 +751,7 @@ tr:nth-child(even):hover td{background:#e8f0ff}
     <button class="chip fdate-clear" id="fDateClear" onclick="clearDateF()" title="Limpar período">✕</button>
   </div>
 
-  <div id="semFimAlert" style="display:none;margin-bottom:.6rem;padding:.55rem .9rem;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#9a3412;display:flex;align-items:center;gap:.5rem">
+  <div id="semFimAlert" style="display:none;margin-bottom:.6rem;padding:.55rem .9rem;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#9a3412;align-items:center;gap:.5rem">
     <span style="font-size:15px">⚠️</span>
     <span id="semFimAlertTxt"></span>
     <span style="color:#c2410c;font-weight:600"> — o LT está sendo contado até hoje, inflando a média.</span>
@@ -1402,34 +1402,7 @@ function normalizeWorkflowRecord(rec){
   rec.lt=calcLT(rec.ini,rec.fim);
   return rec;
 }
-// Correções pontuais de datas conhecidamente erradas (aplicadas uma vez por sessão)
-var _dataPatchApplied=false;
-function applyDataPatches(){
-  if(_dataPatchApplied) return;
-  _dataPatchApplied=true;
-  var patches={
-    'SLOPC-26557': {ini:'2026-05-15', fim:'2026-05-15'},
-    'SLOPC-35433': {fim:'2026-04-30'},
-    'SLOPC-23768': {fim:'2026-05-01'},
-    'SLOPC-36949': {fim:'2026-05-18'},
-    'SLOPC-37716': {fim:'2026-05-19'},
-    'SLOPC-27315': {fim:'2026-05-24'},
-    'SLOPC-27305': {fim:'2026-06-03'},
-    'SLOPC-35319': {fim:'2026-06-08'}
-  };
-  var changed=false;
-  allData.forEach(function(r){
-    var p=patches[r.id];
-    if(!p) return;
-    if(p.ini && r.ini!==p.ini){ r.ini=p.ini; changed=true; }
-    // Data Fim só corrige se estiver vazia
-    if(p.fim && !isValidDate(r.fim)){ r.fim=p.fim; changed=true; }
-    if(changed) r.lt=calcLT(r.ini,r.fim);
-  });
-  if(changed){ saveLocal(); }
-}
 function normalizeWorkflowAll(){
-  applyDataPatches();
   allData=allData.map(function(r){ return normalizeWorkflowRecord(r); });
 }
 function makeRow(r){
