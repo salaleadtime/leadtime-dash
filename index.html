@@ -3167,6 +3167,14 @@ function renderBacklogView(){
   var totalBacklog=stories.length;
   var totalRefined=stories.filter(isRefined).length;
 
+  // Histórias que saíram do backlog: estavam no snapshot anterior mas não estão no atual
+  var exitedBacklog=0;
+  if(prev&&Array.isArray(prev.stories)&&prev.stories.length){
+    var curIds={};
+    stories.forEach(function(s){ if(s.id) curIds[s.id]=true; });
+    exitedBacklog=prev.stories.filter(function(s){ return s.id&&!curIds[s.id]; }).length;
+  }
+
   // Global delta
   var totalDelta=prev!==null?totalBacklog-prev.stories.length:null;
   var globalDeltaHtml='';
@@ -3267,7 +3275,7 @@ function renderBacklogView(){
       svKpiItem('#7a0000',totalBacklog,'Total Backlog','importação #'+cur.seq)+
       svKpiItem('#3b82f6',squads.length,'Squads com Backlog','grupos ativos')+
       svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo "Refinada" no Jira')+
-      svKpiItem('#f59e0b',backlogSnaps.length,'Importações','snapshots históricos')+
+      svKpiItem('#e11d48',exitedBacklog,'Saíram do Backlog',prev?'vs importação anterior':'importe novamente para ver')+
     '</div>'+
     '<div class="bk-delta-bar">'+
       (prev
