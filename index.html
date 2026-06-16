@@ -259,7 +259,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 @media(max-width:760px){.cal-months{grid-template-columns:1fr}.cal-sprrow{grid-template-columns:56px 1fr}.cal-sprrow .cal-in.dt{grid-column:2}}
 
 /* ══ ÉPICOS ══ */
-.ep{padding:1.2rem 1.6rem}
+.ep{padding:1.2rem 1.6rem;display:flex;flex-direction:column;gap:.2rem}
 
 /* filter bar */
 .fbar{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:.9rem 1.2rem;margin-bottom:1.1rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow-md)}
@@ -371,6 +371,33 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 .sc-fill{height:100%;border-radius:2px;transition:width .5s}
 .sc-stats{display:flex;gap:8px;font-size:10px;color:var(--tx3)}
 .sc-stats strong{color:var(--tx2);font-weight:600}
+
+/* ── ÉPICOS SUMMARY (header + KPIs + info cards) ── */
+.ep-hdr{margin-bottom:1.2rem}
+.ep-hdr-title{font-size:24px;font-weight:800;color:#7a0000;letter-spacing:-.6px;line-height:1}
+.ep-hdr-sub{font-size:11px;color:#94a3b8;margin-top:5px}
+.ep-krow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:1rem}
+.ep-kpi{background:#fff;border:1px solid #e8edf5;border-radius:12px;padding:1rem 1.1rem;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(15,23,42,.05);transition:box-shadow .2s,transform .15s}
+.ep-kpi:hover{box-shadow:0 4px 16px rgba(15,23,42,.1);transform:translateY(-1px)}
+.ep-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
+.ep-kpi.kb::before{background:linear-gradient(90deg,#2563eb,#60a5fa)}
+.ep-kpi.kg::before{background:linear-gradient(90deg,#16a34a,#22c55e)}
+.ep-kpi.ka::before{background:linear-gradient(90deg,#d97706,#f59e0b)}
+.ep-kpi.kr::before{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.ep-kpi.kgr::before{background:linear-gradient(90deg,#64748b,#94a3b8)}
+.ep-kpi-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#94a3b8;margin-bottom:7px}
+.ep-kpi-val{font-size:26px;font-weight:800;line-height:1;letter-spacing:-1.5px;color:#0f172a}
+.ep-kpi-sub{font-size:10px;color:#94a3b8;margin-top:5px;font-weight:500}
+.ep-irow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.2rem}
+.ep-ic{background:#fff;border:1px solid #e8edf5;border-radius:12px;padding:.85rem 1.1rem;box-shadow:0 1px 4px rgba(15,23,42,.05);display:flex;flex-direction:column;gap:3px;min-width:0}
+.ep-ic-lbl{font-size:9.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.ep-ic-name{font-size:11.5px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep-ic-sub{font-size:10px;color:#64748b}
+.ep-ic-big{font-size:24px;font-weight:800;color:#7c3aed;letter-spacing:-1px;line-height:1;margin:.1rem 0}
+.ep-ic-date{display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:#2563eb;font-family:ui-monospace,monospace;margin-top:2px}
+.ep-ic-lt{font-size:22px;font-weight:800;color:#dc2626;letter-spacing:-1px;line-height:1;margin:.1rem 0}
+@media(max-width:880px){.ep-krow{grid-template-columns:repeat(3,1fr)}.ep-irow{grid-template-columns:1fr 1fr}}
+@media(max-width:580px){.ep-krow{grid-template-columns:repeat(2,1fr)}.ep-irow{grid-template-columns:1fr}}
 
 /* 2-col grid */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -725,6 +752,8 @@ tr:nth-child(even):hover td{background:#e8f0ff}
 <!-- ══ ÉPICOS PANE ══ -->
 <div class="pane on" id="pane-ep">
 <div class="ep">
+
+  <div id="epSummary"></div>
 
   <div class="fbar">
     <span class="fl">Status:</span>
@@ -1823,6 +1852,51 @@ function inTrimester(dateStr,tri){
   return d>=tri.from&&d<=tri.to;
 }
 
+function renderEpicsSummary(){
+  var el=$id('epSummary'); if(!el) return;
+  var active=activeEpics();
+  var nAtivos=active.length;
+  var nMeta=active.filter(function(r){return r.lt<40;}).length;
+  var nAtenc=active.filter(function(r){return r.lt>=40&&r.lt<META;}).length;
+  var nCrit=active.filter(function(r){return r.lt>=META;}).length;
+  var nSemData=active.filter(function(r){return !r.dataPrevista;}).length;
+
+  var now=new Date(); now.setHours(0,0,0,0);
+  var withDate=active.filter(function(r){return !!r.dataPrevista;}).sort(function(a,b){return parseLocalDate(a.dataPrevista)-parseLocalDate(b.dataPrevista);});
+  var prox=withDate[0];
+  var proxHtml=prox
+    ?'<div class="ep-ic-name">'+esc(prox.id.replace('SLOPC-','#'))+' · '+esc((prox.resumo||'').slice(0,55))+'</div><div class="ep-ic-date">'+fmtD(prox.dataPrevista)+'</div>'
+    :'<div class="ep-ic-sub">—</div>';
+
+  var maxLt=active.slice().sort(function(a,b){return b.lt-a.lt;})[0];
+  var maxHtml=maxLt
+    ?'<div class="ep-ic-name">'+esc(maxLt.id.replace('SLOPC-','#'))+' · '+esc(maxLt.squad)+'</div><div class="ep-ic-lt">'+maxLt.lt+'d</div>'
+    :'<div class="ep-ic-sub">—</div>';
+
+  var squadsAtivas=new Set(active.map(function(r){return r.squad;}).filter(Boolean)).size;
+
+  el.innerHTML=
+    '<div class="ep-hdr">'+
+      '<div class="ep-hdr-title">Épicos</div>'+
+      '<div class="ep-hdr-sub">Visão executiva dos épicos ativos, mantendo filtros, edição inline e regras originais do sistema.</div>'+
+    '</div>'+
+    '<div class="ep-krow">'+
+      _epKpi('kb','Épicos Ativos',nAtivos,'sem Data Fim')+
+      _epKpi('kg','Na Meta',nMeta,'lead time < 40d')+
+      _epKpi('ka','Atenção',nAtenc,'entre 40d e 61d')+
+      _epKpi('kr','Críticos',nCrit,'≥ '+META+'d')+
+      _epKpi('kgr','Sem Data Prevista',nSemData,'precisa planejamento')+
+    '</div>'+
+    '<div class="ep-irow">'+
+      '<div class="ep-ic"><div class="ep-ic-lbl">🚀 Próxima entrega</div>'+proxHtml+'</div>'+
+      '<div class="ep-ic"><div class="ep-ic-lbl">⚠ Maior Lead Time</div>'+maxHtml+'</div>'+
+      '<div class="ep-ic"><div class="ep-ic-lbl">Squads ativas</div><div class="ep-ic-big">'+squadsAtivas+'</div><div class="ep-ic-sub">com épicos em acompanhamento</div></div>'+
+    '</div>';
+}
+function _epKpi(cls,lbl,val,sub){
+  return '<div class="ep-kpi '+cls+'"><div class="ep-kpi-lbl">'+lbl+'</div><div class="ep-kpi-val">'+val+'</div><div class="ep-kpi-sub">'+sub+'</div></div>';
+}
+
 function renderDash(){
   renderTriBanner();
   renderMetaPace();
@@ -2692,7 +2766,7 @@ function renderAll(tabToRestore){
   }
   try{
     normalizeWorkflowAll();
-    renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
+    renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); renderEpicsSummary(); updateTabCounts();
     activateTab(tab);
   }catch(e){
     console.error('renderAll error:', e);
