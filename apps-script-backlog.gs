@@ -36,7 +36,8 @@ var VP_SHEET_MAP = {
   vpSprint:     '_vp_sprint',
   vpDeliveries: '_vp_deliveries',
   vpOpUpdates:  '_vp_opupdates',
-  vpQuickNotes: '_vp_quicknotes'
+  vpQuickNotes: '_vp_quicknotes',
+  vpEpicMeta:   '_vp_epic_meta'  // mapa {id:{squad,resumo}} para todos os épicos
 };
 
 function getVpSheet_(key) {

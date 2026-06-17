@@ -1782,7 +1782,7 @@ var SQUAD_KEY='leadtime_sala_v8_squad';   // cache de squad originado do Jira/SE
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-06-17-v31-seed-slopc8870';
+var SEED_VERSION='2026-06-17-v32-epic-meta-cloud';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
@@ -2083,8 +2083,9 @@ function replaceFromSharedSource(rows){
     var old=localMap[r.id];
     var cachedResumo=resumoCache[r.id]||'';
     var cachedSquad=squadCache[r.id]||'';
-    if(!r.resumo) r.resumo = (old&&old.resumo) || cachedResumo || '';
-    if(!r.squad)  r.squad  = (old&&old.squad)  || cachedSquad  || '';
+    var cloudMeta=(_epicMetaCloud&&_epicMetaCloud[r.id])||{};
+    if(!r.resumo) r.resumo = (old&&old.resumo) || cachedResumo || cloudMeta.resumo || '';
+    if(!r.squad)  r.squad  = (old&&old.squad)  || cachedSquad  || cloudMeta.squad  || '';
 
     if(!old) return;
     var oldFimValido=isValidDate(old.fim);
@@ -3618,6 +3619,41 @@ function loadStoriesLocal(){
 // ═══════════════════════════════════════
 var _gasBacklogSaving=false;
 var _gasBacklogLoading=false;
+
+// ── Epic Meta Cloud (squad + resumo) ──────────────────────────────────────
+// Armazena {id:{squad,resumo}} na aba _vp_epic_meta do Apps Script de backlog.
+// Qualquer browser novo carrega o mapa na inicialização — sem precisar importar.
+var _epicMetaCloud = null; // null = ainda não carregado
+
+function loadEpicMetaFromCloud(cb){
+  if(!BK_GAS_URL){ if(cb) cb(); return; }
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key=vpEpicMeta&t='+Date.now(), function(err,json){
+    if(!err && json && json.ok && json.data && typeof json.data==='object'){
+      _epicMetaCloud = json.data;
+    }
+    if(cb) cb();
+  });
+}
+
+function saveEpicMetaToCloud(rows){
+  if(!BK_GAS_URL || !rows || !rows.length) return;
+  var meta = {};
+  try{ meta = JSON.parse(localStorage.getItem(RESUMO_KEY+'_meta')||'{}'); }catch(e){}
+  (rows||[]).forEach(function(r){
+    if(r&&r.id){
+      if(!meta[r.id]) meta[r.id]={};
+      if(r.squad)  meta[r.id].squad  = r.squad;
+      if(r.resumo) meta[r.id].resumo = r.resumo;
+    }
+  });
+  // Persiste localmente também para envio futuro caso a rede falhe
+  try{ localStorage.setItem(RESUMO_KEY+'_meta', JSON.stringify(meta)); }catch(e){}
+  fetch(BK_GAS_URL, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveVpData&key=vpEpicMeta&payload='+encodeURIComponent(JSON.stringify(meta))
+  }).catch(function(){});
+}
 var MAX_BACKLOG_SNAPS=20; // limite de snapshots — impede crescimento indefinido do payload
 function saveBacklogSnaps(){
   // Mantém apenas os MAX_BACKLOG_SNAPS mais recentes para não sobrecarregar o GAS
@@ -3681,8 +3717,7 @@ function mergeBacklog(incoming){
 }
 
 // JSONP helper — evita bloqueio CORS; GAS responde com callback(data)
-function _gasJsonp(url, cb){
-  var name='_gasJP_'+Date.now();
+function _gasJsonp(url, cb){  var name='_gasJP_'+Date.now();
   var script=document.createElement('script');
   var done=false;
   window[name]=function(data){
@@ -4800,6 +4835,7 @@ function loadXlsx(file){
 
       allData = merged;
       saveResumoCache(merged);
+      saveEpicMetaToCloud(merged);
       backfillEpicSquads();
 
       // Diagnóstico: exibe no console os resumos lidos pelo import (F12 → Console)
@@ -5460,6 +5496,8 @@ var SEED=[
   if(SHEETS_WEBAPP){
     renderBootFromLocal();
     setSyncLabel('🔄 Sincronizando com Google Sheets…');
+    // Carrega meta de squad/resumo da nuvem antes do sync do Sheets
+    loadEpicMetaFromCloud();
     // Carrega backlog e estórias compartilhados em paralelo com os épicos
     gasLoadBacklog(function(err, count){
       if(!err && count>0){
