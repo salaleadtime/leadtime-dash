@@ -334,6 +334,22 @@ tr:nth-child(even):hover td{background:#e8f0ff!important}
 .eimp{width:100%;min-height:30px;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11px;font-family:ui-sans-serif,-apple-system,sans-serif;color:var(--tx2);background:transparent;resize:none;line-height:1.4;overflow:hidden;transition:border-color .13s,background .13s;outline:none}
 .eimp:hover{border-color:var(--border2);background:#f8faff}
 .eimp:focus{border-color:var(--accent);background:#fff}
+/* imp lock */
+.imp-lock-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:9998}
+.imp-lock-ov.show{display:block}
+.imp-lock-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.14);padding:22px 26px 18px;z-index:9999;min-width:250px;text-align:center;font-family:ui-sans-serif,-apple-system,sans-serif}
+.imp-lock-box.show{display:block}
+.imp-lock-box h4{margin:0 0 3px;font-size:13px;font-weight:700;color:#1e293b}
+.imp-lock-box p{margin:0 0 13px;font-size:11px;color:#64748b}
+.imp-lock-box input[type=password]{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:12px;outline:none;font-family:inherit}
+.imp-lock-box input[type=password]:focus{border-color:var(--accent)}
+.imp-lock-btns{display:flex;gap:8px;margin-top:11px}
+.imp-lock-btns button{flex:1;padding:7px 0;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;transition:opacity .12s}
+.imp-lock-btns .ilb-ok{background:var(--accent);color:#fff}
+.imp-lock-btns .ilb-cancel{background:#f1f5f9;color:#64748b}
+.imp-lock-err{font-size:10px;color:#ef4444;margin-top:7px;display:none}
+.imp-th-ico{font-size:9px;opacity:.45;cursor:pointer;vertical-align:middle;margin-left:3px;transition:opacity .12s}
+.imp-th-ico:hover{opacity:.75}
 
 /* pagination */
 .pag{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid #f1f5f9;font-size:10px;color:#94a3b8;background:#f8fafc}
@@ -1094,7 +1110,7 @@ body{min-height:100vh}
         <thead><tr>
           <th>ID Épico</th><th>Squad</th><th>Resumo</th><th>Status</th>
           <th>Data Início</th><th>Data Prevista</th><th class="th-fim">📅 Data Fim</th><th>CHG</th>
-          <th id="thLT" onclick="toggleSortLT()" style="cursor:pointer;user-select:none;white-space:nowrap" title="Clique para ordenar por Lead Time">Lead Time <span id="ltSortIco" style="font-size:10px;opacity:.6">⇅</span></th><th>Impedimentos</th>
+          <th id="thLT" onclick="toggleSortLT()" style="cursor:pointer;user-select:none;white-space:nowrap" title="Clique para ordenar por Lead Time">Lead Time <span id="ltSortIco" style="font-size:10px;opacity:.6">⇅</span></th><th>Impedimentos <span id="impThIco" class="imp-th-ico" title="Clique para desbloquear edição" onclick="eimpLockClick()">🔒</span></th>
         </tr></thead>
         <tbody id="tblBody"></tbody>
       </table>
@@ -1734,6 +1750,7 @@ tr:nth-child(even):hover td,
 // STATE
 // ═══════════════════════════════════════
 var META=62, allData=[], pg=1, PG=12, sortLT=null; // null | 'desc' | 'asc'
+var impSenhaOk=false, _impFocusTgt=null;
 var ALL_SQUADS=['Contact','Expresso','Guardiões','Inception','Interestelar','MadMax','Terminator','TopGun'];
 var filt={s:'all',l:'all',sq:'all',dateIni:null,dateFim:null};
 var curTab='ep';
@@ -2929,7 +2946,7 @@ function renderTbl(){
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
       '<td style="min-width:195px;max-width:255px">'+
-        '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this)">'+esc(r.impedimento||'')+'</textarea>'+
+        '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
       '</td>'+
     '</tr>';
   });
@@ -3125,6 +3142,43 @@ function fc(el){
 }
 
 function ar(el){el.style.height='auto';el.style.height=Math.max(30,el.scrollHeight)+'px';}
+
+function eimpFocus(el){
+  if(impSenhaOk) return;
+  el.blur();
+  _impFocusTgt=el;
+  var m=$id('impLockBox'), o=$id('impLockOv');
+  $id('impLockInput').value='';
+  $id('impLockErr').style.display='none';
+  m.classList.add('show'); o.classList.add('show');
+  setTimeout(function(){$id('impLockInput').focus();},60);
+}
+function eimpLockClick(){
+  if(impSenhaOk){ impSenhaOk=false; var ico=$id('impThIco'); if(ico){ico.textContent='🔒';ico.title='Clique para desbloquear edição';} return; }
+  _impFocusTgt=null;
+  var m=$id('impLockBox'), o=$id('impLockOv');
+  $id('impLockInput').value='';
+  $id('impLockErr').style.display='none';
+  m.classList.add('show'); o.classList.add('show');
+  setTimeout(function(){$id('impLockInput').focus();},60);
+}
+function confirmImpSenha(){
+  if($id('impLockInput').value==='sala'){
+    impSenhaOk=true;
+    var ico=$id('impThIco'); if(ico){ico.textContent='🔓';ico.title='Edição desbloqueada · clique para bloquear novamente';}
+    closeImpLock(true);
+  } else {
+    $id('impLockErr').style.display='block';
+    $id('impLockInput').value='';
+    $id('impLockInput').focus();
+  }
+}
+function closeImpLock(success){
+  $id('impLockBox').classList.remove('show');
+  $id('impLockOv').classList.remove('show');
+  if(success && _impFocusTgt){ var t=_impFocusTgt; _impFocusTgt=null; setTimeout(function(){t.focus();},60); }
+  else { _impFocusTgt=null; }
+}
 
 function populateSqF(){
   var fromData=allData.map(function(r){return r.squad;}).filter(Boolean);
@@ -6096,5 +6150,18 @@ function calSeedExample(){
   });
 })();
 </script>
+
+<!-- Impedimento lock modal -->
+<div class="imp-lock-ov" id="impLockOv" onclick="closeImpLock(false)"></div>
+<div class="imp-lock-box" id="impLockBox">
+  <h4>🔒 Impedimentos</h4>
+  <p>Informe a senha para editar</p>
+  <input type="password" id="impLockInput" placeholder="Senha" onkeydown="if(event.key==='Enter')confirmImpSenha();if(event.key==='Escape')closeImpLock(false);">
+  <div class="imp-lock-btns">
+    <button class="ilb-cancel" onclick="closeImpLock(false)">Cancelar</button>
+    <button class="ilb-ok" onclick="confirmImpSenha()">Confirmar</button>
+  </div>
+  <div class="imp-lock-err" id="impLockErr">Senha incorreta</div>
+</div>
 </body>
 </html>
