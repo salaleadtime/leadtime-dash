@@ -673,6 +673,305 @@ tr:nth-child(even):hover td{background:#e8f0ff!important}
 .hist-revertido-sheets{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
 .hist-deletado{background:#1e293b;color:#f8fafc;border:1px solid #475569}
 
+/* ==========================================================
+   AJUSTE VISUAL — PALETA BRADESCO + MENU PÍLULA
+   Alteração somente de layout/CSS. Regras e JS preservados.
+   ========================================================== */
+:root{
+  --brad-red:#cc092f;
+  --brad-red-2:#d60b3f;
+  --brad-pink:#d80b57;
+  --brad-wine:#9f0030;
+  --brad-soft:#fff1f5;
+  --brad-soft-2:#fde5ed;
+  --brad-line:#f0b3c4;
+  --brad-text:#1d2430;
+  --brad-muted:#667085;
+}
+
+/* Topo sai do preto e entra na paleta Bradesco */
+.top{
+  height:74px!important;
+  padding:0 1.8rem!important;
+  background:linear-gradient(135deg,var(--brad-wine) 0%,var(--brad-red) 48%,var(--brad-pink) 100%)!important;
+  border-bottom:0!important;
+  box-shadow:0 8px 22px rgba(204,9,47,.18)!important;
+  gap:14px!important;
+}
+.top::after{
+  display:block!important;
+  content:''!important;
+  position:absolute!important;
+  inset:0!important;
+  background:
+    radial-gradient(circle at 12% 20%,rgba(255,255,255,.16),transparent 22%),
+    linear-gradient(90deg,rgba(255,255,255,.08),transparent 40%)!important;
+  pointer-events:none!important;
+}
+.top-logo{
+  width:38px!important;
+  height:38px!important;
+  border-radius:12px!important;
+  background:rgba(255,255,255,.18)!important;
+  border:1px solid rgba(255,255,255,.28)!important;
+  color:#fff!important;
+  box-shadow:none!important;
+  font-size:12px!important;
+}
+.top-name{
+  font-size:21px!important;
+  color:#fff!important;
+  letter-spacing:-.6px!important;
+}
+.top-sub{
+  color:rgba(255,255,255,.78)!important;
+  font-size:9.5px!important;
+  letter-spacing:1.1px!important;
+}
+.top-sub::before,
+.top-sync{
+  display:none!important;
+}
+.top-meta{
+  background:rgba(255,255,255,.18)!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.24)!important;
+  padding:7px 15px!important;
+  border-radius:22px!important;
+  font-size:11px!important;
+  box-shadow:none!important;
+}
+.tbtn{
+  background:rgba(255,255,255,.16)!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.24)!important;
+  border-radius:18px!important;
+  padding:8px 14px!important;
+  font-size:11.5px!important;
+  box-shadow:none!important;
+}
+.tbtn:hover{
+  background:rgba(255,255,255,.25)!important;
+  color:#fff!important;
+  transform:translateY(-1px);
+}
+.tbtn.green{
+  background:#fff!important;
+  color:var(--brad-red)!important;
+  border-color:#fff!important;
+}
+
+/* Menu no modelo da referência: pílula menor, ativo preenchido e inativo contornado */
+.tabs{
+  top:74px!important;
+  min-height:58px!important;
+  background:#fff!important;
+  border-bottom:1px solid #f3d6df!important;
+  box-shadow:0 8px 18px rgba(29,36,48,.06)!important;
+  padding:11px 1.8rem 12px!important;
+  gap:10px!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  overflow-x:auto!important;
+}
+.tabbt{
+  height:34px!important;
+  padding:0 18px!important;
+  border:1.4px solid var(--brad-pink)!important;
+  border-radius:999px!important;
+  background:#fff!important;
+  color:var(--brad-red)!important;
+  margin:0!important;
+  font-size:12.5px!important;
+  font-weight:800!important;
+  letter-spacing:.1px!important;
+  box-shadow:none!important;
+  gap:8px!important;
+  white-space:nowrap!important;
+}
+.tabbt.on{
+  background:linear-gradient(135deg,var(--brad-red),var(--brad-pink))!important;
+  color:#fff!important;
+  border-color:transparent!important;
+  box-shadow:0 7px 16px rgba(204,9,47,.22)!important;
+}
+.tabbt:hover:not(.on){
+  background:var(--brad-soft)!important;
+  color:var(--brad-wine)!important;
+  border-color:var(--brad-red)!important;
+  border-radius:999px!important;
+}
+.tab-ct{
+  min-width:22px!important;
+  height:20px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:var(--brad-soft-2)!important;
+  color:var(--brad-red)!important;
+  border-radius:999px!important;
+  padding:0 7px!important;
+  font-size:10px!important;
+  font-weight:900!important;
+}
+.tabbt.on .tab-ct{
+  background:rgba(255,255,255,.24)!important;
+  color:#fff!important;
+}
+
+/* Ajuste de espaçamento por causa do topo menor */
+.ep,.db,.cal-wrap{
+  padding-top:1.45rem!important;
+}
+
+/* Hero e cards seguem a paleta, sem o tom preto */
+.pd-hero{
+  background:linear-gradient(135deg,var(--brad-wine),var(--brad-red) 52%,var(--brad-pink))!important;
+  border-radius:22px!important;
+  box-shadow:0 14px 30px rgba(204,9,47,.18)!important;
+}
+.pd-hero-box{
+  background:rgba(255,255,255,.17)!important;
+  border:1px solid rgba(255,255,255,.26)!important;
+}
+.pd-card::after,
+.premium-kpi::before{
+  background:var(--pcol,var(--brad-red))!important;
+}
+.pd-card,
+.premium-kpi,
+.premium-ep-card,
+.pd-panel,
+.metro-summary,
+.metro-panel,
+.tc,
+.panel{
+  border-color:#e8edf3!important;
+  box-shadow:0 8px 20px rgba(29,36,48,.07)!important;
+}
+
+/* Botões, chips, paginação e ações no mesmo padrão */
+.chip.on,
+.pb.on,
+.up-btn,
+.cal-btn.primary,
+.fab-cap{
+  background:linear-gradient(135deg,var(--brad-red),var(--brad-pink))!important;
+  border-color:transparent!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+.chip:hover,
+.fsel:focus,
+.fdate:focus,
+.fsrch:focus,
+.einp:hover,
+.eimp:hover,
+.einp:focus,
+.eimp:focus{
+  border-color:var(--brad-red)!important;
+}
+.cid-link,
+.cid-link:hover,
+.premium-title,
+.premium-pill.red,
+.metro-card-id{
+  color:var(--brad-red)!important;
+}
+.premium-pill.red,
+.metro-card-id,
+.pd-action.red{
+  background:var(--brad-soft)!important;
+}
+
+/* Timeline de entregas previstas com Bradesco */
+.metro-line{
+  background:linear-gradient(90deg,var(--brad-red),var(--brad-pink))!important;
+}
+.metro-dot{
+  border-color:var(--brad-red)!important;
+}
+.metro-card{
+  box-shadow:0 12px 24px rgba(29,36,48,.08)!important;
+}
+
+/* Tabelas mais limpas e executivas */
+th{
+  background:#fffafd!important;
+  color:#667085!important;
+}
+tr:hover td,
+tr:nth-child(even):hover td{
+  background:#fff7fa!important;
+}
+
+/* Responsivo */
+@media(max-width:720px){
+  .top{
+    height:70px!important;
+    padding:0 1rem!important;
+  }
+  .top-name{font-size:18px!important}
+  .tabs{
+    top:70px!important;
+    padding:10px 1rem!important;
+  }
+  .tabbt{
+    height:32px!important;
+    padding:0 15px!important;
+    font-size:12px!important;
+  }
+}
+
+</style>
+<style id="premium-layout-css">
+
+/* ==========================================================
+   LAYOUT PREMIUM — aplicado somente à camada visual
+   Mantém regras, cálculos, imports, filtros e persistência originais.
+   ========================================================== */
+:root{
+  --premium-bg:#f4f6f9;
+  --premium-dark:#161a22;
+  --premium-dark2:#242a36;
+  --premium-red:#d90736;
+  --premium-red2:#f12b52;
+  --premium-red-soft:#ffe8ef;
+  --premium-card:#ffffff;
+  --premium-line:#e2e8f0;
+  --premium-text:#17202a;
+  --premium-muted:#667085;
+  --premium-muted2:#98a2b3;
+  --premium-green:#138a3d;
+  --premium-green-soft:#e9f8ef;
+  --premium-amber:#b77900;
+  --premium-amber-soft:#fff3d8;
+  --premium-blue:#2563eb;
+  --premium-blue-soft:#eef4ff;
+  --premium-purple:#6b4eff;
+  --premium-purple-soft:#f1eeff;
+  --premium-shadow:0 16px 36px rgba(23,32,42,.10),0 3px 10px rgba(23,32,42,.05);
+  --premium-shadow-sm:0 8px 22px rgba(23,32,42,.08),0 2px 6px rgba(23,32,42,.04);
+}
+html,body{background:var(--premium-bg)!important;color:var(--premium-text)!important;font-size:14px}
+body{min-height:100vh}
+.pane.on{animation:premiumFade .18s ease-out}@keyframes premiumFade{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:none}}
+.ep,.db,.cal-wrap{padding:2rem!important;max-width:1780px;margin:0 auto}.db{gap:1.35rem!important}.sec-lbl{color:var(--premium-muted2)!important;font-size:13px!important;letter-spacing:.9px!important;margin-bottom:1rem!important}.sec-lbl::after{background:var(--premium-line)!important}
+/* Cards e filtros */
+.fbar{border:1px solid var(--premium-line)!important;border-radius:18px!important;padding:1rem 1.25rem!important;box-shadow:var(--premium-shadow-sm)!important;background:#fff!important;margin-bottom:1.25rem!important;gap:12px!important}.fl{background:#f1f4f8!important;color:var(--premium-muted)!important;border-radius:12px!important;padding:7px 10px!important;font-size:10px!important}.chip,.fsel,.fdate,.fsrch{height:34px!important;border-radius:12px!important;border:1px solid var(--premium-line)!important;background:#fff!important;color:var(--premium-muted)!important;font-size:12px!important}.chip{padding:0 14px!important}.chip.on{background:var(--premium-red)!important;border-color:var(--premium-red)!important;color:#fff!important;box-shadow:none!important}.chip:hover{border-color:var(--premium-red)!important;color:var(--premium-red)!important}.chip.on:hover{color:#fff!important}.fsep{background:var(--premium-line)!important;height:26px!important}
+/* Tabela moderna */
+.tc,.panel,.sv-tbl-wrap,.bk-history,.cal-tri{background:#fff!important;border:1px solid var(--premium-line)!important;border-radius:20px!important;box-shadow:var(--premium-shadow-sm)!important;overflow:hidden!important}.tc-hd{background:#fff!important;border-bottom:1px solid var(--premium-line)!important;padding:1rem 1.25rem!important}.tc-hd-t,.p-t{font-size:15px!important;color:var(--premium-text)!important;font-weight:850!important}.tc-hint,.p-cnt{font-size:11px!important;color:var(--premium-muted2)!important}table{font-size:13px!important}th{background:#fbfcfe!important;color:var(--premium-muted)!important;border-bottom:1px solid var(--premium-line)!important;padding:13px 16px!important;font-size:11px!important;letter-spacing:.65px!important}td{padding:14px 16px!important;border-bottom:1px solid #eef2f6!important}tr:nth-child(even) td{background:#fdfefe!important}tr:hover td,tr:nth-child(even):hover td{background:#f7faff!important}.cid-link{color:var(--premium-red)!important;font-weight:850!important}.bdg{border-radius:16px!important;padding:5px 11px!important;font-size:10px!important;border:0!important}.bgreen{background:var(--premium-green-soft)!important;color:var(--premium-green)!important}.bblue{background:var(--premium-blue-soft)!important;color:var(--premium-blue)!important}.bamber{background:var(--premium-amber-soft)!important;color:var(--premium-amber)!important}.bgray{background:#f0f2f5!important;color:var(--premium-muted)!important}.bviolet{background:var(--premium-purple-soft)!important;color:var(--premium-purple)!important}.einp,.eimp{border-radius:10px!important;background:#f8fafc!important;border:1px solid transparent!important}.einp:hover,.eimp:hover,.einp:focus,.eimp:focus{border-color:var(--premium-red)!important;background:#fff!important}.pag{background:#fff!important;padding:12px 16px!important}.pb{border-radius:10px!important}.pb.on{background:var(--premium-red)!important;border-color:var(--premium-red)!important}
+/* Aba Épicos — executivo */
+.premium-ep-executive{margin-bottom:1.25rem}.premium-page-title{margin:0 0 1.15rem}.premium-title{font-size:28px;line-height:1.1;font-weight:900;letter-spacing:-.8px;color:var(--premium-text)}.premium-subtitle{font-size:13px;color:var(--premium-muted);margin-top:6px}.premium-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}.premium-kpi{background:#fff;border:1px solid var(--premium-line);border-radius:18px;padding:18px 20px;box-shadow:var(--premium-shadow-sm);position:relative;overflow:hidden}.premium-kpi::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;background:var(--pcol,var(--premium-red))}.premium-kpi-l{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--premium-muted);font-weight:850}.premium-kpi-v{font-size:30px;font-weight:900;letter-spacing:-1.4px;margin-top:8px;color:var(--premium-text)}.premium-kpi-s{font-size:12px;color:var(--premium-muted2);margin-top:3px}.premium-ep-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}.premium-ep-card{background:#fff;border:1px solid var(--premium-line);border-radius:18px;padding:18px 20px;box-shadow:var(--premium-shadow-sm);display:flex;align-items:center;justify-content:space-between;gap:14px}.premium-ep-card strong{font-size:15px}.premium-ep-card span{font-size:12px;color:var(--premium-muted)}.premium-pill{display:inline-flex;align-items:center;justify-content:center;min-width:74px;height:26px;border-radius:20px;font-size:11px;font-weight:850;padding:0 12px}.premium-pill.red{background:var(--premium-red-soft,var(--softred));color:var(--premium-red)}.premium-pill.green{background:var(--premium-green-soft);color:var(--premium-green)}.premium-pill.amber{background:var(--premium-amber-soft);color:var(--premium-amber)}.premium-pill.blue{background:var(--premium-blue-soft);color:var(--premium-blue)}
+/* Dashboard premium */
+.premium-dashboard{max-width:1780px;margin:0 auto;padding:0}.pd-hero{background:var(--premium-red);border-radius:24px;padding:34px 38px;box-shadow:var(--premium-shadow-sm);display:flex;align-items:center;gap:24px;justify-content:space-between;color:#fff}.pd-hero h1{font-size:34px;line-height:1.05;margin:0;font-weight:900;letter-spacing:-1px}.pd-hero p{margin:8px 0 0;color:#ffd5df;font-size:14px}.pd-hero-mini{display:grid;grid-template-columns:repeat(4,138px);gap:16px}.pd-hero-box{height:76px;border-radius:18px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);padding:14px 16px}.pd-hero-v{font-size:25px;font-weight:900;line-height:1;color:#fff}.pd-hero-l{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#ffd6df;margin-top:9px;font-weight:800}.pd-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-top:28px}.pd-card{background:#fff;border:1px solid var(--premium-line);border-radius:20px;box-shadow:var(--premium-shadow-sm);padding:22px 24px;min-height:128px;position:relative;overflow:hidden}.pd-card::after{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:var(--pcol,var(--premium-red))}.pd-card-l{font-size:11px;text-transform:uppercase;letter-spacing:.75px;color:var(--premium-muted);font-weight:900}.pd-card-v{font-size:38px;font-weight:950;letter-spacing:-1.5px;margin-top:12px;color:var(--premium-text)}.pd-card-s{font-size:12px;color:var(--premium-muted2);margin-top:4px}.pd-panels{display:grid;grid-template-columns:1fr 1.04fr;gap:26px;margin-top:36px}.pd-panel{background:#fff;border:1px solid var(--premium-line);border-radius:22px;box-shadow:var(--premium-shadow-sm);padding:30px}.pd-panel-title{font-size:22px;font-weight:900;letter-spacing:-.35px;color:var(--premium-text);margin-bottom:24px}.pd-squad-row{margin:0 0 24px}.pd-squad-top{display:flex;justify-content:space-between;align-items:center;font-weight:850;margin-bottom:10px}.pd-squad-name{font-size:15px}.pd-squad-pct{font-size:14px;color:var(--pcol,var(--premium-green))}.pd-bar{height:11px;background:#edf1f5;border-radius:10px;overflow:hidden}.pd-bar i{display:block;height:100%;width:var(--w,0%);background:var(--pcol,var(--premium-green));border-radius:10px}.pd-risk{display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid #eef2f6}.pd-risk:last-child{border-bottom:0}.pd-risk-desc{font-size:14px;color:var(--premium-text)}.pd-risk small{display:block;color:var(--premium-muted2);font-size:11px;margin-top:3px}
+/* Entregas previstas — Metro Timeline */
+.pd-deliveries{margin-top:36px}.metro-wrap{display:grid;grid-template-columns:330px 1fr;gap:34px;align-items:stretch}.metro-summary,.metro-panel{background:#fff;border:1px solid var(--premium-line);border-radius:22px;box-shadow:var(--premium-shadow-sm);padding:30px}.metro-summary h2,.metro-panel h2{font-size:20px;line-height:1.1;margin:0 0 28px;font-weight:900;color:var(--premium-text)}.metro-s-row{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:center;margin:30px 0}.metro-s-v{font-size:27px;font-weight:950}.metro-s-l{font-weight:850;color:var(--premium-muted);font-size:13px}.metro-area{position:relative;min-height:395px;overflow:hidden}.metro-line{position:absolute;left:70px;right:36px;top:184px;height:6px;background:var(--premium-red);border-radius:6px}.metro-gate{position:absolute;top:55px;bottom:28px;width:2px;background:#e1e7ef}.metro-gate span{position:absolute;top:-27px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:850;color:var(--premium-muted);white-space:nowrap}.metro-dot{position:absolute;top:172px;width:24px;height:24px;border-radius:50%;background:#fff;border:5px solid var(--premium-red);z-index:3}.metro-card{position:absolute;width:238px;min-height:100px;background:#fff;border:1px solid var(--premium-line);border-radius:16px;box-shadow:0 14px 26px rgba(23,32,42,.10);padding:18px 20px;z-index:4}.metro-card::before{content:'';position:absolute;left:50%;width:2px;background:#dfe6ee;z-index:-1}.metro-card.top::before{top:100%;height:58px}.metro-card.bottom::before{bottom:100%;height:58px}.metro-card-id{display:inline-flex;align-items:center;height:25px;border-radius:18px;background:var(--premium-red-soft,var(--softred));color:var(--premium-red);font-size:11px;font-weight:900;padding:0 14px}.metro-card-name{font-size:15px;font-weight:900;margin-top:12px;color:var(--premium-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.metro-card-date{height:25px;border-radius:16px;margin-top:9px;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}.metro-card-date.green{background:var(--premium-green-soft);color:var(--premium-green)}.metro-card-date.red{background:var(--premium-red-soft,var(--softred));color:var(--premium-red)}.metro-card-date.amber{background:var(--premium-amber-soft);color:var(--premium-amber)}.metro-card-date.blue{background:var(--premium-blue-soft);color:var(--premium-blue)}.metro-empty{display:flex;align-items:center;justify-content:center;min-height:320px;color:var(--premium-muted2);font-size:14px;text-align:center}.pd-note{margin-top:16px;color:var(--premium-muted2);font-size:12px}.pd-soft-title{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--premium-muted2);font-weight:900;margin:34px 0 14px}.pd-actions{display:flex;gap:12px;flex-wrap:wrap}.pd-action{height:38px;display:inline-flex;align-items:center;border-radius:18px;padding:0 18px;font-size:12px;font-weight:900}.pd-action.red{background:var(--premium-red-soft,var(--softred));color:var(--premium-red)}.pd-action.amber{background:var(--premium-amber-soft);color:var(--premium-amber)}.pd-action.green{background:var(--premium-green-soft);color:var(--premium-green)}
+/* Outros componentes alinhados */
+.kgrid{gap:18px!important}.kpi,.sc,.panel,.st-kpi-item,.sv-kpi-item,.bk-squad-card,.sv-card{border-radius:18px!important;box-shadow:var(--premium-shadow-sm)!important;border-color:var(--premium-line)!important}.kv{letter-spacing:-1.5px!important}.sc-lt{font-size:34px!important}.cal-thead,.cal-mdl-hd{background:var(--premium-red)!important}.cal-btn.primary{background:var(--premium-red)!important;box-shadow:none!important}.fab-cap{background:var(--premium-red)!important;border-radius:18px!important;box-shadow:0 16px 30px rgba(217,7,54,.28)!important}
+@media(max-width:1180px){.premium-kpis,.pd-card-grid{grid-template-columns:repeat(2,1fr)}.premium-ep-strip{grid-template-columns:1fr}.pd-hero{flex-direction:column;align-items:flex-start}.pd-hero-mini{grid-template-columns:repeat(2,138px)}.pd-panels,.metro-wrap{grid-template-columns:1fr}.tabs{justify-content:flex-start;overflow-x:auto}.top{overflow:visible}.top .tbtn span{display:none}.metro-area{overflow-x:auto}}
+@media(max-width:720px){.premium-kpis,.pd-card-grid{grid-template-columns:1fr}.ep,.db,.cal-wrap{padding:1rem!important}.pd-hero-mini{grid-template-columns:1fr 1fr;width:100%}.pd-hero-box{width:auto}.metro-summary,.metro-panel,.pd-panel{padding:20px}.top-meta{display:none!important}}
+
 </style>
 </head>
 <body>
@@ -754,7 +1053,7 @@ tr:nth-child(even):hover td{background:#e8f0ff!important}
 <div class="pane on" id="pane-ep">
 <div class="ep">
 
-  <div id="epSummary"></div>
+  <div id="epExecutive" class="premium-ep-executive"></div>
 
   <div class="fbar">
     <span class="fl">Status:</span>
@@ -811,7 +1110,7 @@ tr:nth-child(even):hover td{background:#e8f0ff!important}
 
 <!-- ══ MEDIÇÃO PANE ══ -->
 <div class="pane" id="pane-me">
-<div class="med-pane">
+<div class="ep">
 
   <div class="med-hero">
     <div class="med-hero-icon">📊</div>
@@ -905,6 +1204,299 @@ tr:nth-child(even):hover td{background:#e8f0ff!important}
 .xr-id{font-family:ui-monospace,monospace;color:#7a0000}
 .xr-scale{position:absolute;left:0;right:0;top:88px;display:flex;justify-content:space-between;font-size:9px;color:var(--tx3)}
 .xr-empty{font-size:12px;color:var(--tx3);text-align:center;padding:1.5rem}
+</style>
+<style>
+/* ==========================================================
+   PATCH FINAL — GRAFITE EXATO + DASHBOARD COMPLETO
+   Escopo: visual/layout e renderização da aba Dashboard usando
+   as funções já existentes. Regras de cálculo/dados preservadas.
+   ========================================================== */
+
+:root{
+  --grafite-exato:#141922;
+  --grafite-card:#242b36;
+  --grafite-card-hover:#303846;
+  --bradesco-red:#cc092f;
+  --bradesco-pink:#d80b57;
+  --bradesco-red-dark:#a6002b;
+  --bg-page:#f4f6fa;
+  --line-soft:#e3e8ef;
+}
+
+/* Fundo */
+html,body{
+  background:var(--bg-page)!important;
+}
+
+/* Topo grafite igual ao print */
+.top{
+  background:var(--grafite-exato)!important;
+  background-image:none!important;
+  border-bottom:none!important;
+  box-shadow:none!important;
+  height:84px!important;
+  padding:0 1.8rem!important;
+}
+.top::before,
+.top::after{
+  display:none!important;
+  content:none!important;
+  background:none!important;
+}
+.top-logo{
+  background:linear-gradient(135deg,var(--bradesco-red),var(--bradesco-pink))!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+  width:46px!important;
+  height:46px!important;
+  border-radius:14px!important;
+}
+.top-name{
+  color:#fff!important;
+  font-size:24px!important;
+  font-weight:800!important;
+  letter-spacing:-.7px!important;
+}
+.top-sub{
+  color:#c6ceda!important;
+  font-size:10px!important;
+  letter-spacing:1.2px!important;
+}
+.top-sub::before,
+.top-sync{
+  display:none!important;
+}
+.top-meta,
+.tbtn{
+  background:var(--grafite-card)!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  border-radius:999px!important;
+  box-shadow:none!important;
+  font-weight:800!important;
+}
+.top-meta{
+  padding:9px 18px!important;
+  font-size:11.5px!important;
+}
+.tbtn{
+  padding:9px 16px!important;
+  font-size:11.5px!important;
+}
+.tbtn:hover{
+  background:var(--grafite-card-hover)!important;
+  color:#fff!important;
+}
+.tbtn.green,
+.up-btn,
+.up-btn-all,
+.fab-cap{
+  background:linear-gradient(135deg,var(--bradesco-red),var(--bradesco-pink))!important;
+  color:#fff!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+}
+
+/* Menu grafite */
+.tabs{
+  top:84px!important;
+  background:var(--grafite-exato)!important;
+  background-image:none!important;
+  border-bottom:none!important;
+  box-shadow:none!important;
+  padding:10px 1.8rem 18px!important;
+  gap:10px!important;
+  min-height:70px!important;
+  align-items:center!important;
+  overflow-x:auto!important;
+}
+.tabs::before,
+.tabs::after{
+  display:none!important;
+  content:none!important;
+}
+.tabbt{
+  background:var(--grafite-card)!important;
+  color:#d8dee8!important;
+  border:0!important;
+  border-radius:999px!important;
+  height:38px!important;
+  padding:0 22px!important;
+  margin:0!important;
+  font-size:12.5px!important;
+  font-weight:800!important;
+  box-shadow:none!important;
+  white-space:nowrap!important;
+}
+.tabbt:hover:not(.on){
+  background:var(--grafite-card-hover)!important;
+  color:#fff!important;
+}
+.tabbt.on{
+  background:linear-gradient(135deg,var(--bradesco-red),var(--bradesco-pink))!important;
+  color:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.tab-ct{
+  background:#3a4350!important;
+  color:#f4f7fb!important;
+  border-radius:999px!important;
+  min-width:24px!important;
+  height:20px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  padding:0 8px!important;
+}
+.tabbt.on .tab-ct{
+  background:rgba(255,255,255,.22)!important;
+  color:#fff!important;
+}
+
+/* Barra branca de upload/importação */
+.upbar,
+.sv-upbar,
+.st-upbar{
+  background:#fff!important;
+  border-bottom:1px solid var(--line-soft)!important;
+}
+
+/* Dashboard completo — estilo limpo do print enviado */
+#pane-db .db{
+  padding:1.2rem 1.6rem 2rem!important;
+  gap:1.35rem!important;
+}
+#pane-db .tri-banner,
+#pane-db #metaPace,
+#pane-db .panel,
+#pane-db .tc,
+#pane-db .kpi,
+#pane-db .sc,
+#pane-db .pg{
+  background:#fff!important;
+  border:1px solid var(--line-soft)!important;
+  box-shadow:0 8px 18px rgba(29,36,48,.06)!important;
+}
+#pane-db .sec-lbl{
+  color:var(--bradesco-red)!important;
+  letter-spacing:.8px!important;
+}
+#pane-db .sec-lbl::after{
+  background:#f0b8c7!important;
+}
+#pane-db .tri-q{
+  background:var(--bradesco-red-dark)!important;
+}
+#pane-db .tri-prog-fill{
+  background:linear-gradient(90deg,var(--bradesco-red-dark),var(--bradesco-red),var(--bradesco-pink))!important;
+}
+#pane-db .kpi{
+  border-radius:12px!important;
+}
+#pane-db .kpi.kn::before,
+#pane-db .kpi.kr::before{
+  background:linear-gradient(90deg,var(--bradesco-red-dark),var(--bradesco-red))!important;
+}
+#pane-db .kpi.kg::before{
+  background:#16a34a!important;
+}
+#pane-db .kpi.ka::before{
+  background:#b77900!important;
+}
+#pane-db .kpi.kb::before{
+  background:#2563eb!important;
+}
+#pane-db .sc{
+  border-radius:12px!important;
+}
+#pane-db .panel{
+  border-radius:14px!important;
+}
+#pane-db .p-t{
+  color:#17202a!important;
+}
+#pane-db .p-cnt,
+#pane-db .tri-note{
+  color:#98a2b3!important;
+}
+
+/* Tabelas e chips gerais */
+th,
+.sv-tbl thead th{
+  background:#fbfcfe!important;
+  color:#667085!important;
+}
+tr:hover td,
+tr:nth-child(even):hover td,
+.sv-tbl tbody tr:hover{
+  background:#fff7fa!important;
+}
+.chip.on,
+.pb.on,
+.cal-btn.primary{
+  background:linear-gradient(135deg,var(--bradesco-red),var(--bradesco-pink))!important;
+  color:#fff!important;
+  border-color:transparent!important;
+}
+.cid-link,
+.st-card-id,
+.sv-card-ep,
+.sv-story-key,
+.metro-card-id,
+.premium-title,
+#pane-ep .premium-title{
+  color:var(--bradesco-red)!important;
+}
+
+/* Cards gerais claros */
+.premium-kpi,
+.premium-ep-card,
+.pd-card,
+.pd-panel,
+.metro-summary,
+.metro-panel,
+.kpi,
+.sc,
+.panel,
+.tc,
+.sv-tbl-wrap,
+.bk-history,
+.bk-squad-card,
+.sv-card,
+.st-card,
+.cal-tri,
+.cal-month{
+  background:#fff!important;
+  border:1px solid var(--line-soft)!important;
+}
+
+/* Responsivo */
+@media(max-width:760px){
+  .top{
+    height:auto!important;
+    min-height:78px!important;
+    padding:12px 1rem!important;
+    flex-wrap:wrap!important;
+  }
+  .top-name{
+    font-size:19px!important;
+  }
+  .tabs{
+    top:78px!important;
+    padding:10px 1rem 14px!important;
+    min-height:58px!important;
+  }
+  .tabbt{
+    height:34px!important;
+    padding:0 16px!important;
+    font-size:12px!important;
+  }
+}
+
 </style>
 <div class="pane" id="pane-db">
 <div class="db" id="dbContent">
@@ -5102,5 +5694,263 @@ function calSeedExample(){
   <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
   <span><span style="display:block">Copiar Tela</span><span class="fab-cap-sub">colar no Teams ou e-mail</span></span>
 </button>
+<script>
+/* ==========================================================
+   LAYOUT PREMIUM — JS executivo para Épicos e Dashboard
+   Patcha renderTbl para chamar renderEpExecutive automaticamente.
+   Sobrescreve renderDash com versão premium.
+   ========================================================== */
+(function(){
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function $id(id){ return document.getElementById(id); }
+  function fmtD(s){ if(!s)return'—'; var p=String(s).split('-'); if(p.length<3)return s; return p[2]+'/'+p[1]+'/'+p[0]; }
+  function now0(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
+  function parseLocalDate(s){ if(!s)return new Date(0); var p=String(s).split('-'); return new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); }
+  function activeEpics(){ return (window.allData||[]).filter(function(r){ return !r.fim; }); }
+  function measuredEpics(){ return (window.allData||[]).filter(function(r){ return !!r.fim; }); }
+  function getCurrentTrimester(){
+    if(typeof window.getCurrentTrimester==='function') return window.getCurrentTrimester();
+    var now=now0(); return {from:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1),to:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3+3,0),remaining:0};
+  }
+  function inTrimester(dateStr,tri){ if(!dateStr)return false; var d=new Date(dateStr+'T00:00:00'); return d>=tri.from&&d<=tri.to; }
+  function deliverList(){
+    var n=now0();
+    return (window.allData||[]).filter(function(r){ return !r.fim && r.dataPrevista; })
+      .sort(function(a,b){ return parseLocalDate(a.dataPrevista)-parseLocalDate(b.dataPrevista); });
+  }
+  function pKind(kind){ return kind==='green'?'var(--premium-green)':kind==='amber'?'var(--premium-amber)':kind==='blue'?'var(--premium-blue)':kind==='purple'?'var(--premium-purple)':'var(--premium-red)'; }
+  function pill(label,kind){ return '<span class="premium-pill '+(kind||'red')+'">'+esc(label)+'</span>'; }
+  function pdAction(label,kind){ return '<span class="pd-action '+(kind||'red')+'">'+esc(label)+'</span>'; }
+  function pct(a,b){ return b ? Math.round(a/b*100) : 0; }
+  function shortId(id){ return String(id||'').replace('SLOPC-','#'); }
+
+  window.renderEpExecutive = function(){
+    var el=$id('epExecutive'); if(!el) return;
+    var act=activeEpics();
+    var total=act.length;
+    var META=window.META||62;
+    var crit=act.filter(function(r){ return r.lt>=META; }).length;
+    var attention=act.filter(function(r){ return r.lt>=40 && r.lt<META; }).length;
+    var ok=act.filter(function(r){ return r.lt<40; }).length;
+    var noDate=act.filter(function(r){ return !r.dataPrevista; }).length;
+    var deliveries=deliverList();
+    var next=deliveries[0];
+    var byLt=act.slice().sort(function(a,b){ return b.lt-a.lt; })[0];
+    var squads=Array.from(new Set(act.map(function(r){ return r.squad; }).filter(Boolean))).length;
+    var cards = [
+      {l:'Épicos ativos',v:total,s:'sem Data Fim',c:'var(--premium-red)'},
+      {l:'Na meta',v:ok,s:'lead time < 40d',c:'var(--premium-green)'},
+      {l:'Atenção',v:attention,s:'entre 40d e '+(META-1)+'d',c:'var(--premium-amber)'},
+      {l:'Críticos',v:crit,s:'≥ '+META+'d',c:'var(--premium-red)'},
+      {l:'Sem data prevista',v:noDate,s:'precisa planejamento',c:'var(--premium-muted)'}
+    ].map(function(k){
+      return '<div class="premium-kpi" style="--pcol:'+k.c+'"><div class="premium-kpi-l">'+esc(k.l)+'</div><div class="premium-kpi-v">'+esc(k.v)+'</div><div class="premium-kpi-s">'+esc(k.s)+'</div></div>';
+    }).join('');
+    var nextHtml = next ? '<div class="premium-ep-card"><div><strong>🚀 Próxima entrega</strong><br><span>'+esc(shortId(next.id))+' · '+esc(next.resumo||'—')+'</span></div>'+pill(fmtD(next.dataPrevista),'blue')+'</div>' : '<div class="premium-ep-card"><div><strong>🚀 Próxima entrega</strong><br><span>Nenhuma data prevista preenchida</span></div>'+pill('—','blue')+'</div>';
+    var riskHtml = byLt ? '<div class="premium-ep-card"><div><strong>⚠ Maior Lead Time</strong><br><span>'+esc(shortId(byLt.id))+' · '+esc(byLt.squad||'—')+'</span></div>'+pill(byLt.lt+'d',byLt.lt>=META?'red':byLt.lt>=40?'amber':'green')+'</div>' : '';
+    el.innerHTML =
+      '<div class="premium-page-title"><div class="premium-title">Épicos</div><div class="premium-subtitle">Visão executiva dos épicos ativos, mantendo filtros, edição inline e regras originais do sistema.</div></div>'+
+      '<div class="premium-kpis">'+cards+'</div>'+
+      '<div class="premium-ep-strip">'+nextHtml+riskHtml+'<div class="premium-ep-card"><div><strong>Squads ativas</strong><br><span>com épicos em acompanhamento</span></div>'+pill(squads,'green')+'</div></div>';
+  };
+
+  function renderDashboardPremium(){
+    var root=$id('dbContent'); if(!root) return;
+    var data=window.allData||[];
+    var META=window.META||62;
+    var tri=getCurrentTrimester();
+    var measured=measuredEpics();
+    var triMeasured=data.filter(function(r){ return inTrimester(r.fim,tri); });
+    var active=activeEpics();
+    var del=deliverList();
+    var delivered=triMeasured.length;
+    var avgTri=delivered?Math.round(triMeasured.reduce(function(s,r){return s+r.lt;},0)/delivered):0;
+    var naMeta=triMeasured.filter(function(r){return r.lt<META;}).length;
+    var pctMeta=delivered?pct(naMeta,delivered):0;
+    var crit=data.filter(function(r){return r.lt>=META;}).length;
+    var noEstimate = (window.allStories||[]).filter(function(s){ var pts = s.pts || s.pontos || s.estimativa || s.estimate || ''; return !String(pts||'').trim(); }).length;
+    if(!window.allStories || !window.allStories.length) noEstimate = active.filter(function(r){ return !r.dataPrevista; }).length;
+    var backlogSnaps=window.backlogSnaps||[];
+    var getCurrentBacklogSnapshot=window.getCurrentBacklogSnapshot||function(){return null;};
+    var snapStoryCount=window.snapStoryCount||function(){return 0;};
+    var backlogTotal = backlogSnaps && backlogSnaps.length ? (getCurrentBacklogSnapshot() ? snapStoryCount(getCurrentBacklogSnapshot()) : 0) : 0;
+    var refined = window.allStories && window.allStories.length ? window.allStories.length : backlogTotal;
+    var dependencies = active.filter(function(r){ return String(r.impedimento||'').trim(); }).length;
+    var hero = [
+      {v:delivered,l:'Entregues'}, {v:(avgTri||'—')+(avgTri?'d':''),l:'LT médio'}, {v:(delivered?pctMeta+'%':'—'),l:'Na meta'}, {v:crit,l:'Críticos'}
+    ].map(function(h){ return '<div class="pd-hero-box"><div class="pd-hero-v">'+esc(h.v)+'</div><div class="pd-hero-l">'+esc(h.l)+'</div></div>'; }).join('');
+    var cards = [
+      {l:'Entregas previstas',v:del.length,s:'até fim do mês / janela atual',k:'red'},
+      {l:'Backlog refinado',v:refined||'—',s:refined?'pronto para análise':'importe a base de stories',k:'green'},
+      {l:'Sem estimativa',v:noEstimate||0,s:'risco para capacidade',k:'amber'},
+      {l:'Dependências',v:dependencies||0,s:'exigem ação externa',k:'blue'}
+    ].map(function(c){ return '<div class="pd-card" style="--pcol:'+pKind(c.k)+'"><div class="pd-card-l">'+esc(c.l)+'</div><div class="pd-card-v">'+esc(c.v)+'</div><div class="pd-card-s">'+esc(c.s)+'</div></div>'; }).join('');
+    var squadHtml = renderPremiumSquads(triMeasured,active);
+    var riskHtml = renderPremiumRisks(data);
+    var timelineHtml = renderPremiumDeliveryTimeline(del,active);
+    root.innerHTML =
+      '<div class="premium-dashboard">'+
+        '<section class="pd-hero"><div><h1>Dashboard executivo</h1><p>Resumo gerencial com foco em previsibilidade, lead time, riscos e entregas do trimestre.</p></div><div class="pd-hero-mini">'+hero+'</div></section>'+
+        '<section class="pd-card-grid">'+cards+'</section>'+
+        '<section class="pd-panels"><div class="pd-panel"><div class="pd-panel-title">Saúde das Squads</div>'+squadHtml+'</div><div class="pd-panel"><div class="pd-panel-title">Fila crítica</div>'+riskHtml+'</div></section>'+
+        timelineHtml+
+      '</div>';
+  }
+
+  function renderPremiumSquads(triMeasured,active){
+    var META=window.META||62;
+    var base = triMeasured && triMeasured.length ? triMeasured : active;
+    var squads=Array.from(new Set((base||[]).map(function(r){return r.squad;}).filter(Boolean))).sort();
+    if(!squads.length) return '<div class="metro-empty">Nenhum dado de squad para exibir.</div>';
+    return squads.slice(0,6).map(function(sq){
+      var items=base.filter(function(r){return r.squad===sq;});
+      var avg=items.length?Math.round(items.reduce(function(s,r){return s+r.lt;},0)/items.length):0;
+      var score=Math.max(5,Math.min(100,100-Math.round(avg/META*45)));
+      var kind=avg>=META?'red':avg>=40?'amber':'green';
+      return '<div class="pd-squad-row" style="--pcol:'+pKind(kind)+'"><div class="pd-squad-top"><span class="pd-squad-name">'+esc(sq)+'</span><span class="pd-squad-pct">'+score+'%</span></div><div class="pd-bar"><i style="--w:'+score+'%"></i></div><div class="pd-note">'+items.length+' épico'+(items.length!==1?'s':'')+' · LT médio '+(avg||'—')+(avg?'d':'')+'</div></div>';
+    }).join('');
+  }
+
+  function renderPremiumRisks(data){
+    var META=window.META||62;
+    var list=(data||[]).filter(function(r){ return r.lt>=META || String(r.impedimento||'').trim(); })
+      .sort(function(a,b){ return (b.lt||0)-(a.lt||0); }).slice(0,5);
+    if(!list.length) return '<div class="metro-empty">✅ Nenhum risco crítico no momento.</div>';
+    return list.map(function(r){
+      var META2=window.META||62;
+      var kind = r.lt>=META2 ? 'red' : 'amber';
+      var desc = r.lt>=META2 ? 'Lead time '+r.lt+'d · acima da meta' : 'Impedimento registrado';
+      if(r.impedimento) desc += ' · '+String(r.impedimento).slice(0,70);
+      return '<div class="pd-risk"><span class="premium-pill '+kind+'">'+esc(shortId(r.id))+'</span><div class="pd-risk-desc">'+esc(desc)+'<small>'+esc(r.resumo||'')+'</small></div></div>';
+    }).join('');
+  }
+
+  function renderPremiumDeliveryTimeline(del,active){
+    var n=now0();
+    var next7=del.filter(function(r){ var diff=Math.floor((parseLocalDate(r.dataPrevista)-n)/86400000); return diff>=0 && diff<=7; }).length;
+    var endMonth=new Date(n.getFullYear(),n.getMonth()+1,0); endMonth.setHours(23,59,59,999);
+    var month=del.filter(function(r){ var d=parseLocalDate(r.dataPrevista); return d>=n && d<=endMonth; }).length;
+    var blocked=(active||[]).filter(function(r){ return String(r.impedimento||'').trim(); }).length;
+    var noDate=(active||[]).filter(function(r){ return !r.dataPrevista; }).length;
+    var summary = [
+      {v:next7,l:'próximos 7 dias',k:'red'}, {v:month,l:'até fim do mês',k:'green'}, {v:blocked,l:'com bloqueio',k:'amber'}, {v:noDate,l:'sem data prevista',k:'red'}
+    ].map(function(s){ return '<div class="metro-s-row"><div class="metro-s-v" style="color:'+pKind(s.k)+'">'+esc(s.v)+'</div><div class="metro-s-l">'+esc(s.l)+'</div></div>'; }).join('');
+    var cards = '';
+    var max=6;
+    var list=del.slice(0,max);
+    if(list.length){
+      var lefts=[8,25,43,58,73,88];
+      list.forEach(function(r,i){
+        var d=parseLocalDate(r.dataPrevista);
+        var diff=Math.floor((d-n)/86400000);
+        var kind=diff<0 || diff<=7 ? 'red' : diff<=21 ? 'amber' : 'blue';
+        if(diff>21) kind='blue';
+        if(diff>=0 && diff<=7) kind='green';
+        var top = i%2===0;
+        var left=lefts[i];
+        var cardTop = top ? 90 : 230;
+        cards += '<div class="metro-dot" style="left:'+left+'%"></div>'+
+          '<div class="metro-card '+(top?'top':'bottom')+'" style="left:calc('+left+'% - 119px);top:'+cardTop+'px">'+
+            '<div class="metro-card-id">'+esc(shortId(r.id))+'</div>'+
+            '<div class="metro-card-name" title="'+esc(r.resumo||'')+'">'+esc((r.resumo||r.id||'Entrega').slice(0,28))+'</div>'+
+            '<div class="metro-card-date '+kind+'">'+esc(fmtD(r.dataPrevista))+'</div>'+
+          '</div>';
+      });
+    }
+    var area = list.length ? '<div class="metro-area"><div class="metro-line"></div><div class="metro-gate" style="left:14%"><span>Esta semana</span></div><div class="metro-gate" style="left:40%"><span>Próxima semana</span></div><div class="metro-gate" style="left:66%"><span>Mês</span></div><div class="metro-gate" style="left:88%"><span>Fim TRI</span></div>'+cards+'</div>' : '<div class="metro-empty">Nenhuma entrega com data prevista.<br>Preencha "Data Prevista" na aba Épicos.</div>';
+    var actions = [];
+    var riskDelivery = del.find(function(r){ var diff=Math.floor((parseLocalDate(r.dataPrevista)-n)/86400000); return diff<0 || diff<=7; });
+    if(riskDelivery) actions.push(pdAction('Priorizar '+shortId(riskDelivery.id),'red'));
+    if(noDate) actions.push(pdAction('Definir datas previstas','amber'));
+    if(blocked) actions.push(pdAction('Remover impedimentos','red'));
+    if(!actions.length) actions.push(pdAction('Manter ritmo de entrega','green'));
+    return '<section class="pd-deliveries"><div class="pd-soft-title">🚀 Entregas Previstas</div><div class="metro-wrap"><aside class="metro-summary"><h2>Resumo da janela</h2>'+summary+'</aside><div class="metro-panel"><h2>Trilha de entrega</h2>'+area+'</div></div><div class="pd-soft-title">Ações recomendadas</div><div class="pd-actions">'+actions.join('')+'</div></section>';
+  }
+
+  if(typeof window.renderTbl === 'function'){
+    var _renderTblOriginal = window.renderTbl;
+    window.renderTbl = function(){
+      _renderTblOriginal.apply(this,arguments);
+      try{ window.renderEpExecutive(); }catch(e){ console.warn('renderEpExecutive',e); }
+    };
+  }
+  window.renderDash = renderDashboardPremium;
+
+  document.addEventListener('DOMContentLoaded',function(){
+    try{ window.renderEpExecutive(); }catch(e){}
+    try{ if((window.curTab||'')==='db') window.renderDash(); }catch(e){}
+  });
+})();
+</script>
+
+<script>
+/* ==========================================================
+   PATCH DASHBOARD COMPLETO
+   Usa as funções originais já existentes:
+   renderTriBanner, renderMetaPace, renderKPI, renderSquads,
+   renderRunwayTimeline, renderDeliveries, renderRisks, renderPanorama.
+   Não altera regra de cálculo/dados.
+   ========================================================== */
+(function(){
+  function renderDashboardCompleto(){
+    var root = document.getElementById('dbContent');
+    if(!root) return;
+
+    root.innerHTML =
+      '<div id="triBanner"></div>'+
+      '<div id="metaPace"></div>'+
+      '<div>'+
+        '<div class="sec-lbl">Visão do Trimestre</div>'+
+        '<div class="kgrid" id="kpiRow"></div>'+
+      '</div>'+
+      '<div>'+
+        '<div class="sec-lbl">Lead Time por Squad · Trimestre Atual</div>'+
+        '<div class="sgrid" id="squadCards"></div>'+
+      '</div>'+
+      '<div id="runwayTimeline"></div>'+
+      '<div class="g2">'+
+        '<div class="panel">'+
+          '<div class="p-hd">'+
+            '<span class="p-t">Datas previstas com status, impacto e próxima ação</span>'+
+            '<span class="p-cnt" id="dCnt">—</span>'+
+          '</div>'+
+          '<div id="dList"></div>'+
+        '</div>'+
+        '<div class="panel">'+
+          '<div class="p-hd">'+
+            '<span class="p-t">🔴 Épicos Críticos ≥ 62d</span>'+
+            '<span class="p-cnt" id="rCnt">—</span>'+
+          '</div>'+
+          '<div id="rList"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div id="panoramaGeral"></div>';
+
+    try{ if(typeof renderTriBanner === 'function') renderTriBanner(); }catch(e){}
+    try{ if(typeof renderMetaPace === 'function') renderMetaPace(); }catch(e){}
+    try{ if(typeof renderKPI === 'function') renderKPI(); }catch(e){}
+    try{ if(typeof renderSquads === 'function') renderSquads(); }catch(e){}
+    try{ if(typeof renderRunwayTimeline === 'function') renderRunwayTimeline(); }catch(e){}
+    try{ if(typeof renderDeliveries === 'function') renderDeliveries(); }catch(e){}
+    try{ if(typeof renderRisks === 'function') renderRisks(); }catch(e){}
+    try{ if(typeof renderPanorama === 'function') renderPanorama(); }catch(e){}
+    try{ if(typeof updateTabCounts === 'function') updateTabCounts(); }catch(e){}
+  }
+
+  window.renderDashboardCompleto = renderDashboardCompleto;
+  window.renderDash = renderDashboardCompleto;
+  try{ renderDash = renderDashboardCompleto; }catch(e){}
+
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(function(){
+      try{
+        if((window.curTab || '') === 'db' || document.querySelector('#pane-db.on')){
+          renderDashboardCompleto();
+        }
+      }catch(e){}
+    },80);
+  });
+})();
+</script>
 </body>
 </html>
