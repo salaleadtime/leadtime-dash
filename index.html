@@ -1777,6 +1777,7 @@ var STORAGE_KEY='leadtime_sala_v8_data';
 var STORAGE_META='leadtime_sala_v8_meta';
 var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 var FIM_LOG_KEY='leadtime_sala_v8_fim_log';
+var RESUMO_KEY='leadtime_sala_v8_resumo'; // cache exclusivo do Jira; nunca apagado pelo Sheets
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
@@ -2050,11 +2051,21 @@ function replaceFromSharedSource(rows){
   if(!Array.isArray(rows)||!rows.length) return false;
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
 
+  // Cache de resumo persistido pelo import do Jira (nunca apagado pelo Sheets)
+  var resumoCache=loadResumoCache();
+
   // Detectar mudanças de fim vindas do Sheets antes do merge
   var localMap={};
   allData.forEach(function(r){ if(r&&r.id) localMap[r.id]=r; });
   incoming.forEach(function(r){
+    // Resumo e Squad vêm exclusivamente do Jira — o Apps Script não os armazena.
+    // Camada 1: localMap (allData em memória, atualizado pelo import).
+    // Camada 2: resumoCache (localStorage, persiste entre recargas da página).
     var old=localMap[r.id];
+    var cachedResumo=resumoCache[r.id]||'';
+    if(!r.resumo) r.resumo = (old&&old.resumo) || cachedResumo || '';
+    if(!r.squad && old && old.squad) r.squad = old.squad;
+
     if(!old) return;
     var oldFimValido=isValidDate(old.fim);
     var newFimValido=isValidDate(r.fim);
@@ -2070,12 +2081,6 @@ function replaceFromSharedSource(rows){
     } else if(oldFimValido && newFimValido && old.fim!==r.fim){
       logFimChange(r.id,old.fim,r.fim,'ALTERADO_SHEETS');
     }
-    // Preservar campos originados do Jira que o Sheets não armazena:
-    // o Apps Script devolve apenas campos operacionais (datas, CHG, status,
-    // impedimento), nunca o texto do Resumo nem o Squad da importação.
-    // Sem esta guarda o sync pós-import apagava esses valores.
-    if(!r.resumo && old.resumo) r.resumo = old.resumo;
-    if(!r.squad  && old.squad)  r.squad  = old.squad;
   });
 
   // Detectar épicos deletados do Sheets que tinham fim ou fimAntes
@@ -2168,6 +2173,19 @@ function loadLocal(){
     if(Array.isArray(data)) data=data.filter(function(r){ return r&&r.id&&isValidEpicId(r.id); });
     return Array.isArray(data)&&data.length?data:null;
   }catch(e){ return null; }
+}
+// Cache de resumo originado do Jira — nunca sobrescrito pelo sync do Sheets.
+// Garante que o Resumo persista mesmo que o Apps Script não devolva o campo.
+function saveResumoCache(rows){
+  try{
+    var cache={};
+    try{ cache=JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){}
+    (rows||[]).forEach(function(r){ if(r&&r.id&&r.resumo) cache[r.id]=r.resumo; });
+    localStorage.setItem(RESUMO_KEY, JSON.stringify(cache));
+  }catch(e){}
+}
+function loadResumoCache(){
+  try{ return JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){ return {}; }
 }
 function showSavedBadge(){
   var el=$id('upSaved'), tx=$id('upSavedTxt');
@@ -4744,6 +4762,7 @@ function loadXlsx(file){
       }
 
       allData = merged;
+      saveResumoCache(merged);
       backfillEpicSquads();
       $id('upName').textContent=file.name;
       $id('upSub').textContent=merged.length+' épicos · '+new Date().toLocaleDateString('pt-BR');
