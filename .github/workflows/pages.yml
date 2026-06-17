@@ -26,6 +26,8 @@ jobs:
         run: python3 .github/scripts/patch_dashboard.py
       - name: Apply visual layout patch
         run: python3 .github/scripts/layout_dashboard_grafite_patch.py
+      - name: Compact buttons for UX
+        run: python3 .github/scripts/ux_compact_buttons_patch.py
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
