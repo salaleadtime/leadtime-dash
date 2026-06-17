@@ -2070,6 +2070,12 @@ function replaceFromSharedSource(rows){
     } else if(oldFimValido && newFimValido && old.fim!==r.fim){
       logFimChange(r.id,old.fim,r.fim,'ALTERADO_SHEETS');
     }
+    // Preservar campos originados do Jira que o Sheets não armazena:
+    // o Apps Script devolve apenas campos operacionais (datas, CHG, status,
+    // impedimento), nunca o texto do Resumo nem o Squad da importação.
+    // Sem esta guarda o sync pós-import apagava esses valores.
+    if(!r.resumo && old.resumo) r.resumo = old.resumo;
+    if(!r.squad  && old.squad)  r.squad  = old.squad;
   });
 
   // Detectar épicos deletados do Sheets que tinham fim ou fimAntes
