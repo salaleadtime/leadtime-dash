@@ -4770,6 +4770,18 @@ function loadXlsx(file){
       allData = merged;
       saveResumoCache(merged);
       backfillEpicSquads();
+
+      // Diagnóstico: exibe no console os resumos lidos pelo import (F12 → Console)
+      try{
+        var semResumo=merged.filter(function(r){return !r.resumo;});
+        if(semResumo.length){
+          console.warn('[Import] Épicos SEM resumo após merge ('+semResumo.length+'):', semResumo.map(function(r){return r.id;}));
+        }
+        var comResumo=merged.filter(function(r){return !!r.resumo;});
+        console.log('[Import] Épicos COM resumo ('+comResumo.length+'):', comResumo.map(function(r){return r.id+': '+r.resumo.slice(0,30);}));
+        console.log('[Import] Formato detectado:', det.format, '| col resumo:', det.map.resumo, '| col id:', det.map.id, '| col squad:', det.map.squad);
+      }catch(e){}
+
       $id('upName').textContent=file.name;
       $id('upSub').textContent=merged.length+' épicos · '+new Date().toLocaleDateString('pt-BR');
       $id('syncLbl').textContent='arquivo: '+file.name+' ('+det.format.toUpperCase()+')';
