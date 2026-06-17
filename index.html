@@ -1778,6 +1778,7 @@ var STORAGE_META='leadtime_sala_v8_meta';
 var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 var FIM_LOG_KEY='leadtime_sala_v8_fim_log';
 var RESUMO_KEY='leadtime_sala_v8_resumo'; // cache exclusivo do Jira; nunca apagado pelo Sheets
+var SQUAD_KEY='leadtime_sala_v8_squad';   // cache de squad originado do Jira/SEED; nunca apagado pelo Sheets
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
@@ -2068,20 +2069,22 @@ function replaceFromSharedSource(rows){
 
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
 
-  // Cache de resumo persistido pelo import do Jira (nunca apagado pelo Sheets)
+  // Caches persistidos pelo import do Jira (nunca sobrescritos pelo Sheets)
   var resumoCache=loadResumoCache();
+  var squadCache=loadSquadCache();
 
   // Detectar mudanças de fim vindas do Sheets antes do merge
   var localMap={};
   allData.forEach(function(r){ if(r&&r.id) localMap[r.id]=r; });
   incoming.forEach(function(r){
     // Resumo e Squad vêm exclusivamente do Jira — o Apps Script não os armazena.
-    // Camada 1: localMap (allData em memória, atualizado pelo import).
-    // Camada 2: resumoCache (localStorage, persiste entre recargas da página).
+    // Camada 1: localMap (allData em memória, atualizado pelo import ou SEED).
+    // Camada 2: resumoCache/squadCache (localStorage, persiste entre recargas).
     var old=localMap[r.id];
     var cachedResumo=resumoCache[r.id]||'';
+    var cachedSquad=squadCache[r.id]||'';
     if(!r.resumo) r.resumo = (old&&old.resumo) || cachedResumo || '';
-    if(!r.squad && old && old.squad) r.squad = old.squad;
+    if(!r.squad)  r.squad  = (old&&old.squad)  || cachedSquad  || '';
 
     if(!old) return;
     var oldFimValido=isValidDate(old.fim);
@@ -2201,14 +2204,24 @@ function loadLocal(){
 // Garante que o Resumo persista mesmo que o Apps Script não devolva o campo.
 function saveResumoCache(rows){
   try{
-    var cache={};
-    try{ cache=JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){}
-    (rows||[]).forEach(function(r){ if(r&&r.id&&r.resumo) cache[r.id]=r.resumo; });
-    localStorage.setItem(RESUMO_KEY, JSON.stringify(cache));
+    var rCache={}, sCache={};
+    try{ rCache=JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){}
+    try{ sCache=JSON.parse(localStorage.getItem(SQUAD_KEY)||'{}'); }catch(e){}
+    (rows||[]).forEach(function(r){
+      if(r&&r.id){
+        if(r.resumo) rCache[r.id]=r.resumo;
+        if(r.squad)  sCache[r.id]=r.squad;
+      }
+    });
+    localStorage.setItem(RESUMO_KEY, JSON.stringify(rCache));
+    localStorage.setItem(SQUAD_KEY,  JSON.stringify(sCache));
   }catch(e){}
 }
 function loadResumoCache(){
   try{ return JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){ return {}; }
+}
+function loadSquadCache(){
+  try{ return JSON.parse(localStorage.getItem(SQUAD_KEY)||'{}'); }catch(e){ return {}; }
 }
 function showSavedBadge(){
   var el=$id('upSaved'), tx=$id('upSavedTxt');
@@ -2386,9 +2399,10 @@ function sBadge(s){
   return '<span class="bdg '+cls+'"><span class="bdg-dot"></span>'+esc(t)+'</span>';
 }
 function squadBadge(sq){
+  if(!sq||!sq.trim()) return '<td><span style="color:#94a3b8;font-size:11px">—</span></td>';
   var m={'Guardiões':'bviolet','Contact':'bblue','Expresso':'bgreen','Interestelar':'bamber','Inception':'borange','TopGun':'bcyan','MadMax':'bred','Terminator':'bindigo'};
-  var cls=m[(sq||'').trim()]||'bgray';
-  return '<td><span class="bdg '+cls+'">'+esc(sq)+'</span></td>';
+  var cls=m[sq.trim()]||'bgray';
+  return '<td><span class="bdg '+cls+'"><span class="bdg-dot"></span>'+esc(sq)+'</span></td>';
 }
 function $id(id){return document.getElementById(id);}
 function esc(s){
@@ -5386,6 +5400,9 @@ var SEED=[
       }
     }
     allData=source.map(makeRow);
+    // Popula os caches de resumo e squad com dados do SEED para cobrir
+    // epics que o Sheets devolve sem esses campos (ex: SLOPC-39378, SLOPC-39100).
+    saveResumoCache(SEED);
     return usedCache;
   }
 
