@@ -24,6 +24,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Patch dashboard for deployment
         run: python3 .github/scripts/patch_dashboard.py
+      - name: Apply visual layout patch
+        run: python3 .github/scripts/layout_dashboard_grafite_patch.py
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
