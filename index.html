@@ -2049,6 +2049,23 @@ function makeRow(r){
 }
 function replaceFromSharedSource(rows){
   if(!Array.isArray(rows)||!rows.length) return false;
+
+  // Diagnóstico: mostra no console o resumo que o Sheets está devolvendo
+  try{
+    var semResumoSheets=rows.filter(function(r){return r&&r.id&&!r.resumo;});
+    var comResumoSheets=rows.filter(function(r){return r&&r.id&&r.resumo;});
+    console.log('[Sheets] Total registros:', rows.length,
+      '| COM resumo:', comResumoSheets.length,
+      '| SEM resumo:', semResumoSheets.length);
+    if(semResumoSheets.length) console.warn('[Sheets] IDs sem resumo:', semResumoSheets.map(function(r){return r.id;}));
+    console.log('[Sheets] localMap tem resumo para Contact?',
+      ['SLOPC-39378','SLOPC-39100'].map(function(id){
+        var r=allData.find(function(x){return x&&x.id===id;});
+        return id+':'+(r?'"'+(r.resumo||'').slice(0,20)+'"':'NÃO_EXISTE');
+      }));
+    console.log('[Sheets] resumoCache Contact:', loadResumoCache()['SLOPC-39378']||'vazio', '/', loadResumoCache()['SLOPC-39100']||'vazio');
+  }catch(e){}
+
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
 
   // Cache de resumo persistido pelo import do Jira (nunca apagado pelo Sheets)
