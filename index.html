@@ -1814,13 +1814,16 @@ var _sheetsLastSuccessAt = 0;   // última vez que o Sheets respondeu com dados 
 var _sheetsOfflineWarned = false;
 var _sheetsLastWritePayload = '';
 var SHEETS_POLL_MS = 120000;
-// Edições de CHG/Impedimento feitas pelo usuário aguardando confirmação do Sheets.
-// O Apps Script não reflete a gravação instantaneamente; sem esta proteção, uma
-// releitura que chega antes da gravação consolidar apaga o valor recém-digitado
-// (o Sheets é autoritativo). Mapa {id:{chg,impedimento,ts}}; cada campo é limpo
-// assim que o Sheets devolve o mesmo valor, ou após o TTL.
-var _pendingEdits = {};
-var PENDING_EDIT_TTL = 150000;
+// ── Motor de sincronização: fila de escritas pendentes ──────────────────────
+// Toda edição local (qualquer campo) é registrada nesta fila persistida até o
+// Sheets confirmar EXATAMENTE o valor enviado. Enquanto não confirma:
+//   • a leitura do Sheets nunca sobrescreve um campo com edição pendente;
+//   • a fila reenvia sozinha o que falhou (Sheets offline / gravação perdida).
+// Resolve, de forma genérica para TODOS os campos, a classe de bugs
+// "digitei e sumiu ao sincronizar" — sem precisar de remendo campo a campo.
+var PENDING_KEY = 'leadtime_sala_v8_pending';
+var PENDING_EDIT_TTL = 600000; // 10 min sem confirmar → assume o que está no Sheets
+var EDITABLE_FIELDS = ['status','statusAntes','chg','impedimento','ini','fim','fimAntes','dataPrevista'];
 // Valores de CHG que vieram hardcoded do seed/JSON e jamais foram inseridos pelo usuário.
 // Mapeado como {epicId: chgValue}. Sempre que detectados, são apagados e o Sheets é corrigido.
 var _SEED_CHG_CORRECTIONS = {'SLOPC-33834': 'CHG0916531'};
@@ -2101,6 +2104,11 @@ function replaceFromSharedSource(rows){
   // Caches persistidos pelo import do Jira (nunca sobrescritos pelo Sheets)
   var resumoCache=loadResumoCache();
   var squadCache=loadSquadCache();
+  // Fila de escritas pendentes: protege campos com edição local ainda não
+  // confirmada pelo Sheets. Carregada uma vez; gravada ao final se mudar.
+  var _pend=loadPending();
+  var _pendChanged=false;
+  var _pendNow=Date.now();
 
   // Detectar mudanças de fim vindas do Sheets antes do merge
   var localMap={};
@@ -2116,20 +2124,24 @@ function replaceFromSharedSource(rows){
     if(!r.resumo) r.resumo = (old&&old.resumo) || cachedResumo || cloudMeta.resumo || '';
     if(!r.squad)  r.squad  = (old&&old.squad)  || cachedSquad  || cloudMeta.squad  || '';
 
-    // Proteção contra race: se o usuário acabou de editar CHG/Impedimento e o
-    // Sheets ainda não devolveu esse valor (gravação não consolidada), mantém o
-    // valor local em vez de apagá-lo. Limpa a pendência quando o Sheets confirma.
-    var pend=_pendingEdits[r.id];
+    // Proteção genérica contra race / escrita perdida: para QUALQUER campo
+    // editável com valor pendente, se o Sheets ainda não devolveu exatamente
+    // esse valor, preserva o local. Quando o Sheets confirma, remove da fila.
+    // Vale inclusive para apagar um campo (valor pendente = string vazia):
+    // o vazio é mantido até o Sheets confirmar que também ficou vazio.
+    var pend=_pend[r.id];
     if(pend){
-      if((Date.now()-pend.ts) < PENDING_EDIT_TTL){
-        ['chg','impedimento'].forEach(function(field){
-          if(pend[field]===undefined) return;
-          if((r[field]||'') === pend[field]) delete pend[field];   // Sheets confirmou
-          else r[field]=pend[field];                                // ainda não refletiu — preserva
+      if((_pendNow-(pend.ts||0)) < PENDING_EDIT_TTL && pend.fields){
+        Object.keys(pend.fields).forEach(function(field){
+          if((r[field]||'') === (pend.fields[field]||'')){
+            delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
+          } else {
+            r[field]=pend.fields[field];                              // ainda não refletiu — preserva
+          }
         });
-        if(pend.chg===undefined && pend.impedimento===undefined) delete _pendingEdits[r.id];
+        if(!Object.keys(pend.fields).length){ delete _pend[r.id]; _pendChanged=true; }
       } else {
-        delete _pendingEdits[r.id];                                 // expirou
+        delete _pend[r.id]; _pendChanged=true;                       // expirou
       }
     }
 
@@ -2155,6 +2167,7 @@ function replaceFromSharedSource(rows){
     if(!r.resumo && old.resumo) r.resumo = old.resumo;
     if(!r.squad  && old.squad)  r.squad  = old.squad;
   });
+  if(_pendChanged) savePending(_pend);
 
   // Detectar épicos deletados do Sheets que tinham fim ou fimAntes
   allData.forEach(function(r){
@@ -2302,6 +2315,44 @@ function loadResumoCache(){
 }
 function loadSquadCache(){
   try{ return JSON.parse(localStorage.getItem(SQUAD_KEY)||'{}'); }catch(e){ return {}; }
+}
+
+// ── Fila de escritas pendentes (motor de sincronização) ─────────────────────
+function loadPending(){
+  try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function savePending(p){
+  try{ localStorage.setItem(PENDING_KEY, JSON.stringify(p||{})); }catch(e){}
+}
+// Registra os campos editáveis de um épico como pendentes de confirmação.
+// Chamado em TODA edição local antes de enviar ao Sheets.
+function queuePendingWrite(rec){
+  if(!rec||!rec.id) return;
+  var p=loadPending();
+  var ent=p[rec.id]||{fields:{}};
+  EDITABLE_FIELDS.forEach(function(f){ ent.fields[f]=rec[f]||''; });
+  ent.ts=Date.now();
+  p[rec.id]=ent;
+  savePending(p);
+}
+// Monta o payload padrão enviado ao Sheets a partir de um conjunto de campos.
+function _sheetsItem(id, f){
+  return {id:id, status:f.status||'', statusAntes:f.statusAntes||'',
+    chg:f.chg||'', impedimento:f.impedimento||'', ini:f.ini||'',
+    fim:f.fim||'', fimAntes:f.fimAntes||'', dataPrevista:f.dataPrevista||''};
+}
+// Reenvia ao Sheets tudo que ainda não foi confirmado (e não expirou).
+// Rede de segurança para gravações que falharam ou se perderam.
+function flushPendingWrites(){
+  if(!SHEETS_WEBAPP || _sheetsWriteSyncing) return;
+  var p=loadPending(), now=Date.now(), items=[], changed=false;
+  Object.keys(p).forEach(function(id){
+    var ent=p[id];
+    if(!ent||!ent.fields||(now-(ent.ts||0))>PENDING_EDIT_TTL){ delete p[id]; changed=true; return; }
+    items.push(_sheetsItem(id, ent.fields));
+  });
+  if(changed) savePending(p);
+  if(items.length) saveToSheets(items);   // saveToSheets re-lê e confirma em 500ms
 }
 function showSavedBadge(){
   var el=$id('upSaved'), tx=$id('upSavedTxt');
@@ -3045,7 +3096,8 @@ function restaurarFim(epicId,fimAntes){
   rec.lt=calcLT(rec.ini,rec.fim);
   logFimChange(epicId,'',fimAntes,'RESTAURADO');
   saveLocal();
-  saveToSheets([{id:rec.id,status:rec.status||'',statusAntes:rec.statusAntes||'',chg:rec.chg||'',impedimento:rec.impedimento||'',ini:rec.ini||'',fim:rec.fim||'',fimAntes:'',dataPrevista:rec.dataPrevista||''}]);
+  queuePendingWrite(rec);
+  saveToSheets([_sheetsItem(rec.id, rec)]);
   renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab('me');
   toast('✓ Data Fim restaurada','<strong>'+esc(epicId)+'</strong> voltou para Medição com Data Fim <strong>'+fimAntes+'</strong>.');
   closeHistorico();
@@ -3170,17 +3222,11 @@ function fc(el){
   }
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
     var r=allData[gi];
-    if(f==='chg'||f==='impedimento'){
-      // Marca o valor recém-digitado como pendente até o Sheets confirmar,
-      // evitando que uma releitura antecipada o apague (ver replaceFromSharedSource).
-      var pe=_pendingEdits[r.id]||{};
-      pe[f]=r[f]||''; pe.ts=Date.now();
-      _pendingEdits[r.id]=pe;
-    }
-    saveToSheets([{
-      id:r.id, status:r.status||'', statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
-      ini:r.ini||'', fim:r.fim||'', fimAntes:r.fimAntes||'', dataPrevista:r.dataPrevista||''
-    }]);
+    // Enfileira TODOS os campos editáveis como pendentes até o Sheets confirmar.
+    // Protege qualquer edição (inclusive apagar um campo) contra ser sobrescrita
+    // por uma releitura antecipada ou perdida por uma gravação que falhou.
+    queuePendingWrite(r);
+    saveToSheets([_sheetsItem(r.id, r)]);
   }
 }
 
@@ -5700,9 +5746,14 @@ function _trySheets(silent){
 // Auto-refresh somente por Google Sheets; JSONBin não sobrescreve a base quando Sheets está ativo.
 setInterval(function(){
   if(!SHEETS_WEBAPP || _sheetsSyncing || _sheetsWriteSyncing) return;
+  flushPendingWrites();   // rede de segurança: reenvia edições que não foram confirmadas
   if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
   _trySheets(true);
 }, SHEETS_POLL_MS);
+
+// Recupera, logo após carregar, escritas que ficaram pendentes numa sessão
+// anterior (ex.: navegador fechado antes do Sheets confirmar).
+setTimeout(function(){ try{ flushPendingWrites(); }catch(e){} }, 5000);
 
 // Pré-carrega o html2canvas para que "Copiar" funcione já no 1º clique (sem perder o gesto do usuário)
 setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL); }catch(e){} }, 2500);
