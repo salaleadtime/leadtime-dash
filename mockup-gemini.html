@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mockup — Análise com Gemini AI</title>
+  <style>
+    :root{
+      --red:#CC092F; --red-dark:#98001F; --red-soft:#FDE9EE;
+      --blue:#174A7C; --blue-soft:#EAF2FB;
+      --green:#1F9D55; --green-soft:#EAF8EF;
+      --amber:#C77700; --amber-soft:#FFF4DB;
+      --bg:#F3F5F8; --card:#fff; --text:#202333; --muted:#687083;
+      --line:#E3E7EF; --shadow:0 12px 28px rgba(24,31,56,.08); --radius:18px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+
+    /* ── TOPBAR ── */
+    .topbar{
+      background:radial-gradient(circle at top right,rgba(255,255,255,.18),transparent 26%),
+        linear-gradient(135deg,var(--red),var(--red-dark));
+      color:#fff; padding:22px 28px 34px;
+    }
+    .topbar h1{font-size:22px;margin-bottom:4px}
+    .topbar p{font-size:13px;opacity:.85}
+
+    .page{max-width:860px;margin:-22px auto 48px;padding:0 24px}
+
+    /* ── STEPS NAV ── */
+    .steps-nav{
+      background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow);padding:16px 20px;margin-bottom:20px;
+      display:flex;gap:0;overflow:hidden;
+    }
+    .step-btn{
+      flex:1;border:0;background:none;cursor:pointer;padding:10px 8px;
+      font-size:12px;font-weight:800;color:var(--muted);border-radius:10px;
+      transition:.15s;display:flex;flex-direction:column;align-items:center;gap:5px;
+    }
+    .step-btn:hover{background:#F3F5F8}
+    .step-btn.active{background:var(--red-soft);color:var(--red-dark)}
+    .step-num{
+      width:26px;height:26px;border-radius:50%;background:var(--line);
+      color:var(--muted);font-size:12px;font-weight:900;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .step-btn.active .step-num{background:var(--red-dark);color:#fff}
+    .step-btn.done .step-num{background:var(--green);color:#fff}
+    .step-btn.done{color:var(--green)}
+
+    /* ── CARD ── */
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px;
+    }
+    .card h2{font-size:16px;color:var(--red-dark);margin-bottom:6px}
+    .card .sub{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:16px}
+
+    /* ── SPRINT CARD (replica do painel real) ── */
+    .sprint-card{
+      background:#F7F9FC;border:1px solid var(--line);border-radius:16px;
+      padding:16px;margin-bottom:0;
+    }
+    .sprint-card-title{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      margin-bottom:12px;flex-wrap:wrap;
+    }
+    .sprint-card-title h3{font-size:14px;font-weight:800;color:#173A5E;display:flex;align-items:center;gap:6px}
+    .badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:800}
+    .badge.blue{background:var(--blue-soft);color:var(--blue)}
+    .badge.green{background:var(--green-soft);color:var(--green)}
+    .badge.amber{background:var(--amber-soft);color:var(--amber)}
+    .badge.red{background:var(--red-soft);color:var(--red-dark)}
+    .gemini-badge{
+      font-size:10px;font-weight:800;border-radius:999px;
+      padding:2px 8px;background:linear-gradient(135deg,#4285F4,#0F9D58);color:#fff;
+    }
+
+    /* ── BOTÃO GEMINI ── */
+    .gemini-btn{
+      border:0;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800;
+      cursor:pointer;transition:.16s ease;
+      background:linear-gradient(135deg,#4285F4,#0F9D58);
+      color:#fff;display:inline-flex;align-items:center;gap:6px;
+    }
+    .gemini-btn:hover{opacity:.88;transform:translateY(-1px)}
+    .gemini-btn:disabled{opacity:.55;cursor:wait}
+
+    /* ── ANÁLISE HERO ── */
+    .ai-hero{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+      background:#fff;border:1px solid var(--line);border-radius:12px;
+      padding:14px;margin-bottom:10px;
+    }
+    .ai-hero small{display:block;font-size:10px;font-weight:900;text-transform:uppercase;
+      letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+    .ai-hero strong{font-size:14px;line-height:1.4;color:var(--text)}
+    .ai-tone{border-radius:999px;padding:5px 13px;font-size:12px;font-weight:800;white-space:nowrap;flex:0 0 auto}
+    .ai-tone.neutral{background:#F0F0F0;color:var(--muted)}
+    .ai-tone.critical{background:#FEF2F2;color:#991B1B}
+    .ai-tone.warn{background:var(--amber-soft);color:var(--amber)}
+    .ai-tone.good{background:var(--green-soft);color:var(--green)}
+
+    .ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+    .ai-item{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+    .ai-item small{display:block;font-size:10px;font-weight:900;text-transform:uppercase;
+      letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+    .ai-item span{font-size:12.5px;color:var(--text);line-height:1.45}
+    .ai-note{font-size:11px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
+
+    /* ── CONFIG ROW (chave API) ── */
+    .config-row{
+      display:flex;align-items:center;gap:8px;
+      background:#F0F7FF;border:1px solid #C5D9EF;border-radius:10px;
+      padding:10px 12px;margin-bottom:10px;flex-wrap:wrap;
+    }
+    .config-row label{font-size:11px;color:var(--blue);font-weight:900;white-space:nowrap}
+    .key-input{
+      flex:1;min-width:180px;min-height:34px;border:1px solid #C5D9EF;border-radius:8px;
+      padding:0 10px;font-size:12.5px;font-family:monospace;background:#fff;outline:none;
+    }
+    .key-input:focus{border-color:#4285F4;box-shadow:0 0 0 3px rgba(66,133,244,.12)}
+    .save-btn{
+      border:0;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;
+      background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap;
+    }
+    .save-btn:hover{opacity:.88}
+
+    /* ── LOADING DOTS ── */
+    .loading-dots{display:inline-flex;gap:3px;align-items:center}
+    .loading-dots span{width:5px;height:5px;border-radius:50%;background:#fff;animation:d .7s ease-in-out infinite}
+    .loading-dots span:nth-child(2){animation-delay:.15s}
+    .loading-dots span:nth-child(3){animation-delay:.3s}
+    @keyframes d{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1.1);opacity:1}}
+
+    /* ── ERROR ── */
+    .error-box{
+      background:var(--red-soft);border:1px solid #F3B9C5;border-radius:10px;
+      padding:10px 14px;font-size:12.5px;color:var(--red-dark);line-height:1.5;
+      margin-bottom:10px;display:flex;gap:8px;align-items:flex-start;
+    }
+
+    /* ── EXPLICAÇÃO LATERAL ── */
+    .explain-box{
+      background:linear-gradient(135deg,#0F172A,#1E293B);
+      border-radius:var(--radius);padding:20px;color:#CBD5E1;margin-bottom:16px;
+    }
+    .explain-box h3{font-size:14px;color:#F1F5F9;margin-bottom:10px}
+    .explain-box ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+    .explain-box li{font-size:12.5px;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+    .explain-box li .ic{flex:0 0 20px;height:20px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900}
+    .explain-box li .ic.g{background:#14532D;color:#86EFAC}
+    .explain-box li .ic.b{background:#1e3a5f;color:#93C5FD}
+    .explain-box li .ic.r{background:#7F1D1D;color:#FCA5A5}
+
+    /* ── CACHE INDICATOR ── */
+    .cache-pill{
+      display:inline-flex;align-items:center;gap:5px;
+      background:var(--green-soft);border:1px solid #B7EACA;border-radius:999px;
+      padding:3px 10px;font-size:11px;font-weight:800;color:var(--green);
+    }
+    .cache-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+    /* ── BOTÕES DE NAVEGAÇÃO ── */
+    .nav-row{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+    .nav-btn{
+      border:1px solid var(--line);background:var(--card);border-radius:999px;
+      padding:9px 18px;font-size:13px;font-weight:800;cursor:pointer;transition:.14s;color:var(--text);
+    }
+    .nav-btn:hover{border-color:#F2A7B7;color:var(--red-dark)}
+    .nav-btn.primary{background:var(--red-dark);color:#fff;border-color:var(--red-dark)}
+    .nav-btn.primary:hover{opacity:.88}
+    .nav-btn:disabled{opacity:.35;cursor:default}
+
+    /* ── TABS DE FLUXO ── */
+    .flow-row{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+    .flow-step{
+      display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;
+      padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);
+    }
+    .flow-step.active{background:var(--red-soft);color:var(--red-dark);border-color:#F3B9C5}
+    .flow-step.done{background:var(--green-soft);color:var(--green);border-color:#B7EACA}
+    .flow-arrow{color:var(--line);font-size:16px}
+
+    /* ── COMO OBTER CHAVE ── */
+    .how-to{background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px 16px}
+    .how-to h4{font-size:13px;color:#92400E;margin-bottom:8px;font-weight:800}
+    .how-to ol{padding-left:18px;display:flex;flex-direction:column;gap:6px}
+    .how-to li{font-size:12.5px;color:#78350F;line-height:1.5}
+    .how-to a{color:#1D4ED8;font-weight:700}
+    .how-to .highlight{
+      display:inline-block;background:#FEF3C7;border:1px solid #FDE68A;
+      border-radius:6px;padding:1px 7px;font-family:monospace;font-size:12px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div style="max-width:860px;margin:0 auto">
+    <h1>Análise de Sprint com Gemini AI</h1>
+    <p>Demonstração interativa do fluxo de integração — passo a passo</p>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- NAVEGAÇÃO POR PASSOS -->
+  <div class="steps-nav">
+    <button class="step-btn active" id="navBtn0" onclick="goStep(0)">
+      <span class="step-num" id="stepNum0">1</span>
+      Sem chave
+    </button>
+    <button class="step-btn" id="navBtn1" onclick="goStep(1)">
+      <span class="step-num" id="stepNum1">2</span>
+      Inserir chave
+    </button>
+    <button class="step-btn" id="navBtn2" onclick="goStep(2)">
+      <span class="step-num" id="stepNum2">3</span>
+      Carregando
+    </button>
+    <button class="step-btn" id="navBtn3" onclick="goStep(3)">
+      <span class="step-num" id="stepNum3">4</span>
+      Resultado IA
+    </button>
+    <button class="step-btn" id="navBtn4" onclick="goStep(4)">
+      <span class="step-num" id="stepNum4">5</span>
+      Cache
+    </button>
+    <button class="step-btn" id="navBtn5" onclick="goStep(5)">
+      <span class="step-num" id="stepNum5">6</span>
+      Erro de chave
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PASSO 0 — Estado inicial (sem chave)
+  ═══════════════════════════════════════ -->
+  <div id="step0">
+    <div class="card">
+      <h2>Passo 1 — Estado inicial do painel</h2>
+      <p class="sub">O card de análise aparece normalmente com as regras automáticas. O botão <b>"Analisar com IA"</b> fica visível no canto do card, ao lado do badge "Regras automáticas".</p>
+
+      <div class="sprint-card">
+        <div class="sprint-card-title">
+          <h3>Leitura inteligente da sprint</h3>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span class="badge blue">Regras automáticas</span>
+            <button class="gemini-btn" onclick="goStep(1)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              Analisar com IA
+            </button>
+          </div>
+        </div>
+
+        <div class="ai-hero">
+          <div>
+            <small>Diagnóstico da sprint</small>
+            <strong>A squad Contact possui 18 histórias na sprint atual. O maior volume está em "Em Desenvolvimento".</strong>
+          </div>
+          <span class="ai-tone warn">Monitorar</span>
+        </div>
+
+        <div class="ai-grid">
+          <div class="ai-item"><small>Principal atenção</small><span>3 pontos de atenção e 2 itens sem responsável informado.</span></div>
+          <div class="ai-item"><small>Recomendação</small><span>Priorizar remoção dos impedimentos antes de avançar novas histórias.</span></div>
+          <div class="ai-item"><small>Próxima ação</small><span>Abrir Atenções e definir dono, prazo e ação de desbloqueio.</span></div>
+          <div class="ai-item"><small>Mensagem para gestão</small><span>A gestão deve atuar para reduzir incerteza e garantir dono claro para cada item.</span></div>
+        </div>
+        <p class="ai-note">Leitura gerada por regras automáticas com base nos dados importados. Clique em "Analisar com IA" para uma análise contextual com Google Gemini.</p>
+      </div>
+    </div>
+
+    <div class="explain-box">
+      <h3>O que acontece neste passo</h3>
+      <ul>
+        <li><span class="ic b">→</span>O card mostra a análise por regras como sempre funcionou (sem mudança de comportamento padrão).</li>
+        <li><span class="ic g">+</span>Um novo botão "Analisar com IA" aparece no cabeçalho do card. Ele não interfere em nada — é opcional.</li>
+        <li><span class="ic b">→</span>O usuário clica quando quiser uma análise mais rica e contextual do Gemini.</li>
+      </ul>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" disabled>← Anterior</button>
+      <button class="nav-btn primary" onclick="goStep(1)">Próximo: Inserir chave →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PASSO 1 — Solicitar chave API
+  ═══════════════════════════════════════ -->
+  <div id="step1" style="display:none">
+    <div class="card">
+      <h2>Passo 2 — Solicitar a chave API (primeira vez)</h2>
+      <p class="sub">Ao clicar em "Analisar com IA" sem ter chave salva, aparece um campo inline no próprio card para inserir a chave. A chave fica salva no <b>localStorage do browser</b> — não vai para nenhum servidor.</p>
+
+      <div class="sprint-card">
+        <div class="sprint-card-title">
+          <h3>Leitura inteligente da sprint</h3>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="badge blue">Regras automáticas</span>
+            <button class="gemini-btn" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              Analisar com IA
+            </button>
+          </div>
+        </div>
+
+        <!-- Campo de chave aparece aqui -->
+        <div class="config-row">
+          <label>🔑 Chave Gemini API</label>
+          <input class="key-input" type="password" placeholder="Cole sua chave aqui: AIzaSy..." id="demoKeyInput"/>
+          <button class="save-btn" onclick="simulateSave()">Salvar e analisar</button>
+        </div>
+
+        <div class="ai-hero">
+          <div>
+            <small>Diagnóstico da sprint</small>
+            <strong>A squad Contact possui 18 histórias na sprint atual. O maior volume está em "Em Desenvolvimento".</strong>
+          </div>
+          <span class="ai-tone warn">Monitorar</span>
+        </div>
+        <div class="ai-grid">
+          <div class="ai-item"><small>Principal atenção</small><span>3 pontos de atenção e 2 itens sem responsável.</span></div>
+          <div class="ai-item"><small>Recomendação</small><span>Priorizar remoção dos impedimentos.</span></div>
+          <div class="ai-item"><small>Próxima ação</small><span>Definir dono e prazo de desbloqueio.</span></div>
+          <div class="ai-item"><small>Mensagem para gestão</small><span>Incerteza moderada — atuação necessária.</span></div>
+        </div>
+        <p class="ai-note">Insira sua chave do Google AI Studio para análise com Gemini.</p>
+      </div>
+    </div>
+
+    <div class="how-to">
+      <h4>Como obter a chave gratuita do Gemini</h4>
+      <ol>
+        <li>Acesse <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> e faça login com sua conta Google.</li>
+        <li>Clique em <span class="highlight">Get API Key</span> → <span class="highlight">Create API Key</span>.</li>
+        <li>Copie a chave gerada (começa com <span class="highlight">AIzaSy...</span>).</li>
+        <li>Cole no campo acima e clique em <b>Salvar e analisar</b>.</li>
+        <li>A chave fica salva no seu browser — você não precisará informar novamente.</li>
+      </ol>
+    </div>
+
+    <div class="explain-box" style="margin-top:14px">
+      <h3>Segurança da chave</h3>
+      <ul>
+        <li><span class="ic g">✓</span>A chave é salva apenas no <b>localStorage</b> do browser local — não sobe para nenhum servidor.</li>
+        <li><span class="ic g">✓</span>Cada usuário usa sua própria chave gratuita do Google.</li>
+        <li><span class="ic r">!</span>Não compartilhe sua chave. Cada conta Google tem cota própria (1.500 req/dia grátis).</li>
+      </ul>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" onclick="goStep(0)">← Anterior</button>
+      <button class="nav-btn primary" onclick="simulateSave()">Próximo: Ver carregando →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PASSO 2 — Loading
+  ═══════════════════════════════════════ -->
+  <div id="step2" style="display:none">
+    <div class="card">
+      <h2>Passo 3 — Analisando com Gemini (carregando)</h2>
+      <p class="sub">O botão fica desabilitado com uma animação de pontos enquanto o Gemini processa. O restante do card continua visível — sem bloquear a tela inteira.</p>
+
+      <div class="sprint-card">
+        <div class="sprint-card-title">
+          <h3>Leitura inteligente da sprint</h3>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="badge blue">Regras automáticas</span>
+            <button class="gemini-btn" disabled>
+              <span class="loading-dots"><span></span><span></span><span></span></span>
+              Analisando...
+            </button>
+          </div>
+        </div>
+
+        <div class="ai-hero">
+          <div>
+            <small>Diagnóstico da sprint</small>
+            <strong>A squad Contact possui 18 histórias na sprint atual. O maior volume está em "Em Desenvolvimento".</strong>
+          </div>
+          <span class="ai-tone warn">Monitorar</span>
+        </div>
+        <div class="ai-grid">
+          <div class="ai-item"><small>Principal atenção</small><span>3 pontos de atenção e 2 itens sem responsável.</span></div>
+          <div class="ai-item"><small>Recomendação</small><span>Priorizar remoção dos impedimentos.</span></div>
+          <div class="ai-item"><small>Próxima ação</small><span>Definir dono e prazo de desbloqueio.</span></div>
+          <div class="ai-item"><small>Mensagem para gestão</small><span>Incerteza moderada — atuação necessária.</span></div>
+        </div>
+        <p class="ai-note">Consultando Gemini AI com os dados da sprint...</p>
+      </div>
+    </div>
+
+    <div class="explain-box">
+      <h3>O que está acontecendo nos bastidores</h3>
+      <ul>
+        <li><span class="ic b">1</span>O sistema monta um prompt com os dados reais da sprint: chaves, status, bloqueios, dependências, responsáveis e próximas ações.</li>
+        <li><span class="ic b">2</span>Envia para <b>Gemini 1.5 Flash</b> via API REST — modelo mais rápido e gratuito do Google.</li>
+        <li><span class="ic b">3</span>Aguarda a resposta JSON estruturada (diagnóstico, tom, recomendação, etc.).</li>
+        <li><span class="ic g">✓</span>Tempo médio de resposta: <b>1 a 3 segundos</b>.</li>
+      </ul>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" onclick="goStep(1)">← Anterior</button>
+      <button class="nav-btn primary" onclick="goStep(3)">Próximo: Ver resultado →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PASSO 3 — Resultado da IA
+  ═══════════════════════════════════════ -->
+  <div id="step3" style="display:none">
+    <div class="card">
+      <h2>Passo 4 — Análise real do Gemini aplicada</h2>
+      <p class="sub">O card é atualizado com o diagnóstico do Gemini. O badge muda de "Regras automáticas" para <b>"Gemini AI"</b>, indicando a fonte. A nota de rodapé também muda.</p>
+
+      <div class="sprint-card">
+        <div class="sprint-card-title">
+          <h3>
+            Leitura inteligente da sprint
+            <span class="gemini-badge">Gemini AI</span>
+          </h3>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="gemini-btn" onclick="goStep(2)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              Atualizar análise
+            </button>
+          </div>
+        </div>
+
+        <div class="ai-hero">
+          <div>
+            <small>Diagnóstico da sprint</small>
+            <strong>A sprint da squad Contact está em estado de <span style="color:var(--amber)">atenção moderada</span>. Das 18 histórias ativas, 3 apresentam bloqueio real: SLOPC-9201 aguarda decisão de arquitetura há 4 dias, SLOPC-9215 depende de API externa sem previsão, e SLOPC-9228 está impedida por ambiente de homologação indisponível. O risco de não entrega no sprint é médio-alto para esses 3 itens.</strong>
+          </div>
+          <span class="ai-tone warn">⚠ Atenção</span>
+        </div>
+
+        <div class="ai-grid">
+          <div class="ai-item">
+            <small>Principal atenção</small>
+            <span>3 histórias bloqueadas por decisão técnica, dependência externa e ambiente indisponível. Sem ação hoje, essas histórias saem da sprint.</span>
+          </div>
+          <div class="ai-item">
+            <small>Recomendação</small>
+            <span>Escalar SLOPC-9201 para o arquiteto responsável ainda hoje. A decisão técnica está bloqueando 2 histórias dependentes.</span>
+          </div>
+          <div class="ai-item">
+            <small>Próxima ação</small>
+            <span>Agendar alinhamento de 15 minutos com o negócio para os 2 itens de homologação que vencem amanhã.</span>
+          </div>
+          <div class="ai-item">
+            <small>Mensagem para gestão</small>
+            <span>Sprint com 71% de progressão. Risco concentrado em 3 itens. Intervenção necessária até o fim do dia.</span>
+          </div>
+        </div>
+        <p class="ai-note">Análise gerada por Google Gemini AI com base nos dados reais da sprint importada.</p>
+      </div>
+    </div>
+
+    <div class="explain-box">
+      <h3>Diferença entre regras e IA</h3>
+      <ul>
+        <li><span class="ic r">✕</span><b>Regras:</b> "3 pontos de atenção e 2 itens sem responsável" — texto genérico, igual para qualquer sprint com esses números.</li>
+        <li><span class="ic g">✓</span><b>Gemini:</b> Cita as chaves específicas (SLOPC-9201), o motivo real de cada bloqueio e o impacto exato no sprint — diagnóstico contextualizado.</li>
+        <li><span class="ic g">✓</span>O gestor chega na reunião com informação acionável, não só com contadores.</li>
+      </ul>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" onclick="goStep(2)">← Anterior</button>
+      <button class="nav-btn primary" onclick="goStep(4)">Próximo: Cache →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PASSO 4 — Cache
+  ═══════════════════════════════════════ -->
+  <div id="step4" style="display:none">
+    <div class="card">
+      <h2>Passo 5 — Cache de 30 minutos</h2>
+      <p class="sub">Se o usuário trocar de squad e voltar, ou recarregar a página, o resultado do Gemini é <b>reutilizado automaticamente</b> por 30 minutos sem consumir nova cota — desde que os dados da sprint não tenham mudado.</p>
+
+      <div class="sprint-card">
+        <div class="sprint-card-title">
+          <h3>
+            Leitura inteligente da sprint
+            <span class="gemini-badge">Gemini AI</span>
+          </h3>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span class="cache-pill">
+              <span class="dot"></span>
+              Cache · expira em 28 min
+            </span>
+            <button class="gemini-btn" onclick="goStep(2)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Atualizar análise
+            </button>
+          </div>
+        </div>
+
+        <div class="ai-hero">
+          <div>
+            <small>Diagnóstico da sprint</small>
+            <strong>A sprint da squad Contact está em estado de atenção moderada. Das 18 histórias ativas, 3 apresentam bloqueio real...</strong>
+          </div>
+          <span class="ai-tone warn">⚠ Atenção</span>
+        </div>
+        <div class="ai-grid">
+          <div class="ai-item"><small>Principal atenção</small><span>3 histórias bloqueadas. Sem ação hoje, saem da sprint.</span></div>
+          <div class="ai-item"><small>Recomendação</small><span>Escalar SLOPC-9201 para o arquiteto responsável.</span></div>
+          <div class="ai-item"><small>Próxima ação</small><span>Agendar alinhamento de 15 min com o negócio.</span></div>
+          <div class="ai-item"><small>Mensagem para gestão</small><span>Intervenção necessária até o fim do dia.</span></div>
+        </div>
+        <p class="ai-note">Análise gerada por Google Gemini AI. (cache — clique em "Atualizar análise" para forçar nova chamada)</p>
+      </div>
+    </div>
+
+    <div class="explain-box">
+      <h3>Como o cache funciona</h3>
+      <ul>
+        <li><span class="ic g">✓</span>A chave do cache é gerada com base em: squad + quantidade de histórias + nº de bloqueios + nº de dependências + nº em homologação + nº em deploy.</li>
+        <li><span class="ic g">✓</span>Se qualquer um desses números mudar (nova importação), o cache é invalidado e a próxima análise vai ao Gemini.</li>
+        <li><span class="ic g">✓</span>Válido por 30 minutos. Após isso, a próxima chamada busca análise nova automaticamente.</li>
+        <li><span class="ic b">→</span>O botão "Atualizar análise" força uma nova chamada ao Gemini mesmo com cache válido.</li>
+      </ul>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" onclick="goStep(3)">← Anterior</button>
+      <button class="nav-btn primary" onclick="goStep(5)">Próximo: Erro de chave →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PASSO 5 — Erro de chave inválida
+  ═══════════════════════════════════════ -->
+  <div id="step5" style="display:none">
+    <div class="card">
+      <h2>Passo 6 — Erro de chave inválida ou sem internet</h2>
+      <p class="sub">Se a chave estiver errada ou houver falha de rede, uma mensagem de erro clara aparece <b>dentro do card</b>. O resultado por regras permanece visível — o painel não quebra.</p>
+
+      <div class="sprint-card">
+        <div class="sprint-card-title">
+          <h3>Leitura inteligente da sprint</h3>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="badge blue">Regras automáticas</span>
+            <button class="gemini-btn" onclick="goStep(2)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+
+        <!-- ERRO -->
+        <div class="error-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex:0 0 auto;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>Erro ao chamar Gemini: API key not valid. Please pass a valid API key. — Verifique sua chave em <b>aistudio.google.com</b> e tente novamente.</span>
+        </div>
+
+        <div class="ai-hero">
+          <div>
+            <small>Diagnóstico da sprint (por regras)</small>
+            <strong>A squad Contact possui 18 histórias na sprint atual. O maior volume está em "Em Desenvolvimento".</strong>
+          </div>
+          <span class="ai-tone warn">Monitorar</span>
+        </div>
+        <div class="ai-grid">
+          <div class="ai-item"><small>Principal atenção</small><span>3 pontos de atenção e 2 itens sem responsável.</span></div>
+          <div class="ai-item"><small>Recomendação</small><span>Priorizar remoção dos impedimentos.</span></div>
+          <div class="ai-item"><small>Próxima ação</small><span>Definir dono e prazo de desbloqueio.</span></div>
+          <div class="ai-item"><small>Mensagem para gestão</small><span>Incerteza moderada — atuação necessária.</span></div>
+        </div>
+        <p class="ai-note">Leitura gerada por regras automáticas. Corrija a chave e clique em "Tentar novamente".</p>
+      </div>
+    </div>
+
+    <div class="explain-box">
+      <h3>Comportamento em caso de erro</h3>
+      <ul>
+        <li><span class="ic g">✓</span>O painel <b>não quebra</b> — o resultado por regras continua visível normalmente.</li>
+        <li><span class="ic g">✓</span>A mensagem de erro indica exatamente o problema (chave inválida, sem internet, cota esgotada).</li>
+        <li><span class="ic b">→</span>O usuário pode corrigir a chave clicando em "Tentar novamente" e informando uma nova chave.</li>
+        <li><span class="ic b">→</span>Se a cota gratuita do dia acabar (1.500 req), basta aguardar até meia-noite para resetar.</li>
+      </ul>
+    </div>
+
+    <div style="background:var(--green-soft);border:1px solid #B7EACA;border-radius:12px;padding:16px 18px;margin-top:4px">
+      <p style="font-size:13.5px;color:var(--green);font-weight:800;margin-bottom:6px">Resumo do fluxo completo</p>
+      <div class="flow-row">
+        <span class="flow-step done">1. Botão visível</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step done">2. Inserir chave (1ª vez)</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step done">3. Loading</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step done">4. Resultado Gemini</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-step done">5. Cache 30min</span>
+      </div>
+      <p style="font-size:12px;color:var(--green);margin-top:8px">Da segunda vez em diante: o usuário só clica no botão — chave já está salva, resultado aparece em ~2 segundos.</p>
+    </div>
+
+    <div class="nav-row">
+      <button class="nav-btn" onclick="goStep(4)">← Anterior</button>
+      <button class="nav-btn primary" onclick="goStep(0)">↺ Recomeçar do início</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const steps = 6;
+  let current = 0;
+
+  function goStep(n){
+    for(let i=0;i<steps;i++){
+      const el = document.getElementById('step'+i);
+      const btn = document.getElementById('navBtn'+i);
+      const num = document.getElementById('stepNum'+i);
+      if(el) el.style.display = i===n ? '' : 'none';
+      if(btn){
+        btn.classList.remove('active','done');
+        if(i===n) btn.classList.add('active');
+        else if(i<n) btn.classList.add('done');
+      }
+      if(num && i<n) num.textContent = '✓';
+      else if(num) num.textContent = i+1;
+    }
+    current = n;
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function simulateSave(){
+    const val = (document.getElementById('demoKeyInput')?.value||'').trim();
+    // Simula independente do valor para fins de demo
+    goStep(2);
+    setTimeout(()=>goStep(3), 2000);
+  }
+</script>
+</body>
+</html>
