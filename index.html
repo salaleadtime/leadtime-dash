@@ -1810,6 +1810,8 @@ var BK_GAS_URL     = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0is
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
+var _sheetsLastSuccessAt = 0;   // última vez que o Sheets respondeu com dados válidos
+var _sheetsOfflineWarned = false;
 var _sheetsLastWritePayload = '';
 var SHEETS_POLL_MS = 120000;
 // Edições de CHG/Impedimento feitas pelo usuário aguardando confirmação do Sheets.
@@ -2257,7 +2259,13 @@ function saveLocal(){
     showSavedBadge();
     // Agenda sincronização automática com a nuvem (10s debounce)
     jbAutoSave();
-  }catch(e){ /* storage full or disabled */ }
+  }catch(e){
+    // localStorage cheio ou desabilitado — avisa o usuário para não perder dados silenciosamente
+    toast('⚠️ Falha ao salvar localmente',
+      'O armazenamento do navegador está cheio ou desabilitado. Os dados estão apenas em memória. '
+      +'<strong>Evite fechar a aba</strong> até limpar espaço ou exportar via Excel.','err');
+    console.error('saveLocal falhou:', e);
+  }
 }
 function loadLocal(){
   try{
@@ -2277,13 +2285,17 @@ function saveResumoCache(rows){
     try{ sCache=JSON.parse(localStorage.getItem(SQUAD_KEY)||'{}'); }catch(e){}
     (rows||[]).forEach(function(r){
       if(r&&r.id){
+        // Sempre sobrescreve quando o import traz um valor: o Jira é a fonte correta
+        // para resumo e squad. O cache antigo fica obsoleto se o usuário reimportar.
         if(r.resumo) rCache[r.id]=r.resumo;
         if(r.squad)  sCache[r.id]=r.squad;
       }
     });
     localStorage.setItem(RESUMO_KEY, JSON.stringify(rCache));
     localStorage.setItem(SQUAD_KEY,  JSON.stringify(sCache));
-  }catch(e){}
+  }catch(e){
+    console.error('saveResumoCache falhou:', e);
+  }
 }
 function loadResumoCache(){
   try{ return JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){ return {}; }
@@ -5663,8 +5675,19 @@ function _trySheets(silent){
     loadFromSheets(function(err, sheetsData){
       if(err){
         if(!silent) setSyncLabel('⚠️ Sheets offline — usando cache local');
+        // Avisa uma única vez quando o Sheets está offline por mais de 5 minutos,
+        // para que o usuário saiba que está vendo dados potencialmente desatualizados.
+        var agora=Date.now();
+        if(_sheetsLastSuccessAt && !_sheetsOfflineWarned && (agora-_sheetsLastSuccessAt)>300000){
+          _sheetsOfflineWarned=true;
+          var minutos=Math.floor((agora-_sheetsLastSuccessAt)/60000);
+          toast('⚠️ Sheets offline há '+minutos+' min',
+            'Você está vendo os dados do cache local. Edições são salvas localmente mas <strong>não estão sendo sincronizadas com o time</strong> até a conexão voltar.','err');
+        }
         return;
       }
+      _sheetsLastSuccessAt=Date.now();
+      _sheetsOfflineWarned=false;
       replaceFromSharedSource(sheetsData);
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
       if(silent) toast('🔄 Dados atualizados','O dashboard recebeu os dados oficiais do Google Sheets.');
