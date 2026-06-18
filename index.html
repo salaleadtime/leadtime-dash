@@ -1812,6 +1812,13 @@ var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
 var _sheetsLastWritePayload = '';
 var SHEETS_POLL_MS = 120000;
+// Edições de CHG/Impedimento feitas pelo usuário aguardando confirmação do Sheets.
+// O Apps Script não reflete a gravação instantaneamente; sem esta proteção, uma
+// releitura que chega antes da gravação consolidar apaga o valor recém-digitado
+// (o Sheets é autoritativo). Mapa {id:{chg,impedimento,ts}}; cada campo é limpo
+// assim que o Sheets devolve o mesmo valor, ou após o TTL.
+var _pendingEdits = {};
+var PENDING_EDIT_TTL = 150000;
 // Valores de CHG que vieram hardcoded do seed/JSON e jamais foram inseridos pelo usuário.
 // Mapeado como {epicId: chgValue}. Sempre que detectados, são apagados e o Sheets é corrigido.
 var _SEED_CHG_CORRECTIONS = {'SLOPC-33834': 'CHG0916531'};
@@ -2106,6 +2113,23 @@ function replaceFromSharedSource(rows){
     var cloudMeta=(_epicMetaCloud&&_epicMetaCloud[r.id])||{};
     if(!r.resumo) r.resumo = (old&&old.resumo) || cachedResumo || cloudMeta.resumo || '';
     if(!r.squad)  r.squad  = (old&&old.squad)  || cachedSquad  || cloudMeta.squad  || '';
+
+    // Proteção contra race: se o usuário acabou de editar CHG/Impedimento e o
+    // Sheets ainda não devolveu esse valor (gravação não consolidada), mantém o
+    // valor local em vez de apagá-lo. Limpa a pendência quando o Sheets confirma.
+    var pend=_pendingEdits[r.id];
+    if(pend){
+      if((Date.now()-pend.ts) < PENDING_EDIT_TTL){
+        ['chg','impedimento'].forEach(function(field){
+          if(pend[field]===undefined) return;
+          if((r[field]||'') === pend[field]) delete pend[field];   // Sheets confirmou
+          else r[field]=pend[field];                                // ainda não refletiu — preserva
+        });
+        if(pend.chg===undefined && pend.impedimento===undefined) delete _pendingEdits[r.id];
+      } else {
+        delete _pendingEdits[r.id];                                 // expirou
+      }
+    }
 
     if(!old) return;
     var oldFimValido=isValidDate(old.fim);
@@ -3134,6 +3158,13 @@ function fc(el){
   }
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
     var r=allData[gi];
+    if(f==='chg'||f==='impedimento'){
+      // Marca o valor recém-digitado como pendente até o Sheets confirmar,
+      // evitando que uma releitura antecipada o apague (ver replaceFromSharedSource).
+      var pe=_pendingEdits[r.id]||{};
+      pe[f]=r[f]||''; pe.ts=Date.now();
+      _pendingEdits[r.id]=pe;
+    }
     saveToSheets([{
       id:r.id, status:r.status||'', statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
       ini:r.ini||'', fim:r.fim||'', fimAntes:r.fimAntes||'', dataPrevista:r.dataPrevista||''
