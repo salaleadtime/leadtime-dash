@@ -6775,9 +6775,9 @@
       if($('insights')) $('insights').innerHTML = '';
       if($('deliveryList')) $('deliveryList').innerHTML = '';
 
-      // Empty state quando não há dados
+      // Empty state quando não há dados em nenhuma das bases
       const gerencial = $('gerencial');
-      if(rows.length === 0){
+      if(rows.length === 0 && sprintRows.length === 0){
         const sections = gerencial?.querySelectorAll('.kpi-grid,.kpi-type-row,.section,#bmSection,.management-layout');
         if(sections) sections.forEach(s => s.style.display='none');
         if(!$('managementEmptyState')){
@@ -6812,11 +6812,20 @@
       const dep = data.filter(r=>r.dependencia).length;
       const homolog = data.filter(isHomologation).length;
 
-      // Type KPIs
-      const bugs = data.filter(isBug).length;
-      const melhorias = data.filter(isMelhoria).length;
-      const historias = data.filter(r=>isHistoria(r)).length;
-      const bugsCorrecao = data.filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')).length;
+      // Dataset combinado: rows + sprintRows (deduplicado por chave)
+      // Necessário porque a Sprint_ativa contém Bugs e Melhorias que não estão no Acomp. Geral
+      const sprintDataForSquad = effectiveSprintRows().filter(r =>
+        sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)
+      );
+      const seenKeys = new Set(data.map(r => r.chave).filter(Boolean));
+      const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
+      const combined = applyDateFilter([...data, ...extraFromSprint]);
+
+      // Type KPIs — usam o dataset combinado
+      const bugs = combined.filter(isBug).length;
+      const melhorias = combined.filter(isMelhoria).length;
+      const historias = combined.filter(r=>isHistoria(r)).length;
+      const bugsCorrecao = combined.filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')).length;
 
       $('kpiTotal').textContent = total;
       $('kpiPB').textContent = pb;
@@ -6828,32 +6837,32 @@
       $('kpiMelhorias').textContent = melhorias;
       $('kpiHistorias').textContent = historias;
       $('kpiBugsCorrecao').textContent = bugsCorrecao;
-      $('chartBadge').textContent = `${total} itens`;
+      $('chartBadge').textContent = `${combined.length} itens`;
 
-      // Chart.js charts
+      // Chart.js charts — usam o dataset combinado
       renderChartJs('chartStatus',
-        countBy(data, r=>r.situacao).slice(0,6),
-        data,
+        countBy(combined, r=>r.situacao).slice(0,6),
+        combined,
         (r, label)=>(normalize(r.situacao)||'Não informado')===label
       );
       renderChartJs('chartBacklog',
         [['Bugs', bugs], ['Melhorias', melhorias], ['Histórias', historias]],
-        data,
+        combined,
         (r, label)=> label==='Bugs' ? isBug(r) : label==='Melhorias' ? isMelhoria(r) : isHistoria(r)
       );
       renderChartJs('chartRisk',
-        countBy(data, r=>r.risco).slice(0,4),
-        data,
+        countBy(combined, r=>r.risco).slice(0,4),
+        combined,
         (r, label)=>(normalize(r.risco)||'Não informado')===label
       );
       renderChartJs('chartBlocksDeps',
-        [['Bloqueios', bloq], ['Dependências', dep], ['Sem alerta', data.filter(r=>!r.bloqueio&&!r.dependencia).length]],
-        data,
+        [['Bloqueios', bloq], ['Dependências', dep], ['Sem alerta', combined.filter(r=>!r.bloqueio&&!r.dependencia).length]],
+        combined,
         (r, label)=> label==='Bloqueios' ? r.bloqueio : label==='Dependências' ? r.dependencia : (!r.bloqueio&&!r.dependencia)
       );
 
-      // Render Bug/Melhoria section
-      renderBmList(data);
+      // Seção Bugs e Melhorias usa dataset combinado
+      renderBmList(combined);
 
       // Update last-updated badge
       updateLastUpdatedBadge();
