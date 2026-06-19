@@ -5494,22 +5494,22 @@
 
       <!-- Linha 2: KPIs por tipo — Bugs, Melhorias, Histórias, Em Correção -->
       <div class="kpi-type-row">
-        <article class="kpi bug" onclick="openList('Bugs da squad', filteredBySquad().filter(isBug))">
+        <article class="kpi bug" onclick="openList('Bugs da squad', combinedBySquad().filter(isBug))">
           <span>🐛 Bugs</span>
           <strong id="kpiBugs">0</strong>
           <small>Itens do tipo Bug registrados na squad.</small>
         </article>
-        <article class="kpi melhoria" onclick="openList('Melhorias da squad', filteredBySquad().filter(isMelhoria))">
+        <article class="kpi melhoria" onclick="openList('Melhorias da squad', combinedBySquad().filter(isMelhoria))">
           <span>⚡ Melhorias</span>
           <strong id="kpiMelhorias">0</strong>
           <small>Itens do tipo Melhoria registrados na squad.</small>
         </article>
-        <article class="kpi historia" onclick="openList('Histórias da squad', filteredBySquad().filter(isHistoria))">
+        <article class="kpi historia" onclick="openList('Histórias da squad', combinedBySquad().filter(isHistoria))">
           <span>📖 Histórias</span>
           <strong id="kpiHistorias">0</strong>
           <small>Itens do tipo História (sem bugs/melhorias).</small>
         </article>
-        <article class="kpi" onclick="openList('Bugs em correção', filteredBySquad().filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')))">
+        <article class="kpi" onclick="openList('Bugs em correção', combinedBySquad().filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')))">
           <span>🔧 Em Correção</span>
           <strong id="kpiBugsCorrecao">0</strong>
           <small>Bugs com status de correção ativa.</small>
@@ -6618,6 +6618,17 @@
     function isBug(row){ return /bug/i.test(row.tipo||''); }
     function isMelhoria(row){ return /melhoria/i.test(row.tipo||''); }
     function isHistoria(row){ return /hist[oó]r/i.test(row.tipo||'') || (!isBug(row) && !isMelhoria(row) && (row.tipo||'')); }
+
+    /* ─ Dataset combinado: rows + sprintRows deduplicado por chave ─ */
+    function combinedBySquad(squadOverride){
+      const squad = squadOverride || getSelectedSquad();
+      const base = baseRowsForSquad(squad);
+      const sprint = effectiveSprintRows().filter(r =>
+        sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)
+      );
+      const seen = new Set(base.map(r => r.chave).filter(Boolean));
+      return [...base, ...sprint.filter(r => !seen.has(r.chave))];
+    }
 
     /* ─ Date range filter helper ─ */
     function applyDateFilter(data){
