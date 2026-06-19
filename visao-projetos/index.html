@@ -9,6 +9,7 @@
   <!-- v56: Leitura inteligente da sprint; backlog neste bloco = backlog da sprint atual importada -->
   <!-- v55 produção: Expresso-1 revisada, homologação por quantidade e vínculo por squad/frente preservado -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root{
       --red:#CC092F;
@@ -5292,6 +5293,88 @@
       opacity:.86;
     }
 
+    /* ─── v60: Loading Overlay ─── */
+    .loading-overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px;backdrop-filter:blur(4px)}
+    .loading-overlay.hidden{display:none!important}
+    .loading-card{background:#fff;border-radius:20px;padding:28px 40px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 25px 50px rgba(0,0,0,.25);min-width:320px}
+    .spinner{width:44px;height:44px;border:4px solid var(--red-soft);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-card h3{font-size:16px;font-weight:800;color:var(--text);margin:0}
+    .loading-card p{font-size:13px;color:var(--muted);text-align:center;line-height:1.5;margin:0}
+    .loading-progress{width:100%;background:#F0F0F0;border-radius:999px;height:6px;overflow:hidden}
+    .loading-progress-bar{height:100%;background:linear-gradient(90deg,var(--red),#FF6B6B);border-radius:999px;width:0;transition:width .3s ease}
+
+    /* ─── Delete Confirmation Modal ─── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:8888;backdrop-filter:blur(3px)}
+    .modal-overlay.hidden{display:none!important}
+    .modal{background:#fff;border-radius:20px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 25px 50px rgba(0,0,0,.2)}
+    .modal-icon{width:48px;height:48px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+    .modal h3{font-size:17px;font-weight:800;margin:0 0 8px;color:var(--text)}
+    .modal p{font-size:13.5px;color:var(--muted);line-height:1.5;margin:0 0 20px}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end}
+    .btn-danger{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:999px;padding:10px 16px;font-size:12px;font-weight:800;cursor:pointer;transition:.15s}
+    .btn-danger:hover{background:#FEE2E2}
+
+    /* ─── Empty State ─── */
+    .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;text-align:center;gap:12px}
+    .empty-state-icon{width:56px;height:56px;border-radius:50%;background:var(--red-soft);display:flex;align-items:center;justify-content:center}
+    .empty-state h3{font-size:15px;color:var(--text);font-weight:800;margin:0}
+    .empty-state p{font-size:13px;color:var(--muted);line-height:1.5;max-width:320px;margin:0}
+
+    /* ─── Last Updated Badge ─── */
+    .last-updated-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:#fff;margin-top:10px}
+    .last-updated-badge .dot{width:6px;height:6px;border-radius:50%;background:#5CE65C;flex:0 0 auto}
+
+    /* ─── Date filter group ─── */
+    .filter-date-group{display:flex;align-items:flex-end;gap:8px;background:var(--blue-soft);border:1px solid #C5D9EF;border-radius:14px;padding:10px 12px}
+    .filter-date-group .date-sep{font-size:13px;color:var(--muted);font-weight:700;padding-bottom:4px}
+    .filter-new-badge{background:var(--green);color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em;margin-left:4px;vertical-align:middle}
+
+    /* ─── URL sync pill ─── */
+    .url-sync-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-soft);border:1px solid #B7EACA;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;color:var(--green)}
+
+    /* ─── Bug / Melhoria KPI row ─── */
+    .kpi-type-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+    .kpi.bug:before{background:var(--red)}
+    .kpi.bug strong{color:var(--red-dark)}
+    .kpi.melhoria:before{background:var(--blue)}
+    .kpi.melhoria strong{color:var(--blue)}
+    .kpi.historia:before{background:var(--green)}
+    .kpi.historia strong{color:var(--green)}
+
+    /* ─── Bug / Melhoria section ─── */
+    .bm-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+    .bm-type-tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .bm-tab{border:1px solid var(--line);background:#F8F9FC;border-radius:999px;padding:7px 14px;color:var(--muted);font-size:12px;font-weight:800;cursor:pointer;transition:.15s ease;display:inline-flex;align-items:center;gap:5px}
+    .bm-tab:hover{border-color:#ccc}
+    .bm-tab.active.bug-tab{background:#FDE9EE;color:var(--red-dark);border-color:#F3B9C5}
+    .bm-tab.active.melhoria-tab{background:var(--blue-soft);color:var(--blue);border-color:#C5D9EF}
+    .bm-tab.active.all-tab{background:var(--amber-soft);color:var(--amber);border-color:#F9D888}
+    .bm-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:999px;font-size:10px;font-weight:900;padding:0 4px;background:currentColor;color:#fff}
+    .bm-count-inner{color:#fff;font-size:10px;font-weight:900;mix-blend-mode:initial}
+    .bm-tab .cnt{background:rgba(0,0,0,.12);border-radius:999px;padding:0px 6px;font-size:10px;font-weight:900}
+    .bug-melhoria-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:4px}
+    .bm-row{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#FAFBFD;cursor:pointer;transition:.13s}
+    .bm-row:hover{border-color:#F2A7B7;box-shadow:0 4px 14px rgba(204,9,47,.07);background:#fff}
+    .bm-type-tag{flex:0 0 auto;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+    .bm-type-tag.bug{background:#FDE9EE;color:var(--red-dark)}
+    .bm-type-tag.melhoria{background:var(--blue-soft);color:var(--blue)}
+    .bm-body{flex:1;min-width:0}
+    .bm-key{font-size:11px;font-weight:900;color:var(--blue)}
+    .bm-summary{font-size:13px;font-weight:600;color:var(--text);margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bm-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+
+    /* ─── Chart.js canvas ─── */
+    .chart-canvas-wrap{position:relative;height:160px}
+
+    /* ─── Export per delivery ─── */
+    .mini-action.export{color:var(--blue);border-color:#C5D9EF}
+    .mini-action.export:hover{background:var(--blue-soft);border-color:var(--blue)}
+
+    /* ─── SLA Notification button ─── */
+    .notif-btn-wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0}
+    #notifStatus{font-size:12px;color:var(--muted)}
+
 </style>
 </head>
 <body>
@@ -5300,6 +5383,10 @@
       <div class="title-wrap">
         <h1>Painel Estratégico de Entregas</h1>
         <p>Visão estratégica e operacional para acompanhar entregas, bloqueios, dependências e rota de produção.</p>
+        <div class="last-updated-badge" id="lastUpdatedBadge" style="display:none">
+          <span class="dot"></span>
+          <span id="lastUpdatedText">Última importação: —</span>
+        </div>
       </div>
       <div class="toolbar">
         <label class="file-label" title="Acomp._Geral_Todas_Squads — ou selecione múltiplos arquivos (Acomp.Geral + Sprint_ativa) para importar tudo de uma vez">
@@ -5329,6 +5416,10 @@
         <button class="tab" data-view="operacional" onclick="switchView('operacional')">Visão Operacional</button>
       </div>
       <div class="data-source">
+        <span class="url-sync-pill" id="urlSyncPill" title="Filtro de squad salvo na URL — compartilhe o link para abrir com o mesmo contexto">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          URL sincronizada
+        </span>
         <div><b>Base:</b> <span id="baseInfo">Data e Hora</span></div>
       </div>
     </section>
@@ -5340,6 +5431,19 @@
           <select id="squadFilter" onchange="handleSquadFilterChange()"></select>
         </div>
         <div class="selected-pill" id="selectedSquadLabel">Squad: Contact</div>
+        <!-- Filtro de período de datas -->
+        <div class="filter-date-group" id="dateFilterGroup">
+          <div>
+            <label>De <span class="filter-new-badge">Novo</span></label>
+            <input type="date" id="filterDateFrom" onchange="renderAll()" style="min-width:130px" />
+          </div>
+          <span class="date-sep">→</span>
+          <div>
+            <label>Até</label>
+            <input type="date" id="filterDateTo" onchange="renderAll()" style="min-width:130px" />
+          </div>
+          <button class="btn btn-soft" style="padding:6px 10px;font-size:11px;height:42px;align-self:flex-end" onclick="clearDateFilter()" title="Limpar filtro de datas">✕</button>
+        </div>
       </div>
       <div class="filter-left" id="operationalFilters" style="display:none">
         <div>
@@ -5354,6 +5458,7 @@
     </section>
 
     <section id="gerencial" class="view active">
+      <!-- Linha 1: KPIs gerais (6 colunas) -->
       <div class="kpi-grid">
         <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad())">
           <span>Total de histórias</span>
@@ -5387,32 +5492,77 @@
         </article>
       </div>
 
+      <!-- Linha 2: KPIs por tipo — Bugs, Melhorias, Histórias, Em Correção -->
+      <div class="kpi-type-row">
+        <article class="kpi bug" onclick="openList('Bugs da squad', filteredBySquad().filter(isBug))">
+          <span>🐛 Bugs</span>
+          <strong id="kpiBugs">0</strong>
+          <small>Itens do tipo Bug registrados na squad.</small>
+        </article>
+        <article class="kpi melhoria" onclick="openList('Melhorias da squad', filteredBySquad().filter(isMelhoria))">
+          <span>⚡ Melhorias</span>
+          <strong id="kpiMelhorias">0</strong>
+          <small>Itens do tipo Melhoria registrados na squad.</small>
+        </article>
+        <article class="kpi historia" onclick="openList('Histórias da squad', filteredBySquad().filter(isHistoria))">
+          <span>📖 Histórias</span>
+          <strong id="kpiHistorias">0</strong>
+          <small>Itens do tipo História (sem bugs/melhorias).</small>
+        </article>
+        <article class="kpi" onclick="openList('Bugs em correção', filteredBySquad().filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')))">
+          <span>🔧 Em Correção</span>
+          <strong id="kpiBugsCorrecao">0</strong>
+          <small>Bugs com status de correção ativa.</small>
+        </article>
+      </div>
+
+      <!-- Gráficos com Chart.js -->
       <section class="section">
         <div class="section-head">
           <div>
             <h2>Gráficos estratégicos</h2>
-            <p class="sub">Gráficos menores e clicáveis. Ao clicar em uma barra, abre a lista das histórias daquele número.</p>
+            <p class="sub">Gráficos interativos com Chart.js — passe o mouse para ver detalhes, clique nas barras para filtrar histórias.</p>
           </div>
-          <span class="badge red" id="chartBadge">0 histórias</span>
+          <span class="badge red" id="chartBadge">0 itens</span>
         </div>
         <div class="charts-grid">
           <div class="chart-card">
             <div class="chart-title">Situação <small>status</small></div>
-            <div id="chartStatus"></div>
+            <div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div>
+            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
           </div>
           <div class="chart-card">
-            <div class="chart-title">Backlog da sprint x Refinadas <small>sprint atual</small></div>
-            <div id="chartBacklog"></div>
+            <div class="chart-title">Tipo de item <small>bugs · melhorias · histórias</small></div>
+            <div class="chart-canvas-wrap"><canvas id="chartBacklog"></canvas></div>
+            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para filtrar por tipo</p>
           </div>
           <div class="chart-card">
             <div class="chart-title">Risco <small>entrega</small></div>
-            <div id="chartRisk"></div>
+            <div class="chart-canvas-wrap"><canvas id="chartRisk"></canvas></div>
+            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver itens em risco</p>
           </div>
           <div class="chart-card">
             <div class="chart-title">Bloqueios e Dependências <small>atenção</small></div>
-            <div id="chartBlocksDeps"></div>
+            <div class="chart-canvas-wrap"><canvas id="chartBlocksDeps"></canvas></div>
+            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver itens bloqueados</p>
           </div>
         </div>
+      </section>
+
+      <!-- Seção de Bugs e Melhorias -->
+      <section class="section" id="bmSection">
+        <div class="bm-section-head">
+          <div>
+            <h2 style="font-size:17px;color:var(--red-dark)">Bugs e Melhorias</h2>
+            <p class="sub" style="margin-top:4px">Visão detalhada de bugs e melhorias da sprint. Clique em qualquer item para abrir no Jira.</p>
+          </div>
+          <div class="bm-type-tabs">
+            <button class="bm-tab all-tab active" id="bmTabAll" onclick="switchBmTab('all')">Todos <span class="cnt" id="bmCntAll">0</span></button>
+            <button class="bm-tab bug-tab" id="bmTabBug" onclick="switchBmTab('bug')">🐛 Bugs <span class="cnt" id="bmCntBug">0</span></button>
+            <button class="bm-tab melhoria-tab" id="bmTabMelhoria" onclick="switchBmTab('melhoria')">⚡ Melhorias <span class="cnt" id="bmCntMelhoria">0</span></button>
+          </div>
+        </div>
+        <div class="bug-melhoria-list" id="bmList"></div>
       </section>
 
       <div class="management-layout">
@@ -5847,6 +5997,34 @@
       <div id="drawerContent"></div>
     </div>
   </aside>
+
+  <!-- Loading Overlay (#3) -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <h3>Importando planilha...</h3>
+      <p>Processando dados do Jira.<br>Isso pode levar alguns segundos.</p>
+      <div class="loading-progress">
+        <div class="loading-progress-bar" id="loadBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmação de exclusão (#7) -->
+  <div class="modal-overlay hidden" id="deleteModal">
+    <div class="modal">
+      <div class="modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </div>
+      <h3 id="deleteModalTitle">Excluir entrega final?</h3>
+      <p id="deleteModalBody">Esta ação remove apenas o cadastro da entrega final. As histórias importadas do Jira não serão excluídas.</p>
+      <div class="modal-actions">
+        <button class="btn btn-soft" onclick="hideDeleteModal()">Cancelar</button>
+        <button class="btn btn-danger" id="deleteModalConfirm">Sim, excluir</button>
+      </div>
+    </div>
+  </div>
+
 
   <script id="initialData" type="application/json">[{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39605","id":"6415629","situacao":"Product Backlog","criado":"29/05/2026","atualizado":"03/06/2026","resumo":"Subsídios - Cesta de Serviços: Criar Botão \"Salvar e Continuar\" para habilitar Lista Relacionada","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-39603","id":"6415011","situacao":"Product Backlog","criado":"29/05/2026","atualizado":"03/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Empréstimo Composição Fechadas e Fechadas Mês","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-39602","id":"6415006","situacao":"Product Backlog","criado":"29/05/2026","atualizado":"01/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Consignado Fechadas e Fechadas Mês","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39600","id":"6411548","situacao":"Product Backlog","criado":"28/05/2026","atualizado":"01/06/2026","resumo":"Subsídios - Subsídios - Abas de Produtos Específicos: Disponibilizar Botão para Preencher Campos Vazios","squad":"Expresso-1","rotulos":["refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38006","chave":"SLOPC-39537","id":"6397439","situacao":"Product Backlog","criado":"27/05/2026","atualizado":"05/06/2026","resumo":"[Golpes e Fraudes – API Extrato] - Ajustar Layout da tela e condições de chamada da API de consulta cliente","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-39378","chave":"SLOPC-39528","id":"6385923","situacao":"Product Backlog","criado":"26/05/2026","atualizado":"05/06/2026","resumo":"[Orquestrador de Solicitações] Endpoint de Lista de Produtos","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-39378","chave":"SLOPC-39482","id":"6369811","situacao":"Product Backlog","criado":"25/05/2026","atualizado":"05/06/2026","resumo":"[Orquestrador de Solicitações] Tabela de Configuração","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39444","id":"6363181","situacao":"Product Backlog","criado":"22/05/2026","atualizado":"07/06/2026","resumo":"Subsídios -  Criar Submódulo \"Solicitações Canceladas\" em \"Relatórios Analíticos\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-36324","chave":"SLOPC-39363","id":"6353667","situacao":"Em Desenvolvimento","criado":"21/05/2026","atualizado":"07/06/2026","resumo":"Correção da Pipeline de Release do gcsb-srv-servicos-operacionais","squad":"Guardioes","rotulos":["areas_envolvidas","Dependencia_Externa","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39362","id":"6350986","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"07/06/2026","resumo":"Subsídios - Capitalização: Filtrar Opções de Justificativa para \"Subsídio Não Localizado\" e \"Subsídio Parcial\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39361","id":"6350956","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"27/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Outros\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39360","id":"6350924","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"27/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Contas\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39359","id":"6350225","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"28/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Atendimento \" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39358","id":"6350223","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"03/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - BBF VEICULOS \" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39357","id":"6350217","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"01/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Limite de Crédito\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39356","id":"6350214","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"03/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Outros Diversos\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39355","id":"6350206","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"03/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Middle\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39354","id":"6349596","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"21/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Leasing\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39353","id":"6349590","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"21/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Cartão de Debito \" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39352","id":"6349583","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"21/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Cheques \" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39351","id":"6349576","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"21/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Consignado\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39350","id":"6349569","situacao":"Product Backlog","criado":"21/05/2026","atualizado":"21/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Aplicação Financeira\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39228","id":"6331993","situacao":"Product Backlog","criado":"19/05/2026","atualizado":"25/05/2026","resumo":"Subsídios - Subsídios - Remover Campos da Aba Checklist dos \"Relatórios Analíticos\" (Todos os Produtos)","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31843","chave":"SLOPC-39226","id":"6330959","situacao":"Product Backlog","criado":"19/05/2026","atualizado":"26/05/2026","resumo":"[OBF] [TÉCNICA] Correção ‘Justificativa de Status’ Base Produção","squad":"Expresso-1","rotulos":["OBF","Validada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39140","id":"6317637","situacao":"Product Backlog","criado":"15/05/2026","atualizado":"19/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Arrecadação\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39139","id":"6317621","situacao":"Product Backlog","criado":"15/05/2026","atualizado":"21/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Leilão\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-39100","chave":"SLOPC-39133","id":"6313398","situacao":"Product Backlog","criado":"15/05/2026","atualizado":"03/06/2026","resumo":"[Pricing 2.0 Servicenow] - Definição de Aprovador por Alçada","squad":"Contact","rotulos":["Validada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39132","id":"6314007","situacao":"Product Backlog","criado":"15/05/2026","atualizado":"19/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Cobranças\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"","chave":"SLOPC-39063","id":"6300935","situacao":"Product Backlog","criado":"13/05/2026","atualizado":"15/05/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Débito Automatico\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-36324","chave":"SLOPC-39001","id":"6289679","situacao":"Em teste","criado":"12/05/2026","atualizado":"07/06/2026","resumo":"Criação da versão v2 de endpoints do gcsb-srv-servicos-operacionais para suporte a CNPJ alfanumérico","squad":"Guardioes","rotulos":["GCSB","Net_Empresa","Nova-RT2/26"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-38994","id":"6289093","situacao":"Em Desenvolvimento","criado":"12/05/2026","atualizado":"07/06/2026","resumo":"Subsídios - Direcionamentos para Capitalização","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"","chave":"SLOPC-38855","id":"6271433","situacao":"Product Backlog","criado":"11/05/2026","atualizado":"05/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Carteiras Comerciais\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"","chave":"SLOPC-38791","id":"6261925","situacao":"Product Backlog","criado":"08/05/2026","atualizado":"07/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Cesta de Serviços\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-38790","id":"6261498","situacao":"Em homologação","criado":"08/05/2026","atualizado":"07/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Consignado Bradesco\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"","chave":"SLOPC-38446","id":"6214174","situacao":"Product Backlog","criado":"29/04/2026","atualizado":"30/04/2026","resumo":"Subsídios - Processos Judiciais: Incluir BPO ORIZON na Distribuição Manual","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36613","chave":"SLOPC-38220","id":"6188073","situacao":"Product Backlog","criado":"27/04/2026","atualizado":"29/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Pagamento Boleto – Comprovante","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36613","chave":"SLOPC-38213","id":"6187684","situacao":"Product Backlog","criado":"27/04/2026","atualizado":"29/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Pagamento Boleto – Aprovar","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36613","chave":"SLOPC-38204","id":"6186794","situacao":"Product Backlog","criado":"27/04/2026","atualizado":"29/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Pagamento Boleto – Incluir","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36613","chave":"SLOPC-38202","id":"6187126","situacao":"Product Backlog","criado":"27/04/2026","atualizado":"29/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Pagamento Arrecadacao – Comprovante","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36613","chave":"SLOPC-38201","id":"6186554","situacao":"Product Backlog","criado":"27/04/2026","atualizado":"27/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Pagamento Arrecadacao – Incluir","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36613","chave":"SLOPC-38193","id":"6185844","situacao":"Product Backlog","criado":"27/04/2026","atualizado":"28/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Pagamento Arrecadacao – Aprovar","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38006","chave":"SLOPC-38011","id":"6179004","situacao":"Em deploy para produção","criado":"27/04/2026","atualizado":"05/06/2026","resumo":"[Golpes e Fraudes – API Extrato1] - Desenvolver a interface do solicitante para consulta e seleção de transações do extrato.","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-36614","chave":"SLOPC-37968","id":"6170021","situacao":"Product Backlog","criado":"24/04/2026","atualizado":"24/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Acerto Contabil","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36614","chave":"SLOPC-37936","id":"6165044","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"07/05/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Comprovante Terceira","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36614","chave":"SLOPC-37933","id":"6164339","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"24/04/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Validação Terceira","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36614","chave":"SLOPC-37925","id":"6162775","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"12/05/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Transf. Terceira","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37912","id":"6159883","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [39/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: BITZ","squad":"Expresso-1","rotulos":["OBF","Refinada","Validada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37911","id":"6159879","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [38/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Bradesco Saúde","squad":"Expresso-1","rotulos":["OBF","Refinada","Validada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37910","id":"6159876","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [37/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Leasing","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37909","id":"6159874","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [36/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Repasses Finame/BNDES","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37908","id":"6159872","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [35/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Crédito Rural","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37907","id":"6159868","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [34/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Consórcios","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37906","id":"6159867","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [33/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Pós-venda de Ativos (Créditos Cedidos)","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37905","id":"6159865","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [32/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Acionamentos Cobranças – Ligações/SMS/E-mail","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37904","id":"6159863","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [31/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Bradesco Seguros BARE","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37903","id":"6159862","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"25/05/2026","resumo":"[OBF] [Melhoria #50] [29/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Vida e Previdência","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37901","id":"6159861","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"25/05/2026","resumo":"[OBF] [Melhoria #50] [26/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Next","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37900","id":"6159859","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"25/05/2026","resumo":"[OBF] [Melhoria #50] [25/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Obrigação Não Categorizada","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37899","id":"6159858","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [24/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Retirada de Veículos do Pátio","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37898","id":"6159855","situacao":"Product Backlog","criado":"23/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [23/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Investimentos","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37897","id":"6159854","situacao":"Em Desenvolvimento","criado":"23/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [22/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Estorno/Devolução de Valores","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37896","id":"6159851","situacao":"Em deploy para produção","criado":"23/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [20/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Manutenção Seguro Prestamista","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37895","id":"6159847","situacao":"Em teste","criado":"23/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [18/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: BP - Empréstimos","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37894","id":"6159831","situacao":"Em deploy para produção","criado":"23/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [17/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: RESTRITIVOS / SPC / SERASA","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37893","id":"6159815","situacao":"Em deploy para produção","criado":"23/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [16/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: RESTRITIVOS / SISBACEN/SCR","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-36614","chave":"SLOPC-37862","id":"6157205","situacao":"Product Backlog","criado":"22/04/2026","atualizado":"06/06/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Distribuicao Empresa Terceira","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36614","chave":"SLOPC-37853","id":"6156059","situacao":"Product Backlog","criado":"22/04/2026","atualizado":"06/06/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Double Check","squad":"Intrstelar","rotulos":["ISS_Inter","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-37678","id":"6137071","situacao":"Em deploy para produção","criado":"17/04/2026","atualizado":"07/06/2026","resumo":"Subsídios - Aba Produto Todos os Produtos : Criar Botão para Preencher Campos Vazios","squad":"Expresso-1","rotulos":["refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-38896","chave":"SLOPC-37677","id":"6137026","situacao":"Em teste","criado":"17/04/2026","atualizado":"07/06/2026","resumo":"Subsídios - Dossiê PDF: Incluir Múltiplas Cestas de Serviço da Lista Relacionada","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37621","id":"6122725","situacao":"Product Backlog","criado":"15/04/2026","atualizado":"22/05/2026","resumo":"[OBF] [Melhoria #50] [30/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Protestos","squad":"Expresso-1","rotulos":["OBF","Refinada","Validada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37620","id":"6122717","situacao":"Product Backlog","criado":"15/04/2026","atualizado":"19/05/2026","resumo":"[OBF] [Melhoria #50] [28/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Financiamento de Veículos","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37619","id":"6122543","situacao":"Product Backlog","criado":"15/04/2026","atualizado":"19/05/2026","resumo":"[OBF] [Melhoria #50] [27/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Capitalização","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37615","id":"6121435","situacao":"Em deploy para produção","criado":"15/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [14/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Manutenção de Conta","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37613","id":"6121426","situacao":"Em homologação","criado":"15/04/2026","atualizado":"07/06/2026","resumo":"[OBF] [Melhoria #50] [19/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Bradesco Financiamentos","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-36614","chave":"SLOPC-37502","id":"6106184","situacao":"Product Backlog","criado":"14/04/2026","atualizado":"06/06/2026","resumo":"ISS - Fluxo Service Now para ISS Proprio - Resolvedor etapa Escrituracao","squad":"Intrstelar","rotulos":["ISS_Inter","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37357","id":"6072723","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"03/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Não finalizadas por escritório","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37356","id":"6072719","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"03/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF SeguroLimite","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37355","id":"6072717","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"03/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Tarefas em Atendimento","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37354","id":"6072716","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"03/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF SubTarefas finalizadas ano","squad":"Expresso-1","rotulos":["CANCELAR","OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37353","id":"6072705","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"03/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF SubTarefas em Atendimento e OBF SubTarefas finalizadas ano","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37351","id":"6072520","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"01/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Finalizadas Diário","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37350","id":"6072514","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"01/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Empréstimo Composição Abertas e Expurgo","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37345","id":"6067545","situacao":"Product Backlog","criado":"09/04/2026","atualizado":"01/06/2026","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Consignado Abertas e Expurgo","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-37083","chave":"SLOPC-37297","id":"6062714","situacao":"Product Backlog","criado":"08/04/2026","atualizado":"14/05/2026","resumo":"[FISC. Rural] Envio automatizado das Cartas e Registro de eventos de comunicação via Service Now","squad":"Contact","rotulos":["FiscalizaçãoRural"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-37083","chave":"SLOPC-37294","id":"6062503","situacao":"Product Backlog","criado":"08/04/2026","atualizado":"14/05/2026","resumo":"[FISC. Rural] Geração automática de cartas de Fiscalização","squad":"Contact","rotulos":["FiscalizaçãoRural"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-37200","id":"6039254","situacao":"Product Backlog","criado":"02/04/2026","atualizado":"02/04/2026","resumo":"[OBF] [Melhoria #1242] [Relatorio] OBF Consignado","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36612","chave":"SLOPC-36631","id":"5986776","situacao":"Product Backlog","criado":"25/03/2026","atualizado":"06/06/2026","resumo":"[ISS] Tabela de Relatórios Personalizável e exportar arquivo","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36612","chave":"SLOPC-36629","id":"5986765","situacao":"Em teste","criado":"25/03/2026","atualizado":"05/06/2026","resumo":"[ISS] Unificação do Upload de Arquivos de ISS em Logs de Tratamento","squad":"Intrstelar","rotulos":["ISS_Inter","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-36612","chave":"SLOPC-36623","id":"5984477","situacao":"Em homologação","criado":"25/03/2026","atualizado":"05/06/2026","resumo":"[ISS - PRÓPRIO] Validação Parametrizada para Abertura de Solicitações","squad":"Intrstelar","rotulos":["ISS_Inter","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-35870","id":"5866968","situacao":"Product Backlog","criado":"07/03/2026","atualizado":"29/05/2026","resumo":"[OBF] [Melhoria #1242] [Relatorio] Melhorias Gerais - OBF Bloqueio Empréstimos","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":true,"dependencia":false,"risco":"Alto","proximo":"Desbloquear o item e definir responsável pela remoção do impedimento."},{"tipo":"História","epic":"","chave":"SLOPC-35347","id":"5820283","situacao":"Product Backlog","criado":"27/02/2026","atualizado":"26/05/2026","resumo":"[OBF] [Melhoria] Cesta de Serviços","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-35313","id":"5815694","situacao":"Em deploy para produção","criado":"26/02/2026","atualizado":"07/06/2026","resumo":"Subsídios - Criar Novos Grupos de Acesso para BPO Orizon (Líder e Resolvedor)","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-35274","id":"5810709","situacao":"Em deploy para produção","criado":"25/02/2026","atualizado":"07/06/2026","resumo":"Subsídios - Subsídios - Liberação de Acesso à Tabela de Porcentagem BPOS para Perfil de Governança","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-35261","id":"5804021","situacao":"Em homologação","criado":"25/02/2026","atualizado":"07/06/2026","resumo":"Subsídios - Cesta de Serviços: Permitir Adicionar Múltiplas Cestas Reclamadas","squad":"Expresso-1","rotulos":["refinada","Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"","chave":"SLOPC-35218","id":"5795076","situacao":"Product Backlog","criado":"24/02/2026","atualizado":"13/05/2026","resumo":"Subsídios - Integração: Armazenar Arquivos no GCC Após Conclusão","squad":"Expresso-1","rotulos":["Nova-RT2/26","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-35202","id":"5780955","situacao":"Product Backlog","criado":"23/02/2026","atualizado":"23/02/2026","resumo":"Subsídios - Capitalização: Implementar Geração do Dossiê","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-35155","id":"5774840","situacao":"Product Backlog","criado":"20/02/2026","atualizado":"20/02/2026","resumo":"[OBF] [Melhoria #27] - Atualização massiva - Erro não deve realizar nenhuma alteração","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-35149","id":"5773311","situacao":"Product Backlog","criado":"20/02/2026","atualizado":"20/02/2026","resumo":"[OBF] [Melhoria #27] - Atualização massiva - Erro não deve realizar nenhuma alteração","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-35135","id":"5768500","situacao":"Product Backlog","criado":"19/02/2026","atualizado":"20/02/2026","resumo":"Subsídios - Capitalização: Implementar Aba e Campos de Produto na Tela de Análise","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-34719","id":"5742103","situacao":"Product Backlog","criado":"12/02/2026","atualizado":"12/02/2026","resumo":"Subsídios - Criar Submódulo \"Relatório - Capitalização\" em \"Relatórios Analíticos\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-34686","id":"5732145","situacao":"Product Backlog","criado":"11/02/2026","atualizado":"11/02/2026","resumo":"Subsídios - Automatizar Conclusão de Direcionamentos do Tipo \"Extrato\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-34638","id":"5727829","situacao":"Product Backlog","criado":"10/02/2026","atualizado":"10/02/2026","resumo":"[OBF] [Melhorias # 12, 13, 14, 16, 18, 19 e 22] - SLOPC-32240 Correções [Habilitadoras] Notificar escritórios atualizações das tarefas","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-34567","id":"5703299","situacao":"Product Backlog","criado":"06/02/2026","atualizado":"31/03/2026","resumo":"[OBF] [Melhoria] [Solicitante e Resolvedor] Produto \"Apresentação de Documentos\"","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-34333","id":"5674568","situacao":"Product Backlog","criado":"03/02/2026","atualizado":"05/05/2026","resumo":"[OBF] [Melhoria #45] Disponibilizar campos para personalização na Fila de Tarefas e na Fila de Solicitações","squad":"Expresso-1","rotulos":["OBF","Pendencia_RT"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-33648","chave":"SLOPC-33655","id":"5603663","situacao":"Product Backlog","criado":"22/01/2026","atualizado":"10/04/2026","resumo":"[Capital de Giro] Realizar Validação Automática de Restrições do CNPJ na modalidade FG SEBRAE","squad":"Contact","rotulos":["PendenteDocumentaçãoAPI","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-33648","chave":"SLOPC-33651","id":"5603659","situacao":"Product Backlog","criado":"22/01/2026","atualizado":"10/04/2026","resumo":"[Capital de Giro] Realizar Validação Automática de Restrições do CNPJ na modalidade FGI PEAC","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"SLOPC-33648","chave":"SLOPC-33649","id":"5603657","situacao":"Product Backlog","criado":"22/01/2026","atualizado":"10/04/2026","resumo":"[Capital de Giro] Realizar Validação Automática de Restrições do CNPJ na modalidade FGI Tradicional","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint."},{"tipo":"História","epic":"","chave":"SLOPC-33542","id":"5583042","situacao":"Product Backlog","criado":"19/01/2026","atualizado":"13/02/2026","resumo":"[OBF] [MELHORIA] 173  -COMPOS E RENEG - MR Pedidos - Alterar taxa de juros","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-33322","id":"5563359","situacao":"Product Backlog","criado":"15/01/2026","atualizado":"03/03/2026","resumo":"[OBF][MELHORIA #112] [SOLICITANTE] Ajustar Opções de Confirmação para Exclusão de Síndico","squad":"Expresso-1","rotulos":["OBF","Pendente_RT"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-33141","id":"5538354","situacao":"Product Backlog","criado":"12/01/2026","atualizado":"04/03/2026","resumo":"[OBF] [MELHORIA]-1149- SOLICITAÇÕES - Ocultar dados do Resolvedor","squad":"Expresso-1","rotulos":["OBF","Pendente_RT"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-36954","chave":"SLOPC-33033","id":"5523139","situacao":"Product Backlog","criado":"09/01/2026","atualizado":"19/05/2026","resumo":"ATCL - Desenvolver banco de dados para habilitar a consulta das bases históricas de dados e documentos do legado ATCL","squad":"Guardioes","rotulos":["Bancodedados"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno."},{"tipo":"História","epic":"","chave":"SLOPC-32630","id":"5478843","situacao":"Product Backlog","criado":"30/12/2025","atualizado":"25/02/2026","resumo":"OBF - [MELHORIA - Melhoria - Item 263] - RESOLVEDOR - DESISTÊNCIA SOLICITANTE - Confirmar Cancelamento","squad":"Expresso-1","rotulos":["OBF","Pendente_RT"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-32629","id":"5477876","situacao":"Product Backlog","criado":"30/12/2025","atualizado":"23/03/2026","resumo":"OBF - [MELHORIA - Item 340] - Resolvedor adicionar novos itens nas Multirows","squad":"Expresso-1","rotulos":["OBF","Pendente_RT"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-32628","id":"5477452","situacao":"Product Backlog","criado":"30/12/2025","atualizado":"30/12/2025","resumo":"OBF - [MELHORIA - Melhoria - Item 340] - Resolvedor adicionar novos itens nas Multirows","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31880","id":"5353129","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] Texto de orientação das multirows","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31879","id":"5353128","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] Melhorias CAMPOS PADRONIZADOS - Solicitante","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31878","id":"5353127","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] Correção CAMPOS PADRONIZADOS - Solicitante","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31877","id":"5353126","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] [Melhoria MVP 2] Uso da tecla TAB para ir ao próximo campo","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31875","id":"5353124","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] PORTAL SOLICITANTE - Finalização automática","squad":"Expresso-1","rotulos":["Nova-RT2/26","OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31874","id":"5353123","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] PÓS SUBMIT - Exportar tarefas em excel (solicitante)","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31873","id":"5353121","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"13/02/2026","resumo":"[OBF] Botão \"Iniciar\" resolvedor","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31871","id":"5353119","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/04/2026","resumo":"[OBF] Melhoria ANS (TM/TMA)","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31870","id":"5353118","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"11/04/2026","resumo":"[OBF] PRIORIDADE - Grupos de acesso escritórios","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-31847","chave":"SLOPC-31869","id":"5353117","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] PRIORIDADE - Integração SBK na tela do resolvedor","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31868","id":"5353115","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"08/05/2026","resumo":"[OBF] PRIORIDADE - Padronizar campos de revogação de liminar (incluir checkbox)","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-31850","id":"5350224","situacao":"Product Backlog","criado":"05/12/2025","atualizado":"06/02/2026","resumo":"Subsidios -  Habilitar Editor HTML para os Campos \"Parecer do Laudo\" e \"Breve Relato\"","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-29650","id":"5069932","situacao":"Product Backlog","criado":"23/10/2025","atualizado":"04/05/2026","resumo":"[OBF] [Solicitante] Campo padrão Dpto Jurídico (junção)","squad":"Expresso-1","rotulos":["Nova-RT2/26","OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-31847","chave":"SLOPC-28256","id":"4897544","situacao":"Product Backlog","criado":"28/09/2025","atualizado":"02/03/2026","resumo":"[OBF] Integração GCPJ","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-26376","id":"4723685","situacao":"Product Backlog","criado":"01/09/2025","atualizado":"23/10/2025","resumo":"GCSB - Migrar os microsserviços vinculados aos centros de custo GCSB da cloud TI-Híbrida para a Microsoft Azure - T1DMND0051013 - Microsserviço: gcsb-bff-servicos-operacionais","squad":"Guardioes","rotulos":["GCSB"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-25058","id":"4610075","situacao":"Product Backlog","criado":"14/08/2025","atualizado":"02/02/2026","resumo":"[OBF] [Habilitadoras] Resolvedor - Integração GCC","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-20206","chave":"SLOPC-25023","id":"4608116","situacao":"Product Backlog","criado":"14/08/2025","atualizado":"13/03/2026","resumo":"História 2 - Classificação Automática dos E-mails Recebidos","squad":"Intrstelar","rotulos":["Oficios_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-31847","chave":"SLOPC-23895","id":"4517078","situacao":"Product Backlog","criado":"30/07/2025","atualizado":"13/03/2026","resumo":"[OBF] [Solicitante] Integração das Multirows de OBF com Subsídios e GCPJ","squad":"Expresso-1","rotulos":["OBF"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23683","id":"4493510","situacao":"Product Backlog","criado":"25/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração na etapa Resolvedor - Aplicação Cheque","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23562","id":"4481531","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração fila de Tratamento \"Triagem Produtos /  Serviços","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-23168","chave":"SLOPC-23561","id":"4481530","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Tratamento - Aplicação Limite Cadastral","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23560","id":"4481529","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Criar item de catálogo Recepção de Originais demais Produtos - Resolvedor","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23559","id":"4481528","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Criar fila dentro da aplicação Gestão Contábil","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23558","id":"4481525","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Tratamento - Aplicação Documento Legal","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23557","id":"4481523","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação  FORMULÁRIO CONTÍNUO - PEDIDO + ENTREGA - aplicação Cheque","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23556","id":"4481522","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação Tarifa Estorno - Demais Produtos - Aplicação Gestão Contábil","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23555","id":"4481521","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação TALÃO DE CHEQUES - PEDIDO - aplicação Cheque","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23554","id":"4481520","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação Boletim de Ocorrência e Sustação de Cheque - aplicação Cheque","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23553","id":"4481518","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no no Formulário de Solicitação CCF - EXCLUSÃO DE CADASTRO DE CHEQUE SEM FUNDO - aplicação Cheque","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23552","id":"4481516","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração nos etapa Resolvedor - Aplicação Cheque - item de catálogo Custódia.","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23551","id":"4481513","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no item de catálogo Custódia - Aplicação Cheque - Solicitante","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-23168","chave":"SLOPC-23548","id":"4481510","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação - Aplicação Registro Cartório","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-23168","chave":"SLOPC-23547","id":"4481508","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Tratamento - Aplicação Manutenção - Contratos de Créditos e Garantias","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23545","id":"4481505","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no formulário CHEQUE DEVOLVIDO - PESQUISA - Aplicação Cheque","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27306","chave":"SLOPC-23542","id":"4481099","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação - Aplicação Cheque Compensação","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-23168","chave":"SLOPC-23540","id":"4481094","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"19/03/2026","resumo":"ATCL - Disponibilizar o Protocolo para impressão","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23538","id":"4481091","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Criar nova categoria/ formulário para a aplicação ON - Gestão Contábil","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23537","id":"4481089","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Tratamento - Aplicação Encerramento de Conta","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-27307","chave":"SLOPC-23536","id":"4481088","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação - Aplicação Encerramento de Conta","squad":"Intrstelar","rotulos":["ATCL_INTER"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-23168","chave":"SLOPC-23535","id":"4481083","situacao":"Product Backlog","criado":"23/07/2025","atualizado":"02/03/2026","resumo":"ATCL - Alteração no Formulário de Solicitação - Aplicação Relacionamento Operacional","squad":"Intrstelar","rotulos":["ATCL_INTER","Despriorizada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-23143","id":"4440470","situacao":"Product Backlog","criado":"16/07/2025","atualizado":"09/12/2025","resumo":"Subsídios - Botão Envio Cadastro Ocultar","squad":"Expresso-1","rotulos":["Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-20323","id":"4188361","situacao":"Em deploy para produção","criado":"29/05/2025","atualizado":"07/06/2026","resumo":"Subsídios - Criar Submódulo \"Checklist - Bradesco Veículos\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira."},{"tipo":"História","epic":"SLOPC-20266","chave":"SLOPC-20313","id":"4188050","situacao":"Product Backlog","criado":"29/05/2025","atualizado":"17/04/2026","resumo":"[ABONO] Reatribuição de Tarefa de Abono em caso de indisponibilidade de analista","squad":"Contact","rotulos":["Abono_Contact"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-20266","chave":"SLOPC-20305","id":"4188039","situacao":"Product Backlog","criado":"29/05/2025","atualizado":"17/04/2026","resumo":"[ABONO] Retornar a tarefa de abono regularizada pelo solicitante para o último analista que realizou a tratativa","squad":"Contact","rotulos":["Abono_Contact"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-14937","chave":"SLOPC-17945","id":"3879916","situacao":"Product Backlog","criado":"02/04/2025","atualizado":"11/04/2025","resumo":"Monitorar o processamento dos arquivos pelo estruturante destacando possíveis erros","squad":"Guardioes","rotulos":["GCPJ"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-14937","chave":"SLOPC-17944","id":"3879914","situacao":"Product Backlog","criado":"02/04/2025","atualizado":"11/04/2025","resumo":"Garantir a postagem dos dados nas tabelas criadas na ServiceNow pelo estruturante para a abertura das solicitações","squad":"Guardioes","rotulos":["GCPJ"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno."},{"tipo":"História","epic":"SLOPC-14937","chave":"SLOPC-17943","id":"3879912","situacao":"Product Backlog","criado":"02/04/2025","atualizado":"22/05/2026","resumo":"Tratar a base do GCPJ aplicando as regras e padronizações estabelecidas e postar no Blob Storage da Azure para consumo do Estruturante de Abertura Massiva #9193","squad":"Guardioes","rotulos":["GCPJ"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"","chave":"SLOPC-17058","id":"3682372","situacao":"Product Backlog","criado":"24/02/2025","atualizado":"09/12/2025","resumo":"Subsídios - Check-list - Atualização e alteração no layout","squad":"Expresso-1","rotulos":["SUB-ME","SUBSIDIOS"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-14937","chave":"SLOPC-14941","id":"3179459","situacao":"Product Backlog","criado":"25/10/2024","atualizado":"22/05/2026","resumo":"GCPJ - Consumir as bases do GCPJ do ambiente analítico do SAS Corporativo através da ferramenta Secure Transport #9193","squad":"Guardioes","rotulos":["GCPJ"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências."},{"tipo":"História","epic":"SLOPC-7818","chave":"SLOPC-7832","id":"1926912","situacao":"Product Backlog","criado":"03/10/2023","atualizado":"24/05/2026","resumo":"Promover a atualização automática da base de Encarteiramento e Gerenciamento Regional","squad":"Guardioes","rotulos":["ServiceNow"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno."},{"tipo":"História","epic":"SLOPC-2223","chave":"SLOPC-5898","id":"1444989","situacao":"Product Backlog","criado":"19/04/2023","atualizado":"22/05/2026","resumo":"FIRP - Promover a integração do sistema FIRP com a ServiceNow para consulta de Firmas e Poderes","squad":"Guardioes","rotulos":["CHANGE_FIRP"],"responsavel":"","prazo":"","estimativa":"","changeData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno."}]</script>
   <script id="initialSprintData" type="application/json">[{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-39603","id":"6415011","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Empréstimo Composição Fechadas e Fechadas Mês","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-39602","id":"6415006","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Consignado Fechadas e Fechadas Mês","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39600","id":"6411548","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"Subsídios - Subsídios - Abas de Produtos Específicos: Disponibilizar Botão para Preencher Campos Vazios","squad":"Expresso-1","rotulos":["refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38006","chave":"SLOPC-39537","id":"6397439","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[Golpes e Fraudes – API Extrato] - Ajustar Layout da tela e condições de chamada da API de consulta cliente","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-39378","chave":"SLOPC-39528","id":"6385923","situacao":"Pronta para Desenvolvimento","criado":"","atualizado":"","resumo":"[Orquestrador de Solicitações] Endpoint de Lista de Produtos","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-39378","chave":"SLOPC-39482","id":"6369811","situacao":"Em Desenvolvimento","criado":"","atualizado":"","resumo":"[Orquestrador de Solicitações] Tabela de Configuração","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39444","id":"6363181","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"Subsídios -  Criar Submódulo \"Solicitações Canceladas\" em \"Relatórios Analíticos\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-36324","chave":"SLOPC-39363","id":"6353667","situacao":"Em Desenvolvimento","criado":"","atualizado":"","resumo":"Correção da Pipeline de Release do gcsb-srv-servicos-operacionais","squad":"Guardioes","rotulos":["areas_envolvidas","Dependencia_Externa","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-39362","id":"6350986","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"Subsídios - Capitalização: Filtrar Opções de Justificativa para \"Subsídio Não Localizado\" e \"Subsídio Parcial\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-39100","chave":"SLOPC-39101","id":"6307756","situacao":"Selecionado para Grooming","criado":"","atualizado":"","resumo":"[Pricing 2.0 Servicenow] - Criação de Chamado de Exceção de Pricing via API (com Mapeamento de Campos)","squad":"Contact","rotulos":[],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":true,"risco":"Atenção","proximo":"Confirmar dependência externa e combinar data de retorno.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-36324","chave":"SLOPC-39001","id":"6289679","situacao":"Em teste","criado":"","atualizado":"","resumo":"Criação da versão v2 de endpoints do gcsb-srv-servicos-operacionais para suporte a CNPJ alfanumérico","squad":"Guardioes","rotulos":["GCSB","Net_Empresa","Nova-RT2/26"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-38994","id":"6289093","situacao":"Em Desenvolvimento","criado":"","atualizado":"","resumo":"Subsídios - Direcionamentos para Capitalização","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38896","chave":"SLOPC-38855","id":"6271433","situacao":"Pronta para Desenvolvimento","criado":"","atualizado":"","resumo":"Subsídios - Criar Submódulo \"Checklist - Carteiras Comerciais\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-38790","id":"6261498","situacao":"Em homologação","criado":"","atualizado":"","resumo":"Subsídios - Criar Submódulo \"Checklist - Consignado Bradesco\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38006","chave":"SLOPC-38011","id":"6179004","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"[Golpes e Fraudes – API Extrato1] - Desenvolver a interface do solicitante para consulta e seleção de transações do extrato.","squad":"Contact","rotulos":["Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37903","id":"6159862","situacao":"Em Desenvolvimento","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [29/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Vida e Previdência","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37899","id":"6159858","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [24/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Retirada de Veículos do Pátio","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37898","id":"6159855","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [23/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Investimentos","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37897","id":"6159854","situacao":"Em teste","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [22/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Estorno/Devolução de Valores","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37896","id":"6159851","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [20/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Manutenção Seguro Prestamista","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37895","id":"6159847","situacao":"Em teste","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [18/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: BP - Empréstimos","squad":"Expresso-1","rotulos":["defeito","OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37894","id":"6159831","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [17/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: RESTRITIVOS / SPC / SERASA","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37893","id":"6159815","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [16/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: RESTRITIVOS / SISBACEN/SCR","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-36612","chave":"SLOPC-37757","id":"6147050","situacao":"Disponivel para Homologação","criado":"","atualizado":"","resumo":"ISS Proprio - Estrutura Base","squad":"Intrstelar","rotulos":["ISS_Inter","QA_DEV","UpdateSet"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-37678","id":"6137071","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"Subsídios - Aba Produto Todos os Produtos : Criar Botão para Preencher Campos Vazios","squad":"Expresso-1","rotulos":["refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38896","chave":"SLOPC-37677","id":"6137026","situacao":"Em teste","criado":"","atualizado":"","resumo":"Subsídios - Dossiê PDF: Incluir Múltiplas Cestas de Serviço da Lista Relacionada","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-29629","chave":"SLOPC-37619","id":"6122543","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [27/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Capitalização","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37615","id":"6121435","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [14/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Manutenção de Conta","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-27317","chave":"SLOPC-37613","id":"6121426","situacao":"Em homologação","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #50] [19/39] Mostrar Aba Dados do Pedido no Formulário da Tarefa - Produto: Bradesco Financiamentos","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37350","id":"6072514","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Empréstimo Composição Abertas e Expurgo","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-31845","chave":"SLOPC-37345","id":"6067545","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[OBF] [Melhoria #1242] [Relatório] Melhorias Gerais - OBF Consignado Abertas e Expurgo","squad":"Expresso-1","rotulos":["OBF","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":true,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Validar prioridade para entrada na próxima sprint.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-36612","chave":"SLOPC-36631","id":"5986776","situacao":"Product Backlog","criado":"","atualizado":"","resumo":"[ISS] Tabela de Relatórios Personalizável e exportar arquivo","squad":"Intrstelar","rotulos":["ISS_Inter"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":true,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Refinar história, critérios de aceite e dependências.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-36612","chave":"SLOPC-36629","id":"5986765","situacao":"Em teste","criado":"","atualizado":"","resumo":"[ISS] Unificação do Upload de Arquivos de ISS em Logs de Tratamento","squad":"Intrstelar","rotulos":["ISS_Inter","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-36612","chave":"SLOPC-36623","id":"5984477","situacao":"Em homologação","criado":"","atualizado":"","resumo":"[ISS - PRÓPRIO] Validação Parametrizada para Abertura de Solicitações","squad":"Intrstelar","rotulos":["ISS_Inter","Refinada"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-35313","id":"5815694","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"Subsídios - Criar Novos Grupos de Acesso para BPO Orizon (Líder e Resolvedor)","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-35274","id":"5810709","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"Subsídios - Subsídios - Liberação de Acesso à Tabela de Porcentagem BPOS para Perfil de Governança","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-35261","id":"5804021","situacao":"Homologada","criado":"","atualizado":"","resumo":"Subsídios - Cesta de Serviços: Permitir Adicionar Múltiplas Cestas Reclamadas","squad":"Expresso-1","rotulos":["refinada","Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true},{"tipo":"História","epic":"SLOPC-38897","chave":"SLOPC-20323","id":"4188361","situacao":"Em deploy para produção","criado":"","atualizado":"","resumo":"Subsídios - Criar Submódulo \"Checklist - Bradesco Veículos\" em \"Relatórios Checklists\"","squad":"Expresso-1","rotulos":["Refinada","Subsídios"],"responsavel":"","prazo":"","estimativa":"","changeData":"","homologacaoData":"","refinada":false,"product_backlog":false,"bloqueio":false,"dependencia":false,"risco":"Baixo","proximo":"Acompanhar evolução e atualizar status no Jira.","sprintAtual":true}]</script>
@@ -6394,6 +6572,7 @@
       refreshStatusFilterForSquad();
       try { renderDeliveryStoryPicker(); } catch(error) { console.error('Erro ao atualizar histórias da entrega:', error); }
       renderAll();
+      if(typeof syncSquadToUrl === 'function') syncSquadToUrl();
     }
 
     function bindFilterEvents(){
@@ -6435,12 +6614,197 @@
       try { renderDeliveryStoryPicker(); } catch(error) { console.error('Erro ao renderizar histórias da entrega:', error); }
     }
 
+    /* ─ Type helpers ─ */
+    function isBug(row){ return /bug/i.test(row.tipo||''); }
+    function isMelhoria(row){ return /melhoria/i.test(row.tipo||''); }
+    function isHistoria(row){ return /hist[oó]r/i.test(row.tipo||'') || (!isBug(row) && !isMelhoria(row) && (row.tipo||'')); }
+
+    /* ─ Date range filter helper ─ */
+    function applyDateFilter(data){
+      const from = $('filterDateFrom')?.value;
+      const to = $('filterDateTo')?.value;
+      if(!from && !to) return data;
+      return data.filter(r => {
+        const d = r.criado || r.atualizado || '';
+        if(!d) return true;
+        const [day, month, year] = d.split('/');
+        if(!year) return true;
+        const iso = `${year}-${month}-${day}`;
+        if(from && iso < from) return false;
+        if(to && iso > to) return false;
+        return true;
+      });
+    }
+
+    function clearDateFilter(){
+      if($('filterDateFrom')) $('filterDateFrom').value = '';
+      if($('filterDateTo')) $('filterDateTo').value = '';
+      renderAll();
+    }
+
+    /* ─ Bug/Melhoria tab state ─ */
+    let _bmTab = 'all';
+    function switchBmTab(tab){
+      _bmTab = tab;
+      ['all','bug','melhoria'].forEach(t => {
+        const el = $(`bmTab${t.charAt(0).toUpperCase()+t.slice(1)}`);
+        if(el) el.classList.toggle('active', t === tab);
+      });
+      renderBmList(window._bmCurrentData || []);
+    }
+
+    function renderBmList(data){
+      window._bmCurrentData = data;
+      const bugs = data.filter(isBug);
+      const melhorias = data.filter(isMelhoria);
+      const all = [...bugs, ...melhorias];
+
+      if($('bmCntAll')) $('bmCntAll').textContent = all.length;
+      if($('bmCntBug')) $('bmCntBug').textContent = bugs.length;
+      if($('bmCntMelhoria')) $('bmCntMelhoria').textContent = melhorias.length;
+
+      const subset = _bmTab === 'bug' ? bugs : _bmTab === 'melhoria' ? melhorias : all;
+      const list = $('bmList');
+      if(!list) return;
+
+      if(!subset.length){
+        list.innerHTML = `<div class="empty-state">
+          <div class="empty-state-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--red-dark)" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div>
+          <h3>Nenhum item encontrado</h3>
+          <p>Não há ${_bmTab === 'bug' ? 'Bugs' : _bmTab === 'melhoria' ? 'Melhorias' : 'Bugs ou Melhorias'} para a squad selecionada.</p>
+        </div>`;
+        return;
+      }
+
+      list.innerHTML = subset.map(r => {
+        const isBugRow = isBug(r);
+        const tagClass = isBugRow ? 'bug' : 'melhoria';
+        const tagLabel = isBugRow ? 'Bug' : 'Melhoria';
+        const statusBadge = r.situacao ? `<span class="badge ${statusClass(r.situacao) === 'status-done' ? 'green' : statusClass(r.situacao) === 'status-block' ? 'red' : 'blue'}" style="font-size:10px">${escapeHtml(r.situacao)}</span>` : '';
+        return `<div class="bm-row" onclick="openJiraIssue('${escapeJs(r.chave)}', event)">
+          <span class="bm-type-tag ${tagClass}">${tagLabel}</span>
+          <div class="bm-body">
+            <span class="bm-key">${escapeHtml(r.chave)}</span>
+            <div class="bm-summary" title="${escapeAttr(r.resumo)}">${escapeHtml(r.resumo)}</div>
+            <div class="bm-meta">
+              ${statusBadge}
+              ${r.squad ? `<span>Squad: ${escapeHtml(r.squad)}</span>` : ''}
+              ${r.risco && r.risco !== 'Baixo' ? `<span style="color:${r.risco==='Alto'?'var(--red)':'var(--amber)'}">⚠ Risco ${escapeHtml(r.risco)}</span>` : ''}
+              ${r.responsavel ? `<span>👤 ${escapeHtml(r.responsavel)}</span>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    /* ─ Chart.js instances ─ */
+    const _chartInstances = {};
+    const _chartColorMap = {
+      red:'#CC092F', blue:'#174A7C', amber:'#C77700', green:'#1F9D55',
+      purple:'#6D28D9', gray:'#687083'
+    };
+
+    function renderChartJs(canvasId, items, data, predicate){
+      const canvas = document.getElementById(canvasId);
+      if(!canvas || !window.Chart) return;
+      if(_chartInstances[canvasId]){
+        _chartInstances[canvasId].destroy();
+        delete _chartInstances[canvasId];
+      }
+      if(!items || !items.length){
+        canvas.parentElement.innerHTML = '<div class="empty" style="padding:30px;text-align:center;color:var(--muted);font-size:12px">Sem dados</div>';
+        return;
+      }
+
+      const paletteKeys = ['red','blue','amber','green','purple','gray'];
+      const labels = items.map(i=>i[0]);
+      const counts = items.map(i=>i[1]);
+      const bgColors = items.map((_,i) => _chartColorMap[paletteKeys[i % paletteKeys.length]] + 'CC');
+      const borderColors = items.map((_,i) => _chartColorMap[paletteKeys[i % paletteKeys.length]]);
+
+      // Store subsets for click-to-filter
+      items.forEach((item, idx) => {
+        window[`cjs_${canvasId}_${idx}`] = data.filter(r => predicate(r, item[0]));
+      });
+
+      _chartInstances[canvasId] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: counts,
+            backgroundColor: bgColors,
+            borderColor: borderColors,
+            borderWidth: 1.5,
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.parsed.y} item(s)`,
+                title: ctx => ctx[0].label
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 35 } },
+            y: { grid: { color: '#E3E7EF' }, ticks: { font: { size: 10 }, stepSize: 1 }, beginAtZero: true }
+          },
+          onClick: (evt, elements) => {
+            if(!elements.length) return;
+            const idx = elements[0].index;
+            const subset = window[`cjs_${canvasId}_${idx}`] || [];
+            const label = labels[idx] || 'Itens';
+            openList(label, subset);
+          }
+        }
+      });
+    }
+
     function renderManagement(){
       const squad = getSelectedSquad();
-      const data = baseRowsForSquad(squad);
+      const rawData = baseRowsForSquad(squad);
+      const data = applyDateFilter(rawData);
 
       if($('insights')) $('insights').innerHTML = '';
       if($('deliveryList')) $('deliveryList').innerHTML = '';
+
+      // Empty state quando não há dados
+      const gerencial = $('gerencial');
+      if(rows.length === 0){
+        const sections = gerencial?.querySelectorAll('.kpi-grid,.kpi-type-row,.section,#bmSection,.management-layout');
+        if(sections) sections.forEach(s => s.style.display='none');
+        if(!$('managementEmptyState')){
+          const es = document.createElement('div');
+          es.id = 'managementEmptyState';
+          es.className = 'section';
+          es.innerHTML = `<div class="empty-state">
+            <div class="empty-state-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--red-dark)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h4"/></svg></div>
+            <h3>Nenhum dado importado ainda</h3>
+            <p>Importe a planilha do Jira para visualizar histórias, bugs e melhorias neste painel.</p>
+            <label class="btn btn-red" style="cursor:pointer;margin-top:8px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
+              Importar planilha JIRA
+              <input type="file" style="display:none" accept=".xlsx,.xls,.csv" onchange="document.getElementById('fileInput').dispatchEvent(new Event('change'));"/>
+            </label>
+          </div>`;
+          gerencial?.insertBefore(es, gerencial.firstChild);
+        }
+        return;
+      }
+
+      // Restore sections if previously hidden
+      const hiddenSections = gerencial?.querySelectorAll('.kpi-grid,.kpi-type-row,.section,#bmSection,.management-layout');
+      if(hiddenSections) hiddenSections.forEach(s => s.style.display='');
+      const esEl = $('managementEmptyState');
+      if(esEl) esEl.remove();
+
       const total = data.length;
       const pb = data.filter(r=>r.product_backlog).length;
       const refinada = data.filter(r=>r.refinada).length;
@@ -6448,25 +6812,51 @@
       const dep = data.filter(r=>r.dependencia).length;
       const homolog = data.filter(isHomologation).length;
 
+      // Type KPIs
+      const bugs = data.filter(isBug).length;
+      const melhorias = data.filter(isMelhoria).length;
+      const historias = data.filter(r=>isHistoria(r)).length;
+      const bugsCorrecao = data.filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')).length;
+
       $('kpiTotal').textContent = total;
       $('kpiPB').textContent = pb;
       $('kpiRefinada').textContent = refinada;
       $('kpiBloq').textContent = bloq;
       $('kpiDep').textContent = dep;
       $('kpiHomolog').textContent = homolog;
-      $('chartBadge').textContent = `${total} histórias`;
+      $('kpiBugs').textContent = bugs;
+      $('kpiMelhorias').textContent = melhorias;
+      $('kpiHistorias').textContent = historias;
+      $('kpiBugsCorrecao').textContent = bugsCorrecao;
+      $('chartBadge').textContent = `${total} itens`;
 
-      renderChart('chartStatus', countBy(data, r=>r.situacao).slice(0,5), data, (r, label)=>(normalize(r.situacao) || 'Não informado') === label, ['red','blue','amber','green']);
-      renderChart('chartBacklog', [
-        ['Product Backlog', pb],
-        ['Refinadas', refinada]
-      ], data, (r, label)=> label==='Product Backlog' ? r.product_backlog : r.refinada, ['red','blue']);
-      renderChart('chartRisk', countBy(data, r=>r.risco).slice(0,4), data, (r, label)=>(normalize(r.risco) || 'Não informado') === label, ['red','blue','green']);
-      renderChart('chartBlocksDeps', [
-        ['Bloqueios', bloq],
-        ['Dependências', dep],
-        ['Sem alerta', data.filter(r=>!r.bloqueio && !r.dependencia).length]
-      ], data, (r, label)=> label==='Bloqueios' ? r.bloqueio : label==='Dependências' ? r.dependencia : (!r.bloqueio && !r.dependencia), ['red','amber','green']);
+      // Chart.js charts
+      renderChartJs('chartStatus',
+        countBy(data, r=>r.situacao).slice(0,6),
+        data,
+        (r, label)=>(normalize(r.situacao)||'Não informado')===label
+      );
+      renderChartJs('chartBacklog',
+        [['Bugs', bugs], ['Melhorias', melhorias], ['Histórias', historias]],
+        data,
+        (r, label)=> label==='Bugs' ? isBug(r) : label==='Melhorias' ? isMelhoria(r) : isHistoria(r)
+      );
+      renderChartJs('chartRisk',
+        countBy(data, r=>r.risco).slice(0,4),
+        data,
+        (r, label)=>(normalize(r.risco)||'Não informado')===label
+      );
+      renderChartJs('chartBlocksDeps',
+        [['Bloqueios', bloq], ['Dependências', dep], ['Sem alerta', data.filter(r=>!r.bloqueio&&!r.dependencia).length]],
+        data,
+        (r, label)=> label==='Bloqueios' ? r.bloqueio : label==='Dependências' ? r.dependencia : (!r.bloqueio&&!r.dependencia)
+      );
+
+      // Render Bug/Melhoria section
+      renderBmList(data);
+
+      // Update last-updated badge
+      updateLastUpdatedBadge();
 
       try {
         renderInsights(data, squad);
@@ -6488,6 +6878,12 @@
     }
 
     function renderChart(targetId, items, data, predicate, colors){
+      // Kept for compatibility; uses Chart.js when canvas is present
+      const canvas = document.getElementById(targetId);
+      if(canvas && canvas.tagName === 'CANVAS' && window.Chart){
+        renderChartJs(targetId, items, data, predicate);
+        return;
+      }
       const max = Math.max(1, ...items.map(i => i[1]));
       const html = items.map((item, idx) => {
         const [label, count] = item;
@@ -6501,7 +6897,8 @@
           <div class="bar-num">${count}</div>
         </div>`;
       }).join('');
-      $(targetId).innerHTML = html || '<div class="empty">Sem dados para exibir.</div>';
+      const el = document.getElementById(targetId);
+      if(el) el.innerHTML = html || '<div class="empty">Sem dados para exibir.</div>';
     }
 
 
@@ -7016,6 +7413,10 @@
           <div class="delivery-footer">
             <span class="delivery-link">Abrir histórias da frente →</span>
             <div class="delivery-actions">
+              <button class="mini-action export" title="Exportar histórias desta entrega para Excel" onclick="event.stopPropagation(); exportDeliveryXlsx(${idx})">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Exportar
+              </button>
               <button class="mini-action" onclick="event.stopPropagation(); editDelivery(${idx})">Editar</button>
               <button class="mini-action danger" title="Excluir entrega final" aria-label="Excluir entrega final" onclick="event.stopPropagation(); deleteDelivery(${idx})">🗑️</button>
             </div>
@@ -7929,19 +8330,34 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const d = deliveries[index];
       if(!d) return;
       const name = d.name || 'esta entrega final';
-      const confirmed = confirm(`Deseja excluir a entrega final "${name}"?\n\nEssa ação remove apenas o cadastro da entrega final. As histórias importadas do Jira não serão excluídas.`);
-      if(!confirmed) return;
-      deliveries.splice(index, 1);
-      saveDeliveries();
+      showDeleteModal(name, () => {
+        deliveries.splice(index, 1);
+        saveDeliveries();
+        if(editingDeliveryIndex === index){
+          clearDeliveryForm(false);
+          $('deliveryForm').classList.remove('show');
+        } else if(editingDeliveryIndex !== null && editingDeliveryIndex > index){
+          editingDeliveryIndex = editingDeliveryIndex - 1;
+        }
+        renderAll();
+      });
+    }
 
-      if(editingDeliveryIndex === index){
-        clearDeliveryForm(false);
-        $('deliveryForm').classList.remove('show');
-      } else if(editingDeliveryIndex !== null && editingDeliveryIndex > index){
-        editingDeliveryIndex = editingDeliveryIndex - 1;
-      }
+    function showDeleteModal(name, onConfirm){
+      const modal = $('deleteModal');
+      if(!modal){ if(onConfirm && confirm(`Excluir "${name}"?`)) onConfirm(); return; }
+      $('deleteModalTitle').textContent = `Excluir "${name}"?`;
+      $('deleteModalBody').textContent = `Essa ação remove apenas o cadastro da entrega final "${name}". As histórias importadas do Jira não serão excluídas.`;
+      const btn = $('deleteModalConfirm');
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newBtn.onclick = () => { hideDeleteModal(); if(onConfirm) onConfirm(); };
+      modal.classList.remove('hidden');
+    }
 
-      renderAll();
+    function hideDeleteModal(){
+      const modal = $('deleteModal');
+      if(modal) modal.classList.add('hidden');
     }
 
     function editDelivery(index){
@@ -8145,11 +8561,13 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const files = Array.from(ev.target.files||[]);
       if(!files.length) return;
       ev.target.value = '';
+      showLoadingOverlay();
 
       // Importação simples (1 arquivo): comportamento original
       if(files.length === 1){
         try{
           const parsed = await readJiraFileToRows(files[0]);
+          hideLoadingOverlay();
           if(!parsed) return;
           const type = detectVisaoFileType(files[0], parsed);
           if(type === 'epics'){ alert('Este arquivo contém Épicos. Use-o no painel SALA (dashboard principal).'); return; }
@@ -8162,9 +8580,10 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
           }
           importDateTime = new Date();
           persistImportedBases();
-          setupFilters(); renderAll(); registrarImportacaoBase();
+          setupFilters(); renderAll(); registrarImportacaoBase(); updateLastUpdatedBadge();
           alert('Importação concluída: ' + (type==='sprint'?'Sprint Ativa':'Acompanhamento Geral') + ' (' + files[0].name + ')');
         }catch(err){
+          hideLoadingOverlay();
           console.error(err);
           alert('Não consegui importar o arquivo. Verifique se a planilha segue o padrão de extração do Jira.');
         }
@@ -8193,15 +8612,17 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
             skipped.push(file.name + ' (erro: ' + err.message + ')');
           }
         }
+        hideLoadingOverlay();
         importDateTime = new Date();
         persistImportedBases();
-        setupFilters(); renderAll(); registrarImportacaoBase();
+        setupFilters(); renderAll(); registrarImportacaoBase(); updateLastUpdatedBadge();
         let msg = '📦 ' + files.length + ' arquivo(s) processado(s).\n';
         if(importedGeneral) msg += '✅ Acompanhamento Geral: ' + sourceName + '\n';
         if(importedSprint) msg += '✅ Sprint Ativa: ' + sprintSourceName + '\n';
         if(skipped.length) msg += '⚠️ Ignorados: ' + skipped.join(', ');
         alert(msg.trim());
       }catch(err){
+        hideLoadingOverlay();
         console.error(err);
         alert('Erro na importação múltipla: ' + err.message);
       }
@@ -8488,10 +8909,136 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     }
     // ─────────────────────────────────────────────────────────────────────────
 
+    /* ══════════════════════════════════════════════════════════
+       v60 — Melhorias: Loading, Modal, URL sync, SLA notif, Export/entrega
+    ══════════════════════════════════════════════════════════ */
+
+    /* #3 — Loading overlay */
+    function showLoadingOverlay(msg){
+      const el = $('loadingOverlay');
+      if(!el) return;
+      el.classList.remove('hidden');
+      const bar = $('loadBar');
+      if(bar){ bar.style.width='0'; setTimeout(()=>{ bar.style.width='70%'; }, 50); }
+    }
+    function hideLoadingOverlay(){
+      const el = $('loadingOverlay');
+      if(el) el.classList.add('hidden');
+      const bar = $('loadBar');
+      if(bar) bar.style.width='100%';
+    }
+
+    /* #11 — Last Updated Badge */
+    function updateLastUpdatedBadge(){
+      const badge = $('lastUpdatedBadge');
+      const text = $('lastUpdatedText');
+      if(!badge || !text) return;
+      if(importDateTime){
+        const now = new Date();
+        const same = now.toDateString() === importDateTime.toDateString();
+        const timeStr = importDateTime.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        const dateStr = same ? `hoje às ${timeStr}` : `${importDateTime.toLocaleDateString('pt-BR')} às ${timeStr}`;
+        text.textContent = `Última importação: ${dateStr}`;
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    /* #5 — URL sync (squad no hash) */
+    function syncSquadToUrl(){
+      const squad = getSelectedSquad();
+      const hash = squad && !sameSquad(squad,'Todas') ? `#squad=${encodeURIComponent(squad)}` : '#';
+      if(location.hash !== hash) history.replaceState(null, '', hash || location.pathname + location.search);
+    }
+    function restoreSquadFromUrl(){
+      const m = location.hash.match(/[#&]squad=([^&]+)/);
+      if(!m) return;
+      const squad = decodeURIComponent(m[1]);
+      const sq = $('squadFilter');
+      if(!sq) return;
+      const opt = [...sq.options].find(o => sameSquad(o.value, squad));
+      if(opt){ sq.value = opt.value; selectedSquadState = opt.value; }
+    }
+
+    /* #9 — Export per delivery */
+    function exportDeliveryXlsx(idx){
+      const d = deliveries[idx];
+      if(!d || typeof XLSX === 'undefined'){ alert('Entrega não encontrada.'); return; }
+      const linked = getDeliveryStories(d);
+      const header = ['Chave','Resumo','Tipo','Status','Risco','Responsável','Prazo','Epic'];
+      const rows2 = linked.map(r => [r.chave||'', r.resumo||'', r.tipo||'', r.situacao||'', r.risco||'', r.responsavel||'', r.prazo||'', r.epic||'']);
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([
+        [`Entrega: ${d.name || '—'}`],
+        [`Squad: ${d.squad||'—'} | Status: ${d.status||'—'} | Gerado: ${new Date().toLocaleString('pt-BR')}`],
+        [],
+        header,
+        ...rows2
+      ]);
+      ws['!cols'] = [{wch:14},{wch:60},{wch:12},{wch:22},{wch:10},{wch:18},{wch:12},{wch:14}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Histórias');
+      XLSX.writeFile(wb, `Entrega_${(d.name||'sem_nome').replace(/[^a-zA-Z0-9]/g,'_').slice(0,30)}.xlsx`);
+    }
+
+    /* #12 — SLA Notifications */
+    function initSlaNotifications(){
+      if(!('Notification' in window)) return;
+      if(Notification.permission === 'granted'){
+        scheduleSlaCheck();
+      }
+    }
+    function scheduleSlaCheck(){
+      setInterval(()=>{
+        if(Notification.permission !== 'granted') return;
+        const overdue = filteredBySquad().filter(r => {
+          const info = homologationSlaInfo(r);
+          return info && info.overdue;
+        });
+        if(overdue.length){
+          new Notification(`⚠ ${overdue.length} SLA(s) vencido(s) — Painel de Entregas`, {
+            body: overdue.slice(0,3).map(r=>r.chave).join(', ') + (overdue.length>3?` e mais ${overdue.length-3}...`:''),
+            tag: 'sla-overdue-vp'
+          });
+        }
+      }, 30 * 60 * 1000); // verifica a cada 30 min
+    }
+    function requestSlaNotifications(){
+      if(!('Notification' in window)){ alert('Seu navegador não suporta notificações.'); return; }
+      Notification.requestPermission().then(p => {
+        if(p==='granted'){ scheduleSlaCheck(); alert('✓ Notificações de SLA ativadas!'); }
+        else alert('Permissão negada. Habilite nas configurações do navegador.');
+      });
+    }
+
+    /* Patch importação para mostrar loading overlay */
+    (function patchImportWithLoading(){
+      const fileInput = $('fileInput');
+      if(!fileInput) return;
+      const origChange = fileInput.onchange;
+      fileInput.addEventListener('change', function handler(ev){
+        if(ev.target.files && ev.target.files.length){
+          showLoadingOverlay();
+          setTimeout(hideLoadingOverlay, 4000); // fallback
+        }
+      }, true); // capture phase — before the existing listener
+    })();
+
+    /* ══════════════════════════════════════════════════════════ */
+
     setupFilters();
+    restoreSquadFromUrl();
     bindFilterEvents();
     bindSprintImport();
     renderAll();
+    updateLastUpdatedBadge();
+    syncSquadToUrl();
+    initSlaNotifications();
+
+    // Close delete modal on overlay click
+    const _delModal = $('deleteModal');
+    if(_delModal) _delModal.addEventListener('click', e=>{ if(e.target===e.currentTarget) hideDeleteModal(); });
+
     // Garante que a data da importação aparece ao carregar a página
     if(importDateTime && $('baseInfo')){
       $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
