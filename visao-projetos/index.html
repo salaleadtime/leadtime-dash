@@ -5657,10 +5657,16 @@
 
             <div id="geminiConfigRow" class="gemini-config-row" style="display:none">
               <label>Chave Gemini API</label>
-              <input class="gemini-key-input" id="geminiKeyInput" type="password" placeholder="AIza..." autocomplete="off"/>
+              <input class="gemini-key-input" id="geminiKeyInput" type="password" placeholder="AIzaSy..." autocomplete="off"/>
               <button class="gemini-save-btn" onclick="geminiSaveKey()">Salvar e analisar</button>
+              <button class="gemini-save-btn" style="background:#687083" onclick="geminiClearKey()" title="Limpar chave salva e inserir nova">Limpar chave</button>
             </div>
-            <div id="geminiError" class="gemini-error" style="display:none"></div>
+            <div id="geminiError" class="gemini-error" style="display:none">
+              <div id="geminiErrorText"></div>
+              <button onclick="geminiClearKey()" style="margin-top:8px;border:0;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:800;background:var(--red-dark);color:#fff;cursor:pointer">
+                Trocar chave API
+              </button>
+            </div>
 
             <div class="ai-analysis-hero">
               <div>
@@ -7313,11 +7319,23 @@
 
     function geminiSaveKey(){
       const val = ($('geminiKeyInput').value || '').trim();
-      if(!val){ $('geminiError').textContent = 'Informe a chave antes de salvar.'; $('geminiError').style.display='block'; return; }
+      if(!val){
+        if($('geminiErrorText')) $('geminiErrorText').textContent = 'Informe a chave antes de salvar.';
+        if($('geminiError')) $('geminiError').style.display='block';
+        return;
+      }
       localStorage.setItem('gemini_api_key', val);
-      $('geminiConfigRow').style.display = 'none';
-      $('geminiError').style.display = 'none';
+      if($('geminiConfigRow')) $('geminiConfigRow').style.display = 'none';
+      if($('geminiError')) $('geminiError').style.display = 'none';
       geminiAnalyzeSprint();
+    }
+
+    function geminiClearKey(){
+      localStorage.removeItem('gemini_api_key');
+      if($('geminiKeyInput')) $('geminiKeyInput').value = '';
+      if($('geminiConfigRow')) $('geminiConfigRow').style.display = 'flex';
+      if($('geminiError')) $('geminiError').style.display = 'none';
+      if($('geminiKeyInput')) $('geminiKeyInput').focus();
     }
 
     function geminiBuildPrompt(data, groups, squad){
@@ -7418,7 +7436,14 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
         geminiApplyResult(result, false);
       } catch(err){
         if(errEl){
-          errEl.textContent = `Erro ao chamar Gemini: ${err.message}. Verifique sua chave em aistudio.google.com.`;
+          const isQuota = /quota|rate.limit|limit.*0/i.test(err.message);
+          const isInvalidKey = /api.key|invalid.key|permission/i.test(err.message);
+          const msg = isQuota
+            ? 'Cota da chave API esgotada ou igual a zero. Crie uma nova chave em aistudio.google.com num projeto novo e clique em "Trocar chave API".'
+            : isInvalidKey
+            ? 'Chave API inválida. Clique em "Trocar chave API" e insira uma chave válida do aistudio.google.com.'
+            : `Erro ao chamar Gemini: ${err.message}`;
+          if($('geminiErrorText')) $('geminiErrorText').textContent = msg;
           errEl.style.display = 'block';
         }
       } finally {
