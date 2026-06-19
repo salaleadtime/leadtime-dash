@@ -5657,7 +5657,7 @@
 
             <div id="geminiConfigRow" class="gemini-config-row" style="display:none">
               <label>Chave Gemini API</label>
-              <input class="gemini-key-input" id="geminiKeyInput" type="password" placeholder="AIzaSy..." autocomplete="off"/>
+              <input class="gemini-key-input" id="geminiKeyInput" type="text" placeholder="AIzaSy..." autocomplete="off" style="font-family:monospace;font-size:11px"/>
               <button class="gemini-save-btn" onclick="geminiSaveKey()">Salvar e analisar</button>
               <button class="gemini-save-btn" style="background:#687083" onclick="geminiClearKey()" title="Limpar chave salva e inserir nova">Limpar chave</button>
             </div>
@@ -7313,8 +7313,20 @@
       try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e){}
     }
 
+    // Chave em memória — persiste enquanto a aba estiver aberta, sem depender de localStorage
+    let _geminiKeyMemory = '';
+
     function geminiGetKey(){
-      return localStorage.getItem('gemini_api_key') || '';
+      if(_geminiKeyMemory) return _geminiKeyMemory;
+      try { return sessionStorage.getItem('gemini_api_key') || ''; } catch(e){}
+      try { return localStorage.getItem('gemini_api_key') || ''; } catch(e){}
+      return '';
+    }
+
+    function geminiPersistKey(val){
+      _geminiKeyMemory = val;
+      try { sessionStorage.setItem('gemini_api_key', val); } catch(e){}
+      try { localStorage.setItem('gemini_api_key', val); } catch(e){}
     }
 
     function geminiSaveKey(){
@@ -7324,15 +7336,18 @@
         if($('geminiError')) $('geminiError').style.display='block';
         return;
       }
-      localStorage.setItem('gemini_api_key', val);
+      geminiPersistKey(val);
       if($('geminiConfigRow')) $('geminiConfigRow').style.display = 'none';
       if($('geminiError')) $('geminiError').style.display = 'none';
       geminiAnalyzeSprint();
     }
 
     function geminiClearKey(){
-      localStorage.removeItem('gemini_api_key');
+      _geminiKeyMemory = '';
+      try { sessionStorage.removeItem('gemini_api_key'); } catch(e){}
+      try { localStorage.removeItem('gemini_api_key'); } catch(e){}
       if($('geminiKeyInput')) $('geminiKeyInput').value = '';
+      if($('geminiKeyInput')) $('geminiKeyInput').type = 'text';
       if($('geminiConfigRow')) $('geminiConfigRow').style.display = 'flex';
       if($('geminiError')) $('geminiError').style.display = 'none';
       if($('geminiKeyInput')) $('geminiKeyInput').focus();
