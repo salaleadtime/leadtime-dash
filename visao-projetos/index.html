@@ -2941,6 +2941,50 @@
       margin-bottom:9px;
     }
 
+    /* Gemini AI — botão e estados */
+    .gemini-btn{
+      border:0;border-radius:999px;padding:6px 13px;font-size:11.5px;font-weight:800;
+      cursor:pointer;transition:.16s ease;white-space:nowrap;
+      background:linear-gradient(135deg,#4285F4,#0F9D58);
+      color:#fff;display:inline-flex;align-items:center;gap:6px;
+    }
+    .gemini-btn:hover:not(:disabled){opacity:.88;transform:translateY(-1px)}
+    .gemini-btn:disabled{opacity:.55;cursor:wait}
+    .gemini-btn svg{flex:0 0 auto}
+    .gemini-loading-dots{display:inline-flex;gap:3px;align-items:center}
+    .gemini-loading-dots span{
+      width:5px;height:5px;border-radius:50%;background:#fff;
+      animation:gdot .8s ease-in-out infinite;
+    }
+    .gemini-loading-dots span:nth-child(2){animation-delay:.16s}
+    .gemini-loading-dots span:nth-child(3){animation-delay:.32s}
+    @keyframes gdot{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1.1);opacity:1}}
+    .gemini-config-row{
+      display:flex;align-items:center;gap:8px;margin-top:10px;
+      background:#F0F7FF;border:1px solid #C5D9EF;border-radius:10px;padding:8px 12px;
+    }
+    .gemini-config-row label{
+      font-size:11px;color:var(--blue);font-weight:900;white-space:nowrap;margin:0;
+    }
+    .gemini-key-input{
+      flex:1;min-height:32px;border:1px solid #C5D9EF;border-radius:8px;
+      padding:0 10px;font-size:12px;font-family:monospace;background:#fff;outline:none;
+    }
+    .gemini-key-input:focus{border-color:#4285F4;box-shadow:0 0 0 3px rgba(66,133,244,.12)}
+    .gemini-save-btn{
+      border:0;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:800;
+      background:var(--blue);color:#fff;cursor:pointer;white-space:nowrap;
+    }
+    .gemini-source-badge{
+      font-size:10px;font-weight:800;border-radius:999px;
+      padding:2px 8px;background:linear-gradient(135deg,#4285F4,#0F9D58);color:#fff;
+      display:inline-block;margin-left:6px;
+    }
+    .gemini-error{
+      font-size:12px;color:var(--red-dark);background:var(--red-soft);
+      border-radius:8px;padding:8px 12px;margin-top:8px;line-height:1.5;
+    }
+
     .sprint-card h3{
       margin:0;
       color:#173A5E;
@@ -5601,9 +5645,22 @@
         <div class="sprint-insight-grid">
           <div class="sprint-card sprint-reading ai-sprint-analysis">
             <div class="sprint-card-title">
-              <h3>Leitura inteligente da sprint</h3>
-              <span class="badge blue">Regras automáticas</span>
+              <h3>Leitura inteligente da sprint <span id="geminiSourceBadge" class="gemini-source-badge" style="display:none">Gemini AI</span></h3>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span class="badge blue" id="sprintAnalysisBadge">Regras automáticas</span>
+                <button class="gemini-btn" id="geminiAnalyzeBtn" onclick="geminiAnalyzeSprint()" title="Gerar análise com Google Gemini AI (gratuito)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                  Analisar com IA
+                </button>
+              </div>
             </div>
+
+            <div id="geminiConfigRow" class="gemini-config-row" style="display:none">
+              <label>Chave Gemini API</label>
+              <input class="gemini-key-input" id="geminiKeyInput" type="password" placeholder="AIza..." autocomplete="off"/>
+              <button class="gemini-save-btn" onclick="geminiSaveKey()">Salvar e analisar</button>
+            </div>
+            <div id="geminiError" class="gemini-error" style="display:none"></div>
 
             <div class="ai-analysis-hero">
               <div>
@@ -7221,7 +7278,158 @@
         $('sprintExecutiveText').textContent =
           `Leitura gerada automaticamente com base somente na sprint atual importada, respeitando squad, frente/projeto e filtros selecionados. Neste bloco, backlog significa backlog da sprint atual, não backlog geral do produto. Refinadas na sprint: ${analysis.refined}.`;
       }
+
+      // Verificar se há cache Gemini válido para este contexto e aplicar automaticamente
+      const cacheKey = geminiCacheKey(data, squad);
+      const cached = geminiLoadCache(cacheKey);
+      if(cached) geminiApplyResult(cached, true);
     }
+
+    /* ─── INTEGRAÇÃO GEMINI AI ─────────────────────────────────────────── */
+
+    function geminiCacheKey(data, squad){
+      const sig = `${squad}|${data.length}|${data.filter(r=>r.bloqueio).length}|${data.filter(r=>r.dependencia).length}|${data.filter(r=>/homolog/i.test(r.situacao)).length}|${data.filter(r=>/produção|deploy/i.test(r.situacao)).length}`;
+      return 'gemini_sprint_' + btoa(unescape(encodeURIComponent(sig))).slice(0, 32);
+    }
+
+    function geminiLoadCache(key){
+      try {
+        const raw = localStorage.getItem(key);
+        if(!raw) return null;
+        const { ts, data } = JSON.parse(raw);
+        // Cache válido por 30 minutos
+        if(Date.now() - ts > 30 * 60 * 1000) { localStorage.removeItem(key); return null; }
+        return data;
+      } catch(e){ return null; }
+    }
+
+    function geminiSaveCache(key, data){
+      try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch(e){}
+    }
+
+    function geminiGetKey(){
+      return localStorage.getItem('gemini_api_key') || '';
+    }
+
+    function geminiSaveKey(){
+      const val = ($('geminiKeyInput').value || '').trim();
+      if(!val){ $('geminiError').textContent = 'Informe a chave antes de salvar.'; $('geminiError').style.display='block'; return; }
+      localStorage.setItem('gemini_api_key', val);
+      $('geminiConfigRow').style.display = 'none';
+      $('geminiError').style.display = 'none';
+      geminiAnalyzeSprint();
+    }
+
+    function geminiBuildPrompt(data, groups, squad){
+      const total = data.length;
+      const blocks = data.filter(r=>r.bloqueio);
+      const deps = data.filter(r=>r.dependencia);
+      const homolog = data.filter(r=>/homolog/i.test(r.situacao));
+      const deploy = data.filter(r=>/produção|producao|deploy/i.test(r.situacao));
+      const noOwner = data.filter(r=>!normalize(r.responsavel));
+      const statusCounts = countBy(data, r=>r.situacao).map(([s,n])=>`${s}: ${n}`).join(', ');
+
+      const stories = data.slice(0, 30).map(r =>
+        `- [${r.chave||''}] ${r.resumo||''} | Status: ${r.situacao||''} | Responsável: ${r.responsavel||'N/A'} | Bloqueio: ${r.bloqueio?'Sim':'Não'} | Dependência: ${r.dependencia?'Sim':'Não'} | Próxima ação: ${r.proximo||'N/A'}`
+      ).join('\n');
+
+      return `Você é um analista especialista em gestão ágil de squads de tecnologia bancária.
+
+Analise os dados abaixo da sprint atual da squad "${squad}" e responda SOMENTE em JSON válido, sem markdown, sem texto fora do JSON.
+
+DADOS DA SPRINT:
+- Total de histórias: ${total}
+- Distribuição por status: ${statusCounts}
+- Bloqueios ativos: ${blocks.length}
+- Dependências externas: ${deps.length}
+- Em homologação: ${homolog.length}
+- Rota de produção/deploy: ${deploy.length}
+- Sem responsável: ${noOwner.length}
+- Histórias (máx 30):
+${stories}
+
+Responda APENAS com este JSON (sem markdown, sem código fence):
+{
+  "tone": "critical" | "warn" | "good" | "neutral",
+  "toneText": "texto curto do tom (ex: Atenção, Estável, Entrega, Refinar)",
+  "diagnosis": "diagnóstico executivo em 2-3 frases concisas sobre o estado real da sprint",
+  "attentionText": "principal ponto de atenção em 1-2 frases",
+  "recommendation": "recomendação mais importante em 1-2 frases",
+  "nextAction": "próxima ação concreta que o time deve tomar hoje",
+  "management": "mensagem executiva de 1 frase para o gestor sobre risco ou progresso"
+}`;
+    }
+
+    async function geminiCallApi(prompt, apiKey){
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 512 } };
+      const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if(!res.ok){
+        const err = await res.json().catch(()=>({}));
+        throw new Error(err?.error?.message || `Erro HTTP ${res.status}`);
+      }
+      const json = await res.json();
+      const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleaned = text.replace(/```json|```/g,'').trim();
+      return JSON.parse(cleaned);
+    }
+
+    function geminiApplyResult(result, fromCache){
+      if($('sprintAiDiagnosis')) $('sprintAiDiagnosis').textContent = result.diagnosis || '—';
+      if($('sprintAiTone')){
+        $('sprintAiTone').textContent = result.toneText || '—';
+        $('sprintAiTone').className = `ai-tone ${result.tone || 'neutral'}`;
+      }
+      if($('sprintAiAttention')) $('sprintAiAttention').textContent = result.attentionText || '—';
+      if($('sprintAiRecommendation')) $('sprintAiRecommendation').textContent = result.recommendation || '—';
+      if($('sprintAiNextAction')) $('sprintAiNextAction').textContent = result.nextAction || '—';
+      if($('sprintAiManagementMessage')) $('sprintAiManagementMessage').textContent = result.management || '—';
+      if($('sprintExecutiveText')) $('sprintExecutiveText').textContent = `Análise gerada por Google Gemini AI com base nos dados reais da sprint importada.${fromCache ? ' (cache — clique em "Analisar com IA" para atualizar)' : ''}`;
+      if($('sprintAnalysisBadge')) $('sprintAnalysisBadge').style.display = 'none';
+      if($('geminiSourceBadge')) $('geminiSourceBadge').style.display = '';
+    }
+
+    async function geminiAnalyzeSprint(){
+      const apiKey = geminiGetKey();
+      if(!apiKey){
+        if($('geminiConfigRow')) $('geminiConfigRow').style.display = 'flex';
+        if($('geminiKeyInput')) $('geminiKeyInput').focus();
+        return;
+      }
+
+      const btn = $('geminiAnalyzeBtn');
+      const errEl = $('geminiError');
+      if(errEl) errEl.style.display = 'none';
+
+      const data = filteredSprintRows();
+      const groups = sprintGroups(data);
+      const squad = getSelectedSquad();
+      const cacheKey = geminiCacheKey(data, squad);
+
+      if(btn){
+        btn.disabled = true;
+        btn.innerHTML = '<span class="gemini-loading-dots"><span></span><span></span><span></span></span> Analisando...';
+      }
+
+      try {
+        const prompt = geminiBuildPrompt(data, groups, squad);
+        const result = await geminiCallApi(prompt, apiKey);
+        geminiSaveCache(cacheKey, result);
+        geminiApplyResult(result, false);
+      } catch(err){
+        if(errEl){
+          errEl.textContent = `Erro ao chamar Gemini: ${err.message}. Verifique sua chave em aistudio.google.com.`;
+          errEl.style.display = 'block';
+        }
+      } finally {
+        if(btn){
+          btn.disabled = false;
+          btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg> Analisar com IA';
+        }
+      }
+    }
+
+    /* ─── FIM GEMINI AI ─────────────────────────────────────────────────── */
 
 
     function renderSprintCurrent(){
