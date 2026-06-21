@@ -1628,7 +1628,17 @@
     }
 
 
-    /* Quadrante de risco resumido — Lead Time dos épicos */
+    /* ─── Lista compacta de Lead Time por Épico ─── */
+    .epic-lt-list{border:1px solid var(--line);border-radius:12px;background:#FAFBFD;padding:12px;margin-top:12px}
+    .epic-lt-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .epic-lt-head b{font-size:13px;font-weight:800;color:var(--text)}
+    .epic-lt-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:.12s ease}
+    .epic-lt-row:last-child{border-bottom:0;padding-bottom:0}
+    .epic-lt-row:hover{background:rgba(204,9,47,.03);border-radius:6px;padding-left:4px}
+    .epic-lt-key{font-size:12px;font-weight:800;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .epic-lt-cards{font-size:11px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
+
+    /* Quadrante de risco resumido — Lead Time dos épicos (legado, mantido para compatibilidade) */
     .recovery-impact-box{
       border:1px solid #DDE6F1;
       border-radius:18px;
@@ -6978,149 +6988,40 @@
 
       const groups = [...byEpic.entries()].map(([epic, items]) => {
         const lead = getEpicLeadInfo(epic, allRows);
-        const backlog = items.filter(r => r.product_backlog).length;
-        const blocks = items.filter(r => r.bloqueio || /bloque|imped/i.test(r.situacao || '')).length;
-        const deps = items.filter(r => r.dependencia).length;
-        const route = items.filter(r => /produção|producao|deploy|homolog|teste/i.test(r.situacao || '')).length;
-        const highLt = lead.days !== null ? lead.days >= RECOVERY_GOAL.preventiveDays : false;
-        const strongLt = lead.days !== null ? lead.days >= 40 : false;
-        const criticalLt = lead.days !== null ? lead.days >= RECOVERY_GOAL.metaDays : false;
-        const impactScore = items.length + backlog + route + (blocks * 2) + deps;
-        const highImpact = impactScore >= 4 || items.length >= 2 || blocks > 0 || deps > 0;
+        window[`epicLt_${epic.replace(/[^a-z0-9]/gi,'_')}`] = items;
+        return {epic, items, lead};
+      }).sort((a, b) => (b.lead.days || -1) - (a.lead.days || -1));
 
-        let risk = 'control';
-        if(criticalLt || (strongLt && highImpact)) risk = 'high';
-        else if(highLt) risk = 'medium';
-        else if(blocks || deps) risk = 'flow';
-
-        return {epic, items, lead, backlog, blocks, deps, route, impactScore, highLt, strongLt, criticalLt, highImpact, risk};
-      }).sort((a,b)=>{
-        const weight = {high:4, medium:3, flow:2, control:1};
-        return weight[b.risk] - weight[a.risk] || (b.lead.days || 0) - (a.lead.days || 0) || b.items.length - a.items.length;
-      });
-
-      const high = groups.filter(g => g.risk === 'high');
-      const medium = groups.filter(g => g.risk === 'medium');
-      const flow = groups.filter(g => g.risk === 'flow');
-      const control = groups.filter(g => g.risk === 'control');
-      const preventive = groups.filter(g => g.lead.days !== null && g.lead.days >= RECOVERY_GOAL.preventiveDays);
-      const critical = groups.filter(g => g.lead.days !== null && g.lead.days >= RECOVERY_GOAL.metaDays);
-      const targetGroups = [...high, ...medium, ...flow].slice(0,8);
-
-      window.recoveryRiskHigh = high.flatMap(g => g.items);
-      window.recoveryRiskMedium = medium.flatMap(g => g.items);
-      window.recoveryRiskFlow = flow.flatMap(g => g.items);
-      window.recoveryRiskControl = control.flatMap(g => g.items);
-
-      const topExample = targetGroups[0];
-      const exampleText = topExample
-        ? `${topExample.epic} · ${topExample.lead.days !== null ? `${topExample.lead.days}d` : 'sem LT'} · ${topExample.items.length} card(s) na sprint`
-        : 'sem épico em risco preventivo no recorte atual';
-
-      const targetMessage = critical.length
-        ? `${critical.length} épico(s) acima da meta oficial de ${RECOVERY_GOAL.metaDays}d.`
-        : preventive.length
-          ? `${preventive.length} épico(s) com ${RECOVERY_GOAL.preventiveDays}d ou mais no recorte da sprint.`
-          : 'Nenhum épico com LT oficial atingiu a faixa preventiva de Lead Time.';
-
-      const riskItemHtml = (group) => {
-        const first = group.items[0] || {};
-        const leadText = group.lead.days !== null ? `${group.lead.days}d LT` : 'sem LT oficial';
-        const statusText = countBy(group.items, r => r.situacao)[0]?.[0] || 'Sem status';
-        const key = storyKey(first) || extractJiraKey(first.chave) || 'Sem chave';
-        return `<div class="risk-detail-item">
-          <b title="${escapeAttr(group.epic)}">${escapeHtml(group.epic)}</b>
-          <small><span>${escapeHtml(leadText)}</span><span>${group.items.length} card(s)</span><span>${escapeHtml(statusText)}</span></small>
-          <div class="risk-story" title="${escapeAttr((first.chave || key) + ' · ' + (first.resumo || ''))}">${escapeHtml(first.chave || key)} · ${escapeHtml(first.resumo || 'Sem resumo')}</div>
+      if(!groups.length){
+        return `<div class="epic-lt-list">
+          <div class="epic-lt-head"><b>Lead Time dos Épicos</b><span class="badge red">Meta ${RECOVERY_GOAL.metaDays}d</span></div>
+          <div style="font-size:12px;color:var(--muted);padding:8px 0">Nenhum épico identificado no recorte atual.</div>
         </div>`;
+      }
+
+      const ltBadge = (days) => {
+        if(days === null) return `<span class="badge" style="background:#F3F5F8;color:var(--muted)">sem LT</span>`;
+        if(days >= RECOVERY_GOAL.metaDays) return `<span class="badge red">${days}d</span>`;
+        if(days >= 40) return `<span class="badge amber">${days}d</span>`;
+        return `<span class="badge green">${days}d</span>`;
       };
 
-      const riskPreviewHtml = (list, emptyText) => {
-        if(!list.length) return `<div class="risk-empty-info">${escapeHtml(emptyText)}</div>`;
-        return list.slice(0,2).map(riskItemHtml).join('');
-      };
+      const rows = groups.slice(0, 8).map(g => {
+        const safeKey = g.epic.replace(/[^a-z0-9]/gi,'_');
+        return `<div class="epic-lt-row" onclick="openList('${escapeJs(g.epic)}', window.epicLt_${safeKey} || [])">
+          <span class="epic-lt-key">${escapeHtml(g.epic)}</span>
+          <span class="epic-lt-cards">${g.items.length} card(s)</span>
+          ${ltBadge(g.lead.days)}
+        </div>`;
+      }).join('');
 
-
-      return `<div class="recovery-impact-box">
-        <div class="recovery-impact-head">
-          <div>
-            <b>Quadrante de risco resumido</b>
-            <span>Cruza a sprint atual com o Lead Time oficial dos épicos. Sem base oficial, não classifica risco por tempo.</span>
-          </div>
+      return `<div class="epic-lt-list">
+        <div class="epic-lt-head">
+          <b>Lead Time dos Épicos</b>
           <span class="badge red">Meta ${RECOVERY_GOAL.metaDays}d</span>
         </div>
-
-        <div class="risk-summary-panel">
-          <div class="risk-summary-title">Resumo</div>
-          <div class="risk-summary-row">
-            <div class="risk-summary-line red">
-              <strong>${preventive.length}</strong>
-              <span>épicos em atenção preventiva</span>
-              <small>LT ≥ ${RECOVERY_GOAL.preventiveDays}d com card na sprint</small>
-            </div>
-
-            <div class="risk-summary-line green">
-              <strong>${RECOVERY_GOAL.neededDeliveries}</strong>
-              <span>entregas necessárias</span>
-              <small>para recuperação da meta trimestral</small>
-            </div>
-
-            <div class="risk-summary-line amber">
-              <strong>${RECOVERY_GOAL.deadline}</strong>
-              <span>prazo da recuperação</span>
-              <small>foco em entregas de menor LT</small>
-            </div>
-          </div>
-        </div>
-
-        <div class="risk-quadrant-wrap">
-          <div class="risk-quadrant-board">
-            <div class="risk-cell red" onclick="openList('Alto risco · Lead Time', window.recoveryRiskHigh)">
-              <div class="risk-cell-head">
-                <h4>Alto risco</h4>
-                <strong class="risk-number">${high.length}</strong>
-              </div>
-              <p class="risk-cell-desc">LT ≥40d ou acima da meta com impacto na sprint.</p>
-              <div class="risk-detail-list">${riskPreviewHtml(high, 'Sem épico em alto risco neste recorte.')}</div>
-              <span class="risk-cell-cta">Abrir histórias</span>
-            </div>
-
-            <div class="risk-cell amber" onclick="openList('Risco preventivo · Lead Time', window.recoveryRiskMedium)">
-              <div class="risk-cell-head">
-                <h4>Risco médio</h4>
-                <strong class="risk-number">${medium.length}</strong>
-              </div>
-              <p class="risk-cell-desc">LT ≥${RECOVERY_GOAL.preventiveDays}d com cards na sprint atual.</p>
-              <div class="risk-detail-list">${riskPreviewHtml(medium, 'Sem risco preventivo neste recorte.')}</div>
-              <span class="risk-cell-cta">Monitorar na daily</span>
-            </div>
-
-            <div class="risk-cell blue" onclick="openList('Risco operacional · Bloqueios e dependências', window.recoveryRiskFlow)">
-              <div class="risk-cell-head">
-                <h4>Operacional</h4>
-                <strong class="risk-number">${flow.length}</strong>
-              </div>
-              <p class="risk-cell-desc">LT baixo, mas com bloqueio ou dependência.</p>
-              <div class="risk-detail-list">${riskPreviewHtml(flow, 'Sem bloqueio/dependência relevante.')}</div>
-              <span class="risk-cell-cta">Remover impedimento</span>
-            </div>
-
-            <div class="risk-cell green" onclick="openList('Sob controle · Lead Time', window.recoveryRiskControl)">
-              <div class="risk-cell-head">
-                <h4>Controle</h4>
-                <strong class="risk-number">${control.length}</strong>
-              </div>
-              <p class="risk-cell-desc">LT baixo ou sem base oficial, com fluxo sem alerta relevante.</p>
-              <div class="risk-detail-list">${riskPreviewHtml(control, 'Sem itens classificados em controle.')}</div>
-              <span class="risk-cell-cta">Acompanhar fluxo</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="risk-exec-note">
-          <b>Resumo para gestão:</b>
-          <span>${escapeHtml(targetMessage)} O Lead Time é calculado somente com base oficial do épico. Quando não houver LT oficial, o item não entra como risco por tempo; permanece em controle ou operacional conforme bloqueio/dependência. Foco nas entregas de menor LT oficial para apoiar a recuperação da meta trimestral.</span>
-        </div>
+        ${rows}
+        ${groups.length > 8 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">+${groups.length - 8} épico(s) não exibidos</div>` : ''}
       </div>`;
     }
 
