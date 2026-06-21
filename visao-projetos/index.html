@@ -5321,20 +5321,55 @@
     .empty-state h3{font-size:15px;color:var(--text);font-weight:800;margin:0}
     .empty-state p{font-size:13px;color:var(--muted);line-height:1.5;max-width:320px;margin:0}
 
-    /* ─── Last Updated Badge ─── */
+    /* ─── Last Updated Badge (topbar) ─── */
     .last-updated-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:#fff;margin-top:10px}
-    .last-updated-badge .dot{width:6px;height:6px;border-radius:50%;background:#5CE65C;flex:0 0 auto}
+    .last-updated-badge .dot{width:7px;height:7px;border-radius:50%;background:#5CE65C;flex:0 0 auto;box-shadow:0 0 0 3px rgba(92,230,92,.25)}
 
-    /* ─── Date filter group ─── */
-    .filter-date-group{display:flex;align-items:flex-end;gap:8px;background:var(--blue-soft);border:1px solid #C5D9EF;border-radius:14px;padding:10px 12px}
-    .filter-date-group .date-sep{font-size:13px;color:var(--muted);font-weight:700;padding-bottom:4px}
-    .filter-new-badge{background:var(--green);color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em;margin-left:4px;vertical-align:middle}
+    /* ─── Import pill no filter bar ─── */
+    .import-pill{
+      display:inline-flex;align-items:center;gap:7px;
+      background:#fff;border:1px solid var(--line);border-radius:999px;
+      padding:0 14px;height:42px;font-size:12px;font-weight:700;color:var(--muted);
+      white-space:nowrap;
+    }
+    .import-pill .dot{width:7px;height:7px;border-radius:50%;background:#5CE65C;flex:0 0 auto;box-shadow:0 0 0 3px rgba(92,230,92,.2)}
+    .import-pill.no-data .dot{background:#D0D5DD;box-shadow:none}
+    .import-pill.no-data{color:#D0D5DD}
+
+    /* ─── Date filter group (redesign) ─── */
+    .filter-date-group{
+      display:flex;align-items:flex-end;gap:6px;
+      border:1px solid var(--line);border-radius:14px;
+      background:#fff;padding:0 12px;height:42px;
+    }
+    .filter-date-group label{
+      font-size:10px;color:var(--muted);font-weight:900;
+      text-transform:uppercase;letter-spacing:.05em;margin:0;
+      white-space:nowrap;align-self:center;
+    }
+    .filter-date-group input[type="date"]{
+      border:0;background:transparent;min-height:unset;height:42px;
+      padding:0 4px;font-size:13px;color:var(--text);
+      border-radius:0;min-width:120px;
+    }
+    .filter-date-group input[type="date"]:focus{box-shadow:none;border:0}
+    .filter-date-group .date-sep{
+      font-size:14px;color:var(--line);font-weight:400;
+      align-self:center;padding:0 2px;flex:0 0 auto;
+    }
+    .filter-date-group .date-clear{
+      align-self:center;background:none;border:0;color:var(--muted);
+      font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;
+      border-radius:4px;flex:0 0 auto;
+    }
+    .filter-date-group .date-clear:hover{background:#F3F5F8;color:var(--text)}
 
     /* ─── URL sync pill ─── */
     .url-sync-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-soft);border:1px solid #B7EACA;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;color:var(--green)}
 
-    /* ─── Bug / Melhoria KPI row ─── */
-    .kpi-type-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+    @keyframes pulse-dot{0%,100%{box-shadow:0 0 0 3px rgba(92,230,92,.25)}50%{box-shadow:0 0 0 5px rgba(92,230,92,.0)}}
+
+    /* ─── KPI accent por tipo (usados em outros contextos) ─── */
     .kpi.bug:before{background:var(--red)}
     .kpi.bug strong{color:var(--red-dark)}
     .kpi.melhoria:before{background:var(--blue)}
@@ -5384,7 +5419,7 @@
         <h1>Painel Estratégico de Entregas</h1>
         <p>Visão estratégica e operacional para acompanhar entregas, bloqueios, dependências e rota de produção.</p>
         <div class="last-updated-badge" id="lastUpdatedBadge" style="display:none">
-          <span class="dot"></span>
+          <span class="dot" style="animation:pulse-dot 2.4s ease infinite"></span>
           <span id="lastUpdatedText">Última importação: —</span>
         </div>
       </div>
@@ -5420,7 +5455,10 @@
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
           URL sincronizada
         </span>
-        <div><b>Base:</b> <span id="baseInfo">Data e Hora</span></div>
+        <div id="importPillWrap" class="import-pill no-data" title="Data e hora da última importação do Jira">
+          <span class="dot"></span>
+          <span id="baseInfo">Sem dados importados</span>
+        </div>
       </div>
     </section>
 
@@ -5432,17 +5470,16 @@
         </div>
         <div class="selected-pill" id="selectedSquadLabel">Squad: Contact</div>
         <!-- Filtro de período de datas -->
-        <div class="filter-date-group" id="dateFilterGroup">
-          <div>
-            <label>De <span class="filter-new-badge">Novo</span></label>
-            <input type="date" id="filterDateFrom" onchange="renderAll()" style="min-width:130px" />
+        <div>
+          <label>Período</label>
+          <div class="filter-date-group" id="dateFilterGroup">
+            <label style="margin:0;font-size:10px">De</label>
+            <input type="date" id="filterDateFrom" onchange="renderAll()" title="Data inicial do filtro" />
+            <span class="date-sep">→</span>
+            <label style="margin:0;font-size:10px">Até</label>
+            <input type="date" id="filterDateTo" onchange="renderAll()" title="Data final do filtro" />
+            <button class="date-clear" onclick="clearDateFilter()" title="Limpar período">✕</button>
           </div>
-          <span class="date-sep">→</span>
-          <div>
-            <label>Até</label>
-            <input type="date" id="filterDateTo" onchange="renderAll()" style="min-width:130px" />
-          </div>
-          <button class="btn btn-soft" style="padding:6px 10px;font-size:11px;height:42px;align-self:flex-end" onclick="clearDateFilter()" title="Limpar filtro de datas">✕</button>
         </div>
       </div>
       <div class="filter-left" id="operationalFilters" style="display:none">
@@ -5458,76 +5495,42 @@
     </section>
 
     <section id="gerencial" class="view active">
-      <!-- Linha 1: KPIs gerais (6 colunas) -->
-      <div class="kpi-grid">
+      <!-- KPIs estratégicos (4 colunas) -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
         <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad())">
           <span>Total de histórias</span>
           <strong id="kpiTotal">0</strong>
-          <small>Quantidade de histórias na squad selecionada.</small>
+          <small>Escopo total da squad no filtro selecionado.</small>
         </article>
         <article class="kpi" onclick="openList('Histórias em Product Backlog', filteredBySquad().filter(r=>r.product_backlog))">
           <span>Product Backlog</span>
           <strong id="kpiPB">0</strong>
-          <small>Histórias ainda em backlog de produto.</small>
+          <small>Itens ainda não iniciados — pipeline de entrada.</small>
         </article>
-        <article class="kpi" onclick="openList('Histórias refinadas no Product Backlog', filteredBySquad().filter(r=>r.refinada))">
-          <span>Refinadas</span>
-          <strong id="kpiRefinada">0</strong>
-          <small>Conta itens da squad com status Product Backlog e rótulo Refinada.</small>
+        <article class="kpi" onclick="openList('Alertas: bloqueios e dependências', filteredBySquad().filter(r=>r.bloqueio||r.dependencia))">
+          <span>Alertas</span>
+          <strong id="kpiAlertas">0</strong>
+          <small id="kpiAlertasDetail">Bloqueios e dependências que requerem ação.</small>
         </article>
-        <article class="kpi" onclick="openList('Bloqueios identificados', filteredBySquad().filter(r=>r.bloqueio))">
-          <span>Bloqueios</span>
-          <strong id="kpiBloq">0</strong>
-          <small>Possíveis bloqueios por status, resumo ou rótulos.</small>
-        </article>
-        <article class="kpi" onclick="openList('Dependências identificadas', filteredBySquad().filter(r=>r.dependencia))">
-          <span>Dependências</span>
-          <strong id="kpiDep">0</strong>
-          <small>Dependências externas, áreas envolvidas ou temas técnicos.</small>
-        </article>
-        <article class="kpi" onclick="openList('Histórias em homologação', filteredBySquad().filter(isHomologation))">
-          <span>Homologação</span>
-          <strong id="kpiHomolog">0</strong>
-          <small>Histórias com status de homologação.</small>
+        <article class="kpi" onclick="openList('Rota de produção e homologação', filteredBySquad().filter(r=>/produção|producao|deploy|homolog|teste/i.test(r.situacao||'')))">
+          <span>Próximas entregas</span>
+          <strong id="kpiEntregas">0</strong>
+          <small id="kpiEntregasDetail">Itens em homologação ou rota de produção.</small>
         </article>
       </div>
 
-      <!-- Linha 2: KPIs por tipo — Bugs, Melhorias, Histórias, Em Correção -->
-      <div class="kpi-type-row">
-        <article class="kpi bug" onclick="openList('Bugs da squad', combinedBySquad().filter(isBug))">
-          <span>🐛 Bugs</span>
-          <strong id="kpiBugs">0</strong>
-          <small>Itens do tipo Bug registrados na squad.</small>
-        </article>
-        <article class="kpi melhoria" onclick="openList('Melhorias da squad', combinedBySquad().filter(isMelhoria))">
-          <span>⚡ Melhorias</span>
-          <strong id="kpiMelhorias">0</strong>
-          <small>Itens do tipo Melhoria registrados na squad.</small>
-        </article>
-        <article class="kpi historia" onclick="openList('Histórias da squad', combinedBySquad().filter(isHistoria))">
-          <span>📖 Histórias</span>
-          <strong id="kpiHistorias">0</strong>
-          <small>Itens do tipo História (sem bugs/melhorias).</small>
-        </article>
-        <article class="kpi" onclick="openList('Bugs em correção', combinedBySquad().filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')))">
-          <span>🔧 Em Correção</span>
-          <strong id="kpiBugsCorrecao">0</strong>
-          <small>Bugs com status de correção ativa.</small>
-        </article>
-      </div>
-
-      <!-- Gráficos com Chart.js -->
+      <!-- Gráficos estratégicos (2 painéis) -->
       <section class="section">
         <div class="section-head">
           <div>
-            <h2>Gráficos estratégicos</h2>
-            <p class="sub">Gráficos interativos com Chart.js — passe o mouse para ver detalhes, clique nas barras para filtrar histórias.</p>
+            <h2>Composição do backlog</h2>
+            <p class="sub">Distribuição por status e tipo — clique nas barras para ver as histórias correspondentes.</p>
           </div>
           <span class="badge red" id="chartBadge">0 itens</span>
         </div>
-        <div class="charts-grid">
+        <div class="charts-grid" style="grid-template-columns:repeat(2,1fr)">
           <div class="chart-card">
-            <div class="chart-title">Situação <small>status</small></div>
+            <div class="chart-title">Situação <small>status atual</small></div>
             <div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div>
             <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
           </div>
@@ -5536,33 +5539,7 @@
             <div class="chart-canvas-wrap"><canvas id="chartBacklog"></canvas></div>
             <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para filtrar por tipo</p>
           </div>
-          <div class="chart-card">
-            <div class="chart-title">Risco <small>entrega</small></div>
-            <div class="chart-canvas-wrap"><canvas id="chartRisk"></canvas></div>
-            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver itens em risco</p>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Bloqueios e Dependências <small>atenção</small></div>
-            <div class="chart-canvas-wrap"><canvas id="chartBlocksDeps"></canvas></div>
-            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver itens bloqueados</p>
-          </div>
         </div>
-      </section>
-
-      <!-- Seção de Bugs e Melhorias -->
-      <section class="section" id="bmSection">
-        <div class="bm-section-head">
-          <div>
-            <h2 style="font-size:17px;color:var(--red-dark)">Bugs e Melhorias</h2>
-            <p class="sub" style="margin-top:4px">Visão detalhada de bugs e melhorias da sprint. Clique em qualquer item para abrir no Jira.</p>
-          </div>
-          <div class="bm-type-tabs">
-            <button class="bm-tab all-tab active" id="bmTabAll" onclick="switchBmTab('all')">Todos <span class="cnt" id="bmCntAll">0</span></button>
-            <button class="bm-tab bug-tab" id="bmTabBug" onclick="switchBmTab('bug')">🐛 Bugs <span class="cnt" id="bmCntBug">0</span></button>
-            <button class="bm-tab melhoria-tab" id="bmTabMelhoria" onclick="switchBmTab('melhoria')">⚡ Melhorias <span class="cnt" id="bmCntMelhoria">0</span></button>
-          </div>
-        </div>
-        <div class="bug-melhoria-list" id="bmList"></div>
       </section>
 
       <div class="management-layout">
@@ -6195,10 +6172,25 @@
     const RECOVERY_GOAL = { metaDays:62, preventiveDays:14, neededDeliveries:9, targetLt:30, deadline:'30/06', daysLeft:21 };
     const LEAD_TIME_EPICS = {"SLOPC-26557":{"id":"SLOPC-26557","squad":"Guardiões","resumo":"GCSB - Migrar os microsserviços vinculados aos centros de custo GCSB da cloud TI-Híbrida para a Microsoft Azure - microsserviços: serviços-operacionais","status":"Executado","ini":"2025-10-23","fim":"","dataPrevista":""},"SLOPC-29139":{"id":"SLOPC-29139","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - FRONT END","status":"Executado","ini":"2025-11-04","fim":"","dataPrevista":""},"SLOPC-18909":{"id":"SLOPC-18909","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - BACKEND","status":"Executado","ini":"2025-11-11","fim":"","dataPrevista":""},"SLOPC-29141":{"id":"SLOPC-29141","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - SERVICE NOW","status":"Executado","ini":"2025-12-03","fim":"","dataPrevista":""},"SLOPC-33015":{"id":"SLOPC-33015","squad":"Contact","resumo":"Desenvolver processo para refatoração do ServiceNow para o SAT #AtendeBRA","status":"Concluído","ini":"2026-01-08","fim":"2026-03-30","dataPrevista":"2026-04-15"},"SLOPC-33014":{"id":"SLOPC-33014","squad":"Contact","resumo":"Implementar API para validar e consultar token de celular integrado ao ServiceNow #AtendeBRA","status":"Concluído","ini":"2026-01-08","fim":"2026-03-31","dataPrevista":"2026-04-20"},"SLOPC-33834":{"id":"SLOPC-33834","squad":"Guardiões","resumo":"GCSB - Adequar a segmentação dos clientes 049 de VAREJO/DIGITAL/MEI para EMPRESAS E NEGÓCIOS no sistema GCSB","status":"Em Execução","ini":"2026-01-27","fim":"","dataPrevista":"2026-04-30"},"SLOPC-35324":{"id":"SLOPC-35324","squad":"Guardiões","resumo":"Implementar correção dos apontamentos críticos identificados pelo SonarQube na ferramenta GCSB","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":""},"SLOPC-35433":{"id":"SLOPC-35433","squad":"Expresso","resumo":"Desenvolver novos requisitos para Subsídios MVP2 + Melhorias impeditivas para o ConectaJur","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":""},"SLOPC-35319":{"id":"SLOPC-35319","squad":"Contact","resumo":"Implementar digitalização, consulta e atualização de documentos via GCC integrada ao formulário Operação 200k","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":"2026-05-01"},"SLOPC-35104":{"id":"SLOPC-35104","squad":"Guardiões","resumo":"Implementar Correção dos apontamentos \"Blocker\" na ferramenta GCSB identificados pelo SonarQube","status":"Concluído","ini":"2026-02-23","fim":"2026-03-16","dataPrevista":""},"SLOPC-23768":{"id":"SLOPC-23768","squad":"Expresso","resumo":"Desenvolver na ServiceNow fluxo para o processo Obrigações de Fazer - MVP 2 #9197","status":"Em Execução","ini":"2026-03-13","fim":"","dataPrevista":""},"SLOPC-27305":{"id":"SLOPC-27305","squad":"Interestelar","resumo":"Desenvolver na ServiceNow fluxo para o processo de Fiança - novos requisitos (MVP2) #9193","status":"Em Execução","ini":"2026-03-13","fim":"","dataPrevista":"2026-04-25"},"SLOPC-35373":{"id":"SLOPC-35373","squad":"Guardiões","resumo":"Desenvolvimento de RPA para obtenção de dados de contratos pré-fixados de CDC, Crédito Pessoal e Capital de Giro","status":"Em Execução","ini":"2026-03-16","fim":"","dataPrevista":""},"SLOPC-36323":{"id":"SLOPC-36323","squad":"Guardiões","resumo":"Corrigir apontamentos \"critical\" na ferramenta GCSB identificados pelo SonarQube - Fase 2","status":"Em Execução","ini":"2026-03-17","fim":"","dataPrevista":""}};
 
+    function _refreshImportPill(){
+      const el = $('baseInfo');
+      const pill = $('importPillWrap');
+      if(!el) return;
+      if(importDateTime){
+        const timeStr = importDateTime.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        const dateStr = importDateTime.toLocaleDateString('pt-BR');
+        el.textContent = `Última importação: ${dateStr} às ${timeStr}`;
+        if(pill){ pill.classList.remove('no-data'); }
+      } else {
+        el.textContent = 'Sem dados importados';
+        if(pill){ pill.classList.add('no-data'); }
+      }
+    }
+
     function registrarImportacaoBase(){
       importDateTime = new Date();
       localStorage.setItem(IMPORT_BASE_KEY, importDateTime.toISOString());
-      $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
+      _refreshImportPill();
     }
 
     function getJiraUrl(key){
@@ -6604,9 +6596,7 @@
         if(exactOption) squadSelect.value = exactOption.value;
       }
       $('selectedSquadLabel').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}`;
-      $('baseInfo').textContent = importDateTime
-        ? `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`
-        : '';
+      _refreshImportPill();
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
       try { renderOperational(); } catch(error) { console.error('Erro ao renderizar Operacional:', error); }
@@ -6789,7 +6779,7 @@
       // Empty state quando não há dados em nenhuma das bases
       const gerencial = $('gerencial');
       if(rows.length === 0 && sprintRows.length === 0){
-        const sections = gerencial?.querySelectorAll('.kpi-grid,.kpi-type-row,.section,#bmSection,.management-layout');
+        const sections = gerencial?.querySelectorAll('.kpi-grid,.section,.management-layout');
         if(sections) sections.forEach(s => s.style.display='none');
         if(!$('managementEmptyState')){
           const es = document.createElement('div');
@@ -6811,20 +6801,21 @@
       }
 
       // Restore sections if previously hidden
-      const hiddenSections = gerencial?.querySelectorAll('.kpi-grid,.kpi-type-row,.section,#bmSection,.management-layout');
+      const hiddenSections = gerencial?.querySelectorAll('.kpi-grid,.section,.management-layout');
       if(hiddenSections) hiddenSections.forEach(s => s.style.display='');
       const esEl = $('managementEmptyState');
       if(esEl) esEl.remove();
 
       const total = data.length;
       const pb = data.filter(r=>r.product_backlog).length;
-      const refinada = data.filter(r=>r.refinada).length;
       const bloq = data.filter(r=>r.bloqueio).length;
       const dep = data.filter(r=>r.dependencia).length;
+      const alertas = bloq + dep;
       const homolog = data.filter(isHomologation).length;
+      const prodItems = data.filter(r=>/produção|producao|deploy/i.test(r.situacao||'')).length;
+      const entregas = homolog + prodItems;
 
       // Dataset combinado: rows + sprintRows (deduplicado por chave)
-      // Necessário porque a Sprint_ativa contém Bugs e Melhorias que não estão no Acomp. Geral
       const sprintDataForSquad = effectiveSprintRows().filter(r =>
         sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)
       );
@@ -6832,25 +6823,23 @@
       const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
       const combined = applyDateFilter([...data, ...extraFromSprint]);
 
-      // Type KPIs — usam o dataset combinado
       const bugs = combined.filter(isBug).length;
       const melhorias = combined.filter(isMelhoria).length;
       const historias = combined.filter(r=>isHistoria(r)).length;
-      const bugsCorrecao = combined.filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')).length;
 
       $('kpiTotal').textContent = total;
       $('kpiPB').textContent = pb;
-      $('kpiRefinada').textContent = refinada;
-      $('kpiBloq').textContent = bloq;
-      $('kpiDep').textContent = dep;
-      $('kpiHomolog').textContent = homolog;
-      $('kpiBugs').textContent = bugs;
-      $('kpiMelhorias').textContent = melhorias;
-      $('kpiHistorias').textContent = historias;
-      $('kpiBugsCorrecao').textContent = bugsCorrecao;
+      $('kpiAlertas').textContent = alertas;
+      if($('kpiAlertasDetail')) $('kpiAlertasDetail').textContent = alertas
+        ? `${bloq} bloqueio(s) · ${dep} dependência(s) identificada(s).`
+        : 'Nenhum bloqueio ou dependência identificado.';
+      $('kpiEntregas').textContent = entregas;
+      if($('kpiEntregasDetail')) $('kpiEntregasDetail').textContent = entregas
+        ? `${homolog} em homologação · ${prodItems} em rota de produção.`
+        : 'Nenhum item em homologação ou produção.';
       $('chartBadge').textContent = `${combined.length} itens`;
 
-      // Chart.js charts — usam o dataset combinado
+      // 2 gráficos estratégicos
       renderChartJs('chartStatus',
         countBy(combined, r=>r.situacao).slice(0,6),
         combined,
@@ -6861,19 +6850,6 @@
         combined,
         (r, label)=> label==='Bugs' ? isBug(r) : label==='Melhorias' ? isMelhoria(r) : isHistoria(r)
       );
-      renderChartJs('chartRisk',
-        countBy(combined, r=>r.risco).slice(0,4),
-        combined,
-        (r, label)=>(normalize(r.risco)||'Não informado')===label
-      );
-      renderChartJs('chartBlocksDeps',
-        [['Bloqueios', bloq], ['Dependências', dep], ['Sem alerta', combined.filter(r=>!r.bloqueio&&!r.dependencia).length]],
-        combined,
-        (r, label)=> label==='Bloqueios' ? r.bloqueio : label==='Dependências' ? r.dependencia : (!r.bloqueio&&!r.dependencia)
-      );
-
-      // Seção Bugs e Melhorias usa dataset combinado
-      renderBmList(combined);
 
       // Update last-updated badge
       updateLastUpdatedBadge();
@@ -7223,17 +7199,6 @@
         decisions.push({priority:'OK', level:'low', title:'Sem ação crítica identificada', detail:'Não há bloqueio, dependência crítica ou SLA vencido para o filtro atual.', data:data});
       }
 
-      const noteKey = getExecutiveNoteKey();
-      const quickNote = executiveQuickNotes[noteKey] || '';
-      const tags = [
-        `<span class="exec-tag"><b>${data.length}</b> histórias</span>`,
-        `<span class="exec-tag"><b>${productBacklog.length}</b> Product Backlog</span>`,
-        `<span class="exec-tag"><b>${refined.length}</b> refinadas</span>`,
-        `<span class="exec-tag"><b>${homologationItems.length}</b> homologação</span>`,
-        `<span class="exec-tag"><b>${prod.length}</b> rota produção</span>`,
-        `<span class="exec-tag"><b>${changeDates.length ? changeDates.slice(0,2).join(', ') : 'Sem data'}</b> Change</span>`
-      ].join('');
-
       window.execResponsibleData = responsibleData;
       window.execHomologationData = homologationItems;
       const summaryHtml = `<div class="exec-summary">
@@ -7266,7 +7231,6 @@
             <span>${escapeHtml(changeDates.length ? `Change: ${changeDates.slice(0,2).join(', ')}` : 'Change/implantação não informada.')}</span>
           </div>
         </div>
-        <div class="exec-tags">${tags}</div>
         ${renderRecoveryImpactMatrix(data, selectedSquad)}
       </div>`;
 
@@ -8504,7 +8468,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       closeOperationalEditor();
       setupFilters();
       renderAll();
-      $('baseInfo').textContent = '';
+      _refreshImportPill();
     }
 
 
@@ -8948,21 +8912,23 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       if(bar) bar.style.width='100%';
     }
 
-    /* #11 — Last Updated Badge */
+    /* #11 — Last Updated Badge (topbar) + Import Pill (nav-card) */
     function updateLastUpdatedBadge(){
       const badge = $('lastUpdatedBadge');
       const text = $('lastUpdatedText');
-      if(!badge || !text) return;
-      if(importDateTime){
-        const now = new Date();
-        const same = now.toDateString() === importDateTime.toDateString();
-        const timeStr = importDateTime.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-        const dateStr = same ? `hoje às ${timeStr}` : `${importDateTime.toLocaleDateString('pt-BR')} às ${timeStr}`;
-        text.textContent = `Última importação: ${dateStr}`;
-        badge.style.display = '';
-      } else {
-        badge.style.display = 'none';
+      if(badge && text){
+        if(importDateTime){
+          const now = new Date();
+          const same = now.toDateString() === importDateTime.toDateString();
+          const timeStr = importDateTime.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+          const dateStr = same ? `hoje às ${timeStr}` : `${importDateTime.toLocaleDateString('pt-BR')} às ${timeStr}`;
+          text.textContent = `Última importação: ${dateStr}`;
+          badge.style.display = '';
+        } else {
+          badge.style.display = 'none';
+        }
       }
+      _refreshImportPill();
     }
 
     /* #5 — URL sync (squad no hash) */
@@ -9060,9 +9026,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     if(_delModal) _delModal.addEventListener('click', e=>{ if(e.target===e.currentTarget) hideDeleteModal(); });
 
     // Garante que a data da importação aparece ao carregar a página
-    if(importDateTime && $('baseInfo')){
-      $('baseInfo').textContent = `${importDateTime.toLocaleDateString('pt-BR')} • ${importDateTime.toLocaleTimeString('pt-BR')}`;
-    }
+    _refreshImportPill();
     // Pre-warm do GAS para reduzir o cold-start antes de gasLoadAndApplyVpAll()
     if(_VP_GAS_URL){ try{ _vpGasJsonp(_VP_GAS_URL+'?action=health&t='+Date.now(), function(){}); }catch(e){} }
     // Sincroniza com o servidor ao abrir e a cada 2 min — dados importados por
