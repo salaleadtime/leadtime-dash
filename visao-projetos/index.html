@@ -5333,8 +5333,7 @@
     /* ─── URL sync pill ─── */
     .url-sync-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-soft);border:1px solid #B7EACA;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;color:var(--green)}
 
-    /* ─── Bug / Melhoria KPI row ─── */
-    .kpi-type-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+    /* ─── KPI accent por tipo (usados em outros contextos) ─── */
     .kpi.bug:before{background:var(--red)}
     .kpi.bug strong{color:var(--red-dark)}
     .kpi.melhoria:before{background:var(--blue)}
@@ -5458,76 +5457,42 @@
     </section>
 
     <section id="gerencial" class="view active">
-      <!-- Linha 1: KPIs gerais (6 colunas) -->
-      <div class="kpi-grid">
+      <!-- KPIs estratégicos (4 colunas) -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
         <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad())">
           <span>Total de histórias</span>
           <strong id="kpiTotal">0</strong>
-          <small>Quantidade de histórias na squad selecionada.</small>
+          <small>Escopo total da squad no filtro selecionado.</small>
         </article>
         <article class="kpi" onclick="openList('Histórias em Product Backlog', filteredBySquad().filter(r=>r.product_backlog))">
           <span>Product Backlog</span>
           <strong id="kpiPB">0</strong>
-          <small>Histórias ainda em backlog de produto.</small>
+          <small>Itens ainda não iniciados — pipeline de entrada.</small>
         </article>
-        <article class="kpi" onclick="openList('Histórias refinadas no Product Backlog', filteredBySquad().filter(r=>r.refinada))">
-          <span>Refinadas</span>
-          <strong id="kpiRefinada">0</strong>
-          <small>Conta itens da squad com status Product Backlog e rótulo Refinada.</small>
+        <article class="kpi" onclick="openList('Alertas: bloqueios e dependências', filteredBySquad().filter(r=>r.bloqueio||r.dependencia))">
+          <span>Alertas</span>
+          <strong id="kpiAlertas">0</strong>
+          <small id="kpiAlertasDetail">Bloqueios e dependências que requerem ação.</small>
         </article>
-        <article class="kpi" onclick="openList('Bloqueios identificados', filteredBySquad().filter(r=>r.bloqueio))">
-          <span>Bloqueios</span>
-          <strong id="kpiBloq">0</strong>
-          <small>Possíveis bloqueios por status, resumo ou rótulos.</small>
-        </article>
-        <article class="kpi" onclick="openList('Dependências identificadas', filteredBySquad().filter(r=>r.dependencia))">
-          <span>Dependências</span>
-          <strong id="kpiDep">0</strong>
-          <small>Dependências externas, áreas envolvidas ou temas técnicos.</small>
-        </article>
-        <article class="kpi" onclick="openList('Histórias em homologação', filteredBySquad().filter(isHomologation))">
-          <span>Homologação</span>
-          <strong id="kpiHomolog">0</strong>
-          <small>Histórias com status de homologação.</small>
+        <article class="kpi" onclick="openList('Rota de produção e homologação', filteredBySquad().filter(r=>/produção|producao|deploy|homolog|teste/i.test(r.situacao||'')))">
+          <span>Próximas entregas</span>
+          <strong id="kpiEntregas">0</strong>
+          <small id="kpiEntregasDetail">Itens em homologação ou rota de produção.</small>
         </article>
       </div>
 
-      <!-- Linha 2: KPIs por tipo — Bugs, Melhorias, Histórias, Em Correção -->
-      <div class="kpi-type-row">
-        <article class="kpi bug" onclick="openList('Bugs da squad', combinedBySquad().filter(isBug))">
-          <span>🐛 Bugs</span>
-          <strong id="kpiBugs">0</strong>
-          <small>Itens do tipo Bug registrados na squad.</small>
-        </article>
-        <article class="kpi melhoria" onclick="openList('Melhorias da squad', combinedBySquad().filter(isMelhoria))">
-          <span>⚡ Melhorias</span>
-          <strong id="kpiMelhorias">0</strong>
-          <small>Itens do tipo Melhoria registrados na squad.</small>
-        </article>
-        <article class="kpi historia" onclick="openList('Histórias da squad', combinedBySquad().filter(isHistoria))">
-          <span>📖 Histórias</span>
-          <strong id="kpiHistorias">0</strong>
-          <small>Itens do tipo História (sem bugs/melhorias).</small>
-        </article>
-        <article class="kpi" onclick="openList('Bugs em correção', combinedBySquad().filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')))">
-          <span>🔧 Em Correção</span>
-          <strong id="kpiBugsCorrecao">0</strong>
-          <small>Bugs com status de correção ativa.</small>
-        </article>
-      </div>
-
-      <!-- Gráficos com Chart.js -->
+      <!-- Gráficos estratégicos (2 painéis) -->
       <section class="section">
         <div class="section-head">
           <div>
-            <h2>Gráficos estratégicos</h2>
-            <p class="sub">Gráficos interativos com Chart.js — passe o mouse para ver detalhes, clique nas barras para filtrar histórias.</p>
+            <h2>Composição do backlog</h2>
+            <p class="sub">Distribuição por status e tipo — clique nas barras para ver as histórias correspondentes.</p>
           </div>
           <span class="badge red" id="chartBadge">0 itens</span>
         </div>
-        <div class="charts-grid">
+        <div class="charts-grid" style="grid-template-columns:repeat(2,1fr)">
           <div class="chart-card">
-            <div class="chart-title">Situação <small>status</small></div>
+            <div class="chart-title">Situação <small>status atual</small></div>
             <div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div>
             <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
           </div>
@@ -5536,33 +5501,7 @@
             <div class="chart-canvas-wrap"><canvas id="chartBacklog"></canvas></div>
             <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para filtrar por tipo</p>
           </div>
-          <div class="chart-card">
-            <div class="chart-title">Risco <small>entrega</small></div>
-            <div class="chart-canvas-wrap"><canvas id="chartRisk"></canvas></div>
-            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver itens em risco</p>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Bloqueios e Dependências <small>atenção</small></div>
-            <div class="chart-canvas-wrap"><canvas id="chartBlocksDeps"></canvas></div>
-            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver itens bloqueados</p>
-          </div>
         </div>
-      </section>
-
-      <!-- Seção de Bugs e Melhorias -->
-      <section class="section" id="bmSection">
-        <div class="bm-section-head">
-          <div>
-            <h2 style="font-size:17px;color:var(--red-dark)">Bugs e Melhorias</h2>
-            <p class="sub" style="margin-top:4px">Visão detalhada de bugs e melhorias da sprint. Clique em qualquer item para abrir no Jira.</p>
-          </div>
-          <div class="bm-type-tabs">
-            <button class="bm-tab all-tab active" id="bmTabAll" onclick="switchBmTab('all')">Todos <span class="cnt" id="bmCntAll">0</span></button>
-            <button class="bm-tab bug-tab" id="bmTabBug" onclick="switchBmTab('bug')">🐛 Bugs <span class="cnt" id="bmCntBug">0</span></button>
-            <button class="bm-tab melhoria-tab" id="bmTabMelhoria" onclick="switchBmTab('melhoria')">⚡ Melhorias <span class="cnt" id="bmCntMelhoria">0</span></button>
-          </div>
-        </div>
-        <div class="bug-melhoria-list" id="bmList"></div>
       </section>
 
       <div class="management-layout">
@@ -6789,7 +6728,7 @@
       // Empty state quando não há dados em nenhuma das bases
       const gerencial = $('gerencial');
       if(rows.length === 0 && sprintRows.length === 0){
-        const sections = gerencial?.querySelectorAll('.kpi-grid,.kpi-type-row,.section,#bmSection,.management-layout');
+        const sections = gerencial?.querySelectorAll('.kpi-grid,.section,.management-layout');
         if(sections) sections.forEach(s => s.style.display='none');
         if(!$('managementEmptyState')){
           const es = document.createElement('div');
@@ -6811,20 +6750,21 @@
       }
 
       // Restore sections if previously hidden
-      const hiddenSections = gerencial?.querySelectorAll('.kpi-grid,.kpi-type-row,.section,#bmSection,.management-layout');
+      const hiddenSections = gerencial?.querySelectorAll('.kpi-grid,.section,.management-layout');
       if(hiddenSections) hiddenSections.forEach(s => s.style.display='');
       const esEl = $('managementEmptyState');
       if(esEl) esEl.remove();
 
       const total = data.length;
       const pb = data.filter(r=>r.product_backlog).length;
-      const refinada = data.filter(r=>r.refinada).length;
       const bloq = data.filter(r=>r.bloqueio).length;
       const dep = data.filter(r=>r.dependencia).length;
+      const alertas = bloq + dep;
       const homolog = data.filter(isHomologation).length;
+      const prodItems = data.filter(r=>/produção|producao|deploy/i.test(r.situacao||'')).length;
+      const entregas = homolog + prodItems;
 
       // Dataset combinado: rows + sprintRows (deduplicado por chave)
-      // Necessário porque a Sprint_ativa contém Bugs e Melhorias que não estão no Acomp. Geral
       const sprintDataForSquad = effectiveSprintRows().filter(r =>
         sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)
       );
@@ -6832,25 +6772,23 @@
       const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
       const combined = applyDateFilter([...data, ...extraFromSprint]);
 
-      // Type KPIs — usam o dataset combinado
       const bugs = combined.filter(isBug).length;
       const melhorias = combined.filter(isMelhoria).length;
       const historias = combined.filter(r=>isHistoria(r)).length;
-      const bugsCorrecao = combined.filter(r=>isBug(r) && /correç|correc|corrigi|fix/i.test(r.situacao||'')).length;
 
       $('kpiTotal').textContent = total;
       $('kpiPB').textContent = pb;
-      $('kpiRefinada').textContent = refinada;
-      $('kpiBloq').textContent = bloq;
-      $('kpiDep').textContent = dep;
-      $('kpiHomolog').textContent = homolog;
-      $('kpiBugs').textContent = bugs;
-      $('kpiMelhorias').textContent = melhorias;
-      $('kpiHistorias').textContent = historias;
-      $('kpiBugsCorrecao').textContent = bugsCorrecao;
+      $('kpiAlertas').textContent = alertas;
+      if($('kpiAlertasDetail')) $('kpiAlertasDetail').textContent = alertas
+        ? `${bloq} bloqueio(s) · ${dep} dependência(s) identificada(s).`
+        : 'Nenhum bloqueio ou dependência identificado.';
+      $('kpiEntregas').textContent = entregas;
+      if($('kpiEntregasDetail')) $('kpiEntregasDetail').textContent = entregas
+        ? `${homolog} em homologação · ${prodItems} em rota de produção.`
+        : 'Nenhum item em homologação ou produção.';
       $('chartBadge').textContent = `${combined.length} itens`;
 
-      // Chart.js charts — usam o dataset combinado
+      // 2 gráficos estratégicos
       renderChartJs('chartStatus',
         countBy(combined, r=>r.situacao).slice(0,6),
         combined,
@@ -6861,19 +6799,6 @@
         combined,
         (r, label)=> label==='Bugs' ? isBug(r) : label==='Melhorias' ? isMelhoria(r) : isHistoria(r)
       );
-      renderChartJs('chartRisk',
-        countBy(combined, r=>r.risco).slice(0,4),
-        combined,
-        (r, label)=>(normalize(r.risco)||'Não informado')===label
-      );
-      renderChartJs('chartBlocksDeps',
-        [['Bloqueios', bloq], ['Dependências', dep], ['Sem alerta', combined.filter(r=>!r.bloqueio&&!r.dependencia).length]],
-        combined,
-        (r, label)=> label==='Bloqueios' ? r.bloqueio : label==='Dependências' ? r.dependencia : (!r.bloqueio&&!r.dependencia)
-      );
-
-      // Seção Bugs e Melhorias usa dataset combinado
-      renderBmList(combined);
 
       // Update last-updated badge
       updateLastUpdatedBadge();
@@ -7223,17 +7148,6 @@
         decisions.push({priority:'OK', level:'low', title:'Sem ação crítica identificada', detail:'Não há bloqueio, dependência crítica ou SLA vencido para o filtro atual.', data:data});
       }
 
-      const noteKey = getExecutiveNoteKey();
-      const quickNote = executiveQuickNotes[noteKey] || '';
-      const tags = [
-        `<span class="exec-tag"><b>${data.length}</b> histórias</span>`,
-        `<span class="exec-tag"><b>${productBacklog.length}</b> Product Backlog</span>`,
-        `<span class="exec-tag"><b>${refined.length}</b> refinadas</span>`,
-        `<span class="exec-tag"><b>${homologationItems.length}</b> homologação</span>`,
-        `<span class="exec-tag"><b>${prod.length}</b> rota produção</span>`,
-        `<span class="exec-tag"><b>${changeDates.length ? changeDates.slice(0,2).join(', ') : 'Sem data'}</b> Change</span>`
-      ].join('');
-
       window.execResponsibleData = responsibleData;
       window.execHomologationData = homologationItems;
       const summaryHtml = `<div class="exec-summary">
@@ -7266,7 +7180,6 @@
             <span>${escapeHtml(changeDates.length ? `Change: ${changeDates.slice(0,2).join(', ')}` : 'Change/implantação não informada.')}</span>
           </div>
         </div>
-        <div class="exec-tags">${tags}</div>
         ${renderRecoveryImpactMatrix(data, selectedSquad)}
       </div>`;
 
