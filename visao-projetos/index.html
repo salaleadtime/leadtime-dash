@@ -6989,8 +6989,21 @@
       const groups = [...byEpic.entries()].map(([epic, items]) => {
         const lead = getEpicLeadInfo(epic, allRows);
         window[`epicLt_${epic.replace(/[^a-z0-9]/gi,'_')}`] = items;
-        return {epic, items, lead};
-      }).sort((a, b) => (b.lead.days || -1) - (a.lead.days || -1));
+
+        let estimatedDays = null;
+        let isEstimated = false;
+        if(lead.days === null){
+          const dates = items.map(r => parseFlexibleDate(r.criado)).filter(Boolean);
+          if(dates.length){
+            const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
+            estimatedDays = daysBetweenLocalDates(earliest, null);
+            isEstimated = true;
+          }
+        }
+
+        const days = lead.days !== null ? lead.days : estimatedDays;
+        return {epic, items, lead, days, isEstimated};
+      }).sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
 
       if(!groups.length){
         return `<div class="epic-lt-list">
@@ -6999,19 +7012,22 @@
         </div>`;
       }
 
-      const ltBadge = (days) => {
+      const ltBadge = (days, isEstimated) => {
         if(days === null) return `<span class="badge" style="background:#F3F5F8;color:var(--muted)">sem LT</span>`;
-        if(days >= RECOVERY_GOAL.metaDays) return `<span class="badge red">${days}d</span>`;
-        if(days >= 40) return `<span class="badge amber">${days}d</span>`;
-        return `<span class="badge green">${days}d</span>`;
+        const label = isEstimated ? `~${days}d` : `${days}d`;
+        const style = isEstimated ? `background:#F3F5F8;color:var(--muted);border:1px solid #DDE6F1` : '';
+        if(!isEstimated && days >= RECOVERY_GOAL.metaDays) return `<span class="badge red">${label}</span>`;
+        if(!isEstimated && days >= 40) return `<span class="badge amber">${label}</span>`;
+        if(!isEstimated) return `<span class="badge green">${label}</span>`;
+        return `<span class="badge" style="${style}" title="Estimado pela data de criação das histórias">${label}</span>`;
       };
 
-      const rows = groups.slice(0, 8).map(g => {
+      const rows = groups.slice(0, 10).map(g => {
         const safeKey = g.epic.replace(/[^a-z0-9]/gi,'_');
         return `<div class="epic-lt-row" onclick="openList('${escapeJs(g.epic)}', window.epicLt_${safeKey} || [])">
           <span class="epic-lt-key">${escapeHtml(g.epic)}</span>
           <span class="epic-lt-cards">${g.items.length} card(s)</span>
-          ${ltBadge(g.lead.days)}
+          ${ltBadge(g.days, g.isEstimated)}
         </div>`;
       }).join('');
 
@@ -7021,7 +7037,8 @@
           <span class="badge red">Meta ${RECOVERY_GOAL.metaDays}d</span>
         </div>
         ${rows}
-        ${groups.length > 8 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">+${groups.length - 8} épico(s) não exibidos</div>` : ''}
+        ${groups.length > 10 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">+${groups.length - 10} épico(s) não exibidos</div>` : ''}
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">~ estimado pela criação das histórias · sem ~ = base oficial</div>
       </div>`;
     }
 
