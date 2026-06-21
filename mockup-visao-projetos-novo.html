@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mockup — Visão Projetos (versão enxuta)</title>
+  <style>
+    :root{
+      --red:#CC092F;--red-dark:#98001F;--red-soft:#FDE9EE;
+      --blue:#174A7C;--blue-soft:#EAF2FB;
+      --green:#1F9D55;--green-soft:#EAF8EF;
+      --amber:#C77700;--amber-soft:#FFF4DB;
+      --bg:#F3F5F8;--card:#FFFFFF;--text:#202333;
+      --muted:#687083;--line:#E3E7EF;
+      --shadow:0 12px 28px rgba(24,31,56,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+
+    /* ── TOPBAR ── */
+    .topbar{
+      background:linear-gradient(135deg,var(--red),var(--red-dark));
+      color:#fff;padding:22px 28px 40px;
+    }
+    .topbar-inner{max-width:1400px;margin:0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+    .topbar h1{font-size:22px;font-weight:800}
+    .topbar p{font-size:13px;opacity:.85;margin-top:6px}
+    .tabs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+    .tab{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);border-radius:999px;padding:9px 16px;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+    .tab.active{background:#fff;color:var(--red-dark)}
+
+    /* ── PAGE ── */
+    .page{max-width:1400px;margin:-24px auto 48px;padding:0 28px}
+
+    /* ── FILTRO (pill mockup) ── */
+    .filter-bar{
+      background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow);padding:14px 18px;display:flex;align-items:center;
+      gap:12px;margin-bottom:16px;flex-wrap:wrap;
+    }
+    .filter-bar label{font-size:11px;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+    .filter-pill{
+      background:#F8F9FC;border:1px solid var(--line);border-radius:999px;
+      padding:8px 14px;font-size:13px;font-weight:700;color:var(--text);
+      display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+    }
+    .filter-pill svg{width:12px;height:12px;color:var(--muted)}
+    .filter-sep{width:1px;height:20px;background:var(--line)}
+    .filter-badge{background:var(--red-soft);color:var(--red-dark);font-size:11px;font-weight:900;padding:5px 10px;border-radius:999px}
+
+    /* ── ANOTAÇÃO DO CONTEXTO ── */
+    .before-after{
+      display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;
+    }
+    .annotation{
+      border:2px dashed #CBD5E0;border-radius:14px;padding:14px 16px;
+      background:#FAFBFD;
+    }
+    .annotation.old{border-color:#FCA5A5;background:#FFF5F5}
+    .annotation.new{border-color:#86EFAC;background:#F0FDF4}
+    .annotation b{display:block;font-size:12px;font-weight:900;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+    .annotation.old b{color:#B91C1C}
+    .annotation.new b{color:#15803D}
+    .annotation ul{padding-left:16px;font-size:12px;color:#475467;line-height:1.7}
+
+    /* ── KPI GRID ── */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+    .kpi{
+      background:#fff;border:1px solid var(--line);border-radius:16px;
+      box-shadow:var(--shadow);padding:18px 16px 16px;min-height:110px;
+      position:relative;overflow:hidden;cursor:pointer;
+      transition:.15s ease;
+    }
+    .kpi:hover{transform:translateY(-2px)}
+    .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--red)}
+    .kpi.green::before{background:var(--green)}
+    .kpi.amber::before{background:var(--amber)}
+    .kpi.blue::before{background:var(--blue)}
+    .kpi span{display:block;font-size:11px;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+    .kpi strong{display:block;font-size:30px;color:var(--red-dark);line-height:1;margin-bottom:8px;font-weight:900}
+    .kpi.green strong{color:var(--green)}
+    .kpi.amber strong{color:var(--amber)}
+    .kpi.blue strong{color:var(--blue)}
+    .kpi small{display:block;color:var(--muted);font-size:12px;line-height:1.4}
+    .kpi-ghost{opacity:.35;pointer-events:none;position:relative}
+    .kpi-ghost::after{
+      content:"REMOVIDO";position:absolute;inset:0;display:flex;align-items:center;
+      justify-content:center;font-size:10px;font-weight:900;letter-spacing:.1em;
+      color:#B91C1C;background:rgba(254,226,226,.7);border-radius:16px;
+    }
+
+    /* ── SECTION ── */
+    .section{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+    .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+    .section h2{font-size:17px;color:var(--red-dark);font-weight:800}
+    .section p.sub{margin-top:5px;color:var(--muted);font-size:13px;line-height:1.4}
+    .badge{border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;white-space:nowrap}
+    .badge.red{background:var(--red-soft);color:var(--red-dark)}
+    .badge.blue{background:var(--blue-soft);color:var(--blue)}
+    .badge.green{background:var(--green-soft);color:var(--green)}
+    .badge.amber{background:var(--amber-soft);color:var(--amber)}
+
+    /* ── CHARTS ── */
+    .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .chart-card{border:1px solid var(--line);background:#FAFBFD;border-radius:16px;padding:16px;min-height:200px}
+    .chart-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+    .chart-title small{color:var(--muted);font-size:11px;font-weight:700}
+
+    /* barras simuladas */
+    .bar-row{display:grid;grid-template-columns:130px 1fr 32px;gap:10px;align-items:center;margin-bottom:12px}
+    .bar-label{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .bar-track{height:9px;background:#ECEFF5;border-radius:999px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:999px;background:var(--red)}
+    .bar-fill.blue{background:var(--blue)}
+    .bar-fill.green{background:var(--green)}
+    .bar-fill.amber{background:var(--amber)}
+    .bar-num{text-align:right;font-size:12px;font-weight:900;color:var(--muted)}
+
+    /* ── MANAGEMENT LAYOUT ── */
+    .management-layout{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+
+    /* ── DELIVERY CARDS ── */
+    .delivery-portfolio{display:grid;gap:12px}
+    .delivery-card{
+      border:1px solid var(--line);border-radius:14px;background:#FAFBFD;padding:14px 16px;
+      border-left:4px solid var(--blue);cursor:pointer;transition:.15s ease;
+    }
+    .delivery-card:hover{border-color:rgba(23,74,124,.4);background:#fff}
+    .delivery-card h3{font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px}
+    .delivery-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+    .delivery-health{margin-top:10px}
+    .delivery-health-label{font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:4px}
+    .delivery-health-track{height:6px;background:#ECEFF5;border-radius:999px;overflow:hidden}
+    .delivery-health-fill{height:100%;background:var(--blue);border-radius:999px}
+    .delivery-p{font-size:12px;color:var(--muted);margin-bottom:3px}
+
+    /* ── EXEC SUMMARY ── */
+    .exec-summary{border:1px solid #DDE6F1;border-radius:18px;background:#fff;padding:16px;position:relative;overflow:hidden;box-shadow:0 8px 22px rgba(16,24,40,.045)}
+    .exec-summary::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#CC092F,#F04438)}
+    .exec-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-left:6px}
+    .exec-top h3{font-size:15px;font-weight:850;color:#8A001C}
+    .exec-top p{margin-top:5px;font-size:12px;color:#475467;line-height:1.45;max-width:480px}
+    .exec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+    .exec-item{border:1px solid #DDE6F1;border-radius:14px;background:#fff;padding:12px 14px;min-height:80px;position:relative;overflow:hidden}
+    .exec-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--exec-accent,#2563EB)}
+    .exec-item.sq{--exec-accent:#2563EB;background:linear-gradient(180deg,#fff,#F8FBFF)}
+    .exec-item.hm{--exec-accent:#16A34A;background:linear-gradient(180deg,#fff,#F7FEFA)}
+    .exec-item.cr{--exec-accent:#CC092F;background:linear-gradient(180deg,#fff,#FFF8FA)}
+    .exec-item.pr{--exec-accent:#D97706;background:linear-gradient(180deg,#fff,#FFFCF5)}
+    .exec-item small{display:block;font-size:10px;color:#667085;font-weight:900;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+    .exec-item strong{display:block;font-size:15px;font-weight:850;color:#101828;margin-bottom:4px}
+    .exec-item span{display:block;font-size:11px;color:#667085;line-height:1.35}
+
+    /* quadrante de risco simplificado */
+    .risk-box{border:1px solid var(--line);border-radius:14px;background:#FAFBFD;padding:14px;margin-top:14px}
+    .risk-box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .risk-box-head b{font-size:13px;font-weight:800;color:var(--text)}
+    .risk-quadrant{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .risk-cell{border-radius:12px;padding:12px;cursor:pointer}
+    .risk-cell.r{background:var(--red-soft);border:1px solid #F3B9C5}
+    .risk-cell.a{background:var(--amber-soft);border:1px solid #FDDCA0}
+    .risk-cell.b{background:var(--blue-soft);border:1px solid #B8D3F0}
+    .risk-cell.g{background:var(--green-soft);border:1px solid #B7EACA}
+    .risk-cell h4{font-size:12px;font-weight:900;margin-bottom:3px}
+    .risk-cell h4.r{color:var(--red-dark)}
+    .risk-cell h4.a{color:var(--amber)}
+    .risk-cell h4.b{color:var(--blue)}
+    .risk-cell h4.g{color:var(--green)}
+    .risk-cell p{font-size:11px;color:var(--muted);line-height:1.35;margin-top:4px}
+    .risk-num{font-size:22px;font-weight:900;float:right}
+    .risk-num.r{color:var(--red-dark)}
+    .risk-num.a{color:var(--amber)}
+    .risk-num.b{color:var(--blue)}
+    .risk-num.g{color:var(--green)}
+
+    /* ── NOTA OPERACIONAL ── */
+    .ops-note{border:1px solid var(--line);border-radius:14px;background:#FAFBFD;padding:14px;margin-top:12px}
+    .ops-note-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .ops-note-head b{font-size:13px;font-weight:800;color:var(--text)}
+    .note-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+    .note-item:last-child{border-bottom:0;padding-bottom:0}
+    .note-label{flex:0 0 36px;text-align:center;font-size:10px;font-weight:900;background:var(--green-soft);color:var(--green);border-radius:999px;padding:4px 0;height:fit-content;margin-top:1px}
+    .note-body strong{display:block;font-size:12px;font-weight:800;margin-bottom:2px}
+    .note-body span{font-size:11px;color:var(--muted);line-height:1.4}
+
+    /* ── OBSERVAÇÃO DE CONTEXTO ── */
+    .context-banner{
+      background:linear-gradient(135deg,#EEF2FF,#E0E7FF);
+      border:1px solid #C7D2FE;border-radius:14px;padding:14px 18px;
+      margin-bottom:20px;display:flex;gap:12px;align-items:flex-start;
+    }
+    .context-banner .icon{font-size:22px;flex:0 0 auto}
+    .context-banner b{display:block;font-size:13px;font-weight:900;color:#3730A3;margin-bottom:4px}
+    .context-banner p{font-size:12px;color:#4338CA;line-height:1.5}
+
+    /* ── COMPARAÇÃO LADO A LADO ── */
+    .compare-title{font-size:16px;font-weight:900;color:var(--text);margin:28px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+    .old-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:10px;opacity:.5}
+    .old-type-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;opacity:.5}
+    .kpi-mini{background:#fff;border:1px solid #FCA5A5;border-radius:12px;padding:10px;position:relative}
+    .kpi-mini::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#EF4444;border-radius:3px 0 0 3px}
+    .kpi-mini span{font-size:10px;color:#9CA3AF;font-weight:700;display:block;margin-bottom:4px}
+    .kpi-mini strong{font-size:18px;font-weight:900;color:#B91C1C}
+
+    .removed-label{
+      text-align:center;font-size:10px;font-weight:900;color:#B91C1C;
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;
+    }
+    .added-label{
+      text-align:center;font-size:10px;font-weight:900;color:#15803D;
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;
+    }
+
+    /* chart ghost */
+    .chart-ghost{border:1px dashed #FCA5A5;background:#FFF5F5;border-radius:16px;padding:16px;min-height:160px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;opacity:.6}
+    .chart-ghost span{font-size:11px;font-weight:900;color:#B91C1C;text-transform:uppercase;letter-spacing:.05em}
+    .chart-ghost p{font-size:11px;color:#9CA3AF;text-align:center}
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <h1>Painel Estratégico de Entregas</h1>
+      <p>Visão de projetos da squad · Contact</p>
+      <div class="tabs">
+        <div class="tab active">Visão Projetos</div>
+        <div class="tab">Operacional</div>
+        <div class="tab">Sprint Atual</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div style="background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:9px 14px;font-size:12px;font-weight:700;color:#fff">📤 Importar Jira</div>
+      <div style="background:#fff;color:var(--red-dark);border-radius:999px;padding:9px 14px;font-size:12px;font-weight:700">🔗 Compartilhar</div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- BANNER DE CONTEXTO -->
+  <div class="context-banner">
+    <div class="icon">🎯</div>
+    <div>
+      <b>Este é um mockup da versão enxuta proposta</b>
+      <p>Mostra a estrutura nova com dados fictícios. Abaixo você vê primeiro a comparação com o que foi removido, depois o layout novo completo como ficará no ar.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SEÇÃO 1: O QUE FOI REMOVIDO -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="compare-title">❌ O que foi REMOVIDO — antes eram exibidos 10 KPI cards + 4 gráficos + lista de Bugs/Melhorias</div>
+
+  <div class="removed-label">Linha de KPIs que SUMIU (6 cards → fundidos em 4 estratégicos)</div>
+  <div class="old-grid" style="margin-bottom:6px">
+    <div class="kpi-mini"><span>Total histórias</span><strong>42</strong></div>
+    <div class="kpi-mini"><span>Product Backlog</span><strong>18</strong></div>
+    <div class="kpi-mini" style="border-color:#D97706"><span>Refinadas <small style="color:#9CA3AF;font-size:9px">↳ fundida com PB</small></span><strong style="color:#D97706">11</strong></div>
+    <div class="kpi-mini" style="border-color:#D97706"><span>Bloqueios <small style="color:#9CA3AF;font-size:9px">↳ virou "Alertas"</small></span><strong style="color:#D97706">3</strong></div>
+    <div class="kpi-mini" style="border-color:#D97706"><span>Dependências <small style="color:#9CA3AF;font-size:9px">↳ virou "Alertas"</small></span><strong style="color:#D97706">2</strong></div>
+    <div class="kpi-mini" style="border-color:#D97706"><span>Homologação <small style="color:#9CA3AF;font-size:9px">↳ em "Entregas"</small></span><strong style="color:#D97706">4</strong></div>
+  </div>
+
+  <div class="removed-label" style="margin-top:14px">Linha de tipo de item que SUMIU (duplicava o gráfico abaixo)</div>
+  <div class="old-type-row">
+    <div class="kpi-mini"><span>🐛 Bugs</span><strong>7</strong></div>
+    <div class="kpi-mini"><span>⚡ Melhorias</span><strong>5</strong></div>
+    <div class="kpi-mini"><span>📖 Histórias</span><strong>30</strong></div>
+    <div class="kpi-mini"><span>🔧 Em Correção</span><strong>2</strong></div>
+  </div>
+
+  <div class="removed-label" style="margin-top:14px">Gráficos que SUMIRAM (2 de 4 removidos por duplicata)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+    <div class="chart-ghost">
+      <span>Risco — removido</span>
+      <p>Coberto pelo Quadrante de Risco<br>na Leitura Executiva (mais rico)</p>
+    </div>
+    <div class="chart-ghost">
+      <span>Bloqueios e Dependências — removido</span>
+      <p>Coberto pelo novo KPI "Alertas"<br>e pelo card Ponto Crítico abaixo</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SEÇÃO 2: LAYOUT NOVO -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="compare-title">✅ Layout NOVO — visão estratégica limpa</div>
+
+  <!-- FILTRO -->
+  <div class="filter-bar">
+    <label>Squad</label>
+    <div class="filter-pill">
+      Contact
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+    </div>
+    <div class="filter-sep"></div>
+    <label>Período</label>
+    <div class="filter-pill">Todos os dados</div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">Atualizado: 21/06/2026 às 09:41</span>
+      <span class="filter-badge">ati.xlsx</span>
+    </div>
+  </div>
+
+  <!-- ── KPIs ESTRATÉGICOS (4 CARDS) ── -->
+  <div class="added-label">4 KPI cards estratégicos — cada um responde uma pergunta de gestão</div>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <span>Total de histórias</span>
+      <strong>42</strong>
+      <small>Escopo total da squad no filtro selecionado.</small>
+    </div>
+    <div class="kpi blue">
+      <span>Product Backlog</span>
+      <strong>18</strong>
+      <small>Itens ainda não iniciados — pipeline de entrada.</small>
+    </div>
+    <div class="kpi amber">
+      <span>Alertas</span>
+      <strong>5</strong>
+      <small>3 bloqueio(s) · 2 dependência(s) identificada(s).</small>
+    </div>
+    <div class="kpi green">
+      <span>Próximas entregas</span>
+      <strong>7</strong>
+      <small>4 em homologação · 3 em rota de produção.</small>
+    </div>
+  </div>
+
+  <!-- ── GRÁFICOS (2 PAINÉIS) ── -->
+  <div class="added-label" style="margin-top:4px">2 gráficos — situação do fluxo e composição por tipo</div>
+  <div class="section">
+    <div class="section-head">
+      <div>
+        <h2>Composição do backlog</h2>
+        <p class="sub">Distribuição por status e tipo — clique nas barras para ver as histórias correspondentes.</p>
+      </div>
+      <span class="badge red">42 itens</span>
+    </div>
+    <div class="charts-grid">
+      <!-- Gráfico 1: Situação -->
+      <div class="chart-card">
+        <div class="chart-title">Situação <small>status atual</small></div>
+        <div class="bar-row"><div class="bar-label">Product Backlog</div><div class="bar-track"><div class="bar-fill blue" style="width:100%"></div></div><div class="bar-num">18</div></div>
+        <div class="bar-row"><div class="bar-label">Em desenvolvimento</div><div class="bar-track"><div class="bar-fill" style="width:55%"></div></div><div class="bar-num">10</div></div>
+        <div class="bar-row"><div class="bar-label">Em teste / Homolog.</div><div class="bar-track"><div class="bar-fill green" style="width:44%"></div></div><div class="bar-num">8</div></div>
+        <div class="bar-row"><div class="bar-label">Rota de produção</div><div class="bar-track"><div class="bar-fill amber" style="width:17%"></div></div><div class="bar-num">3</div></div>
+        <div class="bar-row"><div class="bar-label">Bloqueado</div><div class="bar-track"><div class="bar-fill" style="width:11%"></div></div><div class="bar-num">2</div></div>
+        <p style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center">Clique nas barras para ver histórias</p>
+      </div>
+      <!-- Gráfico 2: Tipo -->
+      <div class="chart-card">
+        <div class="chart-title">Tipo de item <small>bugs · melhorias · histórias</small></div>
+        <div class="bar-row" style="grid-template-columns:100px 1fr 32px"><div class="bar-label">🐛 Bugs</div><div class="bar-track"><div class="bar-fill" style="width:23%"></div></div><div class="bar-num">7</div></div>
+        <div class="bar-row" style="grid-template-columns:100px 1fr 32px"><div class="bar-label">⚡ Melhorias</div><div class="bar-track"><div class="bar-fill blue" style="width:17%"></div></div><div class="bar-num">5</div></div>
+        <div class="bar-row" style="grid-template-columns:100px 1fr 32px"><div class="bar-label">📖 Histórias</div><div class="bar-track"><div class="bar-fill green" style="width:100%"></div></div><div class="bar-num">30</div></div>
+        <p style="font-size:11px;color:var(--muted);margin-top:18px;line-height:1.5">
+          <b style="color:var(--text)">Ratio bugs/feature:</b> 29% do backlog é bug/melhoria.<br>
+          Clique em cada barra para filtrar a lista de histórias.
+        </p>
+        <p style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center">Clique para filtrar por tipo</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MANAGEMENT LAYOUT ── -->
+  <div class="management-layout">
+
+    <!-- ENTREGAS FINAIS -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <h2>Entregas finais</h2>
+          <p class="sub">Agrupe as entregas por projeto, status, saúde e data de implantação.</p>
+        </div>
+        <button style="background:#F7F8FB;border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-size:12px;font-weight:800;cursor:pointer;color:var(--text)">+ Cadastrar entrega</button>
+      </div>
+      <div class="delivery-portfolio">
+
+        <div class="delivery-card" style="border-left-color:#CC092F">
+          <h3>OBF — Revisão de crédito automático</h3>
+          <div class="delivery-meta">
+            <span class="badge red">Contact</span>
+            <span class="badge blue">OBF</span>
+            <span class="badge amber">Em atenção</span>
+            <span class="badge blue">12 histórias</span>
+            <span class="badge green">3 homologação</span>
+            <span class="badge red">1 SLA vencido</span>
+          </div>
+          <p class="delivery-p"><b>Conclusão:</b> 28/06/2026</p>
+          <p class="delivery-p"><b>Change:</b> 01/07/2026</p>
+          <div class="delivery-health">
+            <span class="delivery-health-label">Saúde da entrega</span>
+            <div class="delivery-health-track"><div class="delivery-health-fill" style="width:62%;background:#CC092F"></div></div>
+            <span style="font-size:11px;color:var(--muted)">62% pronto</span>
+          </div>
+        </div>
+
+        <div class="delivery-card" style="border-left-color:#1F9D55">
+          <h3>Subsídios — Cálculo retroativo de parcelas</h3>
+          <div class="delivery-meta">
+            <span class="badge red">Contact</span>
+            <span class="badge blue">Subsídios</span>
+            <span class="badge green">Rota de produção</span>
+            <span class="badge blue">8 histórias</span>
+          </div>
+          <p class="delivery-p"><b>Conclusão:</b> 19/06/2026</p>
+          <p class="delivery-p"><b>Change:</b> 25/06/2026</p>
+          <div class="delivery-health">
+            <span class="delivery-health-label">Saúde da entrega</span>
+            <div class="delivery-health-track"><div class="delivery-health-fill" style="width:91%;background:#1F9D55"></div></div>
+            <span style="font-size:11px;color:var(--muted)">91% pronto</span>
+          </div>
+        </div>
+
+        <div class="delivery-card" style="border-left-color:#C77700">
+          <h3>Plataforma — Integração API parceiros</h3>
+          <div class="delivery-meta">
+            <span class="badge red">Contact</span>
+            <span class="badge amber">Em andamento</span>
+            <span class="badge blue">14 histórias</span>
+          </div>
+          <p class="delivery-p"><b>Conclusão:</b> 10/07/2026</p>
+          <p class="delivery-p"><b>Change:</b> A definir</p>
+          <div class="delivery-health">
+            <span class="delivery-health-label">Saúde da entrega</span>
+            <div class="delivery-health-track"><div class="delivery-health-fill" style="width:38%;background:#C77700"></div></div>
+            <span style="font-size:11px;color:var(--muted)">38% pronto</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- LEITURA EXECUTIVA -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <h2>Leitura executiva</h2>
+          <p class="sub">Resumo, ponto crítico, homologação e decisões para gestão.</p>
+        </div>
+      </div>
+
+      <div class="exec-summary">
+        <div class="exec-top">
+          <div>
+            <h3>Resumo executivo da entrega</h3>
+            <p>A squad Contact possui 42 histórias. O maior volume está em Product Backlog (18), com 4 itens em homologação e 3 em rota de produção. Foram identificados 3 bloqueio(s) e 2 dependência(s).</p>
+          </div>
+          <span class="badge amber" style="flex:0 0 auto">Atenção</span>
+        </div>
+
+        <!-- EXEC GRID: 4 cards sem exec-tags redundantes -->
+        <div class="exec-grid">
+          <div class="exec-item sq">
+            <small>Squad</small>
+            <strong>Contact</strong>
+            <span>Visão filtrada no painel.</span>
+          </div>
+          <div class="exec-item hm">
+            <small>Homologação</small>
+            <strong>4 histórias</strong>
+            <span>1 com SLA vencido. Priorizar aceite ou retorno do negócio.</span>
+          </div>
+          <div class="exec-item cr">
+            <small>Ponto crítico</small>
+            <strong>3 bloqueio(s)</strong>
+            <span>Avaliar escalonamento imediato.</span>
+          </div>
+          <div class="exec-item pr">
+            <small>Rota de produção</small>
+            <strong>3 item(ns)</strong>
+            <span>Change: 25/06, 01/07</span>
+          </div>
+        </div>
+
+        <!-- NOTA: sem exec-tags abaixo — eram duplicata dos KPIs acima -->
+        <div style="font-size:11px;color:#9CA3AF;font-style:italic;margin-top:12px;padding:8px 10px;border:1px dashed #E5E7EB;border-radius:8px;text-align:center">
+          ✓ exec-tags removidas aqui — os mesmos números já estão nos 4 KPI cards acima
+        </div>
+
+        <!-- QUADRANTE DE RISCO -->
+        <div class="risk-box">
+          <div class="risk-box-head">
+            <b>Quadrante de risco por Lead Time</b>
+            <span class="badge red">Meta 90d</span>
+          </div>
+          <div class="risk-quadrant">
+            <div class="risk-cell r">
+              <h4 class="r">Alto risco <span class="risk-num r">2</span></h4>
+              <p>LT ≥ 40d ou acima da meta com impacto na sprint.</p>
+            </div>
+            <div class="risk-cell a">
+              <h4 class="a">Risco médio <span class="risk-num a">3</span></h4>
+              <p>LT preventivo com cards na sprint atual.</p>
+            </div>
+            <div class="risk-cell b">
+              <h4 class="b">Operacional <span class="risk-num b">2</span></h4>
+              <p>LT baixo, mas com bloqueio ou dependência.</p>
+            </div>
+            <div class="risk-cell g">
+              <h4 class="g">Controle <span class="risk-num g">5</span></h4>
+              <p>Fluxo sem alerta relevante.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- OBSERVAÇÕES OPERACIONAIS -->
+        <div class="ops-note">
+          <div class="ops-note-head">
+            <b>Observações da aba Operacional</b>
+            <span class="badge blue" style="cursor:pointer">Ler todas</span>
+          </div>
+          <div class="note-item">
+            <div class="note-label">Obs.</div>
+            <div class="note-body">
+              <strong>SLOPC-1234</strong>
+              <span>Aguardando retorno do squad de Risk para definir regra de negócio. Estimativa: 3 dias.</span>
+            </div>
+          </div>
+          <div class="note-item">
+            <div class="note-label">Obs.</div>
+            <div class="note-body">
+              <strong>SLOPC-1198</strong>
+              <span>Homologação aprovada pelo negócio. Agendada Change para 25/06.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /management-layout -->
+
+  <!-- RODAPÉ DE COMPARAÇÃO -->
+  <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:8px">
+    <div style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:16px">Resumo das reduções</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div style="text-align:center;padding:16px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0">
+        <div style="font-size:28px;font-weight:900;color:#15803D">-60%</div>
+        <div style="font-size:12px;color:#166534;font-weight:700">KPI cards<br><span style="font-weight:400">10 → 4</span></div>
+      </div>
+      <div style="text-align:center;padding:16px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0">
+        <div style="font-size:28px;font-weight:900;color:#15803D">-50%</div>
+        <div style="font-size:12px;color:#166534;font-weight:700">Gráficos<br><span style="font-weight:400">4 → 2</span></div>
+      </div>
+      <div style="text-align:center;padding:16px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0">
+        <div style="font-size:28px;font-weight:900;color:#15803D">0</div>
+        <div style="font-size:12px;color:#166534;font-weight:700">Seções duplicadas<br><span style="font-weight:400">Antes: 3</span></div>
+      </div>
+      <div style="text-align:center;padding:16px;background:#F0FDF4;border-radius:12px;border:1px solid #BBF7D0">
+        <div style="font-size:28px;font-weight:900;color:#15803D">100%</div>
+        <div style="font-size:12px;color:#166534;font-weight:700">Info estratégica<br><span style="font-weight:400">Tudo add valor</span></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+</body>
+</html>
