@@ -5506,7 +5506,7 @@
 
     <section id="gerencial" class="view active">
       <!-- KPIs estratégicos (4 colunas) -->
-      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr)">
         <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad())">
           <span>Total de histórias</span>
           <strong id="kpiTotal">0</strong>
@@ -5516,6 +5516,11 @@
           <span>Product Backlog</span>
           <strong id="kpiPB">0</strong>
           <small>Itens ainda não iniciados — pipeline de entrada.</small>
+        </article>
+        <article class="kpi" onclick="openList('Histórias refinadas', filteredBySquad().filter(r=>r.refinada))">
+          <span>Refinadas</span>
+          <strong id="kpiRefinadas">0</strong>
+          <small id="kpiRefinedasDetail">Histórias com refinamento concluído.</small>
         </article>
         <article class="kpi" onclick="openList('Alertas: bloqueios e dependências', filteredBySquad().filter(r=>r.bloqueio||r.dependencia))">
           <span>Alertas</span>
@@ -5534,21 +5539,14 @@
         <div class="section-head">
           <div>
             <h2>Composição do backlog</h2>
-            <p class="sub">Distribuição por status e tipo — clique nas barras para ver as histórias correspondentes.</p>
+            <p class="sub">Distribuição por status — clique nas barras para ver as histórias correspondentes.</p>
           </div>
           <span class="badge red" id="chartBadge">0 itens</span>
         </div>
-        <div class="charts-grid" style="grid-template-columns:repeat(2,1fr)">
-          <div class="chart-card">
-            <div class="chart-title">Situação <small>status atual</small></div>
-            <div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div>
-            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Tipo de item <small>bugs · melhorias · histórias</small></div>
-            <div class="chart-canvas-wrap"><canvas id="chartBacklog"></canvas></div>
-            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para filtrar por tipo</p>
-          </div>
+        <div class="chart-card">
+          <div class="chart-title">Situação <small>status atual</small></div>
+          <div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div>
+          <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
         </div>
       </section>
 
@@ -6818,6 +6816,8 @@
 
       const total = data.length;
       const pb = data.filter(r=>r.product_backlog).length;
+      const refinadas = data.filter(r=>r.refinada).length;
+      const pbRefinadas = data.filter(r=>r.product_backlog && r.refinada).length;
       const bloq = data.filter(r=>r.bloqueio).length;
       const dep = data.filter(r=>r.dependencia).length;
       const alertas = bloq + dep;
@@ -6839,6 +6839,10 @@
 
       $('kpiTotal').textContent = total;
       $('kpiPB').textContent = pb;
+      if($('kpiRefinadas')) $('kpiRefinadas').textContent = refinadas;
+      if($('kpiRefinedasDetail')) $('kpiRefinedasDetail').textContent = refinadas
+        ? `${pbRefinadas} no PB · ${refinadas - pbRefinadas} em outros status.`
+        : 'Nenhuma história refinada identificada.';
       $('kpiAlertas').textContent = alertas;
       if($('kpiAlertasDetail')) $('kpiAlertasDetail').textContent = alertas
         ? `${bloq} bloqueio(s) · ${dep} dependência(s) identificada(s).`
@@ -6849,16 +6853,11 @@
         : 'Nenhum item em homologação ou produção.';
       $('chartBadge').textContent = `${combined.length} itens`;
 
-      // 2 gráficos estratégicos
+      // Gráfico de situação em largura total
       renderChartJs('chartStatus',
         countBy(combined, r=>r.situacao).slice(0,6),
         combined,
         (r, label)=>(normalize(r.situacao)||'Não informado')===label
-      );
-      renderChartJs('chartBacklog',
-        [['Bugs', bugs], ['Melhorias', melhorias], ['Histórias', historias]],
-        combined,
-        (r, label)=> label==='Bugs' ? isBug(r) : label==='Melhorias' ? isMelhoria(r) : isHistoria(r)
       );
 
       // Update last-updated badge
