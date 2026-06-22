@@ -5550,7 +5550,7 @@
             <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
           </div>
           <div class="chart-card">
-            <div class="chart-title">Bugs e Melhorias <small>por tipo</small></div>
+            <div class="chart-title">🐛 Bugs &amp; ✨ Melhorias <small>por tipo</small></div>
             <div class="chart-canvas-wrap"><canvas id="chartBacklog"></canvas></div>
             <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver os itens do tipo</p>
           </div>
@@ -6866,9 +6866,9 @@
         (r, label)=>(normalize(r.situacao)||'Não informado')===label
       );
       renderChartJs('chartBacklog',
-        [['Bugs', bugs], ['Melhorias', melhorias]],
+        [['🐛 Bugs', bugs], ['✨ Melhorias', melhorias]],
         combined,
-        (r, label)=> label==='Bugs' ? isBug(r) : isMelhoria(r)
+        (r, label)=> label.includes('Bugs') ? isBug(r) : isMelhoria(r)
       );
 
       // Update last-updated badge
