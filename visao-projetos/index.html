@@ -5539,37 +5539,22 @@
         <div class="section-head">
           <div>
             <h2>Composição do backlog</h2>
-            <p class="sub">Distribuição por status — clique nas barras para ver as histórias correspondentes.</p>
+            <p class="sub">Distribuição por status e tipo — clique nas barras para ver as histórias correspondentes.</p>
           </div>
           <span class="badge red" id="chartBadge">0 itens</span>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Situação <small>status atual</small></div>
-          <div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div>
-          <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
-        </div>
-      </section>
-
-      <!-- Bugs e Melhorias -->
-      <section class="section">
-        <div class="bm-section-head">
-          <div>
-            <h2>Bugs e Melhorias</h2>
-            <p class="sub">Itens de tipo Bug ou Melhoria no escopo da squad selecionada.</p>
+        <div class="charts-grid" style="grid-template-columns:repeat(2,1fr)">
+          <div class="chart-card">
+            <div class="chart-title">Situação <small>status atual</small></div>
+            <div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div>
+            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique nas barras para ver histórias</p>
           </div>
-          <div class="bm-type-tabs">
-            <button id="bmTabAll" class="bm-tab all-tab active" onclick="switchBmTab('all')">
-              Todos <span class="bm-count"><span class="bm-count-inner" id="bmCntAll">0</span></span>
-            </button>
-            <button id="bmTabBug" class="bm-tab bug-tab" onclick="switchBmTab('bug')">
-              Bugs <span class="bm-count"><span class="bm-count-inner" id="bmCntBug">0</span></span>
-            </button>
-            <button id="bmTabMelhoria" class="bm-tab melhoria-tab" onclick="switchBmTab('melhoria')">
-              Melhorias <span class="bm-count"><span class="bm-count-inner" id="bmCntMelhoria">0</span></span>
-            </button>
+          <div class="chart-card">
+            <div class="chart-title">Bugs e Melhorias <small>por tipo</small></div>
+            <div class="chart-canvas-wrap"><canvas id="chartBacklog"></canvas></div>
+            <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">Clique para ver os itens do tipo</p>
           </div>
         </div>
-        <div id="bmList"></div>
       </section>
 
       <div class="management-layout">
@@ -6875,15 +6860,16 @@
         : 'Nenhum item em homologação ou produção.';
       $('chartBadge').textContent = `${combined.length} itens`;
 
-      // Gráfico de situação em largura total
       renderChartJs('chartStatus',
         countBy(combined, r=>r.situacao).slice(0,6),
         combined,
         (r, label)=>(normalize(r.situacao)||'Não informado')===label
       );
-
-      // Bugs e Melhorias
-      renderBmList(combined.filter(r => isBug(r) || isMelhoria(r)));
+      renderChartJs('chartBacklog',
+        [['Bugs', bugs], ['Melhorias', melhorias]],
+        combined,
+        (r, label)=> label==='Bugs' ? isBug(r) : isMelhoria(r)
+      );
 
       // Update last-updated badge
       updateLastUpdatedBadge();
