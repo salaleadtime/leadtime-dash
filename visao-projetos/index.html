@@ -5720,7 +5720,7 @@
             <h2>Visão da sprint em andamento</h2>
             <p>
               Recorte automático das histórias da sprint ativa. Período considerado:
-              <b>08/06/2026 a 19/06/2026</b>.
+              <b id="sprintPeriodDesc">08/06/2026 a 19/06/2026</b>.
             </p>
             <div class="sprint-summary-line">
               <span class="badge blue" id="sprintSquadBadge">Squad: Contact</span>
@@ -6048,8 +6048,48 @@
       if(!Number.isNaN(d.getTime())) importDateTime = d;
     })();
     let sprintSourceName = 'ati.xlsx';
-    const sprintStartLabel = '08/06/2026';
-    const sprintEndLabel = '19/06/2026';
+    let sprintStartLabel = '08/06/2026';
+    let sprintEndLabel   = '19/06/2026';
+
+    function detectActiveSprint(){
+      try {
+        const cal = JSON.parse(localStorage.getItem('leadtime_sala_calendar_v2') || '[]');
+        if(!Array.isArray(cal) || !cal.length) return null;
+        const today = new Date(); today.setHours(0,0,0,0);
+        // 1ª passagem: sprint cujo intervalo inclui hoje
+        for(const tri of cal){
+          for(const sp of (tri.sprints || [])){
+            if(!sp.start || !sp.end) continue;
+            const s = new Date(sp.start); s.setHours(0,0,0,0);
+            const e = new Date(sp.end);   e.setHours(23,59,59,999);
+            if(today >= s && today <= e) return sp;
+          }
+        }
+        // 2ª passagem: sprint mais recente já iniciada (sprint acabou mas ainda é a "última ativa")
+        let lastPast = null;
+        for(const tri of cal){
+          for(const sp of (tri.sprints || [])){
+            if(!sp.start) continue;
+            const s = new Date(sp.start); s.setHours(0,0,0,0);
+            if(s <= today) lastPast = sp;
+          }
+        }
+        return lastPast;
+      } catch(e){ return null; }
+    }
+
+    function applyActiveSprint(){
+      const sp = detectActiveSprint();
+      if(!sp || !sp.start || !sp.end) return;
+      const fmt = iso => { const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
+      sprintStartLabel = fmt(sp.start);
+      sprintEndLabel   = fmt(sp.end);
+      const shortS = sprintStartLabel.slice(0,5);
+      const shortE = sprintEndLabel.slice(0,5);
+      const spName = sp.name || 'Sprint';
+      if($('sprintPeriodDesc'))  $('sprintPeriodDesc').textContent  = `${sprintStartLabel} a ${sprintEndLabel}`;
+      if($('sprintPeriodBadge')) $('sprintPeriodBadge').textContent = `${spName} ${shortS} → ${shortE}`;
+    }
     let selectedSquadState = 'Contact';
     let sprintFrenteFilter = 'Todas';
     function readStoredJSON(storageKey, fallback){
@@ -7715,6 +7755,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
 
     function renderSprintCurrent(){
+      applyActiveSprint();
       const squad = getSelectedSquad();
       let baseSprintData = effectiveSprintRows();
       if(!sameSquad(squad, 'Todas')) baseSprintData = baseSprintData.filter(r => sameSquad(r.squad, squad));
@@ -8884,6 +8925,8 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
     // Garante que a data da importação aparece ao carregar a página
     _refreshImportPill();
+    // Detecta sprint ativa do calendário e atualiza labels
+    applyActiveSprint();
     // Pre-warm do GAS para reduzir o cold-start antes de gasLoadAndApplyVpAll()
     if(_VP_GAS_URL){ try{ _vpGasJsonp(_VP_GAS_URL+'?action=health&t='+Date.now(), function(){}); }catch(e){} }
     // Sincroniza com o servidor ao abrir e a cada 2 min — dados importados por
