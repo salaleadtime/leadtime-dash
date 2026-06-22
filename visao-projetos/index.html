@@ -5550,6 +5550,28 @@
         </div>
       </section>
 
+      <!-- Bugs e Melhorias -->
+      <section class="section">
+        <div class="bm-section-head">
+          <div>
+            <h2>Bugs e Melhorias</h2>
+            <p class="sub">Itens de tipo Bug ou Melhoria no escopo da squad selecionada.</p>
+          </div>
+          <div class="bm-type-tabs">
+            <button id="bmTabAll" class="bm-tab all-tab active" onclick="switchBmTab('all')">
+              Todos <span class="bm-count"><span class="bm-count-inner" id="bmCntAll">0</span></span>
+            </button>
+            <button id="bmTabBug" class="bm-tab bug-tab" onclick="switchBmTab('bug')">
+              Bugs <span class="bm-count"><span class="bm-count-inner" id="bmCntBug">0</span></span>
+            </button>
+            <button id="bmTabMelhoria" class="bm-tab melhoria-tab" onclick="switchBmTab('melhoria')">
+              Melhorias <span class="bm-count"><span class="bm-count-inner" id="bmCntMelhoria">0</span></span>
+            </button>
+          </div>
+        </div>
+        <div id="bmList"></div>
+      </section>
+
       <div class="management-layout">
         <section class="section">
           <div class="section-head">
@@ -6859,6 +6881,9 @@
         combined,
         (r, label)=>(normalize(r.situacao)||'Não informado')===label
       );
+
+      // Bugs e Melhorias
+      renderBmList(combined.filter(r => isBug(r) || isMelhoria(r)));
 
       // Update last-updated badge
       updateLastUpdatedBadge();
