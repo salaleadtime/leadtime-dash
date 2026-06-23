@@ -940,6 +940,223 @@ tr:nth-child(even):hover td{
 }
 
 </style>
+<style>
+/* ==========================================================
+   UX REVIEW — camada visual executiva
+   Objetivo: melhorar leitura, hierarquia e consistência sem alterar regras,
+   cálculos, importação, filtros ou funções JavaScript existentes.
+   ========================================================== */
+:root{
+  --ux-surface:#FFFFFF;
+  --ux-bg:#F5F7FA;
+  --ux-line:#DDE3EC;
+  --ux-line-soft:#EEF2F6;
+  --ux-text:#101828;
+  --ux-muted:#667085;
+  --ux-red:#CC092F;
+  --ux-red-dark:#8A001C;
+  --ux-red-soft:#FFF1F4;
+}
+body{
+  background:linear-gradient(180deg,#F7F8FB 0%,#EEF2F7 100%)!important;
+  color:var(--ux-text)!important;
+}
+.top{
+  box-shadow:0 12px 30px rgba(98,0,25,.18)!important;
+  border-bottom:0!important;
+}
+.top-name{
+  font-size:17px!important;
+  letter-spacing:-.03em!important;
+}
+.top-sub{
+  opacity:.88!important;
+}
+.top-meta{
+  background:rgba(255,255,255,.14)!important;
+  border-color:rgba(255,255,255,.22)!important;
+}
+.tbtn,.up-btn,.chip,.fsel,.fdate,.fsrch,.pb{
+  border-radius:999px!important;
+}
+.tbtn{
+  min-height:34px!important;
+  box-shadow:none!important;
+}
+.tabs{
+  background:rgba(255,255,255,.96)!important;
+  border-bottom:1px solid #E5EAF1!important;
+  box-shadow:0 8px 18px rgba(16,24,40,.055)!important;
+  gap:6px!important;
+}
+.tabbt{
+  padding:9px 13px!important;
+  border-radius:999px!important;
+  margin:7px 0!important;
+  border:1px solid transparent!important;
+  color:#667085!important;
+}
+.tabbt.on{
+  background:var(--ux-red-soft)!important;
+  border-color:#F4BAC7!important;
+  color:var(--ux-red-dark)!important;
+  box-shadow:inset 0 -2px 0 rgba(204,9,47,.18)!important;
+}
+.tabbt:hover:not(.on){
+  background:#F7F8FB!important;
+  border-color:#E5EAF1!important;
+}
+.metabar{
+  background:#FFFFFF!important;
+  border-bottom:1px solid #E5EAF1!important;
+  color:#667085!important;
+}
+.metabar strong{color:var(--ux-red-dark)!important;}
+.upbar,.fbar,.tc,.panel,.sv-tbl-wrap,.bk-history,.cal-tri,.premium-ep-executive,.pd-hero,.tri-banner,.sc,.kpi{
+  border-color:var(--ux-line)!important;
+  box-shadow:0 10px 24px rgba(16,24,40,.055)!important;
+}
+.fbar{
+  padding:.72rem 1rem!important;
+}
+.fl{
+  background:#F2F4F7!important;
+  color:#667085!important;
+}
+.chip.on{
+  background:var(--ux-red)!important;
+  border-color:var(--ux-red)!important;
+  box-shadow:none!important;
+}
+.tc{
+  border-radius:18px!important;
+}
+.tc-hd{
+  background:#FFFFFF!important;
+  border-bottom:1px solid #EEF2F6!important;
+}
+.tc-hd-t{
+  color:var(--ux-red-dark)!important;
+  letter-spacing:-.02em!important;
+}
+table{
+  font-size:12.5px!important;
+}
+th{
+  background:#F8FAFC!important;
+  color:#667085!important;
+  border-bottom:1px solid #E5EAF1!important;
+  font-size:10px!important;
+  letter-spacing:.06em!important;
+}
+td{
+  border-bottom-color:#EEF2F6!important;
+}
+tr:nth-child(even) td{
+  background:#FDFEFE!important;
+}
+tr:hover td,tr:nth-child(even):hover td{
+  background:#FFF8FA!important;
+}
+/* Correção visual: Data Fim é a 7ª coluna; Data Prevista é a 6ª. */
+#pane-ep table thead th:nth-child(6)::after{content:''!important;}
+#pane-ep table thead th:nth-child(7){
+  background:#FFF1F4!important;
+  color:#8A001C!important;
+  border-left:1px solid #F4BAC7!important;
+  border-right:1px solid #F4BAC7!important;
+}
+#pane-ep table tbody td:nth-child(6),
+#pane-ep table tbody tr:nth-child(even) td:nth-child(6),
+#pane-ep table tbody tr:hover td:nth-child(6){
+  background:inherit!important;
+  border-left:0!important;
+  border-right:0!important;
+}
+#pane-ep table tbody td:nth-child(7){
+  background:#FFF8FA!important;
+  border-left:1px solid #F4D6DE!important;
+  border-right:1px solid #F4D6DE!important;
+}
+#pane-ep table tbody tr:nth-child(even) td:nth-child(7){
+  background:#FFF4F7!important;
+}
+#pane-ep table tbody tr:hover td:nth-child(7){
+  background:#FFECEF!important;
+}
+.einp,.eimp{
+  border-radius:10px!important;
+  background:#F8FAFC!important;
+}
+.einp:hover,.eimp:hover,.einp:focus,.eimp:focus{
+  border-color:#F0B7C3!important;
+  background:#FFFFFF!important;
+}
+.bdg{
+  border-radius:999px!important;
+  font-weight:800!important;
+}
+.ux-status-legend{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  background:#FFFFFF;
+  border-bottom:1px solid #E5EAF1;
+  padding:10px 1.6rem;
+  color:#667085;
+}
+.ux-status-legend .ux-title{
+  font-size:10px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:#667085;
+}
+.ux-status-legend .ux-note{
+  font-size:10.5px;
+  font-weight:650;
+  margin-top:2px;
+}
+.ux-status-legend .ux-items{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.ux-status-legend .ux-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 10px;
+  border:1px solid #E3E7EF;
+  border-radius:999px;
+  background:#FAFBFD;
+  color:#344054;
+  font-size:10.5px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.ux-status-legend .ux-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  display:inline-block;
+}
+.ux-status-legend .green{background:#16A34A;}
+.ux-status-legend .amber{background:#D97706;}
+.ux-status-legend .red{background:#CC092F;}
+.ux-status-legend .blue{background:#2563EB;}
+.ux-status-legend .gray{background:#98A2B3;}
+@media(max-width:1180px){
+  .top{height:auto!important;min-height:72px!important;flex-wrap:wrap!important;padding-top:10px!important;padding-bottom:10px!important;}
+  .tabs{top:72px!important;overflow-x:auto!important;}
+  .top .tbtn span{display:inline!important;}
+}
+@media(max-width:760px){
+  .ux-status-legend{align-items:flex-start;}
+}
+</style>
 <style id="premium-layout-css">
 
 /* ==========================================================
