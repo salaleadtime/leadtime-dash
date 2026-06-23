@@ -494,6 +494,28 @@ tr:nth-child(even):hover td{background:#e8f0ff!important}
 .toast-t{font-weight:700;margin-bottom:2px;font-size:12px}
 .toast-s{font-size:11px;color:var(--tx2);line-height:1.4}
 
+/* health check badge (topbar) */
+.hb-ok{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;font-size:11px;font-weight:600;color:#15803d;white-space:nowrap}
+.hb-err{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fff1f2;border:1px solid #fca5a5;border-radius:20px;font-size:11px;font-weight:700;color:#dc2626;cursor:pointer;white-space:nowrap;animation:hb-pulse 2s infinite}
+.hb-err:hover{background:#ffe4e6}
+.hb-warn{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:20px;font-size:11px;font-weight:600;color:#92400e;cursor:pointer;white-space:nowrap}
+.hb-warn:hover{background:#fef3c7}
+@keyframes hb-pulse{0%,100%{opacity:1}50%{opacity:.7}}
+/* health panel overlay */
+.hp-ov{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:700;display:flex;align-items:center;justify-content:center}
+.hp-panel{background:var(--card);border-radius:var(--rad);box-shadow:0 20px 60px rgba(15,23,42,.3);width:min(520px,94vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.hp-hd{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem .7rem;border-bottom:1px solid var(--border2)}
+.hp-t{font-weight:700;font-size:14px}
+.hp-ts{font-size:11px;color:var(--tx2);padding:.35rem 1.2rem;background:#f8fafc;border-bottom:1px solid var(--border2)}
+.hp-body{overflow-y:auto;padding:.8rem 1.2rem;flex:1;display:flex;flex-direction:column;gap:.5rem}
+.hp-item{border-radius:8px;padding:.6rem .9rem;border-left:3px solid}
+.hp-item.high{background:#fff1f2;border-color:#dc2626}
+.hp-item.warn{background:#fffbeb;border-color:#d97706}
+.hp-item-hd{font-weight:700;font-size:12px;margin-bottom:2px}
+.hp-item-msg{font-size:11px;color:var(--tx2);line-height:1.4}
+.hp-tip{font-size:11px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:.55rem .9rem;margin:.6rem 1.2rem .8rem}
+.hp-empty{text-align:center;padding:2rem 1rem;color:var(--tx2);font-size:12px}
+
 @media(max-width:880px){.kgrid{grid-template-columns:1fr 1fr 1fr}.g2{grid-template-columns:1fr}}
 @media(max-width:580px){.kgrid{grid-template-columns:1fr 1fr}.top .tbtn span{display:none}}
 
@@ -1242,6 +1264,7 @@ body{min-height:100vh}
     <span class="top-sub">Transformação Digital · Monitoramento de Épicos</span>
   </div>
   <span class="top-sync" id="syncLbl">pronto</span>
+  <div id="healthBadge" style="display:flex;align-items:center"></div>
   <div class="top-gap"></div>
   <span class="top-meta">Meta: 62 dias</span>
   <a class="tbtn" href="visao-projetos/" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.4);text-decoration:none" title="Visão de Projetos · Acompanhamento de Entregas por Squad">
@@ -3054,6 +3077,88 @@ function renderTriBanner(){
     '</div>';
 }
 
+// ═══════════════════════════════════════
+// HEALTH CHECK — robô de validação automática de dados
+// ═══════════════════════════════════════
+var _hcLastSnap='';
+var HC_LT_WARN=180; // dias: épico ativo acima disso = Data Início suspeita
+
+function getDataAnomalies(){
+  var out=[];
+  allData.forEach(function(r){
+    var done=r.status==='Executado'||r.status==='Concluído';
+    // Regra 1: status "feito" mas sem Data Fim → LT cresce +1d a cada dia e infla a média
+    if(done && !isValidDate(r.fim)){
+      out.push({sev:'high',type:'EXECUTADO_SEM_FIM',id:r.id,squad:r.squad||'—',lt:r.lt,
+        msg:'Status "'+r.status+'" sem Data Fim · LT acumulado: '+r.lt+'d e crescendo +1d/dia'});
+    }
+    // Regra 2: épico ativo com LT muito alto — Data Início provavelmente errada
+    if(!isValidDate(r.fim)&&!done&&r.ini&&r.lt>HC_LT_WARN){
+      out.push({sev:'warn',type:'LT_SUSPEITO',id:r.id,squad:r.squad||'—',lt:r.lt,
+        msg:'LT de '+r.lt+'d (ini: '+r.ini+') · Data Início pode estar incorreta'});
+    }
+  });
+  return out;
+}
+
+function runHealthCheck(silent){
+  if(!allData.length) return [];
+  var anomalies=getDataAnomalies();
+  var snap=anomalies.map(function(a){return a.id+a.type+a.lt;}).join('|');
+  var isNew=snap!==_hcLastSnap;
+  _hcLastSnap=snap;
+  renderHealthBadge(anomalies);
+  if(!silent&&isNew&&anomalies.length){
+    var high=anomalies.filter(function(a){return a.sev==='high';}).length;
+    if(high>0) toast('⚠ '+high+' inconsistência'+(high>1?'s':'')+' nos dados',
+      high+' épico'+(high>1?'s':'')+' com status Executado/Concluído sem Data Fim — LT inflando diariamente.','warn');
+  }
+  return anomalies;
+}
+
+function renderHealthBadge(anomalies){
+  var el=$id('healthBadge'); if(!el) return;
+  if(!anomalies.length){
+    el.innerHTML='<span class="hb-ok">✓ Dados OK</span>'; return;
+  }
+  var high=anomalies.filter(function(a){return a.sev==='high';}).length;
+  var cls=high?'hb-err':'hb-warn', ico=high?'⚠':'⚡';
+  el.innerHTML='<span class="'+cls+'" onclick="openHealthPanel()" title="Clique para ver detalhes">'+
+    ico+' '+anomalies.length+' inconsistência'+(anomalies.length>1?'s':'')+'</span>';
+}
+
+function openHealthPanel(){
+  if($id('hpOv')) return; // já aberto
+  var anomalies=runHealthCheck(true);
+  var ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  var rows=anomalies.length
+    ? anomalies.map(function(a){
+        return '<div class="hp-item '+a.sev+'">'+
+          '<div class="hp-item-hd">'+esc(a.id)+' · <span style="color:#7c3aed">'+esc(a.squad)+'</span></div>'+
+          '<div class="hp-item-msg">'+esc(a.msg)+'</div></div>';
+      }).join('')
+    : '<div class="hp-empty">✅ Nenhuma inconsistência detectada.</div>';
+  var tip=anomalies.length
+    ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> preencha a Data Fim de cada épico "Executado" na aba Épicos. Isso fixa o LT e remove o alerta automaticamente.</div>'
+    : '';
+  var ov=document.createElement('div');
+  ov.className='hp-ov'; ov.id='hpOv';
+  ov.onclick=function(e){if(e.target===ov) closeHealthPanel();};
+  ov.innerHTML=
+    '<div class="hp-panel">'+
+      '<div class="hp-hd"><span class="hp-t">⚕ Saúde dos Dados</span>'+
+        '<button class="mb" onclick="closeHealthPanel()">✕ Fechar</button></div>'+
+      '<div class="hp-ts">Verificado às '+ts+' · robô valida automaticamente a cada 1h</div>'+
+      '<div class="hp-body">'+rows+'</div>'+
+      tip+
+    '</div>';
+  document.body.appendChild(ov);
+}
+
+function closeHealthPanel(){
+  var el=$id('hpOv'); if(el) el.parentNode.removeChild(el);
+}
+
 function renderKPI(){
   var t=allData.length;
   if(!t){$id('kpiRow').innerHTML='';return;}
@@ -3834,6 +3939,7 @@ function renderAll(tabToRestore){
     normalizeWorkflowAll();
     renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); renderEpicsSummary(); updateTabCounts();
     activateTab(tab);
+    runHealthCheck(false);
   }catch(e){
     console.error('renderAll error:', e);
     // Tenta render mínimo: só a tabela de épicos
@@ -5909,6 +6015,11 @@ var SEED=[
   // depois o Google Sheets sobrescreve via replaceFromSharedSource (que preserva a aba atual).
   if(SHEETS_WEBAPP){
     renderBootFromLocal();
+    // Robô de saúde no path Sheets também
+    setInterval(function(){
+      runHealthCheck(false);
+      console.log('[HealthCheck] Verificação automática às',new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    }, 3600000);
     setSyncLabel('🔄 Sincronizando com Google Sheets…');
     // Carrega meta de squad/resumo da nuvem antes do sync do Sheets
     loadEpicMetaFromCloud();
@@ -5942,6 +6053,12 @@ var SEED=[
   }
 
   renderBootFromLocal();
+
+  // Robô de saúde: verifica anomalias a cada 1h e sinaliza no header
+  setInterval(function(){
+    runHealthCheck(false);
+    console.log('[HealthCheck] Verificação automática às',new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+  }, 3600000);
 
   // Nuvem JSONBin: sempre carrega quando configurado (épicos como fallback + backlog snapshots compartilhados).
   if(jbIsConfigured()){
