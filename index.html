@@ -988,6 +988,31 @@ body{min-height:100vh}
 @media(max-width:1180px){.premium-kpis,.pd-card-grid{grid-template-columns:repeat(2,1fr)}.premium-ep-strip{grid-template-columns:1fr}.pd-hero{flex-direction:column;align-items:flex-start}.pd-hero-mini{grid-template-columns:repeat(2,138px)}.pd-panels,.metro-wrap{grid-template-columns:1fr}.tabs{justify-content:flex-start;overflow-x:auto}.top{overflow:visible}.top .tbtn span{display:none}.metro-area{overflow-x:auto}}
 @media(max-width:720px){.premium-kpis,.pd-card-grid{grid-template-columns:1fr}.ep,.db,.cal-wrap{padding:1rem!important}.pd-hero-mini{grid-template-columns:1fr 1fr;width:100%}.pd-hero-box{width:auto}.metro-summary,.metro-panel,.pd-panel{padding:20px}.top-meta{display:none!important}}
 
+/* ── Responsividade 1024px: corrige colapso prematuro do layout (881–1180px) ── */
+@media(min-width:881px) and (max-width:1180px){
+  .ep,.db,.cal-wrap{padding:1.25rem!important}
+  .premium-kpis,.pd-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .premium-ep-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .kgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .g2{grid-template-columns:1fr 1fr!important}
+  .pd-hero{flex-direction:row!important;align-items:center!important;flex-wrap:wrap!important}
+  .pd-hero-mini{grid-template-columns:repeat(3,minmax(100px,1fr))!important}
+  .pd-panels{grid-template-columns:1fr 1.04fr!important}
+  .metro-wrap{grid-template-columns:260px 1fr!important}
+  .top .tbtn span{display:inline!important}
+}
+/* ── Responsividade 1366px: ajusta grids para telas HD comuns (1181–1440px) ── */
+@media(min-width:1181px) and (max-width:1440px){
+  .ep,.db,.cal-wrap{padding:1.6rem 1.8rem!important}
+  .premium-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .kgrid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .pd-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+/* ── Responsividade 1600px+: melhor uso do espaço em monitores grandes ── */
+@media(min-width:1601px){
+  .ep,.db,.cal-wrap{max-width:1680px!important;padding:2.5rem 3rem!important}
+}
+
 </style>
 </head>
 <body>
