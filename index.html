@@ -1270,6 +1270,10 @@ body{min-height:100vh}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17V7l5 5-5 5z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
     <span>🎯 Visão de Projetos</span>
   </a>
+  <a class="tbtn" href="discovery-pmo/" style="background:linear-gradient(135deg,#bf1830,#8e1125);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(191,24,48,.4);text-decoration:none" title="Discovery PMO Tracker · Acompanhamento de Discovery por Iniciativa">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <span>🔍 Discovery PMO</span>
+  </a>
   <button class="tbtn" id="jbBtn" onclick="openJB()" title="Conectar ao JSONBin para sincronizar em tempo real com o time">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
     <span id="jbBtnLabel">☁️ Nuvem Tempo Real</span>
@@ -1308,7 +1312,6 @@ body{min-height:100vh}
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
   <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
-  <button class="tabbt" id="tab-dsc" onclick="goTab('dsc',this)">🔍 Discovery PMO</button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -1885,17 +1888,6 @@ tr:nth-child(even):hover td,
   </div>
 </div>
 
-<!-- ══ DISCOVERY PMO PANE ══ -->
-<div class="pane" id="pane-dsc">
-  <iframe
-    id="discoveryFrame"
-    src="./discovery-pmo/index.html"
-    style="width:100%;height:calc(100vh - 120px);border:0;border-radius:12px;display:block;"
-    title="Discovery PMO Tracker"
-    loading="lazy"
-  ></iframe>
-</div>
-
 <!-- ══ CALENDÁRIO — editor de trimestre ══ -->
 <div class="cal-ov" id="calOv" onclick="if(event.target===this)calCloseEditor()">
   <div class="cal-mdl">
@@ -2050,7 +2042,7 @@ function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal'||id==='dsc') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -2900,7 +2892,7 @@ function activateTab(id){
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal'||id==='dsc')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal')?'none':'flex';
 }
 
 
