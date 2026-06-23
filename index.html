@@ -2064,7 +2064,7 @@ var SQUAD_KEY='leadtime_sala_v8_squad';   // cache de squad originado do Jira/SE
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
-var SEED_VERSION='2026-06-22-v33-entregas-expresso';
+var SEED_VERSION='2026-06-23-v34-sync-bulletproof';
 
 // ═══════════════════════════════════════
 // GOOGLE SHEETS — configuração
@@ -3565,7 +3565,7 @@ function fc(el){
   saveLocal();
   saveTab(targetTab);
 
-  if(f==='fim'||f==='ini'){
+  if(f==='fim'||f==='ini'||f==='chg'||f==='impedimento'||f==='dataPrevista'){
     clearTimeout(_jbSaveTimer);
     jbSave();
   }
