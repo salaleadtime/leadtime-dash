@@ -1308,6 +1308,7 @@ body{min-height:100vh}
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
   <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
+  <button class="tabbt" id="tab-dsc" onclick="goTab('dsc',this)">🔍 Discovery PMO</button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -1884,6 +1885,17 @@ tr:nth-child(even):hover td,
   </div>
 </div>
 
+<!-- ══ DISCOVERY PMO PANE ══ -->
+<div class="pane" id="pane-dsc">
+  <iframe
+    id="discoveryFrame"
+    src="./discovery-pmo/index.html"
+    style="width:100%;height:calc(100vh - 120px);border:0;border-radius:12px;display:block;"
+    title="Discovery PMO Tracker"
+    loading="lazy"
+  ></iframe>
+</div>
+
 <!-- ══ CALENDÁRIO — editor de trimestre ══ -->
 <div class="cal-ov" id="calOv" onclick="if(event.target===this)calCloseEditor()">
   <div class="cal-mdl">
@@ -2038,7 +2050,7 @@ function loadTab(){
   try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal'||id==='dsc') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -2884,10 +2896,11 @@ function activateTab(id){
   updateTabCounts();
 }
 
+
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal'||id==='dsc')?'none':'flex';
 }
 
 
