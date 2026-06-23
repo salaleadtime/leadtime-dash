@@ -5938,27 +5938,48 @@ var SEED=[
     var saved=loadLocal();
     var savedVersion=null;
     try{ savedVersion=localStorage.getItem(STORAGE_VERSION_KEY); }catch(e){}
-    var source=SEED;
     var usedCache=false;
     if(saved&&saved.length){
       if(savedVersion && savedVersion!==SEED_VERSION){
-        source=SEED;
+        // Versão do SEED mudou: faz merge em vez de apagar o localStorage.
+        // Regra: o que o usuário preencheu no navegador (fim, ini, chg,
+        // impedimento, dataPrevista, status) é preservado. O SEED apenas
+        // adiciona épicos novos que ainda não existem localmente.
+        var savedMap={};
+        saved.forEach(function(r){ if(r&&r.id) savedMap[r.id]=r; });
+        var USER_FIELDS=['fim','fimAntes','ini','chg','impedimento','dataPrevista','status','statusAntes'];
+        var merged=SEED.map(function(seedR){
+          var loc=savedMap[seedR.id];
+          if(!loc) return seedR; // épico novo do SEED
+          var out=Object.assign({},seedR);
+          USER_FIELDS.forEach(function(f){
+            // Preserva valor do localStorage se foi preenchido pelo usuário
+            if(loc[f]!==undefined&&loc[f]!==null&&loc[f]!=='') out[f]=loc[f];
+          });
+          return out;
+        });
+        // Épicos que existem só no localStorage (adicionados via import) são mantidos
+        saved.forEach(function(r){
+          if(r&&r.id&&!SEED.find(function(s){return s.id===r.id;})) merged.push(r);
+        });
+        allData=merged.map(makeRow);
         try{
-          localStorage.removeItem(STORAGE_KEY);
-          localStorage.removeItem(STORAGE_META);
           localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION);
         }catch(e){}
+        saveLocal();
+        saveResumoCache(SEED);
+        return false;
       }else{
-        source=saved;
         usedCache=true;
         if(!savedVersion){
           try{ localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION); }catch(e){}
         }
+        allData=saved.map(makeRow);
+        saveResumoCache(SEED);
+        return usedCache;
       }
     }
-    allData=source.map(makeRow);
-    // Popula os caches de resumo e squad com dados do SEED para cobrir
-    // epics que o Sheets devolve sem esses campos (ex: SLOPC-39378, SLOPC-39100).
+    allData=SEED.map(makeRow);
     saveResumoCache(SEED);
     return usedCache;
   }
