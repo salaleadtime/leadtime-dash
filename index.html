@@ -2076,6 +2076,14 @@ var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
 var _sheetsLastSuccessAt = 0;   // última vez que o Sheets respondeu com dados válidos
+var _salaImportDateTime = null;
+var IMPORT_SALA_KEY = 'data_ultima_importacao_sala';
+(function(){
+  var salvo = localStorage.getItem(IMPORT_SALA_KEY);
+  if(!salvo) return;
+  var d = new Date(salvo);
+  if(!isNaN(d.getTime())) _salaImportDateTime = d;
+})();
 var _sheetsOfflineWarned = false;
 var _sheetsLastWritePayload = '';
 var SHEETS_POLL_MS = 120000;
@@ -2729,6 +2737,19 @@ function saveToSheetsBatch(items){
 function setSyncLabel(txt){
   var el=$id('syncLbl');
   if(el) el.textContent=txt;
+}
+function registrarImportacaoSala(){
+  _salaImportDateTime = new Date();
+  localStorage.setItem(IMPORT_SALA_KEY, _salaImportDateTime.toISOString());
+  updateSyncLblImportacao();
+}
+function updateSyncLblImportacao(){
+  if(!_salaImportDateTime) return;
+  var now = new Date();
+  var same = now.toDateString() === _salaImportDateTime.toDateString();
+  var timeStr = _salaImportDateTime.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  var dateStr = same ? 'hoje às '+timeStr : _salaImportDateTime.toLocaleDateString('pt-BR')+' às '+timeStr;
+  setSyncLabel('Última importação: '+dateStr);
 }
 
 // ═══════════════════════════════════════
@@ -3908,8 +3929,7 @@ function doEmergencyRecover(){
 function doRefresh(){
   var tabToRestore=rememberTab();
   normalizeWorkflowAll();
-  var n=new Date();
-  $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  registrarImportacaoSala();
   renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); updateTabCounts();
   activateTab(tabToRestore);
   saveLocal();
@@ -5370,7 +5390,7 @@ function loadXlsx(file){
 
       $id('upName').textContent=file.name;
       $id('upSub').textContent=merged.length+' épicos · '+new Date().toLocaleDateString('pt-BR');
-      $id('syncLbl').textContent='arquivo: '+file.name+' ('+det.format.toUpperCase()+')';
+      registrarImportacaoSala();
 
       // Feedback detalhado ao usuário
       var parts=[];
@@ -5847,7 +5867,7 @@ function loadGS(){
     closeGS();
     $id('upName').textContent='Google Sheets (ao vivo)';
     $id('upSub').textContent=allData.length+' épicos · '+new Date().toLocaleDateString('pt-BR');
-    $id('syncLbl').textContent='Google Sheets · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    registrarImportacaoSala();
 
     var parts=[];
     if(stats.newCount) parts.push('<strong>'+stats.newCount+'</strong> novo'+(stats.newCount!==1?'s':''));
@@ -6034,14 +6054,13 @@ var SEED=[
       var upSv=$id('svUpSaved'); if(upSv) upSv.classList.remove('hidden');
       var upSvT=$id('svUpSavedTxt'); if(upSvT) upSvT.textContent='Salvo localmente · '+allStories.length+' estórias';
     }
-    var n=new Date();
     if(usedCache){
-      $id('syncLbl').textContent=(reason||'Carregado do cache local')+' · '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      updateSyncLblImportacao();
       $id('upName').textContent='Dados salvos localmente';
       $id('upSub').textContent=allData.length+' épicos · recarregados automaticamente';
       showSavedBadge();
     }else{
-      $id('syncLbl').textContent='Atualizado: '+n.toLocaleDateString('pt-BR')+' às '+n.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      registrarImportacaoSala();
     }
     renderAll(normalizeTab(loadTab()));
   }
@@ -6089,7 +6108,7 @@ var SEED=[
     loadFromSheets(function(err, sheetsData){
       if(!err && Array.isArray(sheetsData) && sheetsData.length){
         replaceFromSharedSource(sheetsData);
-        setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+        registrarImportacaoSala();
         return;
       }
       setSyncLabel('⚠️ Sheets offline — usando cache local');
@@ -6142,7 +6161,7 @@ function _trySheets(silent){
       _sheetsLastSuccessAt=Date.now();
       _sheetsOfflineWarned=false;
       replaceFromSharedSource(sheetsData);
-      setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      registrarImportacaoSala();
       if(silent) toast('🔄 Dados atualizados','O dashboard recebeu os dados oficiais do Google Sheets.');
       // Garante que backlog e estórias também sejam atualizados junto com os épicos
       if(BK_GAS_URL) try{ gasLoadBacklog(function(){}); }catch(e){}
