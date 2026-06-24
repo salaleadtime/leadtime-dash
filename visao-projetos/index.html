@@ -2649,6 +2649,8 @@
       display:grid;
       gap:8px;
       margin-top:12px;
+      max-height:280px;
+      overflow-y:auto;
     }
     .sprint-flow-row{
       display:grid;
@@ -3018,6 +3020,8 @@
       display:grid;
       gap:7px;
       margin-top:4px;
+      max-height:280px;
+      overflow-y:auto;
     }
 
     .sprint-flow-row{
@@ -7356,7 +7360,7 @@
     }
 
     function isSprintTesting(row){
-      return /teste|homolog|homologada|disponivel para homolog|disponível para homolog/i.test(row.situacao || '');
+      return /teste|em homolog|disponivel para homolog|disponível para homolog/i.test(row.situacao || '');
     }
 
     function isSprintDeploy(row){
@@ -7393,7 +7397,7 @@
     }
 
     function renderSprintStatusFlow(data){
-      const entries = countBy(data, r=>r.situacao).slice(0,6);
+      const entries = countBy(data, r=>r.situacao);
       const max = Math.max(...entries.map(e=>e[1]), 1);
       $('sprintStatusFlow').innerHTML = entries.length ? entries.map(([label, value]) => {
         const width = Math.max(5, Math.round((value / max) * 100));
