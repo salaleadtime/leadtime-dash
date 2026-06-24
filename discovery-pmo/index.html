@@ -2795,7 +2795,7 @@
       border: 1px solid var(--line);
       border-radius: 16px;
       background: var(--panel);
-      overflow: hidden;
+      overflow: clip;
     }
 
     .raid-pdca-head {
@@ -2854,6 +2854,7 @@
     .raid-pdca-table {
       width: 100%;
       display: grid;
+      overflow-x: auto;
     }
 
     .raid-pdca-row,
