@@ -1304,6 +1304,10 @@ body{min-height:100vh}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     <span>Exportar Excel</span>
   </button>
+  <button class="tbtn" id="adminBtn" onclick="openAdmin()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.4)" title="Painel de Administração">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="8" r="1" fill="currentColor" stroke="none"/></svg>
+    <span>🔐 Admin</span>
+  </button>
 </header>
 
 <!-- TABS -->
@@ -6701,5 +6705,360 @@ function calSeedExample(){
   </div>
   <div class="imp-lock-err" id="impLockErr">Senha incorreta</div>
 </div>
+
+<!-- ══ ADMIN CONSOLE ══ -->
+<style>
+#adminOverlay{position:fixed;inset:0;background:rgba(10,10,30,.72);backdrop-filter:blur(6px);z-index:10000;display:none;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto}
+#adminOverlay.on{display:flex}
+#adminPanel{background:#fff;border-radius:18px;width:100%;max-width:780px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;font-family:'Inter',ui-sans-serif,sans-serif}
+.adm-hd{background:linear-gradient(135deg,#4f1c91,#7c3aed 60%,#4f46e5);padding:20px 26px;display:flex;align-items:center;gap:14px;color:#fff}
+.adm-hd-ico{width:44px;height:44px;background:rgba(255,255,255,.18);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:1px solid rgba(255,255,255,.25)}
+.adm-hd-title{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.adm-hd-sub{font-size:11px;opacity:.8;margin-top:2px}
+.adm-hd-sp{flex:1}
+.adm-close{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.adm-close:hover{background:rgba(255,255,255,.28)}
+/* login */
+#adminLogin{padding:36px 32px;text-align:center}
+#adminLogin .ico{font-size:48px;margin-bottom:12px}
+#adminLogin h3{font-size:17px;font-weight:800;color:#1e293b;margin-bottom:6px}
+#adminLogin p{font-size:12px;color:#64748b;margin-bottom:22px}
+#adminLogin input{width:100%;max-width:300px;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;outline:none;text-align:center;letter-spacing:2px;display:block;margin:0 auto 12px}
+#adminLogin input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+#adminLoginErr{color:#ef4444;font-size:11px;margin-bottom:12px;display:none}
+#adminLogin .adm-login-btn{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:10px;padding:11px 36px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 4px 16px rgba(124,58,237,.35)}
+#adminLogin .adm-login-btn:hover{filter:brightness(1.08)}
+/* body */
+#adminBody{display:none}
+#adminBody.on{display:block}
+.adm-tabs{display:flex;border-bottom:2px solid #e8edf5;background:#f8fafc;padding:0 20px}
+.adm-tab{padding:11px 16px;font-size:11.5px;font-weight:600;color:#94a3b8;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:5px}
+.adm-tab.on{color:#7c3aed;border-bottom-color:#7c3aed}
+.adm-tab:hover:not(.on){color:#475569}
+.adm-pane{display:none;padding:24px 26px}
+.adm-pane.on{display:block}
+.adm-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:12px;margin-top:20px;padding-bottom:6px;border-bottom:1px solid #f1f5f9}
+.adm-sec:first-child{margin-top:0}
+.adm-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.adm-fg label{font-size:11px;font-weight:700;color:#475569;display:block;margin-bottom:5px}
+.adm-fg input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:inherit;outline:none;color:#1e293b}
+.adm-fg input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.adm-fg small{font-size:10px;color:#94a3b8;margin-top:4px;display:block}
+.adm-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s}
+.adm-btn.primary{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;box-shadow:0 2px 10px rgba(124,58,237,.3)}
+.adm-btn.primary:hover{filter:brightness(1.08)}
+.adm-btn.danger{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.adm-btn.danger:hover{background:#fee2e2}
+.adm-btn.ghost{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+.adm-btn.ghost:hover{background:#e2e8f0}
+.adm-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.adm-stat{background:linear-gradient(135deg,#f8f7ff,#ede9fe);border:1px solid #ddd6fe;border-radius:12px;padding:14px 16px;text-align:center}
+.adm-stat .n{font-size:28px;font-weight:800;color:#7c3aed;line-height:1}
+.adm-stat .l{font-size:10px;color:#6d28d9;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.adm-epic-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.adm-epic-table th{background:#f8fafc;padding:8px 10px;text-align:left;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#64748b;border-bottom:2px solid #e2e8f0}
+.adm-epic-table td{padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle}
+.adm-epic-table tr:hover td{background:#f8f7ff}
+.adm-epic-table select{padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;background:#fff;outline:none}
+.adm-epic-table select:focus{border-color:#7c3aed}
+.adm-lt-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.adm-lt-g{background:#dcfce7;color:#15803d}
+.adm-lt-a{background:#fef9c3;color:#92400e}
+.adm-lt-r{background:#fee2e2;color:#b91c1c}
+.adm-msg{font-size:12px;color:#16a34a;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:9px 14px;margin-top:12px;display:none}
+.adm-msg.err{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+.adm-epics-wrap{max-height:340px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:8px}
+</style>
+
+<div id="adminOverlay">
+  <div id="adminPanel">
+    <div class="adm-hd">
+      <div class="adm-hd-ico">🛡️</div>
+      <div>
+        <div class="adm-hd-title">Admin Console · SALA Lead Time</div>
+        <div class="adm-hd-sub">Painel de administração e configurações</div>
+      </div>
+      <div class="adm-hd-sp"></div>
+      <button class="adm-close" onclick="closeAdmin()">✕ Fechar</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="adminLogin">
+      <div class="ico">🔐</div>
+      <h3>Área Restrita</h3>
+      <p>Digite a senha de administrador para continuar</p>
+      <input type="password" id="adminPwdInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin();if(event.key==='Escape')closeAdmin();">
+      <div id="adminLoginErr">Senha incorreta. Tente novamente.</div>
+      <button class="adm-login-btn" onclick="doAdminLogin()">Entrar no Admin</button>
+    </div>
+
+    <!-- PAINEL -->
+    <div id="adminBody">
+      <div class="adm-tabs">
+        <button class="adm-tab on" onclick="admTab('config',this)">⚙️ Configurações</button>
+        <button class="adm-tab" onclick="admTab('dados',this)">📊 Dados</button>
+        <button class="adm-tab" onclick="admTab('epicos',this)">📋 Épicos</button>
+      </div>
+
+      <!-- ABA: Configurações -->
+      <div class="adm-pane on" id="adm-config">
+        <div class="adm-sec">Meta de Lead Time</div>
+        <div class="adm-row">
+          <div class="adm-fg">
+            <label>Meta (dias)</label>
+            <input type="number" id="admMetaDias" value="62" min="1" max="365">
+            <small>Atual: <strong id="admMetaAtual">62</strong> dias · Verde &lt; 40d · Âmbar 40–(meta-1)d · Vermelho ≥ meta</small>
+          </div>
+        </div>
+        <button class="adm-btn primary" onclick="admSalvarMeta()">💾 Salvar Meta</button>
+        <div class="adm-msg" id="admMetaMsg"></div>
+
+        <div class="adm-sec" style="margin-top:28px">Segurança — Senhas</div>
+        <div class="adm-row">
+          <div class="adm-fg">
+            <label>Nova senha Admin</label>
+            <input type="password" id="admNovaSenha" placeholder="Nova senha">
+            <small>Senha atual protege este painel</small>
+          </div>
+          <div class="adm-fg">
+            <label>Confirmar nova senha</label>
+            <input type="password" id="admConfSenha" placeholder="Repita a senha">
+          </div>
+        </div>
+        <button class="adm-btn primary" onclick="admAlterarSenha()">🔑 Alterar Senha Admin</button>
+        <div class="adm-msg" id="admSenhaMsg"></div>
+
+        <div style="margin-top:20px"></div>
+        <div class="adm-fg" style="max-width:260px">
+          <label>Senha de Impedimentos</label>
+          <input type="password" id="admSenhaImp" placeholder="Senha atual: sala">
+          <small>Senha usada para editar impedimentos nos épicos</small>
+        </div>
+        <div style="margin-top:10px"></div>
+        <button class="adm-btn primary" onclick="admAlterarSenhaImp()">🔑 Alterar Senha Impedimentos</button>
+        <div class="adm-msg" id="admImpMsg"></div>
+      </div>
+
+      <!-- ABA: Dados -->
+      <div class="adm-pane" id="adm-dados">
+        <div class="adm-sec">Resumo dos Dados</div>
+        <div class="adm-stat-grid" id="admStatGrid">
+          <div class="adm-stat"><div class="n" id="admStTotal">—</div><div class="l">Total Épicos</div></div>
+          <div class="adm-stat"><div class="n" id="admStConcluido">—</div><div class="l">Concluídos</div></div>
+          <div class="adm-stat"><div class="n" id="admStCritico">—</div><div class="l">Críticos ≥ Meta</div></div>
+        </div>
+
+        <div class="adm-sec">Ações de Cache e Dados</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="adm-btn ghost" onclick="admRecarregar()">🔄 Recarregar Dados</button>
+          <button class="adm-btn danger" onclick="admLimparCache()">🗑️ Limpar Cache Local</button>
+        </div>
+        <div class="adm-msg" id="admDadosMsg"></div>
+      </div>
+
+      <!-- ABA: Épicos -->
+      <div class="adm-pane" id="adm-epicos">
+        <div class="adm-sec">Gerenciar Épicos <span id="admEpCount" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:#7c3aed"></span></div>
+        <div class="adm-epics-wrap">
+          <table class="adm-epic-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Squad</th>
+                <th>Status</th>
+                <th>LT (dias)</th>
+              </tr>
+            </thead>
+            <tbody id="admEpicBody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="adm-btn primary" onclick="admSalvarEpicos()">💾 Salvar Alterações</button>
+        </div>
+        <div class="adm-msg" id="admEpMsg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var ADMIN_KEY = 'sala_admin_pwd';
+  var IMP_KEY   = 'sala_imp_pwd';
+
+  function getAdminPwd(){ return localStorage.getItem(ADMIN_KEY) || 'sala@admin'; }
+  function getImpPwd()  { return localStorage.getItem(IMP_KEY)   || 'sala'; }
+
+  window.openAdmin = function(){
+    var ov = document.getElementById('adminOverlay');
+    document.getElementById('adminLogin').style.display = 'block';
+    document.getElementById('adminBody').classList.remove('on');
+    document.getElementById('adminPwdInput').value = '';
+    document.getElementById('adminLoginErr').style.display = 'none';
+    ov.classList.add('on');
+    setTimeout(function(){ document.getElementById('adminPwdInput').focus(); }, 80);
+  };
+
+  window.closeAdmin = function(){
+    document.getElementById('adminOverlay').classList.remove('on');
+  };
+
+  document.getElementById('adminOverlay').addEventListener('click', function(e){
+    if(e.target === this) window.closeAdmin();
+  });
+
+  window.doAdminLogin = function(){
+    var inp = document.getElementById('adminPwdInput');
+    if(inp.value === getAdminPwd()){
+      document.getElementById('adminLogin').style.display = 'none';
+      var body = document.getElementById('adminBody');
+      body.classList.add('on');
+      admCarregarDados();
+      admCarregarEpicos();
+      admCarregarMeta();
+    } else {
+      document.getElementById('adminLoginErr').style.display = 'block';
+      inp.value = '';
+      inp.focus();
+    }
+  };
+
+  window.admTab = function(id, btn){
+    document.querySelectorAll('.adm-tab').forEach(function(b){ b.classList.remove('on'); });
+    document.querySelectorAll('.adm-pane').forEach(function(p){ p.classList.remove('on'); });
+    btn.classList.add('on');
+    document.getElementById('adm-'+id).classList.add('on');
+    if(id==='dados') admCarregarDados();
+    if(id==='epicos') admCarregarEpicos();
+  };
+
+  function admMsg(id, txt, tipo){
+    var el = document.getElementById(id);
+    el.textContent = txt;
+    el.className = 'adm-msg' + (tipo==='err' ? ' err' : '');
+    el.style.display = 'block';
+    setTimeout(function(){ el.style.display = 'none'; }, 3500);
+  }
+
+  function admCarregarMeta(){
+    var meta = parseInt(localStorage.getItem('sala_meta_dias') || '62');
+    document.getElementById('admMetaDias').value = meta;
+    document.getElementById('admMetaAtual').textContent = meta;
+  }
+
+  window.admSalvarMeta = function(){
+    var v = parseInt(document.getElementById('admMetaDias').value);
+    if(!v || v < 1){ admMsg('admMetaMsg','Valor inválido','err'); return; }
+    localStorage.setItem('sala_meta_dias', v);
+    document.getElementById('admMetaAtual').textContent = v;
+    if(typeof META !== 'undefined') try{ window.META = v; }catch(e){}
+    admMsg('admMetaMsg','✅ Meta salva! Recarregue para aplicar.');
+  };
+
+  window.admAlterarSenha = function(){
+    var n = document.getElementById('admNovaSenha').value;
+    var c = document.getElementById('admConfSenha').value;
+    if(!n){ admMsg('admSenhaMsg','Digite a nova senha','err'); return; }
+    if(n !== c){ admMsg('admSenhaMsg','As senhas não coincidem','err'); return; }
+    if(n.length < 4){ admMsg('admSenhaMsg','Mínimo 4 caracteres','err'); return; }
+    localStorage.setItem(ADMIN_KEY, n);
+    document.getElementById('admNovaSenha').value = '';
+    document.getElementById('admConfSenha').value = '';
+    admMsg('admSenhaMsg','✅ Senha admin alterada com sucesso!');
+  };
+
+  window.admAlterarSenhaImp = function(){
+    var n = document.getElementById('admSenhaImp').value;
+    if(!n){ admMsg('admImpMsg','Digite a nova senha','err'); return; }
+    if(n.length < 3){ admMsg('admImpMsg','Mínimo 3 caracteres','err'); return; }
+    localStorage.setItem(IMP_KEY, n);
+    document.getElementById('admSenhaImp').value = '';
+    admMsg('admImpMsg','✅ Senha de impedimentos alterada!');
+  };
+
+  function admCarregarDados(){
+    var data = (typeof allData !== 'undefined') ? allData : [];
+    var total = data.length;
+    var conc = data.filter(function(r){ return r.status==='Concluído'; }).length;
+    var meta = parseInt(localStorage.getItem('sala_meta_dias') || '62');
+    var crit = data.filter(function(r){ return (r.lt||0) >= meta; }).length;
+    document.getElementById('admStTotal').textContent = total;
+    document.getElementById('admStConcluido').textContent = conc;
+    document.getElementById('admStCritico').textContent = crit;
+  }
+
+  window.admRecarregar = function(){
+    admMsg('admDadosMsg','🔄 Recarregando...');
+    setTimeout(function(){ location.reload(); }, 800);
+  };
+
+  window.admLimparCache = function(){
+    if(!confirm('Limpar todo o cache local? Os dados serão recarregados do SEED/Sheets.')) return;
+    try{
+      localStorage.removeItem('leadtime_sala_v8_data');
+      localStorage.removeItem('leadtime_sala_v8_meta');
+      localStorage.removeItem('leadtime_sala_v8_version');
+    }catch(e){}
+    admMsg('admDadosMsg','✅ Cache limpo! Recarregando...');
+    setTimeout(function(){ location.reload(); }, 1200);
+  };
+
+  function admCarregarEpicos(){
+    var data = (typeof allData !== 'undefined') ? allData : [];
+    var meta = parseInt(localStorage.getItem('sala_meta_dias') || '62');
+    document.getElementById('admEpCount').textContent = '— ' + data.length + ' épicos';
+    var html = '';
+    data.forEach(function(r, i){
+      var lt = r.lt || 0;
+      var cls = lt >= meta ? 'adm-lt-r' : (lt >= 40 ? 'adm-lt-a' : 'adm-lt-g');
+      html += '<tr>' +
+        '<td style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + (r.id||'—') + '</td>' +
+        '<td>' + (r.squad||'—') + '</td>' +
+        '<td><select data-idx="'+i+'" onchange="admStatusChange(this)">' +
+          ['Em Execução','Executado','Concluído'].map(function(s){
+            return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+s+'</option>';
+          }).join('') +
+        '</select></td>' +
+        '<td><span class="adm-lt-badge '+cls+'">'+lt+'d</span></td>' +
+        '</tr>';
+    });
+    document.getElementById('admEpicBody').innerHTML = html || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px">Nenhum dado carregado</td></tr>';
+  }
+
+  window.admStatusChange = function(sel){
+    var idx = parseInt(sel.getAttribute('data-idx'));
+    if(typeof allData !== 'undefined' && allData[idx]){
+      allData[idx].status = sel.value;
+    }
+  };
+
+  window.admSalvarEpicos = function(){
+    try{
+      if(typeof allData !== 'undefined'){
+        localStorage.setItem('leadtime_sala_v8_data', JSON.stringify(allData));
+      }
+      admMsg('admEpMsg','✅ Alterações salvas! Feche o admin para ver o dashboard atualizado.');
+    } catch(e){
+      admMsg('admEpMsg','Erro ao salvar: ' + e.message, 'err');
+    }
+  };
+
+  /* Patch no confirmImpSenha para usar senha do localStorage */
+  var _origConfirm = window.confirmImpSenha;
+  window.confirmImpSenha = function(){
+    var inp = document.getElementById('impLockInput');
+    if(inp && inp.value === getImpPwd()){
+      window.impSenhaOk = true;
+      var ico = document.getElementById('impThIco');
+      if(ico){ ico.textContent='🔓'; ico.title='Edição desbloqueada · clique para bloquear novamente'; }
+      if(typeof closeImpLock === 'function') closeImpLock(true);
+    } else {
+      var err = document.getElementById('impLockErr');
+      if(err) err.style.display = 'block';
+      if(inp){ inp.value=''; inp.focus(); }
+    }
+  };
+})();
+</script>
 </body>
 </html>
