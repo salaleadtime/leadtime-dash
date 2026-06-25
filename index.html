@@ -4321,12 +4321,41 @@ function gasSaveBacklog(){
     body:'action=saveBacklog&payload='+encodeURIComponent(JSON.stringify(backlogSnaps))
   })
   .then(function(){
-    toast('☁️ Backlog publicado','Sincronizando com o servidor…');
-    // reconfere com o servidor (traz a união e converge todos os clientes)
-    setTimeout(function(){ gasLoadBacklog(function(err,n){ if(!err) renderBacklogView(); }); }, 2500);
+    toast('☁️ Backlog publicado','Verificando gravação no servidor…');
+    // Verifica via JSONP se o servidor realmente gravou a carga enviada.
+    // Como mode:'no-cors' torna a resposta do POST opaca, fazemos um GET
+    // separado para confirmar que o servidor tem pelo menos tantas histórias
+    // quanto temos localmente. Se não tiver, avisamos o usuário.
+    var localMax=maxBacklogStoryCount(backlogSnaps);
+    setTimeout(function(){
+      _gasJsonp(BK_GAS_URL+'?action=getBacklog&t='+Date.now(), function(err,json){
+        if(err || !json || !json.ok){
+          toast('⚠️ Servidor','Não foi possível confirmar a gravação. Dados salvos localmente.');
+          _gasBacklogSaving=false;
+          return;
+        }
+        var serverMax=maxBacklogStoryCount(json.backlog||[]);
+        if(serverMax<localMax){
+          toast('⚠️ Servidor desatualizado','Servidor tem '+serverMax+' histórias; local tem '+localMax+'. Tentando reenviar…');
+          mergeBacklog(json.backlog||[]);
+          try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+          // Reenvia uma vez; _gasBacklogSaving já está false para permitir
+          _gasBacklogSaving=false;
+          setTimeout(function(){ gasSaveBacklog(); }, 1000);
+        } else {
+          mergeBacklog(json.backlog||[]);
+          try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+          renderBacklogView(); updateTabCounts();
+          toast('✅ Backlog salvo','Servidor confirmou '+serverMax+' histórias.');
+          _gasBacklogSaving=false;
+        }
+      });
+    }, 2000);
   })
-  .catch(function(){ /* falha de rede real; o backlog continua salvo localmente */ })
-  .finally(function(){ _gasBacklogSaving=false; });
+  .catch(function(){
+    toast('⚠️ Falha de rede','Backlog salvo localmente. Reconecte para sincronizar.');
+    _gasBacklogSaving=false;
+  });
 }
 
 var _gasStoriesSaving=false;
@@ -4535,6 +4564,18 @@ function renderBacklogView(){
   var prev=getPreviousBacklogSnapshot();
   var stories=(cur&&Array.isArray(cur.stories))?cur.stories:[];
 
+  // Aviso quando o snapshot mais recente (por data) tem menos histórias que o maior
+  // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
+  var maxKnown=maxBacklogStoryCount(backlogSnaps);
+  var curCount=snapStoryCount(cur);
+  var staleWarningHtml='';
+  if(maxKnown>curCount){
+    staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;">'+
+      '⚠️ O snapshot mais recente tem <strong>'+curCount+'</strong> histórias, mas há um snapshot com <strong>'+maxKnown+'</strong> histórias. '+
+      'O servidor pode não ter recebido a importação mais completa. Tente importar novamente ou aguarde a sincronização.'+
+      '</div>';
+  }
+
   // Count per squad
   var curSquadCnt={}, prevSquadCnt={};
   stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
@@ -4648,6 +4689,7 @@ function renderBacklogView(){
   }).join('');
 
   bkContent.innerHTML=
+    staleWarningHtml+
     '<div class="sv-kpi" style="margin-bottom:1rem">'+
       svKpiItem('#7a0000',totalBacklog,'Total Backlog','importação #'+cur.seq)+
       svKpiItem('#3b82f6',squads.length,'Squads com Backlog','grupos ativos')+

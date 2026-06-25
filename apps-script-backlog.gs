@@ -335,15 +335,18 @@ function snapTime_(s) {
 }
 
 function compareSnaps_(a, b) {
-  var ca = storyCount_(a);
-  var cb = storyCount_(b);
-
-  if (ca !== cb) return ca - cb;
-
+  // Ordena por tempo primeiro (igual ao frontend), depois por contagem de histórias como
+  // desempate. Isso garante que a importação mais recente seja sempre o snapshot "atual",
+  // independentemente de ter mais ou menos histórias — consistência frontend/backend.
   var ta = snapTime_(a);
   var tb = snapTime_(b);
 
   if (ta !== tb) return ta - tb;
+
+  var ca = storyCount_(a);
+  var cb = storyCount_(b);
+
+  if (ca !== cb) return ca - cb;
 
   return (Number(a && a.seq) || 0) - (Number(b && b.seq) || 0);
 }
