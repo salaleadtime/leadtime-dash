@@ -1360,6 +1360,8 @@ body{min-height:100vh}
     <span class="fdate-sep">→</span>
     <input type="date" class="fdate" id="fDateFim" title="Data início máxima">
     <button class="chip fdate-clear" id="fDateClear" onclick="clearDateF()" title="Limpar período">✕</button>
+    <div class="fsep"></div>
+    <input type="text" class="fsrch" id="srch" placeholder="🔍 Buscar iniciativa..." title="Buscar por número, ID ou nome da iniciativa" oninput="pg=1;renderTbl()">
   </div>
 
   <div id="semFimAlert" style="display:none;margin-bottom:.6rem;padding:.55rem .9rem;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#9a3412;align-items:center;gap:.5rem">
