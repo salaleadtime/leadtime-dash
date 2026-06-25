@@ -270,8 +270,10 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .chip.on{background:#cc0000;border-color:#cc0000;color:#fff;box-shadow:0 2px 8px rgba(204,0,0,.3)}
 .fsep{width:1px;height:20px;background:#e2e8f0;flex-shrink:0;margin:0 4px}
 .fsel{border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:11px;color:#475569;background:#f8fafc;cursor:pointer;outline:none;font-family:inherit}
-.fsrch{border:1px solid var(--border2);border-radius:var(--rads);padding:5px 9px;font-size:12px;color:var(--tx);background:var(--card);outline:none;margin-left:auto;width:190px;font-family:inherit}
-.fsrch:focus,.fsel:focus{border-color:var(--accent)}
+.fsrch{border:none;border-bottom:1px solid transparent;border-radius:0;padding:4px 6px;font-size:12px;color:var(--tx);background:transparent;outline:none;margin-left:auto;width:160px;font-family:inherit;opacity:.45;transition:opacity .2s,border-color .2s}
+.fsrch:focus,.fsrch:not(:placeholder-shown){border-bottom-color:var(--accent);opacity:1}
+.fsrch:hover{opacity:.75}
+.fsel:focus{border-color:var(--accent)}
 
 /* table card */
 .tc{background:var(--card);border:1px solid #e2e8f0;border-radius:var(--rad);overflow:hidden;box-shadow:0 1px 6px rgba(15,23,42,.07)}
@@ -1360,6 +1362,8 @@ body{min-height:100vh}
     <span class="fdate-sep">→</span>
     <input type="date" class="fdate" id="fDateFim" title="Data início máxima">
     <button class="chip fdate-clear" id="fDateClear" onclick="clearDateF()" title="Limpar período">✕</button>
+    <div class="fsep"></div>
+    <input type="text" class="fsrch" id="srch" placeholder="🔍 Buscar iniciativa..." title="Buscar por número, ID ou nome da iniciativa" oninput="pg=1;renderTbl()">
   </div>
 
   <div id="semFimAlert" style="display:none;margin-bottom:.6rem;padding:.55rem .9rem;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#9a3412;align-items:center;gap:.5rem">
