@@ -4169,6 +4169,7 @@ function loadStoriesLocal(){
 // ═══════════════════════════════════════
 var _gasBacklogSaving=false;
 var _gasBacklogLoading=false;
+var _gasBacklogError=null;
 
 // ── Epic Meta Cloud (squad + resumo) ──────────────────────────────────────
 // Armazena {id:{squad,resumo}} na aba _vp_epic_meta do Apps Script de backlog.
@@ -4267,17 +4268,26 @@ function mergeBacklog(incoming){
 }
 
 // JSONP helper — evita bloqueio CORS; GAS responde com callback(data)
-function _gasJsonp(url, cb){  var name='_gasJP_'+Date.now();
+function _gasJsonp(url, cb, timeoutMs){
+  var name='_gasJP_'+Date.now();
   var script=document.createElement('script');
   var done=false;
+  var timer=setTimeout(function(){
+    if(done) return; done=true;
+    delete window[name];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    cb('timeout');
+  }, timeoutMs||12000);
   window[name]=function(data){
     if(done) return; done=true;
+    clearTimeout(timer);
     delete window[name];
     if(script.parentNode) script.parentNode.removeChild(script);
     cb(null,data);
   };
   script.onerror=function(){
     if(done) return; done=true;
+    clearTimeout(timer);
     delete window[name];
     if(script.parentNode) script.parentNode.removeChild(script);
     cb('script error');
@@ -4292,7 +4302,13 @@ function gasLoadBacklog(cb){
   var localMax=maxBacklogStoryCount(backlogSnaps);
   _gasJsonp(BK_GAS_URL+'?action=getBacklog&t='+Date.now(), function(err,json){
     _gasBacklogLoading=false;
-    if(err){ renderBacklogView(); if(cb) cb(err); return; }
+    if(err){
+      // Timeout ou erro de rede: mostra tela de "importar" em vez de spinner infinito
+      _gasBacklogError=err;
+      renderBacklogView();
+      if(cb) cb(err);
+      return;
+    }
     if(json && json.ok && Array.isArray(json.backlog) && json.backlog.length){
       var serverMax=maxBacklogStoryCount(json.backlog);
       mergeBacklog(json.backlog);
@@ -4547,6 +4563,14 @@ function renderBacklogView(){
         '<div style="font-size:28px;margin-bottom:.8rem;animation:spin 1.2s linear infinite;display:inline-block">🔄</div>'+
         '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando dados do servidor…</div>'+
         '<div style="font-size:12px;color:#94a3b8">Aguarde enquanto o backlog compartilhado é carregado.</div>'+
+        '</div>';
+    } else if(_gasBacklogError){
+      bkContent.innerHTML=
+        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+        '<div style="font-size:32px;margin-bottom:.8rem">⚠️</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Servidor não respondeu</div>'+
+        '<div style="font-size:12px;color:#94a3b8;margin-bottom:1rem">Não foi possível carregar o backlog do servidor ('+_gasBacklogError+').<br>Verifique a conexão ou tente recarregar a página.</div>'+
+        '<button onclick="_gasBacklogError=null;gasLoadBacklog();" style="padding:.5rem 1.2rem;background:#e11d48;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Tentar novamente</button>'+
         '</div>';
     } else {
       bkContent.innerHTML=
