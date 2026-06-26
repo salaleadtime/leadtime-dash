@@ -4277,7 +4277,7 @@ function _gasJsonp(url, cb, timeoutMs){
     delete window[name];
     if(script.parentNode) script.parentNode.removeChild(script);
     cb('timeout');
-  }, timeoutMs||12000);
+  }, timeoutMs||28000);
   window[name]=function(data){
     if(done) return; done=true;
     clearTimeout(timer);
@@ -4296,14 +4296,19 @@ function _gasJsonp(url, cb, timeoutMs){
   document.head.appendChild(script);
 }
 
-function gasLoadBacklog(cb){
+function gasLoadBacklog(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  var retries = (_retries === undefined) ? 2 : _retries;
   if(!backlogSnaps.length){ _gasBacklogLoading=true; renderBacklogView(); }
   var localMax=maxBacklogStoryCount(backlogSnaps);
   _gasJsonp(BK_GAS_URL+'?action=getBacklog&t='+Date.now(), function(err,json){
+    if(err==='timeout' && retries>0){
+      // Cold-start do GAS: retry automático após breve pausa
+      setTimeout(function(){ gasLoadBacklog(cb, retries-1); }, 3000);
+      return;
+    }
     _gasBacklogLoading=false;
     if(err){
-      // Timeout ou erro de rede: mostra tela de "importar" em vez de spinner infinito
       _gasBacklogError=err;
       renderBacklogView();
       if(cb) cb(err);
@@ -6146,11 +6151,6 @@ var SEED=[
   jbLoadConfig();
   jbUpdateBtn();
 
-  // Pre-warm do GAS: acorda o servidor o mais cedo possível para que o cold-start
-  // já esteja resolvido quando gasLoadBacklog() disparar logo abaixo (~200 ms depois).
-  // O health endpoint é leve e não retorna dados, só aquece a instância do Apps Script.
-  if(BK_GAS_URL){ try{ _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){}); }catch(e){} }
-
   // BOOT CLOUD-FIRST com render imediato do cache:
   // Renderiza o cache local primeiro para evitar tela em branco no F5,
   // depois o Google Sheets sobrescreve via replaceFromSharedSource (que preserva a aba atual).
@@ -6164,24 +6164,33 @@ var SEED=[
     setSyncLabel('🔄 Sincronizando com Google Sheets…');
     // Carrega meta de squad/resumo da nuvem antes do sync do Sheets
     loadEpicMetaFromCloud();
-    // Carrega backlog e estórias compartilhados em paralelo com os épicos
-    gasLoadBacklog(function(err, count){
-      if(!err && count>0){
-        var bkN=$id('bkUpName'); if(bkN) bkN.textContent='Backlog sincronizado';
-        var bkS=$id('bkUpSub'); if(bkS) bkS.textContent=count+' snapshots carregados do servidor';
-        renderBacklogView();
-        toast('☁️ Backlog carregado','Dados do servidor: '+count+' snapshots disponíveis.');
-      } else if(err){
-        toast('⚠️ Backlog: falha ao carregar servidor','Erro: '+err,'warn');
-      }
-    });
-    gasLoadStories(function(err, count){
-      if(!err && count>0){
-        toast('☁️ Estórias carregadas',count+' estórias sincronizadas do servidor.');
-      } else if(err){
-        toast('⚠️ Estórias: falha ao carregar servidor','Erro: '+err,'warn');
-      }
-    });
+
+    // Pre-warm: dispara health check e aguarda resposta antes de carregar backlog/estórias,
+    // garantindo que o cold-start do Apps Script já esteja resolvido.
+    function _afterWarmup(){
+      gasLoadBacklog(function(err, count){
+        if(!err && count>0){
+          var bkN=$id('bkUpName'); if(bkN) bkN.textContent='Backlog sincronizado';
+          var bkS=$id('bkUpSub'); if(bkS) bkS.textContent=count+' snapshots carregados do servidor';
+          renderBacklogView();
+          toast('☁️ Backlog carregado','Dados do servidor: '+count+' snapshots disponíveis.');
+        } else if(err){
+          toast('⚠️ Backlog: falha ao carregar servidor','Erro: '+err,'warn');
+        }
+      });
+      gasLoadStories(function(err, count){
+        if(!err && count>0){
+          toast('☁️ Estórias carregadas',count+' estórias sincronizadas do servidor.');
+        } else if(err){
+          toast('⚠️ Estórias: falha ao carregar servidor','Erro: '+err,'warn');
+        }
+      });
+    }
+    if(BK_GAS_URL){
+      _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){ _afterWarmup(); });
+    } else {
+      _afterWarmup();
+    }
     loadFromSheets(function(err, sheetsData){
       if(!err && Array.isArray(sheetsData) && sheetsData.length){
         replaceFromSharedSource(sheetsData);
