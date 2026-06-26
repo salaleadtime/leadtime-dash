@@ -4610,11 +4610,13 @@ function renderBacklogView(){
   // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
   var maxKnown=maxBacklogStoryCount(backlogSnaps);
   var curCount=snapStoryCount(cur);
+  var _bkWarnDismissed=(function(){ try{ return localStorage.getItem('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
   var staleWarningHtml='';
-  if(maxKnown>curCount){
-    staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;">'+
-      '⚠️ O snapshot mais recente tem <strong>'+curCount+'</strong> histórias, mas há um snapshot com <strong>'+maxKnown+'</strong> histórias. '+
-      'O servidor pode não ter recebido a importação mais completa. Tente importar novamente ou aguarde a sincronização.'+
+  if(maxKnown>curCount && !_bkWarnDismissed){
+    staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:.75rem;">'+
+      '<span style="flex:1">⚠️ O snapshot mais recente tem <strong>'+curCount+'</strong> histórias, mas há um snapshot com <strong>'+maxKnown+'</strong> histórias. '+
+      'O servidor pode não ter recebido a importação mais completa. Tente importar novamente ou aguarde a sincronização.</span>'+
+      '<button onclick="try{localStorage.setItem(\'bk_stale_warn_dismissed\',\'1\');}catch(e){}this.closest(\'div\').remove()" style="flex:0 0 auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;font-size:11px;color:#92400e;cursor:pointer;white-space:nowrap">Entendido ✕</button>'+
       '</div>';
   }
 
