@@ -279,8 +279,9 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 /* table card */
 .tc{background:var(--card);border:1px solid #e2e8f0;border-radius:var(--rad);overflow:hidden;box-shadow:0 1px 6px rgba(15,23,42,.07)}
 .tc-hd{padding:.85rem 1.2rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;background:#fff}
-.tc-hd-t{font-size:13px;font-weight:700;color:#7a0000}
-.tc-hint{font-size:10.5px;color:#94a3b8}
+.tc-hd-t{font-size:13px;font-weight:600;color:#7a0000;letter-spacing:-.01em}
+.tc-hint{font-size:10px;color:#b0bac7}
+.auto-salvo-badge{display:inline-flex;align-items:center;gap:2px;font-size:9.5px;color:#78909c;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:99px;padding:.05rem .45rem;margin-left:.3rem;vertical-align:middle;line-height:1.6}
 .tscr{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:860px}
 th{background:#7a0000;color:#ffffff;padding:10px 14px;text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;white-space:nowrap;border-bottom:none}
@@ -363,7 +364,7 @@ tr:nth-child(even):hover td{background:#e8f0ff!important}
 
 /* ══ DASHBOARD ══ */
 .db{padding:1.2rem 1.6rem;display:flex;flex-direction:column;gap:1.2rem}
-.sec-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#cc0000;margin-bottom:.8rem;display:flex;align-items:center;gap:8px}.sec-lbl::after{content:'';flex:1;height:1px;background:#fecaca}
+.sec-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#9b1313;margin-bottom:.8rem;display:flex;align-items:center;gap:10px}.sec-lbl::after{content:'';flex:1;height:1px;background:linear-gradient(to right,#f0c0c0,transparent)}
 
 /* KPI grid */
 .kgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
@@ -1363,16 +1364,16 @@ body{min-height:100vh}
     <input type="text" class="fsrch" id="srch" placeholder="🔍 Buscar iniciativa..." title="Buscar por número, ID ou nome da iniciativa" oninput="pg=1;renderTbl()">
   </div>
 
-  <div id="semFimAlert" style="display:none;margin-bottom:.6rem;padding:.55rem .9rem;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-size:12px;color:#9a3412;align-items:center;gap:.5rem">
-    <span style="font-size:15px">⚠️</span>
+  <div id="semFimAlert" style="display:none;margin-bottom:.5rem;padding:.3rem .75rem;background:#fffbf5;border:1px solid #fcd99a;border-left:3px solid #f59e0b;border-radius:6px;font-size:11.5px;color:#92400e;align-items:center;gap:.4rem">
+    <span style="font-size:11px;opacity:.75">⚠</span>
     <span id="semFimAlertTxt"></span>
-    <span style="color:#c2410c;font-weight:600"> — o LT está sendo contado até hoje, inflando a média.</span>
+    <span style="color:#b45309;font-weight:500"> — o LT está sendo contado até hoje, inflando a média.</span>
   </div>
 
   <div class="tc">
     <div class="tc-hd">
       <span class="tc-hd-t" id="tblTitle">Épicos</span>
-      <span class="tc-hint">Data Fim · Data Prevista · CHG · Impedimento são editáveis · 💾 auto-salvo</span>
+      <span class="tc-hint">Data Fim · Data Prevista · CHG · Impedimento são editáveis <span class="auto-salvo-badge">💾 auto-salvo</span></span>
     </div>
     <div class="tscr">
       <table>
