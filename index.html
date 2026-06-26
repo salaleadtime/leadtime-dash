@@ -121,10 +121,10 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 }
 
 /* ── FDATE filters ── */
-.fdate{border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:11px;color:#475569;background:#f8fafc;cursor:pointer;outline:none;font-family:inherit;width:132px}
-.fdate:focus{border-color:var(--accent)}
-.fdate.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
-.fdate-sep{font-size:12px;color:var(--tx3);font-weight:700;padding:0 2px}
+.fdate{border:none;border-radius:20px;padding:4px 10px;font-size:11px;color:#475569;background:#f1f5f9;cursor:pointer;outline:none;font-family:inherit;width:126px;transition:background .15s,color .15s}
+.fdate:focus{background:#e8edf3;color:#1e293b;box-shadow:0 0 0 2px rgba(204,0,0,.12)}
+.fdate.active{background:rgba(204,0,0,.1);color:#cc0000;font-weight:600}
+.fdate-sep{font-size:11px;color:#94a3b8;font-weight:600;padding:0 1px}
 .fdate-clear{display:none!important}
 .fdate-clear.on{display:inline-flex!important;background:var(--rs);border-color:var(--rb);color:var(--rt)}
 .fdate-clear.on:hover{background:#fecaca}
@@ -263,17 +263,18 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .ep{padding:1.2rem 1.6rem;display:flex;flex-direction:column;gap:.9rem}
 
 /* filter bar */
-.fbar{background:var(--card);border:1px solid #e2e8f0;border-radius:var(--rad);padding:.75rem 1.1rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(15,23,42,.06)}
-.fl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#64748b;white-space:nowrap;background:#f1f5f9;padding:4px 8px;border-radius:6px}
-.chip{border:1px solid #e2e8f0;background:#f8fafc;border-radius:8px;padding:5px 14px;font-size:11px;font-weight:500;cursor:pointer;color:#475569;transition:all .13s;white-space:nowrap;font-family:inherit}
-.chip:hover{border-color:#cc0000;color:#cc0000}
-.chip.on{background:#cc0000;border-color:#cc0000;color:#fff;box-shadow:0 2px 8px rgba(204,0,0,.3)}
-.fsep{width:1px;height:20px;background:#e2e8f0;flex-shrink:0;margin:0 4px}
-.fsel{border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:11px;color:#475569;background:#f8fafc;cursor:pointer;outline:none;font-family:inherit}
-.fsrch{border:none;border-bottom:1px solid transparent;border-radius:0;padding:4px 6px;font-size:12px;color:var(--tx);background:transparent;outline:none;margin-left:auto;width:160px;font-family:inherit;opacity:.45;transition:opacity .2s,border-color .2s}
-.fsrch:focus,.fsrch:not(:placeholder-shown){border-bottom-color:var(--accent);opacity:1}
-.fsrch:hover{opacity:.75}
-.fsel:focus{border-color:var(--accent)}
+.fbar{background:#f8fafc;border:1px solid #eef1f6;border-radius:var(--rad);padding:.5rem .85rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.fl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.65px;color:#94a3b8;white-space:nowrap;padding:3px 0}
+.chip{border:none;background:#eef1f6;border-radius:20px;padding:4px 12px;font-size:10.5px;font-weight:500;cursor:pointer;color:#64748b;transition:background .13s,color .13s;white-space:nowrap;font-family:inherit}
+.chip:hover{background:#e2e6ee;color:#cc0000}
+.chip.on{background:#cc0000;color:#fff;box-shadow:none}
+.fsep{width:1px;height:16px;background:#dde1e9;flex-shrink:0;margin:0 2px}
+.fsel{border:none;border-radius:20px;padding:4px 10px;font-size:10.5px;color:#64748b;background:#eef1f6;cursor:pointer;outline:none;font-family:inherit;transition:background .13s}
+.fsrch{border:none;border-radius:20px;padding:4px 12px;font-size:11.5px;color:var(--tx);background:#eef1f6;outline:none;margin-left:auto;width:168px;font-family:inherit;transition:background .2s,box-shadow .2s}
+.fsrch::placeholder{color:#94a3b8}
+.fsrch:focus,.fsrch:not(:placeholder-shown){background:#e8edf3;box-shadow:0 0 0 2px rgba(204,0,0,.1)}
+.fsrch:hover{background:#e8edf3}
+.fsel:focus{background:#e8edf3;box-shadow:0 0 0 2px rgba(204,0,0,.1)}
 
 /* table card */
 .tc{background:var(--card);border:1px solid #e2e8f0;border-radius:var(--rad);overflow:hidden;box-shadow:0 1px 6px rgba(15,23,42,.07)}
@@ -1034,10 +1035,12 @@ body{
   box-shadow:0 10px 24px rgba(16,24,40,.055)!important;
 }
 .fbar{
-  padding:.72rem 1rem!important;
+  padding:.5rem .85rem!important;
+  background:#f8fafc!important;
+  box-shadow:0 1px 3px rgba(15,23,42,.04)!important;
 }
 .fl{
-  background:#F2F4F7!important;
+  background:transparent!important;
   color:#667085!important;
 }
 .chip.on{
