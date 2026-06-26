@@ -1300,8 +1300,9 @@ body{min-height:100vh}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     <span>Copiar</span>
   </button>
-  <button class="tbtn green" onclick="doExport()" title="Exportar Excel" style="padding:5px 10px!important">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="2" fill="#217346"/><path d="M8 7h8M8 12h8M8 17h5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M5 7l2.5 5L5 17" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <button class="tbtn green" onclick="doExport()" title="Exportar Excel">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    <span>Excel</span>
   </button>
 </header>
 
@@ -1521,8 +1522,11 @@ html,body{
   background-image:none!important;
   border-bottom:none!important;
   box-shadow:none!important;
-  height:84px!important;
-  padding:0 1.8rem!important;
+  height:auto!important;
+  min-height:56px!important;
+  padding:0 1.2rem!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
 }
 .top::before,
 .top::after{
@@ -1781,6 +1785,20 @@ tr:nth-child(even):hover td,
     padding:0 10px!important;
     font-size:10.5px!important;
   }
+}
+
+/* Notebook (≤1440px): botões do header só com ícone — texto oculto */
+@media(max-width:1440px){
+  .top .tbtn span{ display:none!important; }
+  .top .tbtn{ padding:6px 8px!important; gap:0!important; }
+  .top .tbtn svg{ display:block!important; }
+  /* Mantém "Excel" visível pois é o único botão de ação principal */
+  .top .tbtn.green span{ display:inline!important; }
+  .top .tbtn.green{ padding:6px 10px!important; gap:4px!important; }
+}
+/* Tela grande (>1440px): mostra texto normal */
+@media(min-width:1441px){
+  .top .tbtn span{ display:inline!important; }
 }
 
 </style>
