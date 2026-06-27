@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>7 Design Mockups — Ops for Ops · Iniciativa #113345</title>
+<style>
+  :root {
+    --primary: #bf1830; --primary-dark: #8e1125; --ink: #1c2430;
+    --muted: #687587; --line: #e5e9f2; --bg: #f2f4f8;
+    --green: #1f9d75; --blue: #2d6cdf; --purple: #7b61ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Segoe UI, sans-serif; background: #e8eaf0; color: var(--ink); padding: 32px 24px; }
+  h1 { font-size: 22px; font-weight: 900; letter-spacing: -.04em; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 40px; }
+  .mockup-wrap { display: flex; flex-direction: column; gap: 48px; }
+  .mockup-section { background: #fff; border-radius: 20px; padding: 28px; box-shadow: 0 8px 32px rgba(17,24,39,.08); }
+  .mockup-label { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .mockup-num { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 900; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mockup-title { font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+  .mockup-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .divider { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+
+  /* === Design 1: Slide-style columns === */
+  .d1-board { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0; border-radius: 14px; overflow: hidden; border: 1.5px solid var(--line); }
+  .d1-col {}
+  .d1-head { padding: 14px 18px; font-weight: 800; font-size: 13px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+  .d1-head.h1 { background: linear-gradient(135deg,#7b1c30,#bf1830); }
+  .d1-head.h2 { background: linear-gradient(135deg,#8e1125,#c9202e); border-left: 1px solid rgba(255,255,255,.15); border-right: 1px solid rgba(255,255,255,.15); }
+  .d1-head.h3 { background: linear-gradient(135deg,#1c2430,#2d3a4a); }
+  .d1-badge { background: rgba(255,255,255,.22); border-radius: 999px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; }
+  .d1-body { padding: 14px 16px; background: #fff; display: flex; flex-direction: column; gap: 10px; min-height: 200px; }
+  .d1-col:not(:last-child) .d1-body { border-right: 1px solid var(--line); }
+  .d1-item { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; line-height: 1.4; color: var(--ink); }
+  .d1-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .d1-dot.c { background: var(--primary); }
+  .d1-dot.d { background: var(--blue); }
+  .d1-dot.n { background: var(--purple); }
+  .d1-target { font-size: 10.5px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+  .d1-foot { padding: 10px 16px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); font-weight: 700; display: flex; gap: 6px; align-items: center; }
+
+  /* === Design 2: Frosted-glass cards === */
+  .d2-board { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+  .d2-col { border-radius: 18px; overflow: hidden; background: linear-gradient(145deg,#fff,#f8faff); border: 1px solid var(--line); box-shadow: 0 6px 24px rgba(17,24,39,.06); }
+  .d2-head { padding: 16px 18px 14px; border-bottom: 1px solid var(--line); }
+  .d2-icon { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .d2-icon.c { background: #fff0f3; }
+  .d2-icon.d { background: #edf4ff; }
+  .d2-icon.n { background: #f1efff; }
+  .d2-htitle { font-weight: 800; font-size: 13px; margin-bottom: 2px; }
+  .d2-htitle.c { color: var(--primary-dark); }
+  .d2-htitle.d { color: #2458b8; }
+  .d2-htitle.n { color: #5741d9; }
+  .d2-count { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .d2-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; min-height: 180px; }
+  .d2-pill { border-radius: 10px; padding: 8px 11px; font-size: 12px; line-height: 1.35; font-weight: 600; }
+  .d2-pill.c { background: #fff0f3; color: #7b1020; }
+  .d2-pill.d { background: #edf4ff; color: #2458b8; }
+  .d2-pill.n { background: #f1efff; color: #5741d9; }
+  .d2-target { font-size: 10px; opacity: .75; margin-top: 2px; }
+
+  /* === Design 3: Vertical stepper === */
+  .d3-board { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+  .d3-col { border-radius: 16px; border: 1px solid var(--line); background: #fff; overflow: hidden; }
+  .d3-head { padding: 14px 16px; font-weight: 800; font-size: 13px; display: flex; align-items: center; gap: 10px; border-bottom: 3px solid; }
+  .d3-head.c { color: var(--primary-dark); border-color: var(--primary); }
+  .d3-head.d { color: #2458b8; border-color: var(--blue); }
+  .d3-head.n { color: #5741d9; border-color: var(--purple); }
+  .d3-badge { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+  .d3-badge.c { background: var(--primary); color: #fff; }
+  .d3-badge.d { background: var(--blue); color: #fff; }
+  .d3-badge.n { background: var(--purple); color: #fff; }
+  .d3-step { display: flex; gap: 0; padding: 10px 16px 10px 12px; position: relative; }
+  .d3-step:not(:last-child)::before { content:''; position:absolute; left:20px; top:30px; bottom:-6px; width:2px; background:var(--line); }
+  .d3-circle { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 3px; margin-right: 10px; z-index: 1; }
+  .d3-circle.c { background: var(--primary); }
+  .d3-circle.d { background: var(--blue); }
+  .d3-circle.n { background: rgba(123,97,255,.18); border: 2px solid var(--purple); }
+  .d3-circle svg { display: block; }
+  .d3-text { font-size: 12.5px; line-height: 1.38; color: var(--ink); }
+  .d3-target { font-size: 10.5px; color: var(--muted); font-weight: 700; }
+
+  /* === Design 4: Dark sidebar panels === */
+  .d4-board { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+  .d4-col { border-radius: 16px; overflow: hidden; }
+  .d4-head { padding: 18px; color: #fff; }
+  .d4-head.c { background: #1c0a0e; }
+  .d4-head.d { background: #0a1226; }
+  .d4-head.n { background: #12101f; }
+  .d4-htag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+  .d4-htag.c { background: rgba(191,24,48,.35); color: #ff9aaa; }
+  .d4-htag.d { background: rgba(45,108,223,.35); color: #7eb0ff; }
+  .d4-htag.n { background: rgba(123,97,255,.35); color: #c4b8ff; }
+  .d4-hcount { font-size: 34px; font-weight: 900; letter-spacing: -.04em; }
+  .d4-hlabel { font-size: 11px; opacity: .6; margin-top: 2px; }
+  .d4-body { padding: 12px 14px; background: #fafbfd; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 16px 16px; display: flex; flex-direction: column; gap: 7px; min-height: 180px; }
+  .d4-item { font-size: 12px; line-height: 1.4; color: var(--ink); padding: 7px 10px; border-radius: 10px; border: 1px solid transparent; }
+  .d4-item.c { background: #fff0f3; border-color: #ffd6de; }
+  .d4-item.d { background: #edf4ff; border-color: #d4e4ff; }
+  .d4-item.n { background: #f1efff; border-color: #ddd8ff; }
+  .d4-target { font-size: 10px; color: var(--muted); font-weight: 700; }
+
+  /* === Design 5: Gradient progress === */
+  .d5-board { display: flex; flex-direction: column; gap: 18px; }
+  .d5-section { border-radius: 16px; border: 1px solid var(--line); overflow: hidden; }
+  .d5-head { display: flex; align-items: center; gap: 14px; padding: 14px 18px; font-weight: 800; font-size: 13px; }
+  .d5-head.c { background: linear-gradient(90deg,#fff0f3,#fff); color: var(--primary-dark); }
+  .d5-head.d { background: linear-gradient(90deg,#edf4ff,#fff); color: #1d4fa8; }
+  .d5-head.n { background: linear-gradient(90deg,#f1efff,#fff); color: #4731c9; }
+  .d5-hbadge { padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 900; }
+  .d5-hbadge.c { background: var(--primary); color: #fff; }
+  .d5-hbadge.d { background: var(--blue); color: #fff; }
+  .d5-hbadge.n { background: var(--purple); color: #fff; }
+  .d5-items { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px 16px; background: #fff; }
+  .d5-chip { display: inline-flex; align-items: flex-start; gap: 7px; border-radius: 10px; padding: 7px 11px; font-size: 12px; line-height: 1.35; font-weight: 600; max-width: 340px; }
+  .d5-chip.c { background: #fff0f3; color: #7b1020; }
+  .d5-chip.d { background: #edf4ff; color: #1d4fa8; }
+  .d5-chip.n { background: #f1efff; color: #4731c9; }
+
+  /* === Design 6: Compact timeline bar === */
+  .d6-wrapper { display: flex; flex-direction: column; gap: 4px; }
+  .d6-group-label { font-size: 10.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 12px 0 6px; }
+  .d6-row { display: flex; align-items: flex-start; gap: 12px; padding: 9px 14px; border-radius: 12px; }
+  .d6-row.c { background: #fff0f3; }
+  .d6-row.d { background: #edf4ff; }
+  .d6-row.n { background: #f1efff; }
+  .d6-marker { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .d6-marker.c { background: var(--primary); }
+  .d6-marker.d { background: var(--blue); }
+  .d6-marker.n { background: var(--purple); }
+  .d6-text { font-size: 12.5px; line-height: 1.38; font-weight: 600; color: var(--ink); flex: 1; }
+  .d6-tag { font-size: 10px; color: var(--muted); font-weight: 700; }
+
+  /* === Design 7: Minimal card with border accent === */
+  .d7-board { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+  .d7-col { border-radius: 16px; background: #fff; border: 1px solid var(--line); overflow: hidden; }
+  .d7-accent { height: 4px; }
+  .d7-accent.c { background: linear-gradient(90deg,var(--primary),#ff6b81); }
+  .d7-accent.d { background: linear-gradient(90deg,var(--blue),#5b9fff); }
+  .d7-accent.n { background: linear-gradient(90deg,var(--purple),#c4b8ff); }
+  .d7-head { padding: 14px 16px 12px; }
+  .d7-htitle { font-weight: 800; font-size: 13px; margin-bottom: 3px; }
+  .d7-htitle.c { color: var(--primary-dark); }
+  .d7-htitle.d { color: #2458b8; }
+  .d7-htitle.n { color: #5741d9; }
+  .d7-hcount { font-size: 11px; color: var(--muted); font-weight: 700; }
+  .d7-body { padding: 4px 0 12px; }
+  .d7-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 16px; font-size: 12.5px; line-height: 1.38; border-bottom: 1px solid #f5f7fb; }
+  .d7-item:last-child { border-bottom: 0; }
+  .d7-num { font-weight: 900; font-size: 11px; color: var(--muted); flex-shrink: 0; width: 18px; }
+  .d7-target { font-size: 10.5px; color: var(--muted); font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>7 Propostas de Design — Ops for Ops</h1>
+<p class="subtitle">Iniciativa #113345 · Gestão de Contas e Cartões · Selecione o design que preferir</p>
+
+<div class="mockup-wrap">
+
+<!-- DESIGN 1 -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">1</div>
+    <div>
+      <div class="mockup-title">Slide-style — 3 colunas com gradiente vermelho</div>
+      <div class="mockup-desc">Fiel ao layout original da apresentação. Cabeçalho com gradiente, corpo branco, rodapé sutil.</div>
+    </div>
+  </div>
+  <div class="d1-board">
+    <div class="d1-col">
+      <div class="d1-head h1">Concluídos <div class="d1-badge">8</div></div>
+      <div class="d1-body">
+        <div class="d1-item"><span class="d1-dot c"></span>Workshop das iniciativas - Ideação</div>
+        <div class="d1-item"><span class="d1-dot c"></span>Solicitação da iniciativa (Necessidades, dor do negócio, AS IS, TO BE, Benefícios)</div>
+        <div class="d1-item"><span class="d1-dot c"></span>Cadastro da iniciativa no wave – Iniciativa #113345</div>
+        <div class="d1-item"><span class="d1-dot c"></span>Bootcamp Ops for Ops (07/05)</div>
+        <div class="d1-item"><span class="d1-dot c"></span>Validação do Business Case, Ações e KPI's (Validação L2)</div>
+        <div class="d1-item"><span class="d1-dot c"></span>Discovery (12/06 – 22/06)</div>
+        <div class="d1-item"><span class="d1-dot c"></span>Criação 4 Features</div>
+        <div class="d1-item"><span class="d1-dot c"></span>Criação Histórias Usuário no Jira projeto PCCF</div>
+      </div>
+      <div class="d1-foot">✅ 8 itens entregues</div>
+    </div>
+    <div class="d1-col">
+      <div class="d1-head h2">Em andamento <div class="d1-badge">5</div></div>
+      <div class="d1-body">
+        <div class="d1-item"><span class="d1-dot d"></span><div>Desenhos dos fluxos AS IS<div class="d1-target">Alvo: 25/06</div></div></div>
+        <div class="d1-item"><span class="d1-dot d"></span><div>Apresentação fluxos DATI, DS e RTE<div class="d1-target">Alvo: 29/06</div></div></div>
+        <div class="d1-item"><span class="d1-dot d"></span><div>Desenho técnico de solução<div class="d1-target">Alvo 03/07 (Data Arquitetura)</div></div></div>
+        <div class="d1-item"><span class="d1-dot d"></span><div>Formalização das histórias e fluxos com a Operação<div class="d1-target">Alvo: 03/07</div></div></div>
+        <div class="d1-item"><span class="d1-dot d"></span><div>Escrita das histórias projetos Outros Produtos<div class="d1-target">Alvo: 10/07</div></div></div>
+      </div>
+      <div class="d1-foot">🔄 5 itens ativos</div>
+    </div>
+    <div class="d1-col">
+      <div class="d1-head h3">Próximos passos <div class="d1-badge">3</div></div>
+      <div class="d1-body">
+        <div class="d1-item"><span class="d1-dot n"></span>Refinamento técnico</div>
+        <div class="d1-item"><span class="d1-dot n"></span>Ratificação de esforço de desenvolvimento e distribuição das histórias na linha do tempo</div>
+        <div class="d1-item"><span class="d1-dot n"></span>Desenvolvimento da solução</div>
+      </div>
+      <div class="d1-foot">🧭 3 próximos passos</div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 2 -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">2</div>
+    <div>
+      <div class="mockup-title">Frosted cards — Ícones com cor por coluna</div>
+      <div class="mockup-desc">Colunas com fundo branco suave, ícone colorido no cabeçalho, itens como chips coloridos por status.</div>
+    </div>
+  </div>
+  <div class="d2-board">
+    <div class="d2-col">
+      <div class="d2-head">
+        <div class="d2-icon c">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#bf1830" stroke-width="2"/><path d="M6.5 10.5l2.5 2.5 4.5-5" stroke="#bf1830" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="d2-htitle c">Concluídos</div>
+        <div class="d2-count">8 itens entregues</div>
+      </div>
+      <div class="d2-body">
+        <div class="d2-pill c">Workshop das iniciativas - Ideação</div>
+        <div class="d2-pill c">Solicitação da iniciativa (Necessidades, dor do negócio...)</div>
+        <div class="d2-pill c">Cadastro no wave – #113345</div>
+        <div class="d2-pill c">Bootcamp Ops for Ops (07/05)</div>
+        <div class="d2-pill c">Validação Business Case e KPI's (L2)</div>
+        <div class="d2-pill c">Discovery (12/06 – 22/06)</div>
+        <div class="d2-pill c">Criação 4 Features</div>
+        <div class="d2-pill c">Histórias Usuário no Jira - PCCF</div>
+      </div>
+    </div>
+    <div class="d2-col">
+      <div class="d2-head">
+        <div class="d2-icon d">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#2d6cdf" stroke-width="2" stroke-dasharray="5 2"/></svg>
+        </div>
+        <div class="d2-htitle d">Em andamento</div>
+        <div class="d2-count">5 itens ativos</div>
+      </div>
+      <div class="d2-body">
+        <div class="d2-pill d">Desenhos dos fluxos AS IS<div class="d2-target">Alvo: 25/06</div></div>
+        <div class="d2-pill d">Apresentação fluxos DATI, DS e RTE<div class="d2-target">Alvo: 29/06</div></div>
+        <div class="d2-pill d">Desenho técnico de solução<div class="d2-target">Alvo 03/07</div></div>
+        <div class="d2-pill d">Formalização histórias com Operação<div class="d2-target">Alvo: 03/07</div></div>
+        <div class="d2-pill d">Escrita histórias Outros Produtos<div class="d2-target">Alvo: 10/07</div></div>
+      </div>
+    </div>
+    <div class="d2-col">
+      <div class="d2-head">
+        <div class="d2-icon n">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M11 5l5 5-5 5" stroke="#7b61ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="d2-htitle n">Próximos passos</div>
+        <div class="d2-count">3 próximos passos</div>
+      </div>
+      <div class="d2-body">
+        <div class="d2-pill n">Refinamento técnico</div>
+        <div class="d2-pill n">Ratificação de esforço e distribuição das histórias</div>
+        <div class="d2-pill n">Desenvolvimento da solução</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 3 -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">3</div>
+    <div>
+      <div class="mockup-title">Stepper vertical — Linha de progresso conectada</div>
+      <div class="mockup-desc">Itens conectados por linha vertical, círculos checos = concluído, pontilhados = em andamento, vazios = próximo.</div>
+    </div>
+  </div>
+  <div class="d3-board">
+    <div class="d3-col">
+      <div class="d3-head c">Concluídos <span class="d3-badge c">8</span></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Workshop das iniciativas - Ideação</div></div></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Solicitação da iniciativa</div></div></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Cadastro no wave – #113345</div></div></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Bootcamp Ops for Ops (07/05)</div></div></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Validação Business Case e KPI's (L2)</div></div></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Discovery (12/06 – 22/06)</div></div></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Criação 4 Features</div></div></div>
+      <div class="d3-step"><div class="d3-circle c"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="d3-text">Criação Histórias Usuário no Jira - PCCF</div></div></div>
+    </div>
+    <div class="d3-col">
+      <div class="d3-head d">Em andamento <span class="d3-badge d">5</span></div>
+      <div class="d3-step"><div class="d3-circle d" style="background:#2d6cdf"></div><div><div class="d3-text">Desenhos dos fluxos AS IS</div><div class="d3-target">Alvo: 25/06</div></div></div>
+      <div class="d3-step"><div class="d3-circle d" style="background:#2d6cdf"></div><div><div class="d3-text">Apresentação fluxos DATI, DS e RTE</div><div class="d3-target">Alvo: 29/06</div></div></div>
+      <div class="d3-step"><div class="d3-circle d" style="background:#2d6cdf"></div><div><div class="d3-text">Desenho técnico de solução</div><div class="d3-target">Alvo 03/07</div></div></div>
+      <div class="d3-step"><div class="d3-circle d" style="background:#2d6cdf"></div><div><div class="d3-text">Formalização das histórias com Operação</div><div class="d3-target">Alvo: 03/07</div></div></div>
+      <div class="d3-step"><div class="d3-circle d" style="background:#2d6cdf"></div><div><div class="d3-text">Escrita das histórias - Outros Produtos</div><div class="d3-target">Alvo: 10/07</div></div></div>
+    </div>
+    <div class="d3-col">
+      <div class="d3-head n">Próximos passos <span class="d3-badge n">3</span></div>
+      <div class="d3-step"><div class="d3-circle n"></div><div><div class="d3-text">Refinamento técnico</div></div></div>
+      <div class="d3-step"><div class="d3-circle n"></div><div><div class="d3-text">Ratificação de esforço e distribuição das histórias</div></div></div>
+      <div class="d3-step"><div class="d3-circle n"></div><div><div class="d3-text">Desenvolvimento da solução</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 4 -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">4</div>
+    <div>
+      <div class="mockup-title">Dark headers — Contadores grandes, corpo claro</div>
+      <div class="mockup-desc">Cabeçalho escuro com número grande em destaque. Corpo claro com itens como cartões coloridos compactos.</div>
+    </div>
+  </div>
+  <div class="d4-board">
+    <div class="d4-col">
+      <div class="d4-head c">
+        <div class="d4-htag c">Concluídos</div>
+        <div class="d4-hcount">8</div>
+        <div class="d4-hlabel">itens entregues</div>
+      </div>
+      <div class="d4-body">
+        <div class="d4-item c">Workshop das iniciativas - Ideação</div>
+        <div class="d4-item c">Solicitação da iniciativa (AS IS, TO BE, Benefícios)</div>
+        <div class="d4-item c">Cadastro no wave – #113345</div>
+        <div class="d4-item c">Bootcamp Ops for Ops (07/05)</div>
+        <div class="d4-item c">Validação Business Case e KPI's (L2)</div>
+        <div class="d4-item c">Discovery (12/06 – 22/06)</div>
+        <div class="d4-item c">Criação 4 Features</div>
+        <div class="d4-item c">Histórias Usuário Jira - PCCF</div>
+      </div>
+    </div>
+    <div class="d4-col">
+      <div class="d4-head d">
+        <div class="d4-htag d">Em andamento</div>
+        <div class="d4-hcount">5</div>
+        <div class="d4-hlabel">itens ativos</div>
+      </div>
+      <div class="d4-body">
+        <div class="d4-item d">Desenhos fluxos AS IS <div class="d4-target">Alvo: 25/06</div></div>
+        <div class="d4-item d">Apresentação DATI, DS e RTE <div class="d4-target">Alvo: 29/06</div></div>
+        <div class="d4-item d">Desenho técnico de solução <div class="d4-target">Alvo 03/07</div></div>
+        <div class="d4-item d">Formalização histórias com Operação <div class="d4-target">Alvo: 03/07</div></div>
+        <div class="d4-item d">Escrita histórias Outros Produtos <div class="d4-target">Alvo: 10/07</div></div>
+      </div>
+    </div>
+    <div class="d4-col">
+      <div class="d4-head n">
+        <div class="d4-htag n">Próximos passos</div>
+        <div class="d4-hcount">3</div>
+        <div class="d4-hlabel">próximos passos</div>
+      </div>
+      <div class="d4-body">
+        <div class="d4-item n">Refinamento técnico</div>
+        <div class="d4-item n">Ratificação de esforço e distribuição das histórias</div>
+        <div class="d4-item n">Desenvolvimento da solução</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 5 -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">5</div>
+    <div>
+      <div class="mockup-title">Gradient flow — Seções horizontais expansíveis</div>
+      <div class="mockup-desc">Layout vertical em seções. Cada status tem um cabeçalho com gradiente sutil e itens como chips inline.</div>
+    </div>
+  </div>
+  <div class="d5-board">
+    <div class="d5-section">
+      <div class="d5-head c"><span class="d5-hbadge c">8</span> Concluídos</div>
+      <div class="d5-items">
+        <div class="d5-chip c">✓ Workshop das iniciativas - Ideação</div>
+        <div class="d5-chip c">✓ Solicitação da iniciativa</div>
+        <div class="d5-chip c">✓ Cadastro no wave – #113345</div>
+        <div class="d5-chip c">✓ Bootcamp Ops for Ops (07/05)</div>
+        <div class="d5-chip c">✓ Validação Business Case e KPI's (L2)</div>
+        <div class="d5-chip c">✓ Discovery (12/06 – 22/06)</div>
+        <div class="d5-chip c">✓ Criação 4 Features</div>
+        <div class="d5-chip c">✓ Histórias Usuário Jira - PCCF</div>
+      </div>
+    </div>
+    <div class="d5-section">
+      <div class="d5-head d"><span class="d5-hbadge d">5</span> Em andamento</div>
+      <div class="d5-items">
+        <div class="d5-chip d">→ Desenhos fluxos AS IS · Alvo 25/06</div>
+        <div class="d5-chip d">→ Apresentação DATI, DS e RTE · Alvo 29/06</div>
+        <div class="d5-chip d">→ Desenho técnico de solução · Alvo 03/07</div>
+        <div class="d5-chip d">→ Formalização histórias com Operação · Alvo 03/07</div>
+        <div class="d5-chip d">→ Escrita histórias Outros Produtos · Alvo 10/07</div>
+      </div>
+    </div>
+    <div class="d5-section">
+      <div class="d5-head n"><span class="d5-hbadge n">3</span> Próximos passos</div>
+      <div class="d5-items">
+        <div class="d5-chip n">◦ Refinamento técnico</div>
+        <div class="d5-chip n">◦ Ratificação de esforço e distribuição das histórias</div>
+        <div class="d5-chip n">◦ Desenvolvimento da solução</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 6 -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">6</div>
+    <div>
+      <div class="mockup-title">Compact timeline — Lista densa, marcadores coloridos</div>
+      <div class="mockup-desc">Visual compacto em lista única, agrupado por status. Ideal para espaço reduzido ou view mobile.</div>
+    </div>
+  </div>
+  <div class="d6-wrapper">
+    <div class="d6-group-label">✅ Concluídos · 8 itens</div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Workshop das iniciativas - Ideação</span></div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Solicitação da iniciativa (Necessidades, dor do negócio, AS IS, TO BE, Benefícios)</span></div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Cadastro da iniciativa no wave – Iniciativa #113345</span></div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Bootcamp Ops for Ops (07/05)</span></div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Validação do Business Case, Ações e KPI's (Validação L2)</span></div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Discovery (12/06 – 22/06)</span></div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Criação 4 Features</span></div>
+    <div class="d6-row c"><span class="d6-marker c"></span><span class="d6-text">Criação Histórias Usuário no Jira projeto PCCF</span></div>
+    <div class="d6-group-label">🔄 Em andamento · 5 itens</div>
+    <div class="d6-row d"><span class="d6-marker d"></span><span class="d6-text">Desenhos dos fluxos AS IS</span><span class="d6-tag">25/06</span></div>
+    <div class="d6-row d"><span class="d6-marker d"></span><span class="d6-text">Apresentação fluxos DATI, DS e RTE</span><span class="d6-tag">29/06</span></div>
+    <div class="d6-row d"><span class="d6-marker d"></span><span class="d6-text">Desenho técnico de solução</span><span class="d6-tag">03/07</span></div>
+    <div class="d6-row d"><span class="d6-marker d"></span><span class="d6-text">Formalização das histórias e fluxos com a Operação</span><span class="d6-tag">03/07</span></div>
+    <div class="d6-row d"><span class="d6-marker d"></span><span class="d6-text">Escrita das histórias projetos Outros Produtos</span><span class="d6-tag">10/07</span></div>
+    <div class="d6-group-label">🧭 Próximos passos · 3 itens</div>
+    <div class="d6-row n"><span class="d6-marker n"></span><span class="d6-text">Refinamento técnico</span></div>
+    <div class="d6-row n"><span class="d6-marker n"></span><span class="d6-text">Ratificação de esforço de desenvolvimento e distribuição das histórias na linha do tempo</span></div>
+    <div class="d6-row n"><span class="d6-marker n"></span><span class="d6-text">Desenvolvimento da solução</span></div>
+  </div>
+</div>
+
+<!-- DESIGN 7 -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">7</div>
+    <div>
+      <div class="mockup-title">Border accent — Minimalista com barra de cor no topo</div>
+      <div class="mockup-desc">Ultra clean. Cada coluna tem apenas uma tira de cor no topo, título simples e itens numerados.</div>
+    </div>
+  </div>
+  <div class="d7-board">
+    <div class="d7-col">
+      <div class="d7-accent c"></div>
+      <div class="d7-head">
+        <div class="d7-htitle c">Concluídos</div>
+        <div class="d7-hcount">8 itens entregues</div>
+      </div>
+      <div class="d7-body">
+        <div class="d7-item"><span class="d7-num">1</span>Workshop das iniciativas - Ideação</div>
+        <div class="d7-item"><span class="d7-num">2</span>Solicitação da iniciativa</div>
+        <div class="d7-item"><span class="d7-num">3</span>Cadastro no wave – #113345</div>
+        <div class="d7-item"><span class="d7-num">4</span>Bootcamp Ops for Ops (07/05)</div>
+        <div class="d7-item"><span class="d7-num">5</span>Validação Business Case e KPI's (L2)</div>
+        <div class="d7-item"><span class="d7-num">6</span>Discovery (12/06 – 22/06)</div>
+        <div class="d7-item"><span class="d7-num">7</span>Criação 4 Features</div>
+        <div class="d7-item"><span class="d7-num">8</span>Histórias Usuário Jira - PCCF</div>
+      </div>
+    </div>
+    <div class="d7-col">
+      <div class="d7-accent d"></div>
+      <div class="d7-head">
+        <div class="d7-htitle d">Em andamento</div>
+        <div class="d7-hcount">5 itens ativos</div>
+      </div>
+      <div class="d7-body">
+        <div class="d7-item"><span class="d7-num">1</span><div>Desenhos fluxos AS IS<div class="d7-target">Alvo: 25/06</div></div></div>
+        <div class="d7-item"><span class="d7-num">2</span><div>Apresentação DATI, DS e RTE<div class="d7-target">Alvo: 29/06</div></div></div>
+        <div class="d7-item"><span class="d7-num">3</span><div>Desenho técnico de solução<div class="d7-target">Alvo 03/07</div></div></div>
+        <div class="d7-item"><span class="d7-num">4</span><div>Formalização histórias com Operação<div class="d7-target">Alvo: 03/07</div></div></div>
+        <div class="d7-item"><span class="d7-num">5</span><div>Escrita histórias Outros Produtos<div class="d7-target">Alvo: 10/07</div></div></div>
+      </div>
+    </div>
+    <div class="d7-col">
+      <div class="d7-accent n"></div>
+      <div class="d7-head">
+        <div class="d7-htitle n">Próximos passos</div>
+        <div class="d7-hcount">3 próximos passos</div>
+      </div>
+      <div class="d7-body">
+        <div class="d7-item"><span class="d7-num">1</span>Refinamento técnico</div>
+        <div class="d7-item"><span class="d7-num">2</span>Ratificação de esforço e distribuição das histórias</div>
+        <div class="d7-item"><span class="d7-num">3</span>Desenvolvimento da solução</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /mockup-wrap -->
+</body>
+</html>

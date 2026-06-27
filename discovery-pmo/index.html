@@ -2860,8 +2860,8 @@
     .raid-pdca-row,
     .raid-pdca-header {
       display: grid;
-      grid-template-columns: minmax(280px, 1.55fr) 132px 92px 96px 108px 110px;
-      align-items: center;
+      grid-template-columns: minmax(220px, 1.55fr) 120px 88px 82px 96px minmax(100px, 1fr);
+      align-items: start;
       gap: 10px;
       padding: 9px 12px;
       border-bottom: 1px solid #edf1f7;
@@ -2951,14 +2951,22 @@
     .raid-status-pill.done { background: #eaf8f3; color: #137252; border-color: #c9eee2; }
 
     .raid-owner,
-    .raid-date,
-    .raid-action-text {
+    .raid-date {
       color: #435267;
       font-size: 11.4px;
       font-weight: 760;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .raid-action-text {
+      color: #435267;
+      font-size: 11.4px;
+      font-weight: 760;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      line-height: 1.35;
     }
 
     .raid-date.late { color: var(--primary-dark); }
@@ -2986,6 +2994,98 @@
       text-align: center;
       color: var(--muted);
       font-size: 12px;
+    }
+
+    /* === Ops for Ops === */
+    .ops-board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      padding: 4px 0;
+    }
+
+    .ops-col {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 4px 16px rgba(17,24,39,.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ops-col-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px 11px;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: -.01em;
+      color: #fff;
+    }
+
+    .ops-col-head.done-head { background: linear-gradient(135deg, #7b1c30, var(--primary)); }
+    .ops-col-head.doing-head { background: linear-gradient(135deg, #8e1125, #bf1830); }
+    .ops-col-head.next-head { background: linear-gradient(135deg, #1c2430, #2d3a4a); }
+
+    .ops-col-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.22);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .ops-col-body {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .ops-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      font-size: 12.5px;
+      line-height: 1.38;
+      color: var(--ink);
+    }
+
+    .ops-dot {
+      flex-shrink: 0;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-top: 5px;
+    }
+
+    .done-head ~ .ops-col-body .ops-dot { background: var(--primary); }
+    .ops-col-body .ops-dot.doing { background: #2d6cdf; }
+    .ops-col-body .ops-dot.next { background: #7b61ff; }
+
+    .ops-item-target {
+      font-size: 10.5px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .ops-col-foot {
+      padding: 10px 16px 13px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
     }
 
     @media (max-width: 1180px) {
@@ -5347,6 +5447,7 @@
         <div class="section-body">
           <div class="tabs">
             <button type="button" class="tab active" data-tab="kanban">Cards</button>
+            <button type="button" class="tab" data-tab="opsforops">Ops for Ops</button>
             <button type="button" class="tab" data-tab="timeline">Timeline</button>
             <button type="button" class="tab" data-tab="schedule">Cronograma <span id="scheduleTabBadge" class="tab-badge hidden"></span></button>
             <button type="button" class="tab" data-tab="checklist">Checklist do Gestor</button>
@@ -5356,6 +5457,10 @@
 
           <div id="tab-kanban" class="tab-panel active">
             <div id="kanban" class="kanban"></div>
+          </div>
+
+          <div id="tab-opsforops" class="tab-panel">
+            <div id="opsforops"></div>
           </div>
 
           <div id="tab-timeline" class="tab-panel">
@@ -6291,28 +6396,118 @@
                   ],
                   "schedule": [
                         {
-                              "id": "sch-113345-discovery",
-                              "item": "Data de Discovery",
+                              "id": "sch-113345-align",
+                              "item": "Alinhamento e Definições",
                               "owner": "Luciana Possamai",
-                              "start": "2026-06-11",
+                              "start": "2026-06-01",
                               "end": "2026-06-11",
+                              "progress": 100,
+                              "done": true,
+                              "observations": "Kick-off, validação de negócio e cadastro da iniciativa.",
+                              "pdcaAction": ""
+                        },
+                        {
+                              "id": "sch-113345-discovery",
+                              "item": "Discovery",
+                              "owner": "Luciana Possamai",
+                              "start": "2026-06-12",
+                              "end": "2026-06-22",
+                              "progress": 100,
+                              "done": true,
+                              "observations": "Discovery realizado conforme cronograma (12/06 – 22/06).",
+                              "pdcaAction": ""
+                        },
+                        {
+                              "id": "sch-113345-asis",
+                              "item": "Desenho de Fluxos AS IS",
+                              "owner": "Luciana Possamai",
+                              "start": "2026-06-23",
+                              "end": "2026-06-25",
+                              "progress": 60,
+                              "done": false,
+                              "observations": "Alvo: 25/06. Apresentação DATI, DS e RTE prevista 29/06.",
+                              "pdcaAction": ""
+                        },
+                        {
+                              "id": "sch-113345-sol",
+                              "item": "Desenho Técnico de Solução",
+                              "owner": "Silmara Rosalem",
+                              "start": "2026-06-29",
+                              "end": "2026-07-03",
                               "progress": 0,
                               "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
+                              "observations": "Alvo 03/07 (Data Arquitetura). Formalização das histórias com Operação.",
+                              "pdcaAction": ""
+                        },
+                        {
+                              "id": "sch-113345-historias",
+                              "item": "Escrita das Histórias",
+                              "owner": "Sandra Souza",
+                              "start": "2026-07-03",
+                              "end": "2026-07-10",
+                              "progress": 0,
+                              "done": false,
+                              "observations": "Escrita das histórias para projetos Outros Produtos. Alvo: 10/07.",
+                              "pdcaAction": ""
+                        },
+                        {
+                              "id": "sch-113345-refin",
+                              "item": "Refinamento Técnico",
+                              "owner": "Silmara Rosalem",
+                              "start": "2026-07-07",
+                              "end": "2026-07-25",
+                              "progress": 0,
+                              "done": false,
+                              "observations": "Ratificação de esforço e distribuição das histórias na linha do tempo.",
                               "pdcaAction": ""
                         },
                         {
                               "id": "sch-113345-dev",
-                              "item": "Janela de Desenvolvimento",
+                              "item": "Desenvolvimento, Testes e Homologações",
                               "owner": "Silmara Rosalem",
-                              "start": "2026-07-01",
-                              "end": "2026-09-01",
+                              "start": "2026-07-15",
+                              "end": "2026-09-30",
                               "progress": 0,
                               "done": false,
-                              "observations": "Início Dev: 01/07/2026 · Término Dev: 01/09/2026.",
+                              "observations": "15/07 – 30/09. Entrega da solução prevista para 30/09.",
+                              "pdcaAction": ""
+                        },
+                        {
+                              "id": "sch-113345-efic",
+                              "item": "Entrega da Eficiência",
+                              "owner": "Luciana Possamai",
+                              "start": "2026-10-01",
+                              "end": "2026-10-31",
+                              "progress": 0,
+                              "done": false,
+                              "observations": "Entrega da eficiência operacional em produção.",
                               "pdcaAction": ""
                         }
                   ],
+                  "opsForOps": {
+                        "completed": [
+                              "Workshop das iniciativas - Ideação",
+                              "Solicitação da iniciativa (Necessidades, dor do negócio, AS IS, TO BE, Benefícios)",
+                              "Cadastro da iniciativa no wave – Iniciativa #113345",
+                              "Bootcamp Ops for Ops (07/05)",
+                              "Validação do Business Case, Ações e KPI's (Validação L2)",
+                              "Discovery (12/06 – 22/06)",
+                              "Criação 4 Features",
+                              "Criação Histórias Usuário no Jira projeto PCCF"
+                        ],
+                        "inProgress": [
+                              { "text": "Desenhos dos fluxos AS IS", "target": "25/06" },
+                              { "text": "Apresentação fluxos DATI, DS e RTE", "target": "29/06" },
+                              { "text": "Desenho técnico de solução", "target": "03/07 (Data Arquitetura)" },
+                              { "text": "Formalização das histórias e fluxos com a Operação", "target": "03/07" },
+                              { "text": "Escrita das histórias projetos Outros Produtos", "target": "10/07" }
+                        ],
+                        "nextSteps": [
+                              "Refinamento técnico",
+                              "Ratificação de esforço de desenvolvimento e distribuição das histórias na linha do tempo",
+                              "Desenvolvimento da solução"
+                        ]
+                  },
                   "raids": {
                         "risks": [],
                         "assumptions": [],
@@ -9558,6 +9753,7 @@
         renderScheduleSignals(safeProject);
         renderChecklist(safeProject);
         renderRaids(safeProject);
+        renderOpsForOps(safeProject);
         renderAttachments(safeProject);
         renderAttachmentSignals(safeProject);
         renderExecutiveRows(safeProject);
@@ -10060,6 +10256,64 @@
       const btn = document.querySelector('.tab[data-tab="attachments"]');
       if (btn) btn.click();
       document.getElementById('tab-attachments')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderOpsForOps(project) {
+      const el = document.getElementById('opsforops');
+      if (!el) return;
+      const ops = project.opsForOps;
+      if (!ops) {
+        el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;">Sem dados de Ops for Ops cadastrados para esta iniciativa.</div>`;
+        return;
+      }
+      const completedItems = (ops.completed || []).map(t =>
+        `<div class="ops-item"><span class="ops-dot" style="background:var(--primary)"></span><span>${escapeHtml(t)}</span></div>`
+      ).join('');
+      const inProgressItems = (ops.inProgress || []).map(t =>
+        `<div class="ops-item"><span class="ops-dot doing"></span><div><div>${escapeHtml(t.text || t)}</div>${t.target ? `<div class="ops-item-target">Alvo: ${escapeHtml(t.target)}</div>` : ''}</div></div>`
+      ).join('');
+      const nextItems = (ops.nextSteps || []).map(t =>
+        `<div class="ops-item"><span class="ops-dot next"></span><span>${escapeHtml(t)}</span></div>`
+      ).join('');
+      el.innerHTML = `
+        <div style="padding:16px 0 8px;">
+          <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Actions Ops for Ops — Iniciativa #${escapeHtml(project.initiativeNumber || '')}</div>
+          <div class="ops-board">
+            <div class="ops-col">
+              <div class="ops-col-head done-head">
+                <span>Concluídos</span>
+                <span class="ops-col-count">${(ops.completed || []).length}</span>
+              </div>
+              <div class="ops-col-body">${completedItems || '<span style="color:var(--muted);font-size:12px">Nenhum item concluído.</span>'}</div>
+              <div class="ops-col-foot">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#1f9d75" stroke-width="2"/><path d="M6 10l3 3 5-5" stroke="#1f9d75" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                ${(ops.completed || []).length} itens entregues
+              </div>
+            </div>
+            <div class="ops-col">
+              <div class="ops-col-head doing-head">
+                <span>Em andamento</span>
+                <span class="ops-col-count">${(ops.inProgress || []).length}</span>
+              </div>
+              <div class="ops-col-body">${inProgressItems || '<span style="color:var(--muted);font-size:12px">Nenhum item em andamento.</span>'}</div>
+              <div class="ops-col-foot">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#2d6cdf" stroke-width="2" stroke-dasharray="4 2"/></svg>
+                ${(ops.inProgress || []).length} itens ativos
+              </div>
+            </div>
+            <div class="ops-col">
+              <div class="ops-col-head next-head">
+                <span>Próximos passos</span>
+                <span class="ops-col-count">${(ops.nextSteps || []).length}</span>
+              </div>
+              <div class="ops-col-body">${nextItems || '<span style="color:var(--muted);font-size:12px">Sem próximos passos definidos.</span>'}</div>
+              <div class="ops-col-foot">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M11 5l5 5-5 5" stroke="#7b61ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                ${(ops.nextSteps || []).length} próximos passos
+              </div>
+            </div>
+          </div>
+        </div>`;
     }
 
     function renderRaids(project) {
