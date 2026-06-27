@@ -1859,6 +1859,311 @@
 
     .gantt-note.pdca-note::before { content: 'PDCA'; color: var(--primary); }
 
+    /* ===== Dark Gantt ===== */
+    .dg-shell {
+      background: #111827;
+      border-radius: 18px;
+      overflow: hidden;
+      padding: 20px 20px 24px;
+    }
+
+    .dg-legend {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    .dg-leg {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: rgba(255,255,255,.45);
+    }
+
+    .dg-leg-dot {
+      width: 12px;
+      height: 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .dg-month-header {
+      display: grid;
+      padding: 0 0 10px 176px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      margin-bottom: 2px;
+      position: relative;
+    }
+
+    .dg-month-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: rgba(255,255,255,.38);
+      text-align: center;
+      letter-spacing: .04em;
+    }
+
+    .dg-today-header-pin {
+      position: absolute;
+      bottom: -6px;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .dg-today-pin-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 3px rgba(191,24,48,.3);
+    }
+
+    .dg-today-pin-label {
+      font-size: 9px;
+      font-weight: 900;
+      color: var(--primary);
+      margin-top: 3px;
+      white-space: nowrap;
+    }
+
+    .dg-row {
+      display: grid;
+      grid-template-columns: 176px 1fr;
+      align-items: center;
+      min-height: 42px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      gap: 0;
+    }
+
+    .dg-row:last-child {
+      border-bottom: none;
+    }
+
+    .dg-label-cell {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 8px 14px 8px 0;
+    }
+
+    .dg-check {
+      width: 17px;
+      height: 17px;
+      border-radius: 5px;
+      border: 1.5px solid rgba(255,255,255,.22);
+      background: transparent;
+      flex-shrink: 0;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      position: relative;
+      margin-top: 2px;
+      transition: .15s ease;
+      accent-color: #7b61ff;
+    }
+
+    .dg-check:checked {
+      background: #7b61ff;
+      border-color: #7b61ff;
+    }
+
+    .dg-check:checked::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 1px;
+      width: 9px;
+      height: 5px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: rotate(-45deg);
+    }
+
+    .dg-label-text {
+      min-width: 0;
+    }
+
+    .dg-task-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255,255,255,.84);
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 128px;
+    }
+
+    .dg-row.dg-done .dg-task-name {
+      color: rgba(255,255,255,.35);
+      text-decoration: line-through;
+      text-decoration-thickness: 1px;
+    }
+
+    .dg-task-meta {
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(255,255,255,.28);
+      margin-top: 1px;
+      white-space: nowrap;
+    }
+
+    .dg-task-days {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: rgba(255,255,255,.22);
+      margin-top: 0px;
+    }
+
+    .dg-track-cell {
+      position: relative;
+      height: 42px;
+    }
+
+    .dg-month-grid-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: rgba(255,255,255,.05);
+      pointer-events: none;
+    }
+
+    .dg-today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1.5px;
+      background: rgba(191,24,48,.6);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .dg-bar {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 20px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: opacity .15s ease;
+      min-width: 4px;
+    }
+
+    .dg-bar.bar-done {
+      background: rgba(123,97,255,.35);
+      color: #c4b8ff;
+      border: 1px solid rgba(123,97,255,.4);
+    }
+
+    .dg-bar.bar-active {
+      background: rgba(45,108,223,.4);
+      color: #7eb0ff;
+      border: 1px solid rgba(45,108,223,.45);
+    }
+
+    .dg-bar.bar-planned {
+      background: rgba(255,255,255,.10);
+      color: rgba(255,255,255,.45);
+      border: 1px solid rgba(255,255,255,.08);
+      font-style: italic;
+    }
+
+    .dg-bar.bar-late {
+      background: rgba(191,24,48,.35);
+      color: #ff9aaa;
+      border: 1px solid rgba(191,24,48,.45);
+    }
+
+    .dg-bar.bar-delivery {
+      background: linear-gradient(90deg,#bf1830,#e8304a);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 14px rgba(191,24,48,.4);
+    }
+
+    .dg-bar.bar-done-check {
+      opacity: .45;
+    }
+
+    .dg-star {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 17px;
+      z-index: 6;
+      filter: drop-shadow(0 2px 6px rgba(31,157,117,.7));
+      pointer-events: none;
+    }
+
+    .dg-edit-btn {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      color: rgba(255,255,255,.5);
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 7px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity .12s;
+      z-index: 10;
+    }
+
+    .dg-row:hover .dg-edit-btn {
+      opacity: 1;
+    }
+
+    .dg-empty {
+      padding: 30px;
+      text-align: center;
+      color: rgba(255,255,255,.3);
+      font-size: 12.5px;
+    }
+
+    .dg-add-btn {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .dg-add-btn button {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.65);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: .15s;
+    }
+
+    .dg-add-btn button:hover {
+      background: rgba(255,255,255,.11);
+      color: #fff;
+    }
+
     .executive-dashboard {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -9978,56 +10283,121 @@
       const wrap = document.getElementById('scheduleGrid');
       const items = [...(project.schedule || [])].sort((a, b) => new Date(a.start || a.end || 0) - new Date(b.start || b.end || 0));
       if (!items.length) {
-        wrap.innerHTML = `<div class="empty-state">Nenhum marco cadastrado. Clique em “+ Novo marco” para iniciar o cronograma executivo.</div>`;
+        wrap.innerHTML = `<div class=”dg-shell”><div class=”dg-empty”>Nenhum marco cadastrado. Clique em “+ Novo marco” para iniciar o cronograma.</div></div>`;
         return;
       }
 
       const DAY = 1000 * 60 * 60 * 24;
       const dates = items.flatMap(s => [parseISODate(s.start), parseISODate(s.end)]).filter(Boolean);
-      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-      const totalDays = Math.max(1, Math.round((maxDate - minDate) / DAY) + 1);
+      const rawMin = new Date(Math.min(...dates.map(d => d.getTime())));
+      const rawMax = new Date(Math.max(...dates.map(d => d.getTime())));
 
-      const header = `<div class="gantt-scale"><div>Marco</div><div>Linha do tempo</div><div>Prazo / PDCA</div><div>Status</div><div></div></div>`;
+      // Snap to month boundaries for cleaner headers
+      const rangeStart = new Date(rawMin.getFullYear(), rawMin.getMonth(), 1);
+      const rangeEnd   = new Date(rawMax.getFullYear(), rawMax.getMonth() + 1, 0);
+      const totalDays  = Math.max(1, Math.round((rangeEnd - rangeStart) / DAY) + 1);
+
+      // Build month header segments
+      const months = [];
+      let cur = new Date(rangeStart);
+      while (cur <= rangeEnd) {
+        const mStart = new Date(cur.getFullYear(), cur.getMonth(), 1);
+        const mEnd   = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+        const clampedEnd = mEnd > rangeEnd ? rangeEnd : mEnd;
+        const offsetPct  = clamp(Math.round(((mStart - rangeStart) / DAY) / totalDays * 100), 0, 100);
+        const widthPct   = clamp(Math.round(((clampedEnd - mStart) / DAY + 1) / totalDays * 100), 1, 100);
+        const MONTHS_PT  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        months.push({ label: MONTHS_PT[cur.getMonth()], offsetPct, widthPct });
+        cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+      }
+
+      // Today pin position
+      const today = parseISODate(fmtDate(new Date()));
+      const todayPct = today >= rangeStart && today <= rangeEnd
+        ? clamp(Math.round(((today - rangeStart) / DAY) / totalDays * 100), 0, 100)
+        : null;
+
+      // Bar rows
       const rows = items.map(s => {
-        const st = scheduleStatus(s);
-        const view = scheduleProgressView(s);
-        const start = parseISODate(s.start) || minDate;
-        const end = parseISODate(s.end) || start;
-        const offset = clamp(Math.round(((start - minDate) / DAY) / totalDays * 100), 0, 96);
-        const duration = Math.max(1, Math.round((end - start) / DAY) + 1);
-        const width = clamp(Math.round((duration / totalDays) * 100), 4, 100 - offset);
-        const observations = String(s.observations || s.notes || '').trim();
-        const pdcaAction = String(s.pdcaAction || '').trim();
-        const pdcaNeeded = scheduleNeedsPdca(s);
-        const pdcaHint = pdcaNeeded && !observations && !pdcaAction
-          ? `<div class="gantt-note pdca-note">Revisar prazo, registrar observação ou ação de replanejamento.</div>`
+        const isDone   = scheduleCompleted(s);
+        const st       = scheduleStatus(s);
+        const start    = parseISODate(s.start) || rangeStart;
+        const end      = parseISODate(s.end)   || start;
+        const dayCount = Math.max(1, Math.round((end - start) / DAY) + 1);
+        const offsetPct = clamp(Math.round(((start - rangeStart) / DAY) / totalDays * 100), 0, 96);
+        const widthPct  = clamp(Math.round((dayCount / totalDays) * 100), 2, 100 - offsetPct);
+
+        // Detect “delivery” bar: last item marked as delivery in name
+        const isDelivery = /efici[eê]ncia|delivery|entrega/i.test(s.item || '');
+        let barClass = 'bar-planned';
+        if (isDone)             barClass = 'bar-done bar-done-check';
+        else if (isDelivery)    barClass = 'bar-delivery';
+        else if (st.cls === 'late')    barClass = 'bar-late';
+        else if (st.cls === 'ontrack') barClass = 'bar-active';
+
+        // Star marker for “entrega da solução” (dev end)
+        const isStar = /desenvolvimento|testes|homologa/i.test(s.item || '');
+        const starOffset = isStar ? clamp(Math.round(((end - rangeStart) / DAY) / totalDays * 100), 0, 100) : null;
+
+        const monthGridLines = months.map(m =>
+          `<div class=”dg-month-grid-line” style=”left:${m.offsetPct}%”></div>`
+        ).join('');
+
+        const todayLine = todayPct !== null
+          ? `<div class=”dg-today-line” style=”left:${todayPct}%”></div>`
           : '';
-        const noteText = [observations, pdcaAction ? `Ação: ${pdcaAction}` : ''].filter(Boolean).join(' · ');
-        return `<div class="gantt-row" data-status="${st.cls}">
-          <div class="gantt-title">
-            <strong title="${escapeAttr(s.item)}">${escapeHtml(s.item || 'Marco sem nome')}</strong>
-            <span>${formatBR(s.start)} até ${formatBR(s.end)}</span>
-            ${noteText ? `<div class="gantt-note">${escapeHtml(noteText)}</div>` : ''}
-            ${pdcaHint}
-            <div class="gantt-mobile-meta">
-              <span>Dono: ${escapeHtml(s.owner || 'Sem dono')}</span>
-              <span>${view.label}</span>
-              <span>${st.label}</span>
+
+        const barLabel = widthPct > 12 ? escapeHtml(s.item || '') : '';
+        const starEl   = starOffset !== null && !isDone
+          ? `<span class=”dg-star” style=”left:${starOffset}%”>🌟</span>` : '';
+
+        return `<div class=”dg-row${isDone ? ' dg-done' : ''}”>
+          <div class=”dg-label-cell”>
+            <input class=”dg-check” type=”checkbox” ${isDone ? 'checked' : ''}
+              onchange=”toggleScheduleDone('${s.id}', this.checked)”
+              title=”Marcar marco como concluído” />
+            <div class=”dg-label-text”>
+              <div class=”dg-task-name” title=”${escapeAttr(s.item || '')}”>${escapeHtml(s.item || 'Marco sem nome')}</div>
+              <div class=”dg-task-meta”>${formatBR(s.start)} → ${formatBR(s.end)}</div>
+              <div class=”dg-task-days”>${dayCount} dia${dayCount !== 1 ? 's' : ''}</div>
             </div>
           </div>
-          <div class="gantt-track" aria-label="${escapeAttr(s.item)}: ${escapeAttr(view.aria)}">
-            <span class="gantt-bar" style="left:${offset}%; width:${width}%;"><span class="gantt-bar-fill" style="width:${view.fill}%;"></span></span>
+          <div class=”dg-track-cell”>
+            ${monthGridLines}
+            ${todayLine}
+            <div class=”dg-bar ${barClass}” style=”left:${offsetPct}%;width:${widthPct}%”>${barLabel}</div>
+            ${starEl}
+            <button type=”button” class=”dg-edit-btn” onclick=”openScheduleModal('${s.id}')”>editar</button>
           </div>
-          <div class="gantt-progress-text ${view.cls}">${view.label}</div>
-          <div class="auto-status ${st.cls}">${st.label}</div>
-          <div class="gantt-actions"><button type="button" class="mini-text-btn" onclick="openScheduleModal('${s.id}')">Editar</button></div>
-          <div class="gantt-owner">Dono: <strong>${escapeHtml(s.owner || 'Sem dono')}</strong></div>
-          <div class="gantt-date">${formatBR(s.start)} · ${formatBR(s.end)}</div>
         </div>`;
       }).join('');
 
-      wrap.innerHTML = header + rows;
+      // Month header HTML
+      const monthHeader = months.map(m =>
+        `<div class=”dg-month-label” style=”position:absolute;left:${m.offsetPct}%;width:${m.widthPct}%”>${m.label}</div>`
+      ).join('');
+
+      const todayHeaderPin = todayPct !== null ? `
+        <div class=”dg-today-header-pin” style=”left:${todayPct}%”>
+          <div class=”dg-today-pin-dot”></div>
+          <div class=”dg-today-pin-label”>Hoje</div>
+        </div>` : '';
+
+      wrap.innerHTML = `<div class=”dg-shell”>
+        <div class=”dg-legend”>
+          <div class=”dg-leg”><div class=”dg-leg-dot” style=”background:rgba(123,97,255,.5)”></div>Concluído</div>
+          <div class=”dg-leg”><div class=”dg-leg-dot” style=”background:rgba(45,108,223,.5)”></div>Em andamento</div>
+          <div class=”dg-leg”><div class=”dg-leg-dot” style=”background:rgba(255,255,255,.14)”></div>Planejado</div>
+          <div class=”dg-leg”><div class=”dg-leg-dot” style=”background:rgba(191,24,48,.5)”></div>Atrasado</div>
+          <div class=”dg-leg”><div class=”dg-leg-dot” style=”background:linear-gradient(90deg,#bf1830,#e8304a)”></div>Entrega</div>
+          <div class=”dg-leg”><span style=”font-size:13px;line-height:1”>🌟</span>Marco Entrega Sol.</div>
+        </div>
+        <div class=”dg-month-header” style=”position:relative;height:28px;padding-left:176px”>
+          ${monthHeader}
+          ${todayHeaderPin}
+        </div>
+        ${rows}
+      </div>`;
     }
 
     function renderScheduleSignals(project) {
@@ -10748,6 +11118,15 @@
       if (!item) return;
       deleteSchedule(item.id);
       closeModal();
+    }
+
+    function toggleScheduleDone(scheduleId, checked) {
+      const p = getProject();
+      const item = (p.schedule || []).find(s => s.id === scheduleId);
+      if (!item) return;
+      item.done = checked;
+      item.progress = checked ? 100 : null;
+      saveData(true);
     }
 
     function openRaidModal(group = 'risks', index = null) {
