@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>6 Design Mockups — Gantt · Andamento da Iniciativa #113345</title>
+<style>
+  :root {
+    --primary: #bf1830; --primary-dark: #8e1125; --ink: #1c2430;
+    --muted: #687587; --line: #e5e9f2; --bg: #f2f4f8;
+    --green: #1f9d75; --blue: #2d6cdf; --purple: #7b61ff;
+    --bar-done: #b8b4d8; --bar-preview: #d4d8e0; --bar-red: #bf1830;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Segoe UI, sans-serif; background: #e8eaf0; color: var(--ink); padding: 32px 24px; }
+  h1 { font-size: 22px; font-weight: 900; letter-spacing: -.04em; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 40px; }
+  .mockup-wrap { display: flex; flex-direction: column; gap: 52px; }
+  .mockup-section { background: #fff; border-radius: 20px; padding: 28px 28px 32px; box-shadow: 0 8px 32px rgba(17,24,39,.08); }
+  .mockup-label { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+  .mockup-num { width: 34px; height: 34px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 900; font-size: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mockup-title { font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+  .mockup-desc { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* shared legend */
+  .legend { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .leg-circle { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ===================== DESIGN 1: Slide replica ===================== */
+  .g1-wrap { overflow-x: auto; }
+  .g1-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  .g1-months { display: grid; grid-template-columns: 160px repeat(5, 1fr); border-bottom: 2px solid var(--line); padding-bottom: 8px; margin-bottom: 0; }
+  .g1-month { font-size: 13px; font-weight: 800; color: var(--ink); text-align: center; }
+  .g1-month:first-child { text-align: left; }
+  .g1-today { position: relative; }
+  .g1-today::after { content: ''; position: absolute; left: 50%; top: -4px; bottom: 0; width: 2px; background: var(--primary); }
+  .g1-today-pin { position: absolute; left: 50%; transform: translateX(-50%); top: -18px; }
+  .g1-row { display: grid; grid-template-columns: 160px repeat(5, 1fr); align-items: center; border-bottom: 1px solid #f0f2f8; min-height: 40px; }
+  .g1-label { font-size: 12px; font-weight: 700; color: var(--ink); padding: 8px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .g1-cols { position: relative; display: contents; }
+  .g1-cell { height: 40px; border-left: 1px solid #f0f2f8; position: relative; }
+  .g1-bar-wrap { position: absolute; inset: 0; display: flex; align-items: center; padding: 7px 0; }
+  .g1-bar { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 8px; font-size: 10.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+  .g1-bar.done { background: var(--bar-done); color: #3a357a; }
+  .g1-bar.preview { background: var(--bar-preview); color: #4a5568; font-style: italic; }
+  .g1-bar.red { background: var(--bar-red); color: #fff; }
+  .g1-star { font-size: 20px; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); filter: drop-shadow(0 2px 4px rgba(0,0,0,.2)); }
+  .g1-pin { display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: 800; color: var(--primary); }
+
+  /* ===================== DESIGN 2: Clean rows with progress fill ===================== */
+  .g2-wrap { overflow-x: auto; }
+  .g2-grid { min-width: 700px; }
+  .g2-header { display: grid; grid-template-columns: 180px 1fr; gap: 0; padding-bottom: 10px; border-bottom: 1.5px solid var(--line); margin-bottom: 4px; }
+  .g2-h-label { font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .g2-months-row { display: grid; grid-template-columns: repeat(5,1fr); }
+  .g2-month { font-size: 11.5px; font-weight: 800; color: var(--muted); text-align: center; }
+  .g2-row { display: grid; grid-template-columns: 180px 1fr; align-items: center; min-height: 38px; border-bottom: 1px solid #f3f5f9; }
+  .g2-label-wrap { padding: 6px 14px 6px 0; }
+  .g2-task { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .g2-sub { font-size: 10.5px; color: var(--muted); }
+  .g2-timeline { position: relative; height: 38px; }
+  .g2-month-lines { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(5,1fr); }
+  .g2-month-line { border-left: 1px dashed #e8ecf4; }
+  .g2-bar-row { position: absolute; inset: 0; display: flex; align-items: center; }
+  .g2-bar { height: 22px; border-radius: 8px; position: absolute; display: flex; align-items: center; padding: 0 9px; font-size: 10.5px; font-weight: 700; }
+  .g2-bar.done { background: #d8d4f0; color: #3a357a; }
+  .g2-bar.preview { background: #e2e6ee; color: #4a5568; font-style: italic; }
+  .g2-bar.red { background: linear-gradient(90deg,#c9202e,#8e1125); color: #fff; }
+  .g2-today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--primary); z-index: 2; }
+  .g2-today-label { position: absolute; top: -18px; transform: translateX(-50%); font-size: 9px; font-weight: 900; color: var(--primary); white-space: nowrap; }
+  .g2-star-marker { position: absolute; font-size: 18px; z-index: 2; transform: translateX(-50%); }
+
+  /* ===================== DESIGN 3: Dark theme Gantt ===================== */
+  .g3-wrap { background: #111827; border-radius: 16px; overflow: hidden; overflow-x: auto; }
+  .g3-inner { min-width: 700px; padding: 20px; }
+  .g3-months { display: grid; grid-template-columns: 160px repeat(5,1fr); padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 4px; }
+  .g3-month { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.5); text-align: center; }
+  .g3-month:first-child { text-align: left; }
+  .g3-row { display: grid; grid-template-columns: 160px repeat(5,1fr); align-items: center; min-height: 40px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .g3-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.82); padding: 6px 0; }
+  .g3-cell { height: 40px; border-left: 1px solid rgba(255,255,255,.06); position: relative; }
+  .g3-bar { height: 20px; border-radius: 6px; position: absolute; top: 50%; transform: translateY(-50%); display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .g3-bar.done { background: rgba(123,97,255,.35); color: #c4b8ff; border: 1px solid rgba(123,97,255,.4); }
+  .g3-bar.preview { background: rgba(255,255,255,.12); color: rgba(255,255,255,.6); font-style: italic; border: 1px solid rgba(255,255,255,.1); }
+  .g3-bar.red { background: linear-gradient(90deg,#bf1830,#e8304a); color: #fff; }
+  .g3-today { position: absolute; top: -28px; bottom: -4px; width: 1.5px; background: #ff4d6a; }
+  .g3-today-pin { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #ff4d6a; font-weight: 900; white-space: nowrap; }
+  .g3-star { position: absolute; font-size: 18px; top: 50%; transform: translate(-50%,-50%); z-index: 2; }
+
+  /* ===================== DESIGN 4: Rounded pastel ===================== */
+  .g4-wrap { overflow-x: auto; }
+  .g4-grid { min-width: 720px; }
+  .g4-header { display: grid; grid-template-columns: 170px repeat(5,1fr); margin-bottom: 8px; }
+  .g4-month { font-size: 12px; font-weight: 800; color: var(--muted); text-align: center; background: #f5f7fb; border-radius: 8px; padding: 5px 4px; margin: 0 2px; }
+  .g4-month:first-child { background: none; }
+  .g4-row { display: grid; grid-template-columns: 170px repeat(5,1fr); min-height: 46px; align-items: center; border-radius: 10px; margin-bottom: 4px; }
+  .g4-row:hover { background: #fafbfd; }
+  .g4-label { font-size: 12.5px; font-weight: 700; color: var(--ink); padding-right: 10px; line-height: 1.3; }
+  .g4-cell { height: 46px; position: relative; border-left: 1px solid #edf1f7; }
+  .g4-bar { height: 26px; border-radius: 13px; position: absolute; top: 50%; transform: translateY(-50%); display: flex; align-items: center; padding: 0 10px; font-size: 10.5px; font-weight: 700; box-shadow: 0 3px 10px rgba(0,0,0,.1); }
+  .g4-bar.done { background: linear-gradient(90deg,#c8c3e8,#b8b4d8); color: #3a357a; }
+  .g4-bar.preview { background: linear-gradient(90deg,#e0e4ee,#d4d8e2); color: #4a5568; font-style: italic; }
+  .g4-bar.red { background: linear-gradient(90deg,#e8304a,#bf1830); color: #fff; }
+  .g4-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--primary); border-radius: 999px; z-index: 2; }
+  .g4-today-top { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 9.5px; font-weight: 900; color: var(--primary); white-space: nowrap; }
+  .g4-star { position: absolute; font-size: 20px; top: 50%; transform: translate(-40%,-50%); z-index: 2; filter: drop-shadow(0 2px 6px rgba(31,157,117,.5)); }
+
+  /* ===================== DESIGN 5: Status pills + mini bar ===================== */
+  .g5-cards { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .g5-row { display: grid; grid-template-columns: 200px 100px 1fr; align-items: center; padding: 10px 16px; border-bottom: 1px solid #f0f3f9; gap: 12px; }
+  .g5-row:last-child { border-bottom: 0; }
+  .g5-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .g5-period { font-size: 11px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+  .g5-status { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+  .g5-status.done { background: #eaf8f3; color: #137252; }
+  .g5-status.doing { background: #edf4ff; color: #2458b8; }
+  .g5-status.planned { background: #f5f7fb; color: var(--muted); }
+  .g5-status.delivery { background: #fff0f3; color: var(--primary-dark); }
+  .g5-bar-track { background: #f0f3f9; border-radius: 999px; height: 10px; position: relative; overflow: hidden; }
+  .g5-bar-fill { height: 100%; border-radius: 999px; }
+  .g5-bar-fill.done { background: linear-gradient(90deg,#7b61ff,#b8b4d8); }
+  .g5-bar-fill.doing { background: linear-gradient(90deg,#2d6cdf,#7eb0ff); }
+  .g5-bar-fill.delivery { background: linear-gradient(90deg,#bf1830,#e8304a); }
+
+  /* ===================== DESIGN 6: Executive summary card ===================== */
+  .g6-hero { display: grid; grid-template-columns: 200px 1fr; gap: 20px; align-items: stretch; }
+  .g6-summary { background: linear-gradient(135deg,#1c2430,#2d3a4a); border-radius: 16px; padding: 20px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; }
+  .g6-s-title { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.5); margin-bottom: 8px; }
+  .g6-s-name { font-size: 16px; font-weight: 900; line-height: 1.2; letter-spacing: -.02em; }
+  .g6-s-chips { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+  .g6-chip { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; }
+  .g6-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .g6-chip-dot.done { background: #b8b4d8; }
+  .g6-chip-dot.doing { background: #2d6cdf; }
+  .g6-chip-dot.red { background: #e8304a; }
+  .g6-chip-label { color: rgba(255,255,255,.6); }
+  .g6-chip-date { margin-left: auto; font-weight: 900; color: rgba(255,255,255,.85); font-size: 10.5px; }
+  .g6-gantt { flex: 1; overflow-x: auto; }
+  .g6-inner { min-width: 500px; }
+  .g6-months { display: grid; grid-template-columns: repeat(5,1fr); margin-bottom: 6px; }
+  .g6-month { font-size: 11px; font-weight: 800; color: var(--muted); text-align: center; }
+  .g6-row { display: grid; grid-template-columns: repeat(5,1fr); min-height: 34px; align-items: center; border-bottom: 1px solid #f0f3f9; position: relative; }
+  .g6-row-label { position: absolute; left: 0; right: 0; top: -16px; font-size: 10px; font-weight: 700; color: var(--muted); }
+  .g6-cell { height: 34px; border-left: 1px solid #f0f3f9; position: relative; }
+  .g6-bar { height: 18px; border-radius: 6px; position: absolute; top: 50%; transform: translateY(-50%); }
+  .g6-bar.done { background: #c8c3e8; }
+  .g6-bar.preview { background: #e0e4ee; }
+  .g6-bar.red { background: var(--primary); }
+  .g6-today-v { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--primary); z-index: 2; }
+  .g6-star { position: absolute; font-size: 16px; top: 50%; transform: translate(-40%,-50%); z-index: 2; }
+</style>
+</head>
+<body>
+<h1>6 Propostas de Design — Gantt · Andamento da Iniciativa</h1>
+<p class="subtitle">Iniciativa #113345 · Gestão de Contas e Cartões · Selecione o design preferido</p>
+
+<div class="mockup-wrap">
+
+<!-- DESIGN 1: Slide replica -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">1</div>
+    <div>
+      <div class="mockup-title">Slide Replica — Fiel ao original da apresentação</div>
+      <div class="mockup-desc">Layout idêntico ao slide PMO: barras roxas (entregas realizadas), cinza (previsão), vermelha (entrega), pin "Hoje" e estrela verde.</div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="leg-dot" style="background:#b8b4d8"></div> Entregas Realizadas</div>
+    <div class="legend-item"><div class="leg-dot" style="background:#d4d8e0"></div> Previsão</div>
+    <div class="legend-item"><span style="color:#1f9d75;font-size:16px">★</span> Entrega da solução</div>
+    <div class="legend-item"><div class="leg-dot" style="background:#bf1830"></div> Entrega eficiência</div>
+    <div class="legend-item"><span style="font-size:14px">📍</span> Hoje</div>
+  </div>
+  <div class="g1-wrap">
+    <div style="min-width:760px">
+      <!-- months header -->
+      <div class="g1-months" style="position:relative">
+        <div></div>
+        <div class="g1-month">Junho</div>
+        <div class="g1-month">Julho</div>
+        <div class="g1-month">Agosto</div>
+        <div class="g1-month">Setembro</div>
+        <div class="g1-month">Outubro</div>
+        <!-- today pin at ~30% of Junho (col2) -->
+        <div style="position:absolute;left:calc(160px + (100% - 160px)*0.12);top:-4px;display:flex;flex-direction:column;align-items:center;z-index:10">
+          <span style="font-size:18px">📍</span>
+          <div style="width:2px;height:8px;background:var(--primary);margin-top:2px"></div>
+        </div>
+      </div>
+      <!-- rows -->
+      <!-- Alinhamento e Definições: early June, col2 left portion -->
+      <div class="g1-row">
+        <div class="g1-label">Alinhamento e Definições</div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar done" style="width:55%;margin-left:0">Alinhamento</div></div>
+          <div style="position:absolute;top:0;bottom:0;left:24%;width:2px;background:rgba(191,24,48,.35);pointer-events:none"></div>
+        </div>
+        <div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div>
+      </div>
+      <!-- Discovery: 12/06-22/06 -->
+      <div class="g1-row">
+        <div class="g1-label">Discovery (12/06 – 22/06)</div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar done" style="width:55%;margin-left:40%">Discovery</div></div>
+          <div style="position:absolute;top:0;bottom:0;left:24%;width:2px;background:rgba(191,24,48,.35);pointer-events:none"></div>
+        </div>
+        <div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div>
+      </div>
+      <!-- Desenho fluxos AS IS: ~22/06-25/06 -->
+      <div class="g1-row">
+        <div class="g1-label">Desenho de Fluxos AS IS</div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar done" style="width:25%;margin-left:72%">AS IS</div></div>
+          <div style="position:absolute;top:0;bottom:0;left:24%;width:2px;background:rgba(191,24,48,.35)"></div>
+        </div>
+        <div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div>
+      </div>
+      <!-- Desenho Sol. 29/06-03/07 -->
+      <div class="g1-row">
+        <div class="g1-label">Desenho Sol. (29/06 a 03/07)</div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar done" style="width:18%;margin-left:89%">Sol.</div></div>
+          <div style="position:absolute;top:0;bottom:0;left:24%;width:2px;background:rgba(191,24,48,.35)"></div>
+        </div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar done" style="width:15%;margin-left:0">Sol.</div></div>
+        </div>
+        <div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div>
+      </div>
+      <!-- Escrita das histórias: 03/07-10/07 -->
+      <div class="g1-row">
+        <div class="g1-label">Escrita das histórias</div>
+        <div class="g1-cell" style="position:relative">
+          <div style="position:absolute;top:0;bottom:0;left:24%;width:2px;background:rgba(191,24,48,.35)"></div>
+        </div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar preview" style="width:34%;margin-left:14%">Escrita</div></div>
+        </div>
+        <div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div>
+      </div>
+      <!-- Refinamento Técnico: 07/07-25/07 -->
+      <div class="g1-row">
+        <div class="g1-label">Refinamento Técnico</div>
+        <div class="g1-cell" style="position:relative">
+          <div style="position:absolute;top:0;bottom:0;left:24%;width:2px;background:rgba(191,24,48,.35)"></div>
+        </div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar preview" style="width:66%;margin-left:26%">Refinamento Técnico</div></div>
+        </div>
+        <div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div>
+      </div>
+      <!-- Desenvolvimento: 15/07-30/09 -->
+      <div class="g1-row">
+        <div class="g1-label">Desenvolvimento, Testes, Homologações</div>
+        <div class="g1-cell" style="position:relative">
+          <div style="position:absolute;top:0;bottom:0;left:24%;width:2px;background:rgba(191,24,48,.35)"></div>
+        </div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar preview" style="width:100%;margin-left:56%;font-style:italic">Desenvolvimento, Testes, Homologações (15/07 – 30/09)</div></div>
+          <span class="g1-star" style="right:auto;left:-6px;top:50%;transform:translateY(-50%);font-size:0px"></span>
+        </div>
+        <div class="g1-cell"></div>
+        <div class="g1-cell" style="position:relative">
+          <span class="g1-star" style="right:2px;top:50%;transform:translateY(-50%);position:absolute;font-size:22px">⭐</span>
+        </div>
+        <div class="g1-cell"></div>
+      </div>
+      <!-- Entrega da Eficiência -->
+      <div class="g1-row">
+        <div class="g1-label">Entrega da Eficiência</div>
+        <div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div><div class="g1-cell"></div>
+        <div class="g1-cell" style="position:relative">
+          <div class="g1-bar-wrap"><div class="g1-bar red" style="width:90%;margin-left:8%">Entrega da Eficiência</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="font-size:10.5px;color:var(--muted);margin-top:14px;font-weight:700">ILUSTRATIVO · NÃO EXAUSTIVO</div>
+</div>
+
+<!-- DESIGN 2: Clean with progress fill -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">2</div>
+    <div>
+      <div class="mockup-title">Clean & Moderno — Barras com sombra, linha "Hoje" destacada</div>
+      <div class="mockup-desc">Visual refinado, barras com bordas arredondadas e sombra. Coluna de status inline. Linha vermelha vertical "Hoje".</div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="leg-dot" style="background:#c8c3e8;border-radius:4px"></div> Entregas Realizadas</div>
+    <div class="legend-item"><div class="leg-dot" style="background:#e0e4ee;border-radius:4px"></div> Previsão</div>
+    <div class="legend-item"><span style="color:#1f9d75;font-size:16px">★</span> Entrega solução</div>
+    <div class="legend-item"><div class="leg-dot" style="background:#bf1830;border-radius:4px"></div> Entrega eficiência</div>
+  </div>
+  <div class="g2-wrap">
+    <div class="g2-grid">
+      <div class="g2-header">
+        <div class="g2-h-label">Fase</div>
+        <div class="g2-months-row">
+          <div class="g2-month">Jun</div>
+          <div class="g2-month">Jul</div>
+          <div class="g2-month">Ago</div>
+          <div class="g2-month">Set</div>
+          <div class="g2-month">Out</div>
+        </div>
+      </div>
+      <!-- rows -->
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Alinhamento e Definições</div><div class="g2-sub">Jun/01 – Jun/11</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"><div class="g2-today-label">Hoje</div></div>
+          <div class="g2-bar done" style="left:0%;width:22%">Alinhamento</div>
+        </div>
+      </div>
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Discovery</div><div class="g2-sub">12/06 – 22/06</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"></div>
+          <div class="g2-bar done" style="left:8%;width:17%">Discovery</div>
+        </div>
+      </div>
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Desenho de Fluxos AS IS</div><div class="g2-sub">23/06 – 25/06</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"></div>
+          <div class="g2-bar done" style="left:18%;width:6%">AS IS</div>
+        </div>
+      </div>
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Desenho da Solução</div><div class="g2-sub">29/06 – 03/07</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"></div>
+          <div class="g2-bar done" style="left:22%;width:8%">Sol.</div>
+        </div>
+      </div>
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Escrita das Histórias</div><div class="g2-sub">03/07 – 10/07</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"></div>
+          <div class="g2-bar preview" style="left:27%;width:10%">Escrita</div>
+        </div>
+      </div>
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Refinamento Técnico</div><div class="g2-sub">07/07 – 25/07</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"></div>
+          <div class="g2-bar preview" style="left:29%;width:18%">Refinamento Técnico</div>
+        </div>
+      </div>
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Desenvolvimento, Testes, Homologações</div><div class="g2-sub">15/07 – 30/09</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"></div>
+          <div class="g2-bar preview" style="left:33%;width:46%;font-style:italic">Desenvolvimento, Testes, Homologações</div>
+          <div class="g2-star-marker" style="left:79%;top:50%;transform:translate(-50%,-50%)">🌟</div>
+        </div>
+      </div>
+      <div class="g2-row">
+        <div class="g2-label-wrap"><div class="g2-task">Entrega da Eficiência</div><div class="g2-sub">Out/2026</div></div>
+        <div class="g2-timeline" style="position:relative">
+          <div class="g2-month-lines"><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div><div class="g2-month-line"></div></div>
+          <div class="g2-today-line" style="left:24%"></div>
+          <div class="g2-bar red" style="left:80%;width:18%">Entrega Eficiência</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 3: Dark theme -->
+<div class="mockup-section" style="background:#0f1520">
+  <div class="mockup-label">
+    <div class="mockup-num">3</div>
+    <div>
+      <div class="mockup-title" style="color:#fff">Dark Mode — Tema escuro executivo</div>
+      <div class="mockup-desc" style="color:rgba(255,255,255,.5)">Fundo dark navy, barras translúcidas com glow, linha "Hoje" vermelha. Ideal para dashboards executivos.</div>
+    </div>
+  </div>
+  <div class="legend" style="margin-bottom:16px">
+    <div class="legend-item" style="color:rgba(255,255,255,.5)"><div class="leg-dot" style="background:rgba(123,97,255,.6)"></div> Entregas Realizadas</div>
+    <div class="legend-item" style="color:rgba(255,255,255,.5)"><div class="leg-dot" style="background:rgba(255,255,255,.2)"></div> Previsão</div>
+    <div class="legend-item" style="color:rgba(255,255,255,.5)"><span style="color:#1f9d75;font-size:16px">★</span> Entrega solução</div>
+    <div class="legend-item" style="color:rgba(255,255,255,.5)"><div class="leg-dot" style="background:#e8304a"></div> Entrega eficiência</div>
+  </div>
+  <div class="g3-wrap">
+    <div class="g3-inner">
+      <div class="g3-months">
+        <div class="g3-month" style="text-align:left">Fase</div>
+        <div class="g3-month">Junho</div>
+        <div class="g3-month">Julho</div>
+        <div class="g3-month">Agosto</div>
+        <div class="g3-month">Setembro</div>
+        <div class="g3-month">Outubro</div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Alinhamento e Definições</div>
+        <div class="g3-cell" style="position:relative">
+          <div class="g3-today" style="left:24%"><div class="g3-today-pin">Hoje</div></div>
+          <div class="g3-bar done" style="left:0%;width:55%">Alinhamento</div>
+        </div>
+        <div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Discovery (12/06 – 22/06)</div>
+        <div class="g3-cell" style="position:relative">
+          <div class="g3-today" style="left:24%"></div>
+          <div class="g3-bar done" style="left:40%;width:55%">Discovery</div>
+        </div>
+        <div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Desenho de Fluxos AS IS</div>
+        <div class="g3-cell" style="position:relative">
+          <div class="g3-today" style="left:24%"></div>
+          <div class="g3-bar done" style="left:73%;width:27%">AS IS</div>
+        </div>
+        <div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Desenho Sol. (29/06 – 03/07)</div>
+        <div class="g3-cell" style="position:relative">
+          <div class="g3-today" style="left:24%"></div>
+          <div class="g3-bar done" style="left:90%;width:10%"></div>
+        </div>
+        <div class="g3-cell" style="position:relative"><div class="g3-bar done" style="left:0%;width:15%">Sol.</div></div>
+        <div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Escrita das Histórias</div>
+        <div class="g3-cell" style="position:relative"><div class="g3-today" style="left:24%"></div></div>
+        <div class="g3-cell" style="position:relative"><div class="g3-bar preview" style="left:14%;width:32%">Escrita</div></div>
+        <div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Refinamento Técnico</div>
+        <div class="g3-cell" style="position:relative"><div class="g3-today" style="left:24%"></div></div>
+        <div class="g3-cell" style="position:relative"><div class="g3-bar preview" style="left:27%;width:73%">Refinamento</div></div>
+        <div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Desenvolvimento, Testes e Homologações</div>
+        <div class="g3-cell" style="position:relative"><div class="g3-today" style="left:24%"></div></div>
+        <div class="g3-cell" style="position:relative"><div class="g3-bar preview" style="left:55%;width:45%;font-style:italic">15/07 – 30/09</div></div>
+        <div class="g3-cell"></div>
+        <div class="g3-cell" style="position:relative"><span class="g3-star" style="left:100%;top:50%">🌟</span></div>
+        <div class="g3-cell"></div>
+      </div>
+      <div class="g3-row">
+        <div class="g3-label">Entrega da Eficiência</div>
+        <div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div><div class="g3-cell"></div>
+        <div class="g3-cell" style="position:relative"><div class="g3-bar red" style="left:8%;width:86%">Entrega da Eficiência</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 4: Rounded pastel -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">4</div>
+    <div>
+      <div class="mockup-title">Rounded & Pastel — Pill-bars, meses com fundo</div>
+      <div class="mockup-desc">Barras pill com sombra suave, meses com fundo cinza, linhas de grade tracejadas. Visual moderno e amigável.</div>
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="leg-dot" style="background:#c8c3e8;border-radius:999px"></div> Entregas Realizadas</div>
+    <div class="legend-item"><div class="leg-dot" style="background:#e0e4ee;border-radius:999px"></div> Previsão</div>
+    <div class="legend-item"><span style="color:#1f9d75;font-size:16px">★</span> Entrega solução</div>
+    <div class="legend-item"><div class="leg-dot" style="background:#bf1830;border-radius:999px"></div> Entrega eficiência</div>
+  </div>
+  <div class="g4-wrap">
+    <div class="g4-grid">
+      <div class="g4-header">
+        <div></div>
+        <div class="g4-month">Junho</div>
+        <div class="g4-month">Julho</div>
+        <div class="g4-month">Agosto</div>
+        <div class="g4-month">Setembro</div>
+        <div class="g4-month">Outubro</div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Alinhamento e Definições</div>
+        <div class="g4-cell" style="position:relative">
+          <div class="g4-today" style="left:24%"><div class="g4-today-top">Hoje 📍</div></div>
+          <div class="g4-bar done" style="left:0%;width:52%">Alinhamento</div>
+        </div>
+        <div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Discovery (12 – 22/06)</div>
+        <div class="g4-cell" style="position:relative">
+          <div class="g4-today" style="left:24%"></div>
+          <div class="g4-bar done" style="left:38%;width:56%">Discovery</div>
+        </div>
+        <div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Desenho de Fluxos AS IS</div>
+        <div class="g4-cell" style="position:relative">
+          <div class="g4-today" style="left:24%"></div>
+          <div class="g4-bar done" style="left:72%;width:28%">AS IS</div>
+        </div>
+        <div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Desenho da Solução</div>
+        <div class="g4-cell" style="position:relative">
+          <div class="g4-today" style="left:24%"></div>
+          <div class="g4-bar done" style="left:89%;width:11%"></div>
+        </div>
+        <div class="g4-cell" style="position:relative">
+          <div class="g4-bar done" style="left:0%;width:14%">Sol.</div>
+        </div>
+        <div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Escrita das Histórias</div>
+        <div class="g4-cell" style="position:relative"><div class="g4-today" style="left:24%"></div></div>
+        <div class="g4-cell" style="position:relative"><div class="g4-bar preview" style="left:13%;width:32%">Escrita</div></div>
+        <div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Refinamento Técnico</div>
+        <div class="g4-cell" style="position:relative"><div class="g4-today" style="left:24%"></div></div>
+        <div class="g4-cell" style="position:relative"><div class="g4-bar preview" style="left:26%;width:74%">Refinamento Técnico</div></div>
+        <div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Desenvolvimento, Testes, Homologações</div>
+        <div class="g4-cell" style="position:relative"><div class="g4-today" style="left:24%"></div></div>
+        <div class="g4-cell" style="position:relative"><div class="g4-bar preview" style="left:53%;width:47%;font-style:italic">15/07 – 30/09</div></div>
+        <div class="g4-cell"></div>
+        <div class="g4-cell" style="position:relative"><span class="g4-star" style="left:100%;top:50%">🌟</span></div>
+        <div class="g4-cell"></div>
+      </div>
+      <div class="g4-row">
+        <div class="g4-label">Entrega da Eficiência</div>
+        <div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div><div class="g4-cell"></div>
+        <div class="g4-cell" style="position:relative"><div class="g4-bar red" style="left:8%;width:86%">Entrega da Eficiência</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN 5: Status pills + mini bar -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">5</div>
+    <div>
+      <div class="mockup-title">Status + Mini-bar — Combinação de status pill e barra de progresso</div>
+      <div class="mockup-desc">Cada fase mostra nome, período, status colorido (pill) e uma barra de progresso compacta. Sem grid de meses — foco no status.</div>
+    </div>
+  </div>
+  <div class="g5-cards">
+    <div style="display:grid;grid-template-columns:200px 100px 1fr;padding:8px 16px;background:#f8fafd;border-bottom:1px solid var(--line)">
+      <div style="font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Fase</div>
+      <div style="font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Status</div>
+      <div style="font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Progresso</div>
+    </div>
+    <div class="g5-row"><div><div class="g5-name">Alinhamento e Definições</div><div class="g5-period">Jun/01 – Jun/11</div></div><div><span class="g5-status done">✓ Concluído</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill done" style="width:100%"></div></div></div></div>
+    <div class="g5-row"><div><div class="g5-name">Discovery</div><div class="g5-period">12/06 – 22/06</div></div><div><span class="g5-status done">✓ Concluído</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill done" style="width:100%"></div></div></div></div>
+    <div class="g5-row"><div><div class="g5-name">Desenho de Fluxos AS IS</div><div class="g5-period">23/06 – 25/06</div></div><div><span class="g5-status doing">⟳ Em andamento</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill doing" style="width:65%"></div></div></div></div>
+    <div class="g5-row"><div><div class="g5-name">Desenho da Solução</div><div class="g5-period">29/06 – 03/07</div></div><div><span class="g5-status doing">⟳ Em andamento</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill doing" style="width:20%"></div></div></div></div>
+    <div class="g5-row"><div><div class="g5-name">Escrita das Histórias</div><div class="g5-period">03/07 – 10/07</div></div><div><span class="g5-status planned">◦ Planejado</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill doing" style="width:0%"></div></div></div></div>
+    <div class="g5-row"><div><div class="g5-name">Refinamento Técnico</div><div class="g5-period">07/07 – 25/07</div></div><div><span class="g5-status planned">◦ Planejado</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill doing" style="width:0%"></div></div></div></div>
+    <div class="g5-row"><div><div class="g5-name">Desenvolvimento, Testes, Homologações</div><div class="g5-period">15/07 – 30/09  🌟</div></div><div><span class="g5-status planned">◦ Planejado</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill doing" style="width:0%"></div></div></div></div>
+    <div class="g5-row" style="background:#fff5f7"><div><div class="g5-name" style="color:var(--primary)">Entrega da Eficiência</div><div class="g5-period">Outubro/2026</div></div><div><span class="g5-status delivery">🏁 Entrega</span></div><div><div class="g5-bar-track"><div class="g5-bar-fill delivery" style="width:0%"></div></div></div></div>
+  </div>
+</div>
+
+<!-- DESIGN 6: Executive card + mini gantt -->
+<div class="mockup-section">
+  <div class="mockup-label">
+    <div class="mockup-num">6</div>
+    <div>
+      <div class="mockup-title">Executive Card + Mini Gantt — Resumo lateral + gráfico compacto</div>
+      <div class="mockup-desc">Card escuro à esquerda com resumo executivo e marcos chave. Gantt compacto à direita, sem rótulos longos.</div>
+    </div>
+  </div>
+  <div class="g6-hero">
+    <div class="g6-summary">
+      <div>
+        <div class="g6-s-title">Andamento da Iniciativa</div>
+        <div class="g6-s-name">Gestão de Contas e Cartões</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">#113345</div>
+      </div>
+      <div class="g6-s-chips">
+        <div class="g6-chip"><div class="g6-chip-dot done"></div><span class="g6-chip-label">Discovery</span><span class="g6-chip-date">22/06 ✓</span></div>
+        <div class="g6-chip"><div class="g6-chip-dot doing" style="background:#2d6cdf"></div><span class="g6-chip-label">Desenho AS IS</span><span class="g6-chip-date">25/06</span></div>
+        <div class="g6-chip"><div class="g6-chip-dot done" style="background:rgba(255,255,255,.25)"></div><span class="g6-chip-label">Desenvolvimento</span><span class="g6-chip-date">30/09 🌟</span></div>
+        <div class="g6-chip"><div class="g6-chip-dot red"></div><span class="g6-chip-label">Entrega Eficiência</span><span class="g6-chip-date">Out/26</span></div>
+      </div>
+    </div>
+    <div class="g6-gantt">
+      <div class="g6-inner">
+        <div class="g6-months">
+          <div class="g6-month">Jun</div>
+          <div class="g6-month">Jul</div>
+          <div class="g6-month">Ago</div>
+          <div class="g6-month">Set</div>
+          <div class="g6-month">Out</div>
+        </div>
+        <!-- today line shared -->
+        <div style="position:relative">
+          <div style="position:absolute;top:-8px;bottom:0;left:24%;width:2px;background:var(--primary);z-index:10"></div>
+          <div style="position:absolute;top:-20px;left:24%;transform:translateX(-50%);font-size:9.5px;font-weight:900;color:var(--primary);white-space:nowrap">Hoje</div>
+
+          <div class="g6-row">
+            <div class="g6-cell" style="position:relative"><div class="g6-bar done" style="left:0%;width:55%"></div></div>
+            <div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div>
+          </div>
+          <div class="g6-row">
+            <div class="g6-cell" style="position:relative"><div class="g6-bar done" style="left:38%;width:58%"></div></div>
+            <div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div>
+          </div>
+          <div class="g6-row">
+            <div class="g6-cell" style="position:relative"><div class="g6-bar done" style="left:72%;width:28%"></div></div>
+            <div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div>
+          </div>
+          <div class="g6-row">
+            <div class="g6-cell" style="position:relative"><div class="g6-bar done" style="left:89%;width:11%"></div></div>
+            <div class="g6-cell" style="position:relative"><div class="g6-bar done" style="left:0%;width:14%"></div></div>
+            <div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div>
+          </div>
+          <div class="g6-row">
+            <div class="g6-cell"></div>
+            <div class="g6-cell" style="position:relative"><div class="g6-bar preview" style="left:13%;width:32%"></div></div>
+            <div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div>
+          </div>
+          <div class="g6-row">
+            <div class="g6-cell"></div>
+            <div class="g6-cell" style="position:relative"><div class="g6-bar preview" style="left:26%;width:74%"></div></div>
+            <div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div>
+          </div>
+          <div class="g6-row">
+            <div class="g6-cell"></div>
+            <div class="g6-cell" style="position:relative"><div class="g6-bar preview" style="left:53%;width:47%"></div></div>
+            <div class="g6-cell"></div>
+            <div class="g6-cell" style="position:relative"><span class="g6-star" style="left:100%;top:50%">🌟</span></div>
+            <div class="g6-cell"></div>
+          </div>
+          <div class="g6-row">
+            <div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div><div class="g6-cell"></div>
+            <div class="g6-cell" style="position:relative"><div class="g6-bar red" style="left:8%;width:86%"></div></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:var(--muted);font-weight:700;display:flex;gap:12px;flex-wrap:wrap">
+          <span>1. Alinhamento</span><span>2. Discovery</span><span>3. AS IS</span><span>4. Desenho Sol.</span>
+          <span>5. Escrita</span><span>6. Refinamento</span><span>7. Desenvolvimento</span><span>8. Entrega Eficiência</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /mockup-wrap -->
+</body>
+</html>
