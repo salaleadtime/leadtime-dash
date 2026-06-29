@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>6 Dashboard Layouts — Iniciativa #113345</title>
+<style>
+  :root {
+    --p: #bf1830; --pd: #8e1125; --ink: #1c2430; --muted: #687587;
+    --line: #e5e9f2; --bg: #f0f2f7; --green: #1f9d75; --blue: #2d6cdf;
+    --purple: #7b61ff; --amber: #f4b740;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Inter, Segoe UI, sans-serif; background: #dde0e8; color: var(--ink); padding: 32px 24px; }
+  h1 { font-size: 22px; font-weight: 900; letter-spacing: -.04em; margin-bottom: 6px; color: var(--ink); }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 44px; }
+  .wrap { display: flex; flex-direction: column; gap: 56px; }
+  .ms { border-radius: 22px; overflow: hidden; box-shadow: 0 12px 48px rgba(17,24,39,.13); }
+  .ml { display: flex; align-items: flex-start; gap: 14px; padding: 22px 22px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  .mn { width: 34px; height: 34px; border-radius: 50%; background: var(--p); color: #fff; font-weight: 900; font-size: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .mt { font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+  .md { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* ───── DESIGN 1: Command Center ───── */
+  .d1 { background: #0d1117; }
+  .d1-top { display: grid; grid-template-columns: 260px 1fr; min-height: 160px; }
+  .d1-brand { background: linear-gradient(160deg, #1a0810, #2a0e1a); padding: 28px 24px; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px solid rgba(255,255,255,.06); }
+  .d1-num { font-size: 11px; font-weight: 900; letter-spacing: .14em; color: rgba(255,255,255,.35); text-transform: uppercase; }
+  .d1-title { font-size: 18px; font-weight: 900; color: #fff; line-height: 1.2; letter-spacing: -.02em; margin-top: 10px; }
+  .d1-sub { font-size: 11px; color: rgba(255,255,255,.38); margin-top: 6px; }
+  .d1-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .d1-badge { padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 800; }
+  .d1-badge.r { background: rgba(191,24,48,.25); color: #ff9aaa; border: 1px solid rgba(191,24,48,.3); }
+  .d1-badge.g { background: rgba(31,157,117,.2); color: #5ee8b8; border: 1px solid rgba(31,157,117,.25); }
+  .d1-badge.b { background: rgba(45,108,223,.2); color: #7eb0ff; border: 1px solid rgba(45,108,223,.25); }
+  .d1-kpis { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .d1-kpi { padding: 22px 20px; border-right: 1px solid rgba(255,255,255,.05); border-bottom: 1px solid rgba(255,255,255,.05); }
+  .d1-kpi:last-child { border-right: 0; }
+  .d1-kpi-label { font-size: 9.5px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.3); margin-bottom: 8px; }
+  .d1-kpi-val { font-size: 26px; font-weight: 900; letter-spacing: -.04em; color: #fff; }
+  .d1-kpi-sub { font-size: 10px; color: rgba(255,255,255,.3); margin-top: 4px; }
+  .d1-kpi-bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,.1); margin-top: 10px; overflow: hidden; }
+  .d1-kpi-bar span { display: block; height: 100%; border-radius: 999px; }
+  .d1-body { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid rgba(255,255,255,.05); }
+  .d1-col { padding: 20px; border-right: 1px solid rgba(255,255,255,.05); }
+  .d1-col:last-child { border-right: 0; }
+  .d1-col-title { font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.35); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .d1-item { display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; color: rgba(255,255,255,.7); padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); line-height: 1.35; }
+  .d1-item:last-child { border-bottom: 0; }
+  .d1-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .d1-target { font-size: 9.5px; color: rgba(255,255,255,.28); font-weight: 700; margin-top: 2px; }
+  .d1-gantt { padding: 0 20px 20px; }
+  .d1-gantt-title { font-size: 9.5px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.3); padding: 14px 0 10px; border-top: 1px solid rgba(255,255,255,.05); margin-bottom: 4px; }
+  .d1-grow { display: grid; grid-template-columns: 140px 1fr; align-items: center; min-height: 30px; border-bottom: 1px solid rgba(255,255,255,.03); }
+  .d1-glabel { font-size: 10.5px; font-weight: 700; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; }
+  .d1-gtrack { position: relative; height: 30px; }
+  .d1-gbar { position: absolute; top: 50%; transform: translateY(-50%); height: 14px; border-radius: 5px; }
+  .d1-gbar.done { background: rgba(123,97,255,.4); }
+  .d1-gbar.active { background: rgba(45,108,223,.4); }
+  .d1-gbar.plan { background: rgba(255,255,255,.1); font-style:italic; }
+  .d1-gbar.del { background: linear-gradient(90deg,#bf1830,#e8304a); }
+  .d1-gline { position: absolute; top:0; bottom:0; width:1.5px; background: rgba(191,24,48,.5); }
+
+  /* ───── DESIGN 2: Magazine layout ───── */
+  .d2 { background: #fff; }
+  .d2-header { background: linear-gradient(135deg, var(--p), #ff6b81); padding: 28px 28px 22px; color: #fff; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; }
+  .d2-htag { font-size: 10px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; opacity: .7; margin-bottom: 8px; }
+  .d2-hname { font-size: 24px; font-weight: 900; letter-spacing: -.04em; line-height: 1.1; }
+  .d2-hmeta { font-size: 11.5px; opacity: .75; margin-top: 10px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .d2-hstats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .d2-hstat { background: rgba(255,255,255,.18); border-radius: 14px; padding: 12px 14px; text-align: center; }
+  .d2-hstat-v { font-size: 22px; font-weight: 900; letter-spacing: -.03em; }
+  .d2-hstat-l { font-size: 9.5px; opacity: .75; margin-top: 2px; font-weight: 700; }
+  .d2-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .d2-left { padding: 24px; border-right: 1px solid var(--line); }
+  .d2-right { padding: 24px; }
+  .d2-section-title { font-size: 10.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .d2-ops { display: flex; flex-direction: column; gap: 0; }
+  .d2-ops-group { margin-bottom: 16px; }
+  .d2-ops-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .d2-ops-pill { padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 900; }
+  .d2-ops-pill.c { background: #fff0f3; color: var(--pd); }
+  .d2-ops-pill.d { background: #edf4ff; color: #2458b8; }
+  .d2-ops-pill.n { background: #f1efff; color: #5741d9; }
+  .d2-ops-item { display: flex; gap: 8px; font-size: 12px; color: var(--ink); padding: 5px 0; border-bottom: 1px solid #f5f7fb; line-height: 1.35; }
+  .d2-ops-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .d2-ops-dot.c { background: var(--p); }
+  .d2-ops-dot.d { background: var(--blue); }
+  .d2-ops-dot.n { background: var(--purple); }
+  .d2-target { font-size: 10px; color: var(--muted); font-weight: 700; }
+  .d2-phases { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-bottom: 20px; }
+  .d2-phase { border-radius: 10px; padding: 10px 8px; text-align: center; border: 1px solid var(--line); }
+  .d2-phase-icon { font-size: 16px; margin-bottom: 4px; }
+  .d2-phase-name { font-size: 9.5px; font-weight: 800; color: var(--ink); }
+  .d2-phase-status { font-size: 9px; font-weight: 700; margin-top: 2px; }
+  .d2-phase.ok { background: #eaf8f3; border-color: #c9eee2; }
+  .d2-phase.ok .d2-phase-status { color: var(--green); }
+  .d2-phase.prog { background: #edf4ff; border-color: #d4e4ff; }
+  .d2-phase.prog .d2-phase-status { color: #2458b8; }
+  .d2-phase.pend { background: #f8fafd; border-color: var(--line); }
+  .d2-phase.pend .d2-phase-status { color: var(--muted); }
+  .d2-gant { margin-top: 4px; }
+  .d2-grow { display: grid; grid-template-columns: 110px 1fr; align-items: center; min-height: 28px; }
+  .d2-glabel { font-size: 10.5px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
+  .d2-gtrack { position: relative; height: 28px; background: #f8fafd; border-radius: 6px; overflow: hidden; }
+  .d2-gbar { position: absolute; top: 50%; transform: translateY(-50%); height: 12px; border-radius: 4px; }
+  .d2-gbar.done { background: linear-gradient(90deg,#c8c3e8,#b8b4d8); }
+  .d2-gbar.plan { background: #e0e4ee; }
+  .d2-gbar.del { background: linear-gradient(90deg,#bf1830,#e8304a); }
+  .d2-gline { position: absolute; top:0; bottom:0; width:1.5px; background: var(--p); z-index:2; }
+
+  /* ───── DESIGN 3: Glassmorphism ───── */
+  .d3 { background: linear-gradient(135deg,#1a1040,#0e1a2e); }
+  .d3-header { padding: 28px 28px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .d3-htitle { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -.03em; }
+  .d3-hsub { font-size: 11.5px; color: rgba(255,255,255,.4); margin-top: 4px; }
+  .d3-hbadges { display: flex; gap: 8px; }
+  .d3-hbadge { padding: 6px 14px; border-radius: 999px; font-size: 11px; font-weight: 800; backdrop-filter: blur(8px); }
+  .d3-hbadge.status { background: rgba(191,24,48,.2); border: 1px solid rgba(191,24,48,.3); color: #ff9aaa; }
+  .d3-hbadge.hours { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.7); }
+  .d3-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; padding: 20px; }
+  .d3-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 18px; backdrop-filter: blur(6px); }
+  .d3-card-title { font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.4); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .d3-card-badge { padding: 3px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 900; }
+  .d3-card-badge.p { background: rgba(191,24,48,.3); color: #ff9aaa; }
+  .d3-card-badge.b { background: rgba(45,108,223,.3); color: #7eb0ff; }
+  .d3-card-badge.g { background: rgba(31,157,117,.3); color: #5ee8b8; }
+  .d3-item { display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; color: rgba(255,255,255,.68); padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); line-height: 1.35; }
+  .d3-item:last-child { border-bottom: 0; }
+  .d3-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .d3-target { font-size: 9.5px; color: rgba(255,255,255,.3); font-weight: 700; }
+  .d3-progress { margin-bottom: 8px; }
+  .d3-prog-label { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: rgba(255,255,255,.4); margin-bottom: 5px; }
+  .d3-prog-track { height: 5px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .d3-prog-fill { height: 100%; border-radius: 999px; }
+  .d3-gantt-row { display: grid; grid-template-columns: 100px 1fr; align-items: center; min-height: 28px; }
+  .d3-gl { font-size: 10px; font-weight: 700; color: rgba(255,255,255,.35); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
+  .d3-gt { position: relative; height: 28px; }
+  .d3-gb { position: absolute; top:50%; transform:translateY(-50%); height:12px; border-radius:5px; }
+  .d3-gb.done { background: rgba(123,97,255,.45); }
+  .d3-gb.plan { background: rgba(255,255,255,.12); font-style:italic; }
+  .d3-gb.del { background: linear-gradient(90deg,#bf1830,#e8304a); }
+  .d3-tl { position: absolute; top:0; bottom:0; width:1.5px; background:rgba(191,24,48,.5); z-index:2; }
+  .d3-full { grid-column: 1/-1; }
+
+  /* ───── DESIGN 4: Splitscreen executive ───── */
+  .d4 { background: #fff; }
+  .d4-layout { display: grid; grid-template-columns: 280px 1fr; min-height: 580px; }
+  .d4-sidebar { background: linear-gradient(180deg,#1c2430,#0d1117); padding: 28px 22px; display: flex; flex-direction: column; gap: 20px; }
+  .d4-logo { display: flex; align-items: center; gap: 10px; }
+  .d4-logo-mark { width: 36px; height: 36px; border-radius: 12px; background: linear-gradient(135deg,var(--p),#ff6b81); display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; font-size: 16px; box-shadow: 0 8px 20px rgba(191,24,48,.4); }
+  .d4-logo-text { font-size: 13px; font-weight: 800; color: #fff; line-height: 1.2; }
+  .d4-logo-sub { font-size: 10px; color: rgba(255,255,255,.4); }
+  .d4-divider { height: 1px; background: rgba(255,255,255,.08); }
+  .d4-kpis { display: flex; flex-direction: column; gap: 10px; }
+  .d4-kpi { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); border-radius: 14px; padding: 14px; }
+  .d4-kpi-l { font-size: 9.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.3); margin-bottom: 6px; }
+  .d4-kpi-v { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: -.03em; }
+  .d4-kpi-s { font-size: 10px; color: rgba(255,255,255,.3); margin-top: 3px; }
+  .d4-kpi-pill { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 800; margin-top: 6px; }
+  .d4-kpi-pill.ok { background: rgba(31,157,117,.25); color: #5ee8b8; }
+  .d4-kpi-pill.warn { background: rgba(244,183,64,.25); color: #ffd97e; }
+  .d4-kpi-pill.bad { background: rgba(191,24,48,.25); color: #ff9aaa; }
+  .d4-main { padding: 28px; overflow-y: auto; }
+  .d4-section { margin-bottom: 24px; }
+  .d4-s-title { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .d4-s-title::after { content:''; flex:1; height:1px; background: var(--line); }
+  .d4-ops-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .d4-ops-col { border-radius: 14px; overflow: hidden; }
+  .d4-ops-head { padding: 10px 14px; font-size: 11.5px; font-weight: 800; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+  .d4-ops-head.c { background: linear-gradient(135deg,#7b1c30,#bf1830); }
+  .d4-ops-head.d { background: linear-gradient(135deg,#1d4fa8,#2d6cdf); }
+  .d4-ops-head.n { background: linear-gradient(135deg,#1c2430,#2d3a4a); }
+  .d4-ops-cnt { background: rgba(255,255,255,.22); width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; }
+  .d4-ops-body { background: #fafbfd; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 14px 14px; padding: 10px 12px; }
+  .d4-ops-item { font-size: 11px; color: var(--ink); padding: 4px 0; border-bottom: 1px solid #f0f3f9; line-height: 1.35; display: flex; gap: 6px; align-items: flex-start; }
+  .d4-ops-item:last-child { border-bottom: 0; }
+  .d4-ops-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .d4-ops-dot.c { background: var(--p); }
+  .d4-ops-dot.d { background: var(--blue); }
+  .d4-ops-dot.n { background: var(--purple); }
+  .d4-ops-target { font-size: 9.5px; color: var(--muted); font-weight: 700; }
+  .d4-timeline { margin-top: 4px; }
+  .d4-trow { display: grid; grid-template-columns: 130px 1fr 70px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); gap: 10px; }
+  .d4-trow:last-child { border-bottom: 0; }
+  .d4-tname { font-size: 11.5px; font-weight: 700; color: var(--ink); }
+  .d4-tperiod { font-size: 10px; color: var(--muted); font-weight: 700; }
+  .d4-tbar-track { height: 8px; background: #f0f3f9; border-radius: 999px; overflow: hidden; }
+  .d4-tbar-fill { height: 100%; border-radius: 999px; }
+  .d4-tstatus { text-align: right; }
+  .d4-tpill { display: inline-flex; padding: 3px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 800; }
+  .d4-tpill.ok { background: #eaf8f3; color: #137252; }
+  .d4-tpill.act { background: #edf4ff; color: #2458b8; }
+  .d4-tpill.plan { background: #f5f7fb; color: var(--muted); }
+  .d4-tpill.del { background: #fff0f3; color: var(--pd); }
+
+  /* ───── DESIGN 5: Kanban + Timeline fusion ───── */
+  .d5 { background: #f8fafd; }
+  .d5-header { background: #fff; padding: 22px 28px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .d5-title { font-size: 20px; font-weight: 900; letter-spacing: -.04em; }
+  .d5-title span { color: var(--p); }
+  .d5-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .d5-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid var(--line); background: #fff; }
+  .d5-body { display: grid; grid-template-columns: 1fr 340px; gap: 0; }
+  .d5-main { padding: 22px; }
+  .d5-aside { background: #fff; border-left: 1px solid var(--line); padding: 22px; }
+  .d5-section-title { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .d5-progress-ring { display: flex; align-items: center; gap: 18px; padding: 16px; background: linear-gradient(135deg,#fff0f3,#fff); border: 1px solid #ffd6de; border-radius: 16px; margin-bottom: 18px; }
+  .d5-ring { width: 64px; height: 64px; position: relative; flex-shrink: 0; }
+  .d5-ring svg { transform: rotate(-90deg); }
+  .d5-ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: var(--p); }
+  .d5-ring-label { font-size: 14px; font-weight: 800; }
+  .d5-ring-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .d5-ops-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 18px; }
+  .d5-ops-card { border-radius: 14px; border: 1px solid var(--line); overflow: hidden; }
+  .d5-ops-head { padding: 9px 12px; font-size: 11px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+  .d5-ops-head.c { background: #fff0f3; color: var(--pd); border-bottom: 2px solid var(--p); }
+  .d5-ops-head.d { background: #edf4ff; color: #2458b8; border-bottom: 2px solid var(--blue); }
+  .d5-ops-head.n { background: #f1efff; color: #5741d9; border-bottom: 2px solid var(--purple); }
+  .d5-ops-cnt2 { font-size: 13px; font-weight: 900; }
+  .d5-ops-body { padding: 8px 12px; background: #fff; }
+  .d5-ops-item { font-size: 11px; padding: 4px 0; color: var(--ink); border-bottom: 1px solid #f5f7fb; display: flex; gap: 6px; }
+  .d5-ops-item:last-child { border-bottom: 0; }
+  .d5-ops-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .d5-ops-dot.c { background: var(--p); }
+  .d5-ops-dot.d { background: var(--blue); }
+  .d5-ops-dot.n { background: var(--purple); }
+  .d5-gantt-mini { }
+  .d5-gmrow { display: grid; grid-template-columns: 110px 1fr; align-items: center; min-height: 26px; border-bottom: 1px solid #f0f3f9; }
+  .d5-gmrow:last-child { border-bottom: 0; }
+  .d5-gml { font-size: 10.5px; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
+  .d5-gmt { position: relative; height: 26px; background: #f8fafd; border-radius: 4px; }
+  .d5-gmbar { position: absolute; top:50%; transform:translateY(-50%); height:10px; border-radius:4px; }
+  .d5-gmbar.done { background: linear-gradient(90deg,#c8c3e8,#b8b4d8); }
+  .d5-gmbar.plan { background: #e0e4ee; }
+  .d5-gmbar.del { background: linear-gradient(90deg,#bf1830,#e8304a); }
+  .d5-gmline { position: absolute; top:0; bottom:0; width:1.5px; background: var(--p); z-index:2; }
+  .d5-aside-kpis { display: flex; flex-direction: column; gap: 10px; }
+  .d5-kcard { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; }
+  .d5-kcard-l { font-size: 9.5px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .d5-kcard-v { font-size: 20px; font-weight: 900; color: var(--ink); letter-spacing: -.03em; }
+  .d5-kcard-s { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .d5-kcard-bar { height: 4px; border-radius: 999px; background: var(--line); margin-top: 8px; overflow: hidden; }
+  .d5-kcard-bar span { display: block; height: 100%; border-radius: 999px; }
+
+  /* ───── DESIGN 6: Newspaper/editorial ───── */
+  .d6 { background: #fff; }
+  .d6-header { padding: 22px 28px 18px; border-bottom: 3px solid var(--ink); }
+  .d6-h-top { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .d6-h-num { font-size: 11px; font-weight: 900; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; border: 1px solid var(--line); padding: 3px 10px; border-radius: 6px; }
+  .d6-h-title { font-size: 26px; font-weight: 900; letter-spacing: -.05em; color: var(--ink); }
+  .d6-h-title span { color: var(--p); }
+  .d6-h-meta { display: flex; gap: 18px; font-size: 11px; color: var(--muted); font-weight: 700; }
+  .d6-h-meta strong { color: var(--ink); }
+  .d6-layout { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--line); }
+  .d6-col { padding: 20px; border-right: 1px solid var(--line); }
+  .d6-col:last-child { border-right: 0; }
+  .d6-col-head { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding-bottom: 10px; border-bottom: 2px solid var(--ink); margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .d6-col-cnt { background: var(--ink); color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 900; }
+  .d6-col-cnt.r { background: var(--p); }
+  .d6-col-cnt.b { background: var(--blue); }
+  .d6-col-cnt.p { background: var(--purple); }
+  .d6-item { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--ink); padding: 8px 0; border-bottom: 1px solid #f0f3f9; line-height: 1.38; }
+  .d6-item:last-child { border-bottom: 0; }
+  .d6-num { font-size: 10px; font-weight: 900; color: var(--muted); flex-shrink: 0; width: 16px; }
+  .d6-tgt { font-size: 10px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+  .d6-footer { border-top: 3px solid var(--ink); padding: 16px 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .d6-footer-title { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .d6-frow { display: grid; grid-template-columns: 100px 1fr 60px; align-items: center; padding: 5px 0; border-bottom: 1px solid #f0f3f9; gap: 10px; font-size: 11px; }
+  .d6-frow:last-child { border-bottom: 0; }
+  .d6-fname { font-weight: 700; color: var(--ink); }
+  .d6-fperiod { color: var(--muted); font-size: 10px; }
+  .d6-ftrack { height: 7px; background: #f0f3f9; border-radius: 999px; overflow: hidden; }
+  .d6-ffill { height: 100%; border-radius: 999px; }
+  .d6-fstatus { text-align: right; font-size: 10px; font-weight: 800; }
+  .d6-fstatus.ok { color: var(--green); }
+  .d6-fstatus.act { color: var(--blue); }
+  .d6-fstatus.plan { color: var(--muted); }
+  .d6-fstatus.del { color: var(--p); }
+</style>
+</head>
+<body>
+<h1>6 Propostas de Dashboard — Visão Executiva</h1>
+<p class="sub">Iniciativa #113345 · Gestão de Contas e Cartões · Selecione o layout preferido</p>
+<div class="wrap">
+
+<!-- ═══ DESIGN 1: COMMAND CENTER ═══ -->
+<div class="ms">
+  <div class="ml"><div class="mn">1</div><div><div class="mt">Command Center — Dark total, KPIs grandes + Gantt compacto</div><div class="md">Dashboard executivo 100% dark. Grandes números no topo, 3 colunas Ops for Ops, Gantt embutido na base.</div></div></div>
+  <div class="d1">
+    <div class="d1-top">
+      <div class="d1-brand">
+        <div>
+          <div class="d1-num">Iniciativa #113345</div>
+          <div class="d1-title">Gestão de Contas e Cartões</div>
+          <div class="d1-sub">Squad Contact · Luciana Possamai · Sandra Souza</div>
+        </div>
+        <div class="d1-badges">
+          <span class="d1-badge r">Em Discovery</span>
+          <span class="d1-badge b">2.440h</span>
+          <span class="d1-badge g">Contact</span>
+        </div>
+      </div>
+      <div class="d1-kpis">
+        <div class="d1-kpi">
+          <div class="d1-kpi-label">Maturidade</div>
+          <div class="d1-kpi-val">33%</div>
+          <div class="d1-kpi-sub">6 de 10 critérios</div>
+          <div class="d1-kpi-bar"><span style="width:33%;background:linear-gradient(90deg,#7b61ff,#c4b8ff)"></span></div>
+        </div>
+        <div class="d1-kpi">
+          <div class="d1-kpi-label">Concluídos</div>
+          <div class="d1-kpi-val">8</div>
+          <div class="d1-kpi-sub">itens Ops for Ops</div>
+          <div class="d1-kpi-bar"><span style="width:62%;background:linear-gradient(90deg,#1f9d75,#5ee8b8)"></span></div>
+        </div>
+        <div class="d1-kpi">
+          <div class="d1-kpi-label">Em andamento</div>
+          <div class="d1-kpi-val">5</div>
+          <div class="d1-kpi-sub">ações ativas</div>
+          <div class="d1-kpi-bar"><span style="width:38%;background:linear-gradient(90deg,#2d6cdf,#7eb0ff)"></span></div>
+        </div>
+        <div class="d1-kpi">
+          <div class="d1-kpi-label">Próx. Entrega</div>
+          <div class="d1-kpi-val">30/09</div>
+          <div class="d1-kpi-sub">Desenvolvimento</div>
+          <div class="d1-kpi-bar"><span style="width:55%;background:linear-gradient(90deg,#bf1830,#ff6b81)"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="d1-body">
+      <div class="d1-col">
+        <div class="d1-col-title">✅ Concluídos <span style="background:rgba(31,157,117,.2);color:#5ee8b8;padding:2px 8px;border-radius:999px;font-size:9.5px">8</span></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Workshop das iniciativas - Ideação</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Solicitação da iniciativa</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Cadastro no wave – #113345</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Bootcamp Ops for Ops (07/05)</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Validação Business Case e KPI's (L2)</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Discovery (12/06 – 22/06)</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Criação 4 Features</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#1f9d75"></span><div>Histórias Usuário Jira - PCCF</div></div>
+      </div>
+      <div class="d1-col">
+        <div class="d1-col-title">🔄 Em andamento <span style="background:rgba(45,108,223,.2);color:#7eb0ff;padding:2px 8px;border-radius:999px;font-size:9.5px">5</span></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#2d6cdf"></span><div>Desenhos dos fluxos AS IS<div class="d1-target">Alvo: 25/06</div></div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#2d6cdf"></span><div>Apresentação DATI, DS e RTE<div class="d1-target">Alvo: 29/06</div></div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#2d6cdf"></span><div>Desenho técnico de solução<div class="d1-target">Alvo: 03/07</div></div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#2d6cdf"></span><div>Formalização histórias com Operação<div class="d1-target">Alvo: 03/07</div></div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#2d6cdf"></span><div>Escrita histórias Outros Produtos<div class="d1-target">Alvo: 10/07</div></div></div>
+      </div>
+      <div class="d1-col">
+        <div class="d1-col-title">🧭 Próximos passos <span style="background:rgba(123,97,255,.2);color:#c4b8ff;padding:2px 8px;border-radius:999px;font-size:9.5px">3</span></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#7b61ff"></span><div>Refinamento técnico</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#7b61ff"></span><div>Ratificação de esforço e distribuição das histórias</div></div>
+        <div class="d1-item"><span class="d1-dot" style="background:#7b61ff"></span><div>Desenvolvimento da solução</div></div>
+        <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)">
+          <div class="d1-col-title" style="margin-bottom:10px">Dependências</div>
+          <div class="d1-item"><span class="d1-dot" style="background:#f4b740"></span><div>Área de Dados: Caio / Eduardo Diana</div></div>
+          <div class="d1-item"><span class="d1-dot" style="background:#f4b740"></span><div>IA/RPA: Everton WENNINGKAMP</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="d1-gantt">
+      <div class="d1-gantt-title">Linha do Tempo — Jun → Out 2026</div>
+      <div class="d1-grow"><div class="d1-glabel">Alinhamento</div><div class="d1-gtrack"><div class="d1-gline" style="left:17%"></div><div class="d1-gbar done" style="left:0%;width:7%"></div></div></div>
+      <div class="d1-grow"><div class="d1-glabel">Discovery</div><div class="d1-gtrack"><div class="d1-gline" style="left:17%"></div><div class="d1-gbar done" style="left:7%;width:7%"></div></div></div>
+      <div class="d1-grow"><div class="d1-glabel">AS IS · Sol.</div><div class="d1-gtrack"><div class="d1-gline" style="left:17%"></div><div class="d1-gbar active" style="left:14%;width:6%"></div></div></div>
+      <div class="d1-grow"><div class="d1-glabel">Escrita · Refin.</div><div class="d1-gtrack"><div class="d1-gline" style="left:17%"></div><div class="d1-gbar plan" style="left:21%;width:14%"></div></div></div>
+      <div class="d1-grow"><div class="d1-glabel">Dev. Testes Homol.</div><div class="d1-gtrack"><div class="d1-gline" style="left:17%"></div><div class="d1-gbar plan" style="left:28%;width:33%"></div></div></div>
+      <div class="d1-grow"><div class="d1-glabel">Entrega Eficiência</div><div class="d1-gtrack"><div class="d1-gline" style="left:17%"></div><div class="d1-gbar del" style="left:81%;width:18%">Entrega</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DESIGN 2: MAGAZINE ═══ -->
+<div class="ms">
+  <div class="ml"><div class="mn">2</div><div><div class="mt">Magazine — Header vermelho com stats, corpo bicoluna</div><div class="md">Cabeçalho impactante com gradiente, stats em destaque. Esquerda: Ops for Ops. Direita: fases + Gantt compacto.</div></div></div>
+  <div class="d2">
+    <div class="d2-header">
+      <div>
+        <div class="d2-htag">Discovery PMO · Iniciativa #113345</div>
+        <div class="d2-hname">Gestão de Contas<br/>e Cartões</div>
+        <div class="d2-hmeta"><span>Squad Contact</span><span>PO: Sandra Souza</span><span>TL: Silmara Rosalem</span><span>2.440h · 2026</span></div>
+      </div>
+      <div class="d2-hstats">
+        <div class="d2-hstat"><div class="d2-hstat-v">33%</div><div class="d2-hstat-l">Maturidade</div></div>
+        <div class="d2-hstat"><div class="d2-hstat-v">8</div><div class="d2-hstat-l">Concluídos</div></div>
+        <div class="d2-hstat"><div class="d2-hstat-v">Out</div><div class="d2-hstat-l">Entrega</div></div>
+      </div>
+    </div>
+    <div class="d2-body">
+      <div class="d2-left">
+        <div class="d2-section-title">Actions Ops for Ops</div>
+        <div class="d2-ops-group">
+          <div class="d2-ops-head"><span class="d2-ops-pill c">✅ Concluídos · 8</span></div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Workshop das iniciativas - Ideação</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Solicitação da iniciativa</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Cadastro no wave – #113345</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Bootcamp Ops for Ops (07/05)</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Validação Business Case e KPI's (L2)</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Discovery (12/06 – 22/06)</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Criação 4 Features</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot c"></span>Histórias Usuário Jira - PCCF</div>
+        </div>
+        <div class="d2-ops-group" style="margin-top:12px">
+          <div class="d2-ops-head"><span class="d2-ops-pill d">🔄 Em andamento · 5</span></div>
+          <div class="d2-ops-item"><span class="d2-ops-dot d"></span><div>Desenhos dos fluxos AS IS<div class="d2-target">Alvo: 25/06</div></div></div>
+          <div class="d2-ops-item"><span class="d2-ops-dot d"></span><div>Apresentação DATI, DS e RTE<div class="d2-target">Alvo: 29/06</div></div></div>
+          <div class="d2-ops-item"><span class="d2-ops-dot d"></span><div>Desenho técnico de solução<div class="d2-target">Alvo: 03/07</div></div></div>
+          <div class="d2-ops-item"><span class="d2-ops-dot d"></span><div>Formalização histórias com Operação<div class="d2-target">Alvo: 03/07</div></div></div>
+          <div class="d2-ops-item"><span class="d2-ops-dot d"></span><div>Escrita histórias Outros Produtos<div class="d2-target">Alvo: 10/07</div></div></div>
+        </div>
+        <div class="d2-ops-group" style="margin-top:12px">
+          <div class="d2-ops-head"><span class="d2-ops-pill n">🧭 Próximos · 3</span></div>
+          <div class="d2-ops-item"><span class="d2-ops-dot n"></span>Refinamento técnico</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot n"></span>Ratificação de esforço e distribuição</div>
+          <div class="d2-ops-item"><span class="d2-ops-dot n"></span>Desenvolvimento da solução</div>
+        </div>
+      </div>
+      <div class="d2-right">
+        <div class="d2-section-title" style="margin-bottom:10px">Fases do Discovery</div>
+        <div class="d2-phases">
+          <div class="d2-phase ok"><div class="d2-phase-icon">🎯</div><div class="d2-phase-name">Kickoff</div><div class="d2-phase-status">Concluído</div></div>
+          <div class="d2-phase prog"><div class="d2-phase-icon">🗺️</div><div class="d2-phase-name">AS IS</div><div class="d2-phase-status">Em andamento</div></div>
+          <div class="d2-phase pend"><div class="d2-phase-icon">🔮</div><div class="d2-phase-name">TO BE</div><div class="d2-phase-status">Pendente</div></div>
+          <div class="d2-phase pend"><div class="d2-phase-icon">📋</div><div class="d2-phase-name">MVP</div><div class="d2-phase-status">Pendente</div></div>
+          <div class="d2-phase prog"><div class="d2-phase-icon">🔗</div><div class="d2-phase-name">Deps.</div><div class="d2-phase-status">Mapeadas</div></div>
+          <div class="d2-phase pend"><div class="d2-phase-icon">📖</div><div class="d2-phase-name">Histórias</div><div class="d2-phase-status">Pendente</div></div>
+          <div class="d2-phase prog"><div class="d2-phase-icon">⚖️</div><div class="d2-phase-name">Estimativa</div><div class="d2-phase-status">Em andamento</div></div>
+          <div class="d2-phase pend"><div class="d2-phase-icon">🚦</div><div class="d2-phase-name">Go/No-Go</div><div class="d2-phase-status">Aguardando</div></div>
+        </div>
+        <div class="d2-section-title">Linha do Tempo</div>
+        <div class="d2-gant">
+          <div class="d2-grow"><div class="d2-glabel">Alinhamento</div><div class="d2-gtrack"><div class="d2-gline" style="left:17%"></div><div class="d2-gbar done" style="left:0%;width:7%"></div></div></div>
+          <div class="d2-grow"><div class="d2-glabel">Discovery</div><div class="d2-gtrack"><div class="d2-gline" style="left:17%"></div><div class="d2-gbar done" style="left:7%;width:7%"></div></div></div>
+          <div class="d2-grow"><div class="d2-glabel">AS IS / Sol.</div><div class="d2-gtrack"><div class="d2-gline" style="left:17%"></div><div class="d2-gbar done" style="left:14%;width:7%"></div></div></div>
+          <div class="d2-grow"><div class="d2-glabel">Escrita / Refin.</div><div class="d2-gtrack"><div class="d2-gline" style="left:17%"></div><div class="d2-gbar plan" style="left:21%;width:14%"></div></div></div>
+          <div class="d2-grow"><div class="d2-glabel">Desenvolvimento</div><div class="d2-gtrack"><div class="d2-gline" style="left:17%"></div><div class="d2-gbar plan" style="left:28%;width:33%"></div></div></div>
+          <div class="d2-grow"><div class="d2-glabel">Entrega Efic.</div><div class="d2-gtrack"><div class="d2-gline" style="left:17%"></div><div class="d2-gbar del" style="left:81%;width:18%">Entrega</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DESIGN 3: GLASSMORPHISM ═══ -->
+<div class="ms">
+  <div class="ml"><div class="mn">3</div><div><div class="mt">Glassmorphism — Cards translúcidos sobre fundo gradiente</div><div class="md">Fundo roxo-navy, cards com blur, barras de progresso, Gantt e Ops for Ops em 3 colunas.</div></div></div>
+  <div class="d3">
+    <div class="d3-header">
+      <div><div class="d3-htitle">Gestão de Contas e Cartões</div><div class="d3-hsub">#113345 · Squad Contact · Luciana Possamai · Sandra Souza · Silmara Rosalem</div></div>
+      <div class="d3-hbadges"><span class="d3-hbadge status">Em Discovery</span><span class="d3-hbadge hours">2.440h · 2026</span></div>
+    </div>
+    <div class="d3-grid">
+      <div class="d3-card">
+        <div class="d3-card-title">✅ Concluídos <span class="d3-card-badge g">8</span></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Workshop das iniciativas - Ideação</div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Solicitação da iniciativa</div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Cadastro no wave – #113345</div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Bootcamp Ops for Ops (07/05)</div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Validação Business Case e KPI's (L2)</div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Discovery (12/06 – 22/06)</div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Criação 4 Features</div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#1f9d75"></span><div>Histórias Usuário Jira - PCCF</div></div>
+      </div>
+      <div class="d3-card">
+        <div class="d3-card-title">🔄 Em andamento <span class="d3-card-badge b">5</span></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#2d6cdf"></span><div>Desenhos dos fluxos AS IS<div class="d3-target">Alvo: 25/06</div></div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#2d6cdf"></span><div>Apresentação DATI, DS e RTE<div class="d3-target">Alvo: 29/06</div></div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#2d6cdf"></span><div>Desenho técnico de solução<div class="d3-target">Alvo: 03/07</div></div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#2d6cdf"></span><div>Formalização histórias com Operação<div class="d3-target">Alvo: 03/07</div></div></div>
+        <div class="d3-item"><span class="d3-dot" style="background:#2d6cdf"></span><div>Escrita histórias Outros Produtos<div class="d3-target">Alvo: 10/07</div></div></div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)">
+          <div class="d3-card-title" style="margin-bottom:10px">🧭 Próximos passos <span class="d3-card-badge p">3</span></div>
+          <div class="d3-item"><span class="d3-dot" style="background:#7b61ff"></span>Refinamento técnico</div>
+          <div class="d3-item"><span class="d3-dot" style="background:#7b61ff"></span>Ratificação de esforço</div>
+          <div class="d3-item"><span class="d3-dot" style="background:#7b61ff"></span>Desenvolvimento da solução</div>
+        </div>
+      </div>
+      <div class="d3-card d3-full" style="grid-column:3">
+        <div class="d3-card-title">Maturidade Discovery</div>
+        <div class="d3-progress"><div class="d3-prog-label"><span>Kickoff</span><span style="color:#1f9d75">✓</span></div><div class="d3-prog-track"><div class="d3-prog-fill" style="width:100%;background:#1f9d75"></div></div></div>
+        <div class="d3-progress"><div class="d3-prog-label"><span>AS IS</span><span>60%</span></div><div class="d3-prog-track"><div class="d3-prog-fill" style="width:60%;background:#2d6cdf"></div></div></div>
+        <div class="d3-progress"><div class="d3-prog-label"><span>Histórias</span><span>0%</span></div><div class="d3-prog-track"><div class="d3-prog-fill" style="width:0%;background:#7b61ff"></div></div></div>
+        <div class="d3-progress"><div class="d3-prog-label"><span>Estimativas</span><span>50%</span></div><div class="d3-prog-track"><div class="d3-prog-fill" style="width:50%;background:#f4b740"></div></div></div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)">
+          <div class="d3-card-title" style="margin-bottom:8px">Linha do Tempo</div>
+          <div class="d3-gantt-row"><div class="d3-gl">Alinhamento</div><div class="d3-gt"><div class="d3-tl" style="left:17%"></div><div class="d3-gb done" style="left:0%;width:7%"></div></div></div>
+          <div class="d3-gantt-row"><div class="d3-gl">Discovery</div><div class="d3-gt"><div class="d3-tl" style="left:17%"></div><div class="d3-gb done" style="left:7%;width:7%"></div></div></div>
+          <div class="d3-gantt-row"><div class="d3-gl">AS IS · Sol.</div><div class="d3-gt"><div class="d3-tl" style="left:17%"></div><div class="d3-gb plan" style="left:14%;width:9%"></div></div></div>
+          <div class="d3-gantt-row"><div class="d3-gl">Desenvolvimento</div><div class="d3-gt"><div class="d3-tl" style="left:17%"></div><div class="d3-gb plan" style="left:28%;width:33%"></div></div></div>
+          <div class="d3-gantt-row"><div class="d3-gl">Entrega Efic.</div><div class="d3-gt"><div class="d3-tl" style="left:17%"></div><div class="d3-gb del" style="left:81%;width:18%"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DESIGN 4: SPLIT SCREEN ═══ -->
+<div class="ms">
+  <div class="ml"><div class="mn">4</div><div><div class="mt">Splitscreen Executive — Sidebar escura + painel principal branco</div><div class="md">Sidebar dark com KPIs e identidade. Painel principal com Ops for Ops em 3 colunas + timeline compacto.</div></div></div>
+  <div class="d4">
+    <div class="d4-layout">
+      <div class="d4-sidebar">
+        <div class="d4-logo"><div class="d4-logo-mark">D</div><div><div class="d4-logo-text">Discovery PMO</div><div class="d4-logo-sub">Tracker · #113345</div></div></div>
+        <div class="d4-divider"></div>
+        <div style="font-size:13px;font-weight:800;color:#fff;line-height:1.2">Gestão de Contas e Cartões</div>
+        <div style="font-size:10.5px;color:rgba(255,255,255,.38);margin-top:4px">Squad Contact · Em Discovery</div>
+        <div class="d4-divider"></div>
+        <div class="d4-kpis">
+          <div class="d4-kpi"><div class="d4-kpi-l">Maturidade</div><div class="d4-kpi-v">33%</div><div class="d4-kpi-s">6 de 10 critérios ✓</div><span class="d4-kpi-pill warn">Média</span></div>
+          <div class="d4-kpi"><div class="d4-kpi-l">Consumo 2026</div><div class="d4-kpi-v">2.440h</div><div class="d4-kpi-s">Estimativa importada</div><span class="d4-kpi-pill ok">Registrado</span></div>
+          <div class="d4-kpi"><div class="d4-kpi-l">Alertas Abertos</div><div class="d4-kpi-v">2</div><div class="d4-kpi-s">Dependências em aberto</div><span class="d4-kpi-pill bad">Atenção</span></div>
+          <div class="d4-kpi"><div class="d4-kpi-l">Entrega Alvo</div><div class="d4-kpi-v">Out/26</div><div class="d4-kpi-s">Entrega da Eficiência</div><span class="d4-kpi-pill ok">Planejado</span></div>
+        </div>
+      </div>
+      <div class="d4-main">
+        <div class="d4-section">
+          <div class="d4-s-title">Actions Ops for Ops</div>
+          <div class="d4-ops-grid">
+            <div class="d4-ops-col">
+              <div class="d4-ops-head c">Concluídos <div class="d4-ops-cnt">8</div></div>
+              <div class="d4-ops-body">
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Workshop das iniciativas</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Solicitação da iniciativa</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Cadastro no wave – #113345</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Bootcamp Ops for Ops (07/05)</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Validação Business Case (L2)</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Discovery (12/06 – 22/06)</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Criação 4 Features</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot c"></span>Histórias Usuário Jira - PCCF</div>
+              </div>
+            </div>
+            <div class="d4-ops-col">
+              <div class="d4-ops-head d">Em andamento <div class="d4-ops-cnt">5</div></div>
+              <div class="d4-ops-body">
+                <div class="d4-ops-item"><span class="d4-ops-dot d"></span><div>Desenhos fluxos AS IS<div class="d4-ops-target">Alvo: 25/06</div></div></div>
+                <div class="d4-ops-item"><span class="d4-ops-dot d"></span><div>Apresentação DATI, DS e RTE<div class="d4-ops-target">Alvo: 29/06</div></div></div>
+                <div class="d4-ops-item"><span class="d4-ops-dot d"></span><div>Desenho técnico de solução<div class="d4-ops-target">Alvo: 03/07</div></div></div>
+                <div class="d4-ops-item"><span class="d4-ops-dot d"></span><div>Formalização histórias Operação<div class="d4-ops-target">Alvo: 03/07</div></div></div>
+                <div class="d4-ops-item"><span class="d4-ops-dot d"></span><div>Escrita histórias Outros Produtos<div class="d4-ops-target">Alvo: 10/07</div></div></div>
+              </div>
+            </div>
+            <div class="d4-ops-col">
+              <div class="d4-ops-head n">Próximos passos <div class="d4-ops-cnt">3</div></div>
+              <div class="d4-ops-body">
+                <div class="d4-ops-item"><span class="d4-ops-dot n"></span>Refinamento técnico</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot n"></span>Ratificação de esforço e distribuição das histórias</div>
+                <div class="d4-ops-item"><span class="d4-ops-dot n"></span>Desenvolvimento da solução</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="d4-section">
+          <div class="d4-s-title">Andamento da Iniciativa</div>
+          <div class="d4-timeline">
+            <div class="d4-trow"><div><div class="d4-tname">Alinhamento</div><div class="d4-tperiod">01/06 – 11/06</div></div><div class="d4-tbar-track"><div class="d4-tbar-fill" style="width:100%;background:linear-gradient(90deg,#c8c3e8,#b8b4d8)"></div></div><div class="d4-tstatus"><span class="d4-tpill ok">✓</span></div></div>
+            <div class="d4-trow"><div><div class="d4-tname">Discovery</div><div class="d4-tperiod">12/06 – 22/06</div></div><div class="d4-tbar-track"><div class="d4-tbar-fill" style="width:100%;background:linear-gradient(90deg,#c8c3e8,#b8b4d8)"></div></div><div class="d4-tstatus"><span class="d4-tpill ok">✓</span></div></div>
+            <div class="d4-trow"><div><div class="d4-tname">AS IS / Solução</div><div class="d4-tperiod">23/06 – 03/07</div></div><div class="d4-tbar-track"><div class="d4-tbar-fill" style="width:50%;background:linear-gradient(90deg,#2d6cdf,#7eb0ff)"></div></div><div class="d4-tstatus"><span class="d4-tpill act">→</span></div></div>
+            <div class="d4-trow"><div><div class="d4-tname">Escrita / Refinamento</div><div class="d4-tperiod">03/07 – 25/07</div></div><div class="d4-tbar-track"><div class="d4-tbar-fill" style="width:0%"></div></div><div class="d4-tstatus"><span class="d4-tpill plan">◦</span></div></div>
+            <div class="d4-trow"><div><div class="d4-tname">Desenvolvimento</div><div class="d4-tperiod">15/07 – 30/09 🌟</div></div><div class="d4-tbar-track"><div class="d4-tbar-fill" style="width:0%"></div></div><div class="d4-tstatus"><span class="d4-tpill plan">◦</span></div></div>
+            <div class="d4-trow"><div><div class="d4-tname">Entrega da Eficiência</div><div class="d4-tperiod">Out/2026</div></div><div class="d4-tbar-track"><div class="d4-tbar-fill" style="width:0%;background:linear-gradient(90deg,#bf1830,#e8304a)"></div></div><div class="d4-tstatus"><span class="d4-tpill del">🏁</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DESIGN 5: KANBAN FUSION ═══ -->
+<div class="ms">
+  <div class="ml"><div class="mn">5</div><div><div class="mt">Kanban Fusion — Header branco + aside com KPIs laterais</div><div class="md">Layout com painel principal e aside lateral com métricas, progresso circular e Gantt mini.</div></div></div>
+  <div class="d5">
+    <div class="d5-header">
+      <div><div class="d5-title">Gestão de Contas<br/> e Cartões <span>#113345</span></div></div>
+      <div class="d5-meta">
+        <span class="d5-chip">🏢 Squad Contact</span>
+        <span class="d5-chip">👤 Sandra Souza</span>
+        <span class="d5-chip">⚙️ Silmara Rosalem</span>
+        <span class="d5-chip" style="background:#fff0f3;border-color:#ffd6de;color:#8e1125">Em Discovery</span>
+      </div>
+    </div>
+    <div class="d5-body">
+      <div class="d5-main">
+        <div class="d5-section-title">Actions Ops for Ops</div>
+        <div class="d5-ops-row">
+          <div class="d5-ops-card">
+            <div class="d5-ops-head c">Concluídos <span class="d5-ops-cnt2">8</span></div>
+            <div class="d5-ops-body">
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Workshop das iniciativas</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Solicitação da iniciativa</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Cadastro no wave – #113345</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Bootcamp Ops for Ops (07/05)</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Validação Business Case (L2)</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Discovery (12/06 – 22/06)</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Criação 4 Features</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot c"></span>Histórias Usuário Jira - PCCF</div>
+            </div>
+          </div>
+          <div class="d5-ops-card">
+            <div class="d5-ops-head d">Em andamento <span class="d5-ops-cnt2">5</span></div>
+            <div class="d5-ops-body">
+              <div class="d5-ops-item"><span class="d5-ops-dot d"></span><div>Desenhos fluxos AS IS<div style="font-size:9.5px;color:var(--muted);font-weight:700">25/06</div></div></div>
+              <div class="d5-ops-item"><span class="d5-ops-dot d"></span><div>Apresentação DATI, DS e RTE<div style="font-size:9.5px;color:var(--muted);font-weight:700">29/06</div></div></div>
+              <div class="d5-ops-item"><span class="d5-ops-dot d"></span><div>Desenho técnico de solução<div style="font-size:9.5px;color:var(--muted);font-weight:700">03/07</div></div></div>
+              <div class="d5-ops-item"><span class="d5-ops-dot d"></span><div>Formalização histórias Operação<div style="font-size:9.5px;color:var(--muted);font-weight:700">03/07</div></div></div>
+              <div class="d5-ops-item"><span class="d5-ops-dot d"></span><div>Escrita histórias Outros Produtos<div style="font-size:9.5px;color:var(--muted);font-weight:700">10/07</div></div></div>
+            </div>
+          </div>
+          <div class="d5-ops-card">
+            <div class="d5-ops-head n">Próximos <span class="d5-ops-cnt2">3</span></div>
+            <div class="d5-ops-body">
+              <div class="d5-ops-item"><span class="d5-ops-dot n"></span>Refinamento técnico</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot n"></span>Ratificação esforço e distribuição</div>
+              <div class="d5-ops-item"><span class="d5-ops-dot n"></span>Desenvolvimento da solução</div>
+            </div>
+          </div>
+        </div>
+        <div class="d5-section-title" style="margin-top:4px">Linha do Tempo</div>
+        <div class="d5-gantt-mini">
+          <div class="d5-gmrow"><div class="d5-gml">Alinhamento</div><div class="d5-gmt"><div class="d5-gmline" style="left:17%"></div><div class="d5-gmbar done" style="left:0%;width:7%"></div></div></div>
+          <div class="d5-gmrow"><div class="d5-gml">Discovery</div><div class="d5-gmt"><div class="d5-gmline" style="left:17%"></div><div class="d5-gmbar done" style="left:7%;width:7%"></div></div></div>
+          <div class="d5-gmrow"><div class="d5-gml">AS IS / Sol.</div><div class="d5-gmt"><div class="d5-gmline" style="left:17%"></div><div class="d5-gmbar done" style="left:14%;width:8%"></div></div></div>
+          <div class="d5-gmrow"><div class="d5-gml">Escrita / Refin.</div><div class="d5-gmt"><div class="d5-gmline" style="left:17%"></div><div class="d5-gmbar plan" style="left:21%;width:14%"></div></div></div>
+          <div class="d5-gmrow"><div class="d5-gml">Desenvolvimento</div><div class="d5-gmt"><div class="d5-gmline" style="left:17%"></div><div class="d5-gmbar plan" style="left:28%;width:33%"></div></div></div>
+          <div class="d5-gmrow"><div class="d5-gml">Entrega Efic.</div><div class="d5-gmt"><div class="d5-gmline" style="left:17%"></div><div class="d5-gmbar del" style="left:81%;width:18%"></div></div></div>
+        </div>
+      </div>
+      <div class="d5-aside">
+        <div class="d5-section-title">Prontidão</div>
+        <div class="d5-progress-ring">
+          <div class="d5-ring">
+            <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#f0f2f7" stroke-width="6"/><circle cx="32" cy="32" r="26" fill="none" stroke="#bf1830" stroke-width="6" stroke-dasharray="163" stroke-dashoffset="109" stroke-linecap="round"/></svg>
+            <div class="d5-ring-num">33%</div>
+          </div>
+          <div><div class="d5-ring-label">Maturidade</div><div class="d5-ring-sub">6 de 10 critérios atendidos</div></div>
+        </div>
+        <div class="d5-aside-kpis">
+          <div class="d5-kcard"><div class="d5-kcard-l">Consumo 2026</div><div class="d5-kcard-v">2.440h</div><div class="d5-kcard-s">Estimativa importada da planilha</div><div class="d5-kcard-bar"><span style="width:55%;background:var(--blue)"></span></div></div>
+          <div class="d5-kcard"><div class="d5-kcard-l">Ações Concluídas</div><div class="d5-kcard-v">8 / 16</div><div class="d5-kcard-s">Ops for Ops (8 concluídos)</div><div class="d5-kcard-bar"><span style="width:50%;background:var(--green)"></span></div></div>
+          <div class="d5-kcard"><div class="d5-kcard-l">Dependências</div><div class="d5-kcard-v">2</div><div class="d5-kcard-s">Dados e IA/RPA em aberto</div><div class="d5-kcard-bar"><span style="width:30%;background:var(--amber)"></span></div></div>
+          <div class="d5-kcard"><div class="d5-kcard-l">Próxima Entrega</div><div class="d5-kcard-v">30/09</div><div class="d5-kcard-s">Desenvolvimento · 78 dias</div><div class="d5-kcard-bar"><span style="width:20%;background:var(--p)"></span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DESIGN 6: NEWSPAPER/EDITORIAL ═══ -->
+<div class="ms">
+  <div class="ml"><div class="mn">6</div><div><div class="mt">Editorial — Layout de jornal, clean, tipografia forte</div><div class="md">Três colunas de texto corrido no topo, footer com Gantt. Ultra clean, sem cores de fundo, só tipografia e bordas.</div></div></div>
+  <div class="d6">
+    <div class="d6-header">
+      <div class="d6-h-top">
+        <span class="d6-h-num">Iniciativa #113345</span>
+        <div class="d6-h-title">Gestão de <span>Contas</span> e Cartões</div>
+      </div>
+      <div class="d6-h-meta">
+        <span>Squad: <strong>Contact</strong></span>
+        <span>PO: <strong>Sandra Souza</strong></span>
+        <span>TL: <strong>Silmara Rosalem</strong></span>
+        <span>Dados: <strong>Caio / Eduardo Diana</strong></span>
+        <span>Consumo: <strong>2.440h</strong></span>
+        <span>Status: <strong style="color:var(--p)">Em Discovery</strong></span>
+      </div>
+    </div>
+    <div class="d6-layout">
+      <div class="d6-col">
+        <div class="d6-col-head">Concluídos <span class="d6-col-cnt r">8</span></div>
+        <div class="d6-item"><span class="d6-num">1</span>Workshop das iniciativas - Ideação</div>
+        <div class="d6-item"><span class="d6-num">2</span>Solicitação da iniciativa (Necessidades, dor do negócio, AS IS, TO BE, Benefícios)</div>
+        <div class="d6-item"><span class="d6-num">3</span>Cadastro da iniciativa no wave – Iniciativa #113345</div>
+        <div class="d6-item"><span class="d6-num">4</span>Bootcamp Ops for Ops (07/05)</div>
+        <div class="d6-item"><span class="d6-num">5</span>Validação do Business Case, Ações e KPI's (Validação L2)</div>
+        <div class="d6-item"><span class="d6-num">6</span>Discovery (12/06 – 22/06)</div>
+        <div class="d6-item"><span class="d6-num">7</span>Criação 4 Features</div>
+        <div class="d6-item"><span class="d6-num">8</span>Criação Histórias Usuário no Jira projeto PCCF</div>
+      </div>
+      <div class="d6-col">
+        <div class="d6-col-head">Em andamento <span class="d6-col-cnt b">5</span></div>
+        <div class="d6-item"><span class="d6-num">1</span><div>Desenhos dos fluxos AS IS<div class="d6-tgt">Alvo: 25/06</div></div></div>
+        <div class="d6-item"><span class="d6-num">2</span><div>Apresentação fluxos DATI, DS e RTE<div class="d6-tgt">Alvo: 29/06</div></div></div>
+        <div class="d6-item"><span class="d6-num">3</span><div>Desenho técnico de solução<div class="d6-tgt">Alvo 03/07 (Data Arquitetura)</div></div></div>
+        <div class="d6-item"><span class="d6-num">4</span><div>Formalização das histórias e fluxos com a Operação<div class="d6-tgt">Alvo: 03/07</div></div></div>
+        <div class="d6-item"><span class="d6-num">5</span><div>Escrita das histórias projetos Outros Produtos<div class="d6-tgt">Alvo: 10/07</div></div></div>
+      </div>
+      <div class="d6-col">
+        <div class="d6-col-head">Próximos passos <span class="d6-col-cnt p">3</span></div>
+        <div class="d6-item"><span class="d6-num">1</span>Refinamento técnico</div>
+        <div class="d6-item"><span class="d6-num">2</span>Ratificação de esforço de desenvolvimento e distribuição das histórias na linha do tempo</div>
+        <div class="d6-item"><span class="d6-num">3</span>Desenvolvimento da solução</div>
+      </div>
+    </div>
+    <div class="d6-footer">
+      <div>
+        <div class="d6-footer-title">Linha do Tempo — Andamento da Iniciativa</div>
+        <div class="d6-frow"><div><div class="d6-fname">Alinhamento</div><div class="d6-fperiod">01/06 – 11/06</div></div><div class="d6-ftrack"><div class="d6-ffill" style="width:100%;background:#c8c3e8"></div></div><div class="d6-fstatus ok">Concluído</div></div>
+        <div class="d6-frow"><div><div class="d6-fname">Discovery</div><div class="d6-fperiod">12/06 – 22/06</div></div><div class="d6-ftrack"><div class="d6-ffill" style="width:100%;background:#c8c3e8"></div></div><div class="d6-fstatus ok">Concluído</div></div>
+        <div class="d6-frow"><div><div class="d6-fname">AS IS / Solução</div><div class="d6-fperiod">23/06 – 03/07</div></div><div class="d6-ftrack"><div class="d6-ffill" style="width:50%;background:#2d6cdf"></div></div><div class="d6-fstatus act">Em andamento</div></div>
+        <div class="d6-frow"><div><div class="d6-fname">Escrita / Refin.</div><div class="d6-fperiod">03/07 – 25/07</div></div><div class="d6-ftrack"><div class="d6-ffill" style="width:0%"></div></div><div class="d6-fstatus plan">Planejado</div></div>
+      </div>
+      <div>
+        <div class="d6-footer-title" style="visibility:hidden">x</div>
+        <div class="d6-frow"><div><div class="d6-fname">Desenvolvimento</div><div class="d6-fperiod">15/07 – 30/09 🌟</div></div><div class="d6-ftrack"><div class="d6-ffill" style="width:0%"></div></div><div class="d6-fstatus plan">Planejado</div></div>
+        <div class="d6-frow"><div><div class="d6-fname">Entrega Eficiência</div><div class="d6-fperiod">Out/2026</div></div><div class="d6-ftrack"><div class="d6-ffill" style="width:0%;background:var(--p)"></div></div><div class="d6-fstatus del">🏁 Entrega</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>
