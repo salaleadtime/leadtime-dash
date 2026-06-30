@@ -5440,6 +5440,7 @@ function loadXlsx(file){
         var impFim    = m.fim>=0 ? parseD(r[m.fim]) : null;
         var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
         var impChg    = m.chg>=0 ? (r[m.chg]||'').toString() : '';
+        if(_SEED_CHG_CORRECTIONS[id] && impChg===_SEED_CHG_CORRECTIONS[id]) impChg='';
         var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
 
         // MERGE — regra: import só SOBRESCREVE se trouxer valor não-vazio.
@@ -5940,6 +5941,7 @@ function loadGS(){
       var impFim    = m.fim>=0 ? parseD(r[m.fim]) : null;
       var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
       var impChg    = m.chg>=0 ? (r[m.chg]||'').toString() : '';
+      if(_SEED_CHG_CORRECTIONS[id] && impChg===_SEED_CHG_CORRECTIONS[id]) impChg='';
       var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
 
       var rec={
