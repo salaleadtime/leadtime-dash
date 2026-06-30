@@ -5439,12 +5439,13 @@ function loadXlsx(file){
         var impIni    = m.ini>=0 ? parseD(r[m.ini]) : null;
         var impFim    = m.fim>=0 ? parseD(r[m.fim]) : null;
         var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
-        var impChg    = m.chg>=0 ? (r[m.chg]||'').toString() : '';
-        if(_SEED_CHG_CORRECTIONS[id] && impChg===_SEED_CHG_CORRECTIONS[id]) impChg='';
         var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
 
         // MERGE — regra: import só SOBRESCREVE se trouxer valor não-vazio.
         // Se import veio vazio e já existia dado local, PRESERVA.
+        // CHG é campo 100% manual: a importação nunca escreve nele, somente
+        // preserva o que já existe localmente (evita reintroduzir CHG indevido
+        // vindo de qualquer arquivo/fonte externa).
         var rec={
           id: id,
           squad: normalizeSquad(impSquad, old?old.squad:'') || (old?old.squad:'') || '',
@@ -5453,7 +5454,7 @@ function loadXlsx(file){
           ini: (old&&old.ini) ? old.ini : (impIni || null),
           fim: impFim || (old?old.fim:null) || null,
           dataPrevista: impPrev || (old?old.dataPrevista:null) || null,
-          chg: (impChg.trim() ? impChg : '') || (old && old.chg && !(_SEED_CHG_CORRECTIONS[id] && old.chg===_SEED_CHG_CORRECTIONS[id]) ? old.chg : '') || '',
+          chg: old ? (old.chg||'') : '',
           impedimento: (impImp.trim() ? impImp : '') || (jimp[id]||'') || (old?old.impedimento:'') || ''
         };
         rec.lt = calcLT(rec.ini, rec.fim);
@@ -5466,7 +5467,7 @@ function loadXlsx(file){
           if(!impIni && old.ini) stats.preservedIni++;
           if(!impFim && old.fim) stats.preservedFim++;
           if(!impPrev && old.dataPrevista) stats.preservedPrev++;
-          if(!impChg.trim() && old.chg) stats.preservedChg++;
+          if(old.chg) stats.preservedChg++;
           if(!impImp.trim() && old.impedimento) stats.preservedImp++;
         } else {
           stats.newCount++;
@@ -5940,10 +5941,10 @@ function loadGS(){
       var impIni    = m.ini>=0 ? parseD(r[m.ini]) : null;
       var impFim    = m.fim>=0 ? parseD(r[m.fim]) : null;
       var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
-      var impChg    = m.chg>=0 ? (r[m.chg]||'').toString() : '';
-      if(_SEED_CHG_CORRECTIONS[id] && impChg===_SEED_CHG_CORRECTIONS[id]) impChg='';
       var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
 
+      // CHG é campo 100% manual: a importação nunca escreve nele, somente
+      // preserva o que já existe localmente.
       var rec={
         id: id,
         squad: normalizeSquad(impSquad, old?old.squad:'') || (old?old.squad:'') || '',
@@ -5952,7 +5953,7 @@ function loadGS(){
         ini: impIni || (old?old.ini:null) || null,
         fim: impFim || (old?old.fim:null) || null,
         dataPrevista: impPrev || (old?old.dataPrevista:null) || null,
-        chg: (impChg.trim()?impChg:'') || (old && old.chg && !(_SEED_CHG_CORRECTIONS[id] && old.chg===_SEED_CHG_CORRECTIONS[id]) ? old.chg : '') || '',
+        chg: old ? (old.chg||'') : '',
         impedimento: (impImp.trim()?impImp:'') || (old?old.impedimento:'') || ''
       };
       rec.lt=calcLT(rec.ini, rec.fim);
@@ -5964,7 +5965,7 @@ function loadGS(){
         if(!impIni && old.ini) stats.preservedIni++;
         if(!impFim && old.fim) stats.preservedFim++;
         if(!impPrev && old.dataPrevista) stats.preservedPrev++;
-        if(!impChg.trim() && old.chg) stats.preservedChg++;
+        if(old.chg) stats.preservedChg++;
         if(!impImp.trim() && old.impedimento) stats.preservedImp++;
       } else {
         stats.newCount++;
