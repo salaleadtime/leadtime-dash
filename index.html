@@ -2384,7 +2384,7 @@ function makeRow(r){
     fim:sFim,
     fimAntes:isValidDate(r.fimAntes)?r.fimAntes:null,
     dataPrevista:sPrev,
-    chg:r.chg||'',
+    chg:(_SEED_CHG_CORRECTIONS[r.id] && r.chg===_SEED_CHG_CORRECTIONS[r.id]) ? '' : (r.chg||''),
     impedimento:r.impedimento||'',
     lt:calcLT(sIni,sFim)
   });
