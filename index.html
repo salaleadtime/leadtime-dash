@@ -2032,7 +2032,21 @@ tr:nth-child(even):hover td,
   <div class="mdl" style="max-width:780px;width:96vw">
     <div class="mt">Histórico — Movimentações entre Medição e Épicos</div>
     <div class="ms">Registra toda alteração de datas: entregas, reversões, mudanças do Sheets e <strong>dados preservados do navegador</strong> quando o SEED atualiza. Épicos revertidos podem ser restaurados com 1 clique.</div>
-    <div id="histBody" style="max-height:460px;overflow-y:auto;margin:.75rem 0;font-size:11px"></div>
+    <div class="fbar" style="margin-top:.6rem">
+      <span class="fl">Período:</span>
+      <button class="chip" id="histP_today" onclick="histSetPeriod('today')">Hoje</button>
+      <button class="chip" id="histP_7" onclick="histSetPeriod('7')">7 dias</button>
+      <button class="chip" id="histP_30" onclick="histSetPeriod('30')">30 dias</button>
+      <button class="chip" id="histP_all" onclick="histSetPeriod('all')">Tudo</button>
+      <div class="fsep"></div>
+      <span class="fl">Tipo:</span>
+      <button class="chip" id="histT_entregas" onclick="histToggleType('entregas')">Entregas</button>
+      <button class="chip" id="histT_reversoes" onclick="histToggleType('reversoes')">Reversões</button>
+      <button class="chip" id="histT_sheets" onclick="histToggleType('sheets')">Sheets</button>
+      <button class="chip" id="histT_tecnicos" onclick="histToggleType('tecnicos')" title="Datas preservadas automaticamente ao sincronizar com a planilha">Técnicos</button>
+    </div>
+    <div id="histSummary" style="font-size:10px;color:#94a3b8;margin:.5rem 2px 0"></div>
+    <div id="histBody" style="max-height:400px;overflow-y:auto;margin:.4rem 0 .75rem;font-size:11px"></div>
     <div class="mf">
       <button class="mb" onclick="histLimpar()" style="color:#dc2626">Limpar histórico local</button>
       <button class="mb" onclick="closeHistorico()">Fechar</button>
@@ -2065,6 +2079,7 @@ var stFilt={epic:'all',status:'all'};
 var medFilt={squad:'all',dateFrom:'',dateTo:''};
 var medTriChip=0; // 0=nenhum, 1-4=trimestre ativo
 var _medTriInited=false;
+var histFilt={period:'30',types:{entregas:true,reversoes:true,sheets:true,tecnicos:false}};
 var TAB_KEY='leadtime_sala_active_tab';
 
 // Persiste a aba ativa no localStorage
@@ -3028,7 +3043,7 @@ function renderMetaPace(){
   var tri=getCurrentTrimester();
   var del=allData.filter(function(r){ return inTrimester(r.fim,tri); });
   var d=del.length;
-  if(!d){ el.innerHTML=''; return; }
+  if(!d){ renderMetaPaceEmpty(el,tri); return; }
   var Sd=del.reduce(function(s,r){ return s+r.lt; },0);
   var avgDel=Math.round(Sd/d);
   var desvio=d*(avgDel-META);
@@ -3063,6 +3078,30 @@ function renderMetaPace(){
           xpChip('Prazo',ddmm+' · '+diasRestantes+' dias','#d97706')+
           xpChip('Sugestão por épico',sugA+' / '+sugB+' dias','#0ea5e9')+
         '</div>'+
+      '</div>'+
+    '</div>';
+}
+// Trimestre sem entregas ainda (ex.: primeiros dias) — em vez de sumir o card,
+// mostra o panorama dos épicos abertos e destaca os que já herdam risco (LT ≥ META)
+// e vão pesar na média assim que forem concluídos neste TRI.
+function renderMetaPaceEmpty(el,tri){
+  var act=activeEpics();
+  if(!act.length){ el.innerHTML=''; return; }
+  var n=act.length;
+  var avgLt=Math.round(act.reduce(function(s,r){ return s+r.lt; },0)/n);
+  var risk=act.filter(function(r){ return r.lt>=META; }).sort(function(a,b){ return b.lt-a.lt; });
+  var riskChips=risk.slice(0,5).map(function(r){
+    return xpChip(r.id.replace('SLOPC-','#'),r.lt+'d · '+(r.squad||'—'),'#dc2626');
+  }).join('');
+  var sub=n+' épico'+(n!==1?'s':'')+' em andamento · LT médio atual de '+avgLt+'d'+
+    (risk.length?'; <b>'+risk.length+'</b> já '+(risk.length!==1?'estão':'está')+' acima da meta de '+META+'d e vão puxar a média assim que forem concluídos neste trimestre.':'.');
+  el.innerHTML=
+    '<div class="xp-card" style="border-left-color:#6366f1">'+
+      '<div class="xp-ico">🌱</div>'+
+      '<div class="xp-main">'+
+        '<div class="xp-txt">'+ordTri(tri.q)+' Trimestre iniciado há '+tri.elapsed+'d — ainda sem entregas registradas.</div>'+
+        '<div class="xp-sub">'+sub+'</div>'+
+        (risk.length?'<div class="xp-chips">'+riskChips+'</div>':'')+
       '</div>'+
     '</div>';
 }
@@ -3508,15 +3547,68 @@ function restaurarFim(epicId,fimAntes){
   closeHistorico();
 }
 
+// Categoriza a origem de um evento p/ os filtros de tipo do histórico.
+// "tecnicos" agrupa eventos automáticos de preservação de merge (alto volume, baixo valor de leitura).
+function histCategoria(origem){
+  if(origem==='ENTREGUE'||origem==='RESTAURADO') return 'entregas';
+  if(origem==='REVERTIDO_UI'||origem==='REVERTIDO_SHEETS') return 'reversoes';
+  if(origem==='PRESERVADO_MERGE_FIM'||origem==='PRESERVADO_MERGE_INI') return 'tecnicos';
+  return 'sheets'; // ALTERADO_SHEETS, DELETADO_SHEETS e origens desconhecidas
+}
+function histPeriodCutoff(){
+  if(histFilt.period==='all') return -Infinity;
+  if(histFilt.period==='today'){ var t=new Date(); t.setHours(0,0,0,0); return t.getTime(); }
+  return Date.now()-parseInt(histFilt.period,10)*86400000;
+}
+function histSetPeriod(p){ histFilt.period=p; renderHistorico(); }
+function histToggleType(t){ histFilt.types[t]=!histFilt.types[t]; renderHistorico(); }
+function histWord(n,sing,plur){ return n+' '+(n===1?sing:plur); }
+function syncHistFiltUI(){
+  ['today','7','30','all'].forEach(function(p){
+    var ch=$id('histP_'+p); if(ch) ch.classList.toggle('on',histFilt.period===p);
+  });
+  ['entregas','reversoes','sheets','tecnicos'].forEach(function(t){
+    var ch=$id('histT_'+t); if(ch) ch.classList.toggle('on',!!histFilt.types[t]);
+  });
+}
+
 function renderHistorico(){
   var el=$id('histBody');
+  var sumEl=$id('histSummary');
+  syncHistFiltUI();
   var log=[];
   try{ log=JSON.parse(localStorage.getItem(FIM_LOG_KEY)||'[]'); }catch(e){}
-  if(!Array.isArray(log)||!log.length){
+  if(!Array.isArray(log)) log=[];
+  if(!log.length){
+    if(sumEl) sumEl.innerHTML='';
     el.innerHTML='<div style="color:#94a3b8;padding:1.2rem 0;text-align:center">Nenhuma movimentação registrada neste navegador ainda.<br><span style="font-size:10px">O histórico é gravado a partir de agora.</span></div>';
     return;
   }
-  var rows=log.slice().reverse().map(function(e){
+
+  var cutoff=histPeriodCutoff();
+  var inPeriod=log.filter(function(e){ return new Date(e.ts).getTime()>=cutoff; });
+
+  // Resumo por categoria dentro do período — mostra mesmo o que está oculto pelo filtro de tipo
+  var counts={entregas:0,reversoes:0,sheets:0,tecnicos:0};
+  inPeriod.forEach(function(e){ counts[histCategoria(e.origem)]++; });
+  if(sumEl){
+    var parts=[
+      histWord(counts.entregas,'entrega','entregas'),
+      histWord(counts.reversoes,'reversão','reversões'),
+      histWord(counts.sheets,'alteração Sheets','alterações Sheets')
+    ];
+    var summary=parts.join(' · ');
+    if(counts.tecnicos) summary+=' · '+histWord(counts.tecnicos,'evento técnico','eventos técnicos')+(histFilt.types.tecnicos?'':' (ocultos)');
+    sumEl.textContent=summary+(histFilt.period!=='all'?' · últim'+(histFilt.period==='today'?'o dia':'os '+histFilt.period+' dias'):'');
+  }
+
+  var list=inPeriod.filter(function(e){ return histFilt.types[histCategoria(e.origem)]; });
+  if(!list.length){
+    el.innerHTML='<div style="color:#94a3b8;padding:1.2rem 0;text-align:center">Nenhuma movimentação para o período/tipo selecionado.</div>';
+    return;
+  }
+
+  var rows=list.slice().reverse().map(function(e){
     var tagClass,tagLabel,rowBg='',acaoExtra='';
     if(e.origem==='ENTREGUE')                    { tagClass='hist-entregue';         tagLabel='Entregue → Medição'; }
     else if(e.origem==='REVERTIDO_UI')           { tagClass='hist-revertido-ui';      tagLabel='↩ Revertido (UI)';  rowBg='background:#fff7ed'; }
