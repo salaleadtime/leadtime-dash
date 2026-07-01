@@ -3106,7 +3106,7 @@ function renderMetaPaceEmpty(el,tri){
     '</div>';
 }
 function xpChip(lbl,val,color){
-  return '<span class="xp-chip"><span class="xp-chip-l">'+lbl+'</span> <b style="color:'+color+'">'+val+'</b></span>';
+  return '<span class="xp-chip"><span class="xp-chip-l">'+esc(lbl)+'</span> <b style="color:'+color+'">'+esc(val)+'</b></span>';
 }
 
 // ── Régua de lead time dos épicos abertos ───────────────────
@@ -3367,7 +3367,7 @@ function renderRisks(){
     var isDone=isValidDate(r.fim);
     var doneBadge=isDone?'<span class="rli-done">✓ Entregue</span>':'';
     return '<div class="rli'+(isDone?' rli-conc':'')+'">'+
-      '<span class="rid">'+r.id.replace('SLOPC-','#')+'<br><span style="color:#7c3aed;font-weight:600">'+esc(r.squad)+'</span><br>'+doneBadge+'</span>'+
+      '<span class="rid">'+esc(r.id.replace('SLOPC-','#'))+'<br><span style="color:#7c3aed;font-weight:600">'+esc(r.squad)+'</span><br>'+doneBadge+'</span>'+
       '<span class="rres">'+esc(r.resumo)+'</span>'+
       '<span class="rlt">⚠ '+r.lt+'d</span></div>';
   }).join('');
