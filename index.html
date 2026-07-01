@@ -3736,9 +3736,10 @@ function renderMed(){
 
   var n=list.length;
   if(n===0){
-    // Auto-expand: if date filter is active but returns 0 records, clear dates and show all
-    if(medFilt.dateFrom||medFilt.dateTo){
-      medFilt.dateFrom=''; medFilt.dateTo=''; medTriChip='';
+    // Auto-expand: só limpa o período quando é um filtro manual (não um trimestre selecionado
+    // explicitamente) — trimestre recém-iniciado sem entregas ainda deve continuar marcado.
+    if((medFilt.dateFrom||medFilt.dateTo)&&!medTriChip){
+      medFilt.dateFrom=''; medFilt.dateTo='';
       var df2=$id('medDateFrom'); if(df2) df2.value='';
       var dt2=$id('medDateTo');   if(dt2) dt2.value='';
       syncTriChips();
@@ -3747,7 +3748,10 @@ function renderMed(){
       n=list.length;
     }
     if(n===0){
-      $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">📊 Nenhum épico encontrado para o filtro selecionado.</div>';
+      var emptyMsg=medTriChip
+        ?'📊 Nenhum épico entregue ainda no <b>'+ordTri(medTriChip)+' Trimestre</b> ('+esc(medFilt.dateFrom)+' a '+esc(medFilt.dateTo)+').'
+        :'📊 Nenhum épico encontrado para o filtro selecionado.';
+      $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">'+emptyMsg+'</div>';
       $id('medSquads').innerHTML='';
       $id('medTblBody').innerHTML='';
       $id('medCnt').textContent='0 épicos';
@@ -3824,6 +3828,7 @@ function fmtIso(d){
   var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
   return y+'-'+m+'-'+dd;
 }
+function ordTri(q){ return ['1º','2º','3º','4º'][q-1]||q; }
 function getTriDates(q){
   var y=new Date().getFullYear(), sm=(q-1)*3;
   return {from:fmtIso(new Date(y,sm,1)), to:fmtIso(new Date(y,sm+3,0))};
