@@ -480,12 +480,11 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .pg-lbl{font-size:9px;color:#94a3b8;margin-top:3px;line-height:1.3}
 
 /* FAB copiar para Teams/e-mail */
-.fab-cap{position:fixed;bottom:28px;right:28px;z-index:4000;background:#7a0000;color:#fff;border:none;border-radius:14px;padding:11px 20px 11px 16px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(122,0,0,.4);transition:all .2s;font-family:inherit;letter-spacing:.2px}
-.fab-cap:hover{background:#cc0000;transform:translateY(-2px);box-shadow:0 8px 28px rgba(204,0,0,.45)}
+.fab-cap{position:fixed;bottom:22px;right:22px;z-index:4000;background:rgba(122,0,0,.85);color:#fff;border:none;border-radius:10px;padding:7px 13px;display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);opacity:.8;transition:all .2s;font-family:inherit;letter-spacing:.2px}
+.fab-cap:hover{background:#7a0000;opacity:1;box-shadow:0 4px 14px rgba(0,0,0,.28)}
 .fab-cap:active{transform:translateY(0)}
-.fab-cap.busy{opacity:.65;cursor:wait;pointer-events:none}
+.fab-cap.busy{opacity:.5;cursor:wait;pointer-events:none}
 .fab-cap svg{flex-shrink:0}
-.fab-cap-sub{font-size:9.5px;font-weight:400;opacity:.75;display:block;line-height:1;margin-top:1px}
 
 /* modal */
 .ov{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
@@ -899,8 +898,7 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .chip.on,
 .pb.on,
 .up-btn,
-.cal-btn.primary,
-.fab-cap{
+.cal-btn.primary{
   background:linear-gradient(135deg,var(--brad-red),var(--brad-pink))!important;
   border-color:transparent!important;
   color:#fff!important;
@@ -1232,7 +1230,7 @@ body{min-height:100vh}
 /* Entregas previstas — Metro Timeline */
 .pd-deliveries{margin-top:36px}.metro-wrap{display:grid;grid-template-columns:330px 1fr;gap:34px;align-items:stretch}.metro-summary,.metro-panel{background:#fff;border:1px solid var(--premium-line);border-radius:22px;box-shadow:var(--premium-shadow-sm);padding:30px}.metro-summary h2,.metro-panel h2{font-size:20px;line-height:1.1;margin:0 0 28px;font-weight:900;color:var(--premium-text)}.metro-s-row{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:center;margin:30px 0}.metro-s-v{font-size:27px;font-weight:950}.metro-s-l{font-weight:850;color:var(--premium-muted);font-size:13px}.metro-area{position:relative;min-height:395px;overflow:hidden}.metro-line{position:absolute;left:70px;right:36px;top:184px;height:6px;background:var(--premium-red);border-radius:6px}.metro-gate{position:absolute;top:55px;bottom:28px;width:2px;background:#e1e7ef}.metro-gate span{position:absolute;top:-27px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:850;color:var(--premium-muted);white-space:nowrap}.metro-dot{position:absolute;top:172px;width:24px;height:24px;border-radius:50%;background:#fff;border:5px solid var(--premium-red);z-index:3}.metro-card{position:absolute;width:238px;min-height:100px;background:#fff;border:1px solid var(--premium-line);border-radius:16px;box-shadow:0 14px 26px rgba(23,32,42,.10);padding:18px 20px;z-index:4}.metro-card::before{content:'';position:absolute;left:50%;width:2px;background:#dfe6ee;z-index:-1}.metro-card.top::before{top:100%;height:58px}.metro-card.bottom::before{bottom:100%;height:58px}.metro-card-id{display:inline-flex;align-items:center;height:25px;border-radius:18px;background:var(--premium-red-soft,var(--softred));color:var(--premium-red);font-size:11px;font-weight:900;padding:0 14px}.metro-card-name{font-size:15px;font-weight:900;margin-top:12px;color:var(--premium-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.metro-card-date{height:25px;border-radius:16px;margin-top:9px;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}.metro-card-date.green{background:var(--premium-green-soft);color:var(--premium-green)}.metro-card-date.red{background:var(--premium-red-soft,var(--softred));color:var(--premium-red)}.metro-card-date.amber{background:var(--premium-amber-soft);color:var(--premium-amber)}.metro-card-date.blue{background:var(--premium-blue-soft);color:var(--premium-blue)}.metro-empty{display:flex;align-items:center;justify-content:center;min-height:320px;color:var(--premium-muted2);font-size:14px;text-align:center}.pd-note{margin-top:16px;color:var(--premium-muted2);font-size:12px}.pd-soft-title{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--premium-muted2);font-weight:900;margin:34px 0 14px}.pd-actions{display:flex;gap:12px;flex-wrap:wrap}.pd-action{height:38px;display:inline-flex;align-items:center;border-radius:18px;padding:0 18px;font-size:12px;font-weight:900}.pd-action.red{background:var(--premium-red-soft,var(--softred));color:var(--premium-red)}.pd-action.amber{background:var(--premium-amber-soft);color:var(--premium-amber)}.pd-action.green{background:var(--premium-green-soft);color:var(--premium-green)}
 /* Outros componentes alinhados */
-.kgrid{gap:18px!important}.kpi,.sc,.panel,.st-kpi-item,.sv-kpi-item,.bk-squad-card,.sv-card{border-radius:18px!important;box-shadow:var(--premium-shadow-sm)!important;border-color:var(--premium-line)!important}.kv{letter-spacing:-1.5px!important}.sc-lt{font-size:34px!important}.cal-thead,.cal-mdl-hd{background:var(--premium-red)!important}.cal-btn.primary{background:var(--premium-red)!important;box-shadow:none!important}.fab-cap{background:var(--premium-red)!important;border-radius:18px!important;box-shadow:0 16px 30px rgba(217,7,54,.28)!important}
+.kgrid{gap:18px!important}.kpi,.sc,.panel,.st-kpi-item,.sv-kpi-item,.bk-squad-card,.sv-card{border-radius:18px!important;box-shadow:var(--premium-shadow-sm)!important;border-color:var(--premium-line)!important}.kv{letter-spacing:-1.5px!important}.sc-lt{font-size:34px!important}.cal-thead,.cal-mdl-hd{background:var(--premium-red)!important}.cal-btn.primary{background:var(--premium-red)!important;box-shadow:none!important}.fab-cap{border-radius:10px!important}
 @media(max-width:1180px){.premium-kpis,.pd-card-grid{grid-template-columns:repeat(2,1fr)}.premium-ep-strip{grid-template-columns:1fr}.pd-hero{flex-direction:column;align-items:flex-start}.pd-hero-mini{grid-template-columns:repeat(2,138px)}.pd-panels,.metro-wrap{grid-template-columns:1fr}.tabs{justify-content:flex-start;overflow-x:auto}.top{overflow:visible}.top .tbtn span{display:none}.metro-area{overflow-x:auto}}
 @media(max-width:720px){.premium-kpis,.pd-card-grid{grid-template-columns:1fr}.ep,.db,.cal-wrap{padding:1rem!important}.pd-hero-mini{grid-template-columns:1fr 1fr;width:100%}.pd-hero-box{width:auto}.metro-summary,.metro-panel,.pd-panel{padding:20px}.top-meta{display:none!important}}
 
@@ -1303,10 +1301,6 @@ body{min-height:100vh}
   <button class="tbtn" id="histBtn" onclick="openHistorico()" title="Histórico de movimentações entre Épicos e Medição">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     <span>Histórico</span>
-  </button>
-  <button class="tbtn" onclick="doCaptureClipboard()" title="Copiar imagem · colar no Teams ou e-mail">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    <span>Copiar</span>
   </button>
   <button class="tbtn green" onclick="doExport()" title="Exportar Excel">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -1589,8 +1583,7 @@ html,body{
 }
 .tbtn.green,
 .up-btn,
-.up-btn-all,
-.fab-cap{
+.up-btn-all{
   background:linear-gradient(135deg,var(--bradesco-red),var(--bradesco-pink))!important;
   color:#fff!important;
   border-color:transparent!important;
@@ -5953,8 +5946,8 @@ function captureBlobPromise(){
 function doCaptureClipboard(){
   // Recurso ainda carregando: avisa e tenta pré-carregar (próximo clique funciona)
   if(typeof html2canvas==='undefined'){
-    loadLib(H2C_URL,function(){ toast('✅ Pronto','Clique em "Copiar" novamente para copiar a tela.'); });
-    toast('⏳ Preparando captura...','Aguarde 1s e clique em "Copiar" de novo.');
+    loadLib(H2C_URL,function(){ toast('✅ Pronto','Clique em "Copiar Tela" novamente para copiar a tela.'); });
+    toast('⏳ Preparando captura...','Aguarde 1s e clique em "Copiar Tela" de novo.');
     return;
   }
 
@@ -6638,9 +6631,9 @@ function calSeedExample(){
 </script>
 
 <!-- Botão flutuante copiar para Teams/e-mail -->
-<button class="fab-cap" id="fabCap" onclick="doCaptureClipboard()">
-  <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-  <span><span style="display:block">Copiar Tela</span><span class="fab-cap-sub">colar no Teams ou e-mail</span></span>
+<button class="fab-cap" id="fabCap" onclick="doCaptureClipboard()" title="Copiar imagem · colar no Teams ou e-mail">
+  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  <span>Copiar Tela</span>
 </button>
 <script>
 /* ==========================================================
