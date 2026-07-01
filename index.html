@@ -7211,7 +7211,9 @@ function calSeedExample(){
 
   window.admSalvarMeta = function(){
     var v = parseInt(document.getElementById('admMetaDias').value);
-    if(!v || v < 1){ admMsg('admMetaMsg','Valor inválido','err'); return; }
+    // Mesma faixa aceita pelo boot (1..365): fora dela o valor seria gravado
+    // mas silenciosamente descartado no próximo reload, voltando para 62.
+    if(!v || v < 1 || v > 365){ admMsg('admMetaMsg','Valor inválido — use entre 1 e 365 dias','err'); return; }
     localStorage.setItem('sala_meta_dias', v);
     document.getElementById('admMetaAtual').textContent = v;
     try{ window.META = v; }catch(e){}
