@@ -1320,8 +1320,8 @@ body{min-height:100vh}
 
 <!-- META INFO BAR -->
 <div class="metabar">
-  <span style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:700;padding:3px 12px;border-radius:6px;font-size:10px;letter-spacing:.5px">📌 META: 62 DIAS</span>
-  <span>✅ Verde &lt; 40d &nbsp;·&nbsp; ⏰ Âmbar 40–61d &nbsp;·&nbsp; ⚠️ Vermelho ≥ 62d</span>
+  <span id="metabarPill" style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:700;padding:3px 12px;border-radius:6px;font-size:10px;letter-spacing:.5px">📌 META: 62 DIAS</span>
+  <span id="metabarLegend">✅ Verde &lt; 40d &nbsp;·&nbsp; ⏰ Âmbar 40–61d &nbsp;·&nbsp; ⚠️ Vermelho ≥ 62d</span>
   <span>LT = Data Fim − Data Início &nbsp;|&nbsp; Sem Data Fim: conta até hoje, atualiza todo dia</span>
 </div>
 
@@ -2057,7 +2057,12 @@ tr:nth-child(even):hover td,
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var META=62, allData=[], pg=1, PG=12, sortLT=null; // null | 'desc' | 'asc'
+// Meta de LT configurável no painel Admin (sala_meta_dias); padrão 62 dias.
+var META=(function(){
+  try{ var v=parseInt(localStorage.getItem('sala_meta_dias'),10); if(v>=1&&v<=365) return v; }catch(e){}
+  return 62;
+})();
+var allData=[], pg=1, PG=12, sortLT=null; // null | 'desc' | 'asc'
 var impSenhaOk=false, _impFocusTgt=null;
 var ALL_SQUADS=['Contact','Expresso','Guardiões','Inception','Interestelar','MadMax','Terminator','TopGun'];
 var filt={s:'all',l:'all',sq:'all',dateIni:null,dateFim:null};
@@ -2139,6 +2144,10 @@ var SHEETS_POLL_MS = 120000;
 // Resolve, de forma genérica para TODOS os campos, a classe de bugs
 // "digitei e sumiu ao sincronizar" — sem precisar de remendo campo a campo.
 var PENDING_KEY = 'leadtime_sala_v8_pending';
+// Épicos já alertados como "deletados do Sheets": evita repetir o toast e a
+// entrada no histórico a cada poll (o registro local é preservado no merge,
+// então sem esta marca o mesmo épico dispararia o alerta a cada 2 minutos).
+var DELETED_WARN_KEY = 'leadtime_sala_v8_deleted_warned';
 var PENDING_EDIT_TTL = 600000; // 10 min sem confirmar → assume o que está no Sheets
 var EDITABLE_FIELDS = ['status','statusAntes','chg','impedimento','ini','fim','fimAntes','dataPrevista'];
 // Valores de CHG que vieram hardcoded do seed/JSON e jamais foram inseridos pelo usuário.
@@ -2486,24 +2495,33 @@ function replaceFromSharedSource(rows){
   });
   if(_pendChanged) savePending(_pend);
 
-  // Detectar épicos deletados do Sheets que tinham fim ou fimAntes
+  // Detectar épicos deletados do Sheets que tinham fim ou fimAntes.
+  // Alerta apenas UMA vez por épico (marca persistida): como o registro local
+  // é preservado no merge abaixo, sem a marca o alerta repetiria a cada poll.
+  var inIds={};
+  incoming.forEach(function(x){ if(x&&x.id) inIds[x.id]=true; });
+  var delWarned=loadDeletedWarned(), delWarnedChanged=false;
   allData.forEach(function(r){
     if(!r||!r.id) return;
-    var inIds={};
-    incoming.forEach(function(x){ if(x&&x.id) inIds[x.id]=true; });
     if(!inIds[r.id] && (isValidDate(r.fim)||isValidDate(r.fimAntes))){
-      logFimChange(r.id,r.fim||r.fimAntes||'','','DELETADO_SHEETS');
-      toast('🗑 Épico removido do Sheets',
-        '<strong>'+esc(r.id)+'</strong> sumiu da planilha e tinha Data Fim registrada. Verifique o <a href="#" onclick="openHistorico();return false;" style="color:#dc2626;font-weight:700">Histórico</a>.','err');
+      if(!delWarned[r.id]){
+        delWarned[r.id]=true; delWarnedChanged=true;
+        logFimChange(r.id,r.fim||r.fimAntes||'','','DELETADO_SHEETS');
+        toast('🗑 Épico removido do Sheets',
+          '<strong>'+esc(r.id)+'</strong> sumiu da planilha e tinha Data Fim registrada. Verifique o <a href="#" onclick="openHistorico();return false;" style="color:#dc2626;font-weight:700">Histórico</a>.','err');
+      }
+    } else if(inIds[r.id] && delWarned[r.id]){
+      // Voltou a existir no Sheets: limpa a marca para alertar de novo se sumir no futuro
+      delete delWarned[r.id]; delWarnedChanged=true;
     }
   });
+  if(delWarnedChanged) saveDeletedWarned(delWarned);
 
   // Merge: Sheets é autoritativo para registros que existem nele.
   // Registros locais (SEED/import) que NÃO existem no Sheets são preservados.
   // Isso garante que épicos adicionados via import + "Salvar HTML (Git)"
   // não desapareçam para o time quando o Sheets não os contém.
-  var inIds={};
-  incoming.forEach(function(r){ inIds[r.id]=true; });
+  // (inIds já foi montado acima a partir de `incoming`.)
   allData.forEach(function(r){
     if(r&&r.id&&!inIds[r.id]) incoming.push(r);
   });
@@ -2641,6 +2659,12 @@ function loadPending(){
 function savePending(p){
   try{ localStorage.setItem(PENDING_KEY, JSON.stringify(p||{})); }catch(e){}
 }
+function loadDeletedWarned(){
+  try{ return JSON.parse(localStorage.getItem(DELETED_WARN_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function saveDeletedWarned(m){
+  try{ localStorage.setItem(DELETED_WARN_KEY, JSON.stringify(m||{})); }catch(e){}
+}
 // Registra os campos editáveis de um épico como pendentes de confirmação.
 // Chamado em TODA edição local antes de enviar ao Sheets.
 function queuePendingWrite(rec){
@@ -2707,10 +2731,24 @@ function loadFromSheets(callback, silent){
 
 // Envia apenas os campos editáveis ao Web App (CHG, Impedimento, datas).
 // Usa text/plain para evitar preflight CORS; o GAS recebe via e.postData.contents.
+var _sheetsWriteQueue=null; // última escrita recebida enquanto outra estava em voo
 function saveToSheets(items){
   if(!SHEETS_WEBAPP || !items || !items.length) return;
   var payload=JSON.stringify(items);
-  if(_sheetsWriteSyncing && payload===_sheetsLastWritePayload) return;
+  if(_sheetsWriteSyncing){
+    // Já há uma gravação em andamento: a edição entra na fila (mesclada por id,
+    // a mais recente vence) e é enviada quando a atual terminar. Antes, escritas
+    // diferentes rodavam em paralelo e a primeira liberava a flag com a segunda
+    // em voo. O dedupe contra o payload em voo só vale com a fila VAZIA: se há
+    // algo enfileirado, até um valor igual ao em voo precisa entrar na fila —
+    // senão a edição antiga enfileirada atropelaria a mais recente (ex.: A em
+    // voo, usuário muda p/ B e volta p/ A: sem isto, B seria gravado por último).
+    if(payload===_sheetsLastWritePayload && !_sheetsWriteQueue) return;
+    var byId={};
+    (_sheetsWriteQueue||[]).concat(items).forEach(function(it){ if(it&&it.id) byId[it.id]=it; });
+    _sheetsWriteQueue=Object.keys(byId).map(function(k){ return byId[k]; });
+    return;
+  }
   _sheetsWriteSyncing=true;
   _sheetsLastWritePayload=payload;
 
@@ -2743,6 +2781,7 @@ function saveToSheets(items){
     })
     .finally(function(){
       _sheetsWriteSyncing=false;
+      if(_sheetsWriteQueue){ var q=_sheetsWriteQueue; _sheetsWriteQueue=null; saveToSheets(q); }
     });
 }
 
@@ -2781,6 +2820,13 @@ function saveToSheetsBatch(items){
 function setSyncLabel(txt){
   var el=$id('syncLbl');
   if(el) el.textContent=txt;
+}
+// Mantém a barra "META: X DIAS" do topo coerente com a meta configurada.
+// Chamada no boot e quando o Admin salva uma nova meta.
+function syncMetabar(){
+  var p=$id('metabarPill'), l=$id('metabarLegend');
+  if(p) p.textContent='📌 META: '+META+' DIAS';
+  if(l) l.innerHTML='✅ Verde &lt; 40d &nbsp;·&nbsp; ⏰ Âmbar 40–'+(META-1)+'d &nbsp;·&nbsp; ⚠️ Vermelho ≥ '+META+'d';
 }
 function registrarImportacaoSala(){
   _salaImportDateTime = new Date();
@@ -2868,6 +2914,12 @@ function squadBadge(sq){
 function $id(id){return document.getElementById(id);}
 function esc(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+// Escapa um valor para uso dentro de string JS de handler inline (onclick="f('...')").
+// esc() sozinho não protege: entidades HTML são decodificadas antes do JS rodar,
+// então uma aspa simples no dado escaparia da string. Aplicar jsq() ANTES de esc().
+function jsq(s){
+  return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
 // Delivery icon based on proximity
@@ -3039,10 +3091,14 @@ function renderMetaPace(){
   if(!d){ renderMetaPaceEmpty(el,tri); return; }
   var Sd=del.reduce(function(s,r){ return s+r.lt; },0);
   var avgDel=Math.round(Sd/d);
-  var desvio=d*(avgDel-META);
+  // Desvio exato (soma real − meta×entregas): usar a média arredondada
+  // acumulava erro de até ±0,5d por entrega e podia inverter o sinal no limite.
+  var desvio=Sd-d*META;
   var EXPECTED_LT=30;
-  var ganho=META-EXPECTED_LT; // 32d de ganho por entrega rápida
-  var necessario=desvio>0 ? Math.ceil(desvio/ganho) : 0;
+  var ganho=META-EXPECTED_LT; // ganho por entrega rápida (só há ganho se META > 30d)
+  // Com meta ≤ 30d o modelo de recuperação por volume não se aplica (divisão por
+  // zero/negativo geraria "Infinity" ou nº negativo de entregas necessárias).
+  var necessario=(desvio>0 && ganho>0) ? Math.ceil(desvio/ganho) : 0;
   var prazoDate=tri.to;
   var ddmm=('0'+prazoDate.getDate()).slice(-2)+'/'+('0'+(prazoDate.getMonth()+1)).slice(-2);
   var diasRestantes=tri.remaining;
@@ -3054,6 +3110,10 @@ function renderMetaPace(){
     accent='#16a34a';
     hd='<div class="xp-txt">✅ Trimestre no ritmo — média atual de <b>'+avgDel+'d</b> está abaixo da meta de <b>'+META+'d</b>. Sem necessidade de recuperação estatística.</div>'+
        '<div class="xp-sub">Desvio acumulado: '+Math.round(desvio)+'d. Continue entregando no ritmo para fechar o trimestre dentro da meta.</div>';
+  } else if(ganho<=0){
+    accent='#dc2626';
+    hd='<div class="xp-txt" style="color:var(--r)">Desvio acumulado de <b>+'+Math.round(desvio)+'d</b> — com meta de <b>'+META+'d</b> (igual ou abaixo do LT esperado de '+EXPECTED_LT+'d por entrega), a recuperação por volume de entregas não se aplica.</div>'+
+       '<div class="xp-sub">'+d+' entrega'+(d!==1?'s':'')+' com média '+avgDel+'d. Para recuperar, reduza o LT das próximas entregas para bem abaixo de '+META+'d.</div>';
   } else {
     accent='#dc2626';
     hd='<div class="xp-txt" style="color:var(--r)">Para recuperar a meta de '+META+'d no trimestre, são necessárias <b>'+necessario+' novas entregas</b> com LT ≈ '+EXPECTED_LT+'d até <b>'+ddmm+'</b> <b>('+diasRestantes+' dias)</b>.</div>'+
@@ -3067,7 +3127,7 @@ function renderMetaPace(){
           xpChip('Entregues no TRI '+tri.q,d+' · média '+avgDel+'d','#16a34a')+
           xpChip('Desvio atual',desvioSigned,desvio<=0?'#16a34a':'#dc2626')+
           xpChip('Meta',META+'d','#6366f1')+
-          xpChip('Necessário',necessario+' novas entregas',necessario===0?'#16a34a':'#dc2626')+
+          xpChip('Necessário',(desvio>0&&ganho<=0)?'reduzir LT':(necessario+' novas entregas'),desvio<=0?'#16a34a':'#dc2626')+
           xpChip('Prazo',ddmm+' · '+diasRestantes+' dias','#d97706')+
           xpChip('Sugestão por épico',sugA+' / '+sugB+' dias','#0ea5e9')+
         '</div>'+
@@ -3458,7 +3518,7 @@ function renderTbl(){
     var lc=ltMap[ltCls(r.lt)];
     var semFimRow=isValidDate(r.ini)&&!isValidDate(r.fim);
     return '<tr'+(semFimRow?' style="background:#fff7ed"':'')+'>'+
-      '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div>'+
+      '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(jsq(r.id))+'\',this)" title="Copiar link do Jira">⎘</button></div>'+
         (isValidDate(r.fimAntes)?'<div class="era-med-badge" title="Estava em Medição com Data Fim '+esc(r.fimAntes)+'">↩ era Medição · '+esc(r.fimAntes.slice(5).replace('-','/'))+'</div>':'')+
       '</td>'+
       squadBadge(r.squad)+
@@ -3617,7 +3677,7 @@ function renderHistorico(){
     if(e.origem==='REVERTIDO_UI'||e.origem==='REVERTIDO_SHEETS'){
       var rec=allData.find(function(r){ return r.id===e.id; });
       if(rec&&!isValidDate(rec.fim)&&isValidDate(e.de)){
-        acaoExtra='<button onclick="restaurarFim(\''+esc(e.id)+'\',\''+esc(e.de)+'\')" '+
+        acaoExtra='<button onclick="restaurarFim(\''+esc(jsq(e.id))+'\',\''+esc(jsq(e.de))+'\')" '+
           'style="font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid #bfdbfe;'+
           'background:#eff6ff;color:#1d4ed8;cursor:pointer;font-family:inherit;margin-left:6px;font-weight:700">'+
           '↩ Restaurar '+esc(e.de)+'</button>';
@@ -3890,7 +3950,7 @@ function renderMed(){
     var lc=ltMap[ltCls(r.lt)];
     var ltAlto=r.lt>100;
     return '<tr'+(ltAlto?' style="background:#fef9c3"':'')+'>'+
-      '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(r.id)+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
+      '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(jsq(r.id))+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
@@ -4963,7 +5023,7 @@ function renderStoryView(){
       svKpiHdItem('#cc0000',totalSt,'Total de Estórias','em '+epicsWithSt+' épicos')+
       svKpiHdItem('#16a34a',nearCnt,'Próximos à Entrega','homolog ou deploy/prod')+
       svKpiHdItem('#dc2626',fullCnt,'Épicos Lotados','≥ '+STORY_LIMIT+' estórias')+
-      (allStories.length?'':svKpiHdItem('#7c3aed',noStEpics.length,'Sem Estórias','épicos sem vínculo'))+
+      (noStEpics.length?svKpiHdItem('#7c3aed',noStEpics.length,'Sem Estórias','épicos sem vínculo'):'')+
     '</div>';
 
   // Apply squad filter
@@ -5008,13 +5068,13 @@ function renderStoryView(){
           '<th>Distribuição de Fase</th>'+
           '<th class="tc">Status</th>'+
         '</tr></thead>'+
-        '<tbody>'+rows+(noStRows && !allStories.length?
+        '<tbody>'+rows+(noStRows?
           '<tr><td colspan="6" style="padding:6px 14px;font-size:9.5px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-top:2px solid #e2e8f0">Épicos sem estórias vinculadas</td></tr>'+noStRows
         :'')+
         '</tbody>'+
         '<tfoot><tr>'+
           '<td colspan="2">'+filteredEpicIds.length+' épico'+(filteredEpicIds.length!==1?'s':'')+' exibido'+(filteredEpicIds.length!==1?'s':'')+
-            (!allStories.length && noStoriesFiltered.length?' · '+noStoriesFiltered.length+' sem estórias':'')+
+            (noStoriesFiltered.length?' · '+noStoriesFiltered.length+' sem estórias':'')+
           '</td>'+
           '<td style="text-align:center"></td>'+
           '<td style="text-align:center;font-size:16px;font-weight:800;color:#0f172a">'+totalFilSt+'</td>'+
@@ -6156,6 +6216,8 @@ var SEED=[
 // BOOT
 // ═══════════════════════════════════════
 (function boot(){
+  // Reflete a meta configurada (pode diferir do padrão 62) na barra do topo.
+  try{ syncMetabar(); }catch(e){}
   // Limpa filtros visuais que o navegador pode reaproveitar por autocomplete/cache.
   try{
     if($id('srch')){
@@ -6859,7 +6921,7 @@ function calSeedExample(){
         '</div>'+
         '<div class="panel">'+
           '<div class="p-hd">'+
-            '<span class="p-t">🔴 Épicos Críticos ≥ 62d</span>'+
+            '<span class="p-t">🔴 Épicos Críticos ≥ '+(window.META||62)+'d</span>'+
             '<span class="p-cnt" id="rCnt">—</span>'+
           '</div>'+
           '<div id="rList"></div>'+
@@ -7149,11 +7211,16 @@ function calSeedExample(){
 
   window.admSalvarMeta = function(){
     var v = parseInt(document.getElementById('admMetaDias').value);
-    if(!v || v < 1){ admMsg('admMetaMsg','Valor inválido','err'); return; }
+    // Mesma faixa aceita pelo boot (1..365): fora dela o valor seria gravado
+    // mas silenciosamente descartado no próximo reload, voltando para 62.
+    if(!v || v < 1 || v > 365){ admMsg('admMetaMsg','Valor inválido — use entre 1 e 365 dias','err'); return; }
     localStorage.setItem('sala_meta_dias', v);
     document.getElementById('admMetaAtual').textContent = v;
-    if(typeof META !== 'undefined') try{ window.META = v; }catch(e){}
-    admMsg('admMetaMsg','✅ Meta salva! Recarregue para aplicar.');
+    try{ window.META = v; }catch(e){}
+    // Re-renderiza tudo para a nova meta valer imediatamente (o boot também a lê do localStorage)
+    try{ if(typeof syncMetabar === 'function') syncMetabar(); }catch(e){}
+    try{ if(typeof renderAll === 'function') renderAll(); }catch(e){}
+    admMsg('admMetaMsg','✅ Meta salva e aplicada!');
   };
 
   window.admAlterarSenha = function(){
@@ -7198,7 +7265,7 @@ function calSeedExample(){
     try{
       localStorage.removeItem('leadtime_sala_v8_data');
       localStorage.removeItem('leadtime_sala_v8_meta');
-      localStorage.removeItem('leadtime_sala_v8_version');
+      localStorage.removeItem('leadtime_sala_v8_seed_version');
     }catch(e){}
     admMsg('admDadosMsg','✅ Cache limpo! Recarregando...');
     setTimeout(function(){ location.reload(); }, 1200);
