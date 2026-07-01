@@ -1320,8 +1320,8 @@ body{min-height:100vh}
 
 <!-- META INFO BAR -->
 <div class="metabar">
-  <span style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:700;padding:3px 12px;border-radius:6px;font-size:10px;letter-spacing:.5px">📌 META: 62 DIAS</span>
-  <span>✅ Verde &lt; 40d &nbsp;·&nbsp; ⏰ Âmbar 40–61d &nbsp;·&nbsp; ⚠️ Vermelho ≥ 62d</span>
+  <span id="metabarPill" style="display:inline-flex;align-items:center;gap:6px;background:#e11d48;color:#fff;font-weight:700;padding:3px 12px;border-radius:6px;font-size:10px;letter-spacing:.5px">📌 META: 62 DIAS</span>
+  <span id="metabarLegend">✅ Verde &lt; 40d &nbsp;·&nbsp; ⏰ Âmbar 40–61d &nbsp;·&nbsp; ⚠️ Vermelho ≥ 62d</span>
   <span>LT = Data Fim − Data Início &nbsp;|&nbsp; Sem Data Fim: conta até hoje, atualiza todo dia</span>
 </div>
 
@@ -2736,15 +2736,17 @@ function saveToSheets(items){
   if(!SHEETS_WEBAPP || !items || !items.length) return;
   var payload=JSON.stringify(items);
   if(_sheetsWriteSyncing){
-    // Já há uma gravação em andamento: payload idêntico é descartado (dedupe);
-    // payload diferente entra na fila (mesclada por id, a edição mais recente
-    // vence) e é enviado quando a atual terminar. Antes, escritas diferentes
-    // rodavam em paralelo e a primeira liberava a flag com a segunda em voo.
-    if(payload!==_sheetsLastWritePayload){
-      var byId={};
-      (_sheetsWriteQueue||[]).concat(items).forEach(function(it){ if(it&&it.id) byId[it.id]=it; });
-      _sheetsWriteQueue=Object.keys(byId).map(function(k){ return byId[k]; });
-    }
+    // Já há uma gravação em andamento: a edição entra na fila (mesclada por id,
+    // a mais recente vence) e é enviada quando a atual terminar. Antes, escritas
+    // diferentes rodavam em paralelo e a primeira liberava a flag com a segunda
+    // em voo. O dedupe contra o payload em voo só vale com a fila VAZIA: se há
+    // algo enfileirado, até um valor igual ao em voo precisa entrar na fila —
+    // senão a edição antiga enfileirada atropelaria a mais recente (ex.: A em
+    // voo, usuário muda p/ B e volta p/ A: sem isto, B seria gravado por último).
+    if(payload===_sheetsLastWritePayload && !_sheetsWriteQueue) return;
+    var byId={};
+    (_sheetsWriteQueue||[]).concat(items).forEach(function(it){ if(it&&it.id) byId[it.id]=it; });
+    _sheetsWriteQueue=Object.keys(byId).map(function(k){ return byId[k]; });
     return;
   }
   _sheetsWriteSyncing=true;
@@ -2818,6 +2820,13 @@ function saveToSheetsBatch(items){
 function setSyncLabel(txt){
   var el=$id('syncLbl');
   if(el) el.textContent=txt;
+}
+// Mantém a barra "META: X DIAS" do topo coerente com a meta configurada.
+// Chamada no boot e quando o Admin salva uma nova meta.
+function syncMetabar(){
+  var p=$id('metabarPill'), l=$id('metabarLegend');
+  if(p) p.textContent='📌 META: '+META+' DIAS';
+  if(l) l.innerHTML='✅ Verde &lt; 40d &nbsp;·&nbsp; ⏰ Âmbar 40–'+(META-1)+'d &nbsp;·&nbsp; ⚠️ Vermelho ≥ '+META+'d';
 }
 function registrarImportacaoSala(){
   _salaImportDateTime = new Date();
@@ -3086,8 +3095,10 @@ function renderMetaPace(){
   // acumulava erro de até ±0,5d por entrega e podia inverter o sinal no limite.
   var desvio=Sd-d*META;
   var EXPECTED_LT=30;
-  var ganho=META-EXPECTED_LT; // 32d de ganho por entrega rápida
-  var necessario=desvio>0 ? Math.ceil(desvio/ganho) : 0;
+  var ganho=META-EXPECTED_LT; // ganho por entrega rápida (só há ganho se META > 30d)
+  // Com meta ≤ 30d o modelo de recuperação por volume não se aplica (divisão por
+  // zero/negativo geraria "Infinity" ou nº negativo de entregas necessárias).
+  var necessario=(desvio>0 && ganho>0) ? Math.ceil(desvio/ganho) : 0;
   var prazoDate=tri.to;
   var ddmm=('0'+prazoDate.getDate()).slice(-2)+'/'+('0'+(prazoDate.getMonth()+1)).slice(-2);
   var diasRestantes=tri.remaining;
@@ -3099,6 +3110,10 @@ function renderMetaPace(){
     accent='#16a34a';
     hd='<div class="xp-txt">✅ Trimestre no ritmo — média atual de <b>'+avgDel+'d</b> está abaixo da meta de <b>'+META+'d</b>. Sem necessidade de recuperação estatística.</div>'+
        '<div class="xp-sub">Desvio acumulado: '+Math.round(desvio)+'d. Continue entregando no ritmo para fechar o trimestre dentro da meta.</div>';
+  } else if(ganho<=0){
+    accent='#dc2626';
+    hd='<div class="xp-txt" style="color:var(--r)">Desvio acumulado de <b>+'+Math.round(desvio)+'d</b> — com meta de <b>'+META+'d</b> (igual ou abaixo do LT esperado de '+EXPECTED_LT+'d por entrega), a recuperação por volume de entregas não se aplica.</div>'+
+       '<div class="xp-sub">'+d+' entrega'+(d!==1?'s':'')+' com média '+avgDel+'d. Para recuperar, reduza o LT das próximas entregas para bem abaixo de '+META+'d.</div>';
   } else {
     accent='#dc2626';
     hd='<div class="xp-txt" style="color:var(--r)">Para recuperar a meta de '+META+'d no trimestre, são necessárias <b>'+necessario+' novas entregas</b> com LT ≈ '+EXPECTED_LT+'d até <b>'+ddmm+'</b> <b>('+diasRestantes+' dias)</b>.</div>'+
@@ -3112,7 +3127,7 @@ function renderMetaPace(){
           xpChip('Entregues no TRI '+tri.q,d+' · média '+avgDel+'d','#16a34a')+
           xpChip('Desvio atual',desvioSigned,desvio<=0?'#16a34a':'#dc2626')+
           xpChip('Meta',META+'d','#6366f1')+
-          xpChip('Necessário',necessario+' novas entregas',necessario===0?'#16a34a':'#dc2626')+
+          xpChip('Necessário',(desvio>0&&ganho<=0)?'reduzir LT':(necessario+' novas entregas'),desvio<=0?'#16a34a':'#dc2626')+
           xpChip('Prazo',ddmm+' · '+diasRestantes+' dias','#d97706')+
           xpChip('Sugestão por épico',sugA+' / '+sugB+' dias','#0ea5e9')+
         '</div>'+
@@ -6201,6 +6216,8 @@ var SEED=[
 // BOOT
 // ═══════════════════════════════════════
 (function boot(){
+  // Reflete a meta configurada (pode diferir do padrão 62) na barra do topo.
+  try{ syncMetabar(); }catch(e){}
   // Limpa filtros visuais que o navegador pode reaproveitar por autocomplete/cache.
   try{
     if($id('srch')){
@@ -7199,6 +7216,7 @@ function calSeedExample(){
     document.getElementById('admMetaAtual').textContent = v;
     try{ window.META = v; }catch(e){}
     // Re-renderiza tudo para a nova meta valer imediatamente (o boot também a lê do localStorage)
+    try{ if(typeof syncMetabar === 'function') syncMetabar(); }catch(e){}
     try{ if(typeof renderAll === 'function') renderAll(); }catch(e){}
     admMsg('admMetaMsg','✅ Meta salva e aplicada!');
   };
