@@ -5048,6 +5048,389 @@
       box-shadow: 0 0 0 4px rgba(200, 16, 46, .08);
     }
 
+    /* === UX Senior: fidelidade visual da Visão Executiva da Onda 1 (KPIs, cards, aside, rankings) === */
+    .ux-v6-update-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--senior-line);
+      border-radius: 999px;
+      padding: 8px 13px;
+      background: #fff;
+      color: #536176;
+      font-size: 11.5px;
+      font-weight: 620;
+      box-shadow: 0 4px 14px rgba(16, 24, 40, .04);
+      white-space: nowrap;
+    }
+
+    .ux-v6-update-pill strong {
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .ux-v6-main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .ux-v6-content-col {
+      display: grid;
+      gap: 14px;
+    }
+
+    .ux-v6-aside {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .ux-v6-side-card {
+      border: 1px solid var(--senior-line);
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .05);
+      padding: 16px 17px;
+    }
+
+    .ux-v6-side-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 13px;
+    }
+
+    .ux-v6-side-title strong {
+      font-size: 15.5px;
+      letter-spacing: -.025em;
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .ux-v6-side-link {
+      color: #b5122b;
+      font-size: 11px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .ux-v6-alert-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .ux-v6-alert-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+      border-bottom: 1px solid #edf0f5;
+      padding-bottom: 9px;
+      color: #334155;
+    }
+
+    .ux-v6-alert-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .ux-v6-alert-left {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .ux-v6-bullet {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #c8102e;
+      margin-top: 5px;
+      flex: 0 0 auto;
+    }
+
+    .ux-v6-bullet.amber {
+      background: #f2a900;
+    }
+
+    .ux-v6-alert-count {
+      font-size: 17px;
+      color: #b5122b;
+      font-weight: 750;
+    }
+
+    .ux-v6-date-list {
+      display: grid;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .ux-v6-date-row {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .ux-v6-date-row .ux-v6-date {
+      color: #0c1b31;
+      font-weight: 750;
+    }
+
+    .ux-v6-date-row .ux-v6-date-note {
+      color: #6b7788;
+    }
+
+    .ux-v6-donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .ux-v6-donut {
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+
+    .ux-v6-donut::after {
+      content: attr(data-total) '\A squads';
+      white-space: pre;
+      text-align: center;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 750;
+      color: #12203a;
+      font-size: 12.5px;
+      line-height: 1.15;
+    }
+
+    .ux-v6-legend {
+      display: grid;
+      gap: 8px;
+      font-size: 11.6px;
+      color: #3e4c62;
+    }
+
+    .ux-v6-legend-row {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .ux-v6-legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+    }
+
+    .ux-v6-rank-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 14px;
+    }
+
+    .ux-v6-rank-card {
+      border: 1px solid var(--senior-line);
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .05);
+      padding: 16px 17px;
+    }
+
+    .ux-v6-bar-row {
+      display: grid;
+      grid-template-columns: 20px 1fr minmax(90px, 1.4fr) 62px;
+      gap: 9px;
+      align-items: center;
+      margin: 9px 0;
+      font-size: 12px;
+      color: #26344a;
+    }
+
+    .ux-v6-bar-row strong:first-child {
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .ux-v6-bar-track {
+      height: 8px;
+      background: #eef1f6;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .ux-v6-bar-track span {
+      display: block;
+      height: 100%;
+      background: #0b1b32;
+      border-radius: 999px;
+    }
+
+    .ux-v6-top-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .ux-v6-top-table th,
+    .ux-v6-top-table td {
+      padding: 9px 8px;
+      border-bottom: 1px solid #edf0f5;
+      text-align: left;
+    }
+
+    .ux-v6-top-table th {
+      color: #6c788b;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .ux-v6-top-table .ux-v6-init-id {
+      font-weight: 750;
+      color: #b5122b;
+    }
+
+    .ux-v6-top-table .ux-v6-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 10.3px;
+      font-weight: 650;
+      background: #f0f2f5;
+      color: #4b5565;
+      white-space: nowrap;
+    }
+
+    .ux-v6-footer-note {
+      text-align: center;
+      color: #9aa4b5;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .ux-v6-card-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid #f0f3f7;
+      border-bottom: 1px solid #f0f3f7;
+      padding: 9px 0;
+    }
+
+    .ux-v6-card-stats > div {
+      text-align: center;
+      border-right: 1px solid #eef2f7;
+    }
+
+    .ux-v6-card-stats > div:last-child {
+      border-right: 0;
+    }
+
+    .ux-v6-card-stats strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 730;
+      letter-spacing: -.025em;
+      color: #0f1b2d;
+    }
+
+    .ux-v6-card-stats span {
+      display: block;
+      color: #748096;
+      font-size: 9.2px;
+      margin-top: 2px;
+    }
+
+    .ux-v6-card-bottom {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 10px;
+      color: #657386;
+      font-size: 10.6px;
+      margin-top: 9px;
+    }
+
+    .ux-v6-card-bottom strong {
+      display: block;
+      color: #23314a;
+      font-weight: 700;
+      font-size: 11.4px;
+      margin-top: 2px;
+    }
+
+    .ux-v6-health-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #f7f9fc;
+      border: 1px solid #edf1f6;
+      font-size: 10.3px;
+      font-weight: 680;
+      color: #3e4c62;
+      white-space: nowrap;
+    }
+
+    .ux-v6-health-badge .ux-v6-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #2e9f5f;
+    }
+
+    .ux-v6-health-badge.warn .ux-v6-dot {
+      background: #f2a900;
+    }
+
+    .ux-v6-health-badge.crit .ux-v6-dot {
+      background: #c8102e;
+    }
+
+    .ux-v6-card-progress {
+      height: 4px;
+      border-radius: 999px;
+      background: #eef2f7;
+      margin-top: 9px;
+      overflow: hidden;
+    }
+
+    .ux-v6-card-progress span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: #2e9f5f;
+    }
+
+    .ux-v6-card-progress.warn span {
+      background: #f2a900;
+    }
+
+    .ux-v6-card-progress.crit span {
+      background: #c8102e;
+    }
+
+    @media (max-width: 1180px) {
+      .ux-v6-main-grid { grid-template-columns: 1fr; }
+      .ux-v6-rank-grid { grid-template-columns: 1fr; }
+    }
+
     .ux-v6-panel-head {
       display: flex;
       justify-content: space-between;
@@ -11610,6 +11993,63 @@ Recomendação PMO: ${d.recommendation}`;
       return initiativeNumber(project) || 'Nº oficial pendente';
     }
 
+    /* === UX Senior: agregações de leitura da Visão Executiva da Onda 1 (aside, saúde e rankings) === */
+    function squadCriticalCount(squadId) {
+      return squadProjects(squadId).filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
+    }
+
+    function squadMissingCount(squadId) {
+      return squadProjects(squadId).reduce((acc, project) => acc + (missingDataCount(project) > 0 ? 1 : 0), 0);
+    }
+
+    function squadHealthInfo(squad) {
+      const critical = squadCriticalCount(squad.id);
+      const alerts = squadProjects(squad.id).reduce((acc, p) => acc + projectAlertCount(p), 0);
+      const missing = squadMissingCount(squad.id);
+      if (critical > 0) return { cls: 'crit', label: 'Crítico' };
+      if (alerts > 0 || missing > 0) return { cls: 'warn', label: 'Atenção' };
+      return { cls: 'good', label: 'Saudável' };
+    }
+
+    function unassignedProjectsCount() {
+      return (data.projects || []).filter(p => normalizeSearchText(p.squad || '') === normalizeSearchText('A validar') || !p.squadId).length;
+    }
+
+    function buildDonutGradient(counts, total) {
+      const colors = { good: '#2e9f5f', warn: '#f2a900', crit: '#c8102e' };
+      if (!total) return '#e2e8f0';
+      let acc = 0;
+      const stops = [];
+      ['good', 'warn', 'crit'].forEach(key => {
+        const val = counts[key] || 0;
+        if (!val) return;
+        const start = acc;
+        acc += (val / total) * 100;
+        stops.push(`${colors[key]} ${start.toFixed(2)}% ${acc.toFixed(2)}%`);
+      });
+      return stops.length ? `conic-gradient(${stops.join(', ')})` : '#e2e8f0';
+    }
+
+    function upcomingDiscoveries(limit = 5) {
+      return (data.projects || [])
+        .filter(p => p.discoveryDate)
+        .sort((a, b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)))
+        .slice(0, limit);
+    }
+
+    function topSquadsByHours(limit = 5) {
+      return [...sortedSquadsList()]
+        .map(squad => ({ squad, hours: hoursForSquad(squad.id) }))
+        .sort((a, b) => b.hours - a.hours)
+        .slice(0, limit);
+    }
+
+    function topInitiativesByHours(limit = 5) {
+      return [...(data.projects || [])]
+        .sort((a, b) => Number(b.hours2026 || 0) - Number(a.hours2026 || 0))
+        .slice(0, limit);
+    }
+
     /* === UX Senior: busca do Painel Executivo da Onda (iniciativa/squad/PO/Tech Lead/líder/responsável/tema) === */
     function normalizeSearchText(value) {
       return String(value || '')
@@ -12179,7 +12619,6 @@ Recomendação PMO: ${d.recommendation}`;
       const totalProjects = allProjects.length;
       const totalChildren = allProjects.reduce((acc, project) => acc + subInitiativeCount(project), 0);
       const totalHours = allProjects.reduce((acc, project) => acc + Number(project.hours2026 || 0), 0);
-      const avgProgress = totalProjects ? Math.round(allProjects.reduce((acc, project) => acc + calculateProgress(project), 0) / totalProjects) : 0;
       const activeDiscoveries = allProjects.filter(p => ['Em Discovery', 'A iniciar', 'Atenção', 'Crítico', 'No prazo'].includes(p.status)).length;
       const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
       const pendingDataCount = allProjects.reduce((acc, p) => acc + (missingDataCount(p) > 0 ? 1 : 0), 0);
@@ -12187,15 +12626,19 @@ Recomendação PMO: ${d.recommendation}`;
       const searchTerm = dashboardSearchTerm || '';
       const visibleSquads = searchTerm ? squads.filter(squad => squadMatchesSearch(squad, searchTerm)) : squads;
 
+      const unassignedCount = unassignedProjectsCount();
+      const healthCounts = { good: 0, warn: 0, crit: 0 };
+      squads.forEach(squad => { healthCounts[squadHealthInfo(squad).cls]++; });
+      const healthLabels = { good: 'Saudável', warn: 'Atenção', crit: 'Crítico' };
+      const healthLegendColors = { good: '#2e9f5f', warn: '#f2a900', crit: '#c8102e' };
+
       const squadCardsHtml = visibleSquads.length ? visibleSquads.map((squad, index) => {
         const projects = squadProjects(squad.id);
         const count = projects.length;
         const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
-        const alerts = projects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-        const critical = projects.filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
         const hours = hoursForSquad(squad.id);
         const nextDisc = nextDiscoveryForSquad(squad.id);
-        const missing = projects.reduce((acc, project) => acc + (missingDataCount(project) > 0 ? 1 : 0), 0);
+        const health = squadHealthInfo(squad);
         const active = squadDrawerOpen && selectedSquad?.id === squad.id ? 'active' : '';
         return `<button type="button" class="ux-v6-squad-card ${active}" style="--squad-accent:${uxV6Accent(index)}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
           <div class="ux-v6-card-top">
@@ -12205,21 +12648,50 @@ Recomendação PMO: ${d.recommendation}`;
             </div>
             <span class="ux-v6-count">${count} projeto${count === 1 ? '' : 's'}</span>
           </div>
-          <div class="ux-v6-hours">${formatHours(hours)}</div>
-          <div class="ux-v6-card-meta">
-            <span>Próx. Discovery</span><strong>${escapeHtml(formatBR(nextDisc))}</strong>
-            <span>Maturidade</span><strong>${average}%</strong>
-            <span>Alertas</span><strong>${alerts}</strong>
-            <span>Dados pendentes</span><strong>${missing}</strong>
-            <span>Atenção/crítico</span><strong>${critical}</strong>
+          <div class="ux-v6-card-stats">
+            <div><strong>${count}</strong><span>Iniciativas</span></div>
+            <div><strong>${childCountForSquad(squad.id)}</strong><span>Filhas</span></div>
+            <div><strong>${formatHours(hours)}</strong><span>Horas 2026</span></div>
           </div>
+          <div class="ux-v6-card-bottom">
+            <span>Próx. Discovery<strong>${escapeHtml(formatBR(nextDisc))}</strong></span>
+            <span class="ux-v6-health-badge ${health.cls}"><span class="ux-v6-dot"></span>${health.label}</span>
+          </div>
+          <div class="ux-v6-card-progress ${health.cls}"><span style="width:${average}%"></span></div>
         </button>`;
       }).join('') : `<div class="ux-v6-squads-empty"><strong>Nenhuma squad encontrada.</strong>Revise o termo buscado ou pesquise por iniciativa, squad, PO, Tech Lead, líder ou tema.</div>`;
+
+      const alertRows = [
+        ['Iniciativas com dados pendentes', pendingDataCount, pendingDataCount > 0 ? 'amber' : ''],
+        ['Iniciativas a validar (sem Squad definida)', unassignedCount, unassignedCount > 0 ? 'amber' : ''],
+        ['Squads com ponto de atenção ou crítico', healthCounts.warn + healthCounts.crit, (healthCounts.warn + healthCounts.crit) > 0 ? 'amber' : ''],
+        ['Iniciativas com alertas PMO/RTE', allProjects.filter(p => projectAlertCount(p) > 0).length, '']
+      ];
+      const alertsHtml = alertRows.map(([label, value, tone]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span class="ux-v6-bullet ${tone}"></span><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('');
+
+      const nextDiscoveriesHtml = upcomingDiscoveries(5).map(project => {
+        const squad = squadForProject(project);
+        const dateLabel = formatBR(project.discoveryDate).slice(0, 5);
+        return `<div class="ux-v6-date-row"><span class="ux-v6-date">${escapeHtml(dateLabel)}</span><span>${escapeHtml(squad?.name || project.squad || 'A validar')}<br><span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span></span></div>`;
+      }).join('') || `<div class="ux-v6-empty"><div><strong>Sem datas cadastradas.</strong>Nenhuma iniciativa com Discovery agendado.</div></div>`;
+
+      const donutGradient = buildDonutGradient(healthCounts, squads.length);
+      const legendHtml = ['good', 'warn', 'crit'].filter(key => healthCounts[key] > 0).map(key => `<div class="ux-v6-legend-row"><span class="ux-v6-legend-dot" style="background:${healthLegendColors[key]}"></span><span>${healthLabels[key]}</span><strong>${healthCounts[key]}</strong></div>`).join('');
+
+      const topSquadsList = topSquadsByHours(5);
+      const maxSquadHours = Math.max(...topSquadsList.map(item => item.hours), 1);
+      const topSquadsHtml = topSquadsList.map((item, index) => `<div class="ux-v6-bar-row"><strong>${index + 1}</strong><span>${escapeHtml(item.squad.name)}</span><div class="ux-v6-bar-track"><span style="width:${Math.max(6, (item.hours / maxSquadHours) * 100)}%"></span></div><strong>${formatHours(item.hours)}</strong></div>`).join('') || `<div class="ux-v6-empty"><div><strong>Sem horas cadastradas.</strong></div></div>`;
+
+      const topInitiativesHtml = topInitiativesByHours(5).map((project, index) => {
+        const squad = squadForProject(project);
+        return `<tr><td>${index + 1}</td><td><span class="ux-v6-init-id">${escapeHtml(projectOfficialNumber(project))}</span><br>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td><strong>${formatHours(project.hours2026)}</strong></td><td>${subInitiativeCount(project)}</td><td><span class="ux-v6-pill">${escapeHtml(project.status || 'Sem status')}</span></td></tr>`;
+      }).join('') || `<tr><td colspan="6" style="text-align:center;color:#667387;padding:20px">Nenhuma iniciativa cadastrada.</td></tr>`;
 
       const drawerSquad = selectedSquad || { id: '', name: 'Squad', business: '' };
       const drawerHours = selectedSquad ? hoursForSquad(selectedSquad.id) : 0;
       const drawerProjectCount = selectedSquad ? squadProjects(selectedSquad.id).length : 0;
       const drawerSearchTerm = squadDrawerSearchTerm || '';
+      const updatedAtLabel = formatBR(data.source?.importedAt) || 'Não informado';
 
       el.innerHTML = `<div class="ux-v6-shell">
         <div class="ux-v6-source"><strong>Planejamento 2026</strong><span>Números oficiais preservados · ${totalProjects} iniciativas principais · ${totalChildren} filhas vinculadas · ${formatHours(totalHours)}</span></div>
@@ -12228,29 +12700,62 @@ Recomendação PMO: ${d.recommendation}`;
             <span class="ux-v6-eyebrow">Visão executiva</span>
             <h2>Visão Executiva da Onda 1</h2>
             <p>Panorama geral das squads e iniciativas da Onda 1 do Discovery. Escolha uma Squad para abrir a lista de iniciativas vinculadas e siga para o Mapa de Discovery completo.</p>
+            <span class="ux-v6-update-pill">◷ Atualizado em <strong>${escapeHtml(updatedAtLabel)}</strong></span>
           </div>
           <div class="ux-v6-kpis">
             <div class="ux-v6-kpi"><span>Squads</span><strong>${squads.length}</strong></div>
             <div class="ux-v6-kpi"><span>Iniciativas</span><strong>${totalProjects}</strong></div>
             <div class="ux-v6-kpi"><span>Horas 2026</span><strong>${formatHours(totalHours)}</strong></div>
-            <div class="ux-v6-kpi"><span>Maturidade</span><strong>${avgProgress}%</strong></div>
-            <div class="ux-v6-kpi"><span>Alertas</span><strong>${totalAlerts}</strong></div>
+            <div class="ux-v6-kpi"><span>Iniciativas a validar</span><strong>${unassignedCount}</strong></div>
+            <div class="ux-v6-kpi"><span>Alertas de qualidade</span><strong>${totalAlerts}</strong></div>
           </div>
         </section>
-        <section class="ux-v6-left" aria-label="Dashboard clicável por Squad">
-          <div class="ux-v6-section-head">
-            <div><strong>Squads</strong><span>Cards clicáveis com volume, horas, próximos Discoveries e pontos de atenção. ${pendingDataCount} iniciativa(s) com dados pendentes.</span></div>
-            <span class="ux-v6-panel-pill">${activeDiscoveries} em acompanhamento</span>
+        <section class="ux-v6-main-grid" aria-label="Dashboard clicável por Squad">
+          <div class="ux-v6-content-col">
+            <section class="ux-v6-left">
+              <div class="ux-v6-section-head">
+                <div><strong>Squads</strong><span>Cards clicáveis com volume, horas, próximos Discoveries e pontos de atenção. ${pendingDataCount} iniciativa(s) com dados pendentes.</span></div>
+                <span class="ux-v6-panel-pill">${activeDiscoveries} em acompanhamento</span>
+              </div>
+              <div class="ux-v6-search-row">
+                <span class="ux-v6-panel-pill">${searchTerm ? `${visibleSquads.length} squad(s) encontrada(s)` : 'Busca por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema'}</span>
+                <label class="ux-v6-search" for="dashboardSearchInput" aria-label="Buscar no painel executivo da Onda 1">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+                  <input id="dashboardSearchInput" type="search" autocomplete="off" placeholder="Buscar por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema..." value="${escapeAttr(searchTerm)}" oninput="handleDashboardSearchInput(this.value)" />
+                </label>
+              </div>
+              <div class="ux-v6-squad-grid">${squadCardsHtml}</div>
+            </section>
+            <section class="ux-v6-rank-grid" aria-label="Rankings executivos">
+              <div class="ux-v6-rank-card">
+                <div class="ux-v6-side-title"><strong>Top squads por horas</strong><span class="ux-v6-side-link">Ver ranking completo</span></div>
+                ${topSquadsHtml}
+              </div>
+              <div class="ux-v6-rank-card">
+                <div class="ux-v6-side-title"><strong>Top iniciativas por esforço</strong><span class="ux-v6-side-link">Ver ranking completo</span></div>
+                <table class="ux-v6-top-table"><thead><tr><th>#</th><th>Iniciativa</th><th>Squad</th><th>Horas 2026</th><th>Filhas</th><th>Status</th></tr></thead><tbody>${topInitiativesHtml}</tbody></table>
+              </div>
+            </section>
           </div>
-          <div class="ux-v6-search-row">
-            <span class="ux-v6-panel-pill">${searchTerm ? `${visibleSquads.length} squad(s) encontrada(s)` : 'Busca por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema'}</span>
-            <label class="ux-v6-search" for="dashboardSearchInput" aria-label="Buscar no painel executivo da Onda 1">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-              <input id="dashboardSearchInput" type="search" autocomplete="off" placeholder="Buscar por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema..." value="${escapeAttr(searchTerm)}" oninput="handleDashboardSearchInput(this.value)" />
-            </label>
-          </div>
-          <div class="ux-v6-squad-grid">${squadCardsHtml}</div>
+          <aside class="ux-v6-aside">
+            <section class="ux-v6-side-card">
+              <div class="ux-v6-side-title"><strong>Atenções da base</strong><span class="ux-v6-side-link">Ver todas</span></div>
+              <div class="ux-v6-alert-list">${alertsHtml}</div>
+            </section>
+            <section class="ux-v6-side-card">
+              <div class="ux-v6-side-title"><strong>Próximos Discoveries</strong><span class="ux-v6-side-link">Ver calendário</span></div>
+              <div class="ux-v6-date-list">${nextDiscoveriesHtml}</div>
+            </section>
+            <section class="ux-v6-side-card">
+              <div class="ux-v6-side-title"><strong>Distribuição por status</strong></div>
+              <div class="ux-v6-donut-wrap">
+                <div class="ux-v6-donut" data-total="${squads.length}" style="background:${donutGradient}"></div>
+                <div class="ux-v6-legend">${legendHtml}</div>
+              </div>
+            </section>
+          </aside>
         </section>
+        <div class="ux-v6-footer-note">Discovery PMO Tracker · Dashboard Oficial O4O — Onda 1 2026 · Dados importados da planilha enviada.</div>
       </div>
       <div id="squadDrawerBackdrop" class="ux-v6-drawer-backdrop ${squadDrawerOpen ? 'active' : ''}" onclick="closeSquadDrawer()"></div>
       <aside id="squadProjectListPanel" class="ux-v6-drawer ${squadDrawerOpen ? 'active' : ''}" aria-hidden="${squadDrawerOpen ? 'false' : 'true'}" aria-label="Iniciativas da Squad selecionada">
