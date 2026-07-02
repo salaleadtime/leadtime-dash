@@ -6380,19 +6380,19 @@
                   "rteOwner": "",
                   "owner": "",
                   "totalHours2026": 3978,
-                  "defaultLeader": "Luis Fernando",
-                  "defaultPo": "Mariana Nakaya"
+                  "defaultLeader": "",
+                  "defaultPo": ""
             },
             {
                   "id": "squad-asd",
                   "name": "ASD",
                   "code": "ASD",
-                  "business": "Concilicação, Regulatório, Garantias e Documentos (sem GCC)",
+                  "business": "Automação RPA",
                   "rteOwner": "",
                   "owner": "",
-                  "totalHours2026": 12096,
-                  "defaultLeader": "Marcos Tasca",
-                  "defaultPo": "Vinicius Barbosa"
+                  "totalHours2026": 20160,
+                  "defaultLeader": "Cinthia Ribeiro",
+                  "defaultPo": "Beatriz Miranda"
             },
             {
                   "id": "squad-contact",
@@ -6415,17 +6415,6 @@
                   "totalHours2026": 4615,
                   "defaultLeader": "Celso Perussi",
                   "defaultPo": "Daniel Lima"
-            },
-            {
-                  "id": "squad-guardioes",
-                  "name": "Guardiões",
-                  "code": "GUARDI",
-                  "business": "Automação RPA",
-                  "rteOwner": "",
-                  "owner": "",
-                  "totalHours2026": 8064,
-                  "defaultLeader": "Cinthia Ribeiro",
-                  "defaultPo": "Beatriz Miranda"
             },
             {
                   "id": "squad-inception",
@@ -6470,6 +6459,17 @@
                   "totalHours2026": 1390,
                   "defaultLeader": "Davi Lopes",
                   "defaultPo": "Jane Silva"
+            },
+            {
+                  "id": "squad-topgun",
+                  "name": "TopGun",
+                  "code": "TOPGUN",
+                  "business": "Gestão de Consignado",
+                  "rteOwner": "",
+                  "owner": "",
+                  "totalHours2026": 0,
+                  "defaultLeader": "Davi Lopes",
+                  "defaultPo": ""
             }
       ],
       "projects": [
@@ -6587,133 +6587,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": true
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
-                              "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113286-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113286.",
-                              "owner": "Celso Perussi",
-                              "due": "2026-06-11",
-                              "priority": "Alta",
-                              "status": "doing",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113286-dados",
-                              "title": "Validar Dados, IA/RPA e Processo",
-                              "description": "Dados: Felipe Silva/ Diego Neves; IA/RPA: Everton WENNINGKAMP",
-                              "owner": "Moseas Souza",
-                              "due": "2026-06-11",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Dependência",
-                              "stageReason": "Informações técnicas importadas da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113286-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Celso Perussi",
-                              "start": "2026-06-11",
-                              "end": "2026-06-11",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113286-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "Moseas Souza",
-                              "start": "2026-07-01",
-                              "end": "2026-08-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/07/2026 · Término Dev: 01/08/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": [
-                              {
-                                    "id": "dep-113286-dados",
-                                    "text": "Área/Responsável de Dados: Felipe Silva/ Diego Neves.",
-                                    "type": "dependencies",
-                                    "owner": "Moseas Souza",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar insumos de dados",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              },
-                              {
-                                    "id": "dep-113286-ia",
-                                    "text": "IA/RPA: Everton WENNINGKAMP.",
-                                    "type": "dependencies",
-                                    "owner": "PO/Tech Lead",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar escopo de automação",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              }
-                        ]
-                  },
-                  "attachments": [],
-                  "sourceLine": 7,
-                  "sourceSquad": "Expresso",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113292",
@@ -6736,14 +6646,14 @@
                   "aiRpa": "Everton WENNINGKAMP",
                   "processName": "",
                   "hours2026": 1800,
-                  "discoveryDate": "2026-08-03",
+                  "discoveryDate": "2006-08-03",
                   "startDev": "2026-09-01",
                   "endDev": "2026-10-01",
-                  "startDate": "2026-08-03",
+                  "startDate": "2006-08-03",
                   "target": "2026-10-01",
-                  "status": "A iniciar",
+                  "status": "Em Discovery",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113292 — Garantias - Registro em Cartório Op de Crédio. Tema: Concilicação, Regulatório, Garantias e Documentos. Squad: Expresso. Líder da frente: Marcos Tasca. PO: Fernanda Rocha. Tech Lead: Moseas Souza. Área de Dados: Felipe Silva/ Diego Neves. Data de Discovery: 03/08/2026. Desenvolvimento previsto de 01/09/2026 a 01/10/2026. Consumo 2026: 1.800h.",
+                  "summary": "Iniciativa 113292 — Garantias - Registro em Cartório Op de Crédio. Tema: Concilicação, Regulatório, Garantias e Documentos. Squad: Expresso. Líder da frente: Marcos Tasca. PO: Fernanda Rocha. Tech Lead: Moseas Souza. Área de Dados: Felipe Silva/ Diego Neves. Data de Discovery: 03/08/2006. Desenvolvimento previsto de 01/09/2026 a 01/10/2026. Consumo 2026: 1.800h.",
                   "subInitiatives": [],
                   "phases": [
                         {
@@ -6829,133 +6739,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": true
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
-                              "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113292-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113292.",
-                              "owner": "Marcos Tasca",
-                              "due": "2026-08-03",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113292-dados",
-                              "title": "Validar Dados, IA/RPA e Processo",
-                              "description": "Dados: Felipe Silva/ Diego Neves; IA/RPA: Everton WENNINGKAMP",
-                              "owner": "Moseas Souza",
-                              "due": "2026-08-03",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Dependência",
-                              "stageReason": "Informações técnicas importadas da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113292-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Marcos Tasca",
-                              "start": "2026-08-03",
-                              "end": "2026-08-03",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113292-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "Moseas Souza",
-                              "start": "2026-09-01",
-                              "end": "2026-10-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/09/2026 · Término Dev: 01/10/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": [
-                              {
-                                    "id": "dep-113292-dados",
-                                    "text": "Área/Responsável de Dados: Felipe Silva/ Diego Neves.",
-                                    "type": "dependencies",
-                                    "owner": "Moseas Souza",
-                                    "due": "2026-08-03",
-                                    "status": "Aberto",
-                                    "action": "Validar insumos de dados",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              },
-                              {
-                                    "id": "dep-113292-ia",
-                                    "text": "IA/RPA: Everton WENNINGKAMP.",
-                                    "type": "dependencies",
-                                    "owner": "PO/Tech Lead",
-                                    "due": "2026-08-03",
-                                    "status": "Aberto",
-                                    "action": "Validar escopo de automação",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              }
-                        ]
-                  },
-                  "attachments": [],
-                  "sourceLine": 8,
-                  "sourceSquad": "Expresso",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113345",
@@ -6988,7 +6808,7 @@
                   "summary": "Iniciativa 113345 — Cartões - Não Monetário - Tratar base PCCF. Tema: Operações de Contas e Cartões. Squad: Contact. Líder da frente: Luciana Possamai. PO: Sandra Souza. Tech Lead: Silmara Rosalem. Área de Dados: Caio / Eduardo Diana. Data de Discovery: 11/06/2026. Desenvolvimento previsto de 01/07/2026 a 01/09/2026. Consumo 2026: 2.440h.",
                   "subInitiatives": [
                         {
-                              "id": "child-113345-113346-10",
+                              "id": "child-113345-113346-9",
                               "initiativeNumber": "113346",
                               "name": "Cartões - Demais Produtos (Alelo, Backoffice PJ, NEXT, Transportes, Cadastral PF)",
                               "squad": "Contact",
@@ -6996,7 +6816,7 @@
                               "theme": "Gestão de BPO - Cartões",
                               "frontLeader": "Luciana Possamai",
                               "rawName": "└ Cartões - Demais Produtos (Alelo, Backoffice PJ, NEXT, Transportes, Cadastral PF)",
-                              "sourceLine": 10,
+                              "sourceLine": 9,
                               "duplicateNumber": false
                         }
                   ],
@@ -7084,144 +6904,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": true
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
-                              "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113345-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113345.",
-                              "owner": "Luciana Possamai",
-                              "due": "2026-06-11",
-                              "priority": "Alta",
-                              "status": "doing",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113345-dados",
-                              "title": "Validar Dados, IA/RPA e Processo",
-                              "description": "Dados: Caio / Eduardo Diana; IA/RPA: Everton WENNINGKAMP",
-                              "owner": "Silmara Rosalem",
-                              "due": "2026-06-11",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Dependência",
-                              "stageReason": "Informações técnicas importadas da planilha"
-                        },
-                        {
-                              "id": "card-113345-filhas",
-                              "title": "Validar iniciativas filhas vinculadas",
-                              "description": "1 iniciativa(s) filha(s) vinculada(s) à iniciativa mãe 113345.",
-                              "owner": "Luciana Possamai",
-                              "due": "2026-06-11",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Governança",
-                              "stageReason": "Estrutura mãe/filha importada da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113345-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Luciana Possamai",
-                              "start": "2026-06-11",
-                              "end": "2026-06-11",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113345-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "Silmara Rosalem",
-                              "start": "2026-07-01",
-                              "end": "2026-09-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/07/2026 · Término Dev: 01/09/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": [
-                              {
-                                    "id": "dep-113345-dados",
-                                    "text": "Área/Responsável de Dados: Caio / Eduardo Diana.",
-                                    "type": "dependencies",
-                                    "owner": "Silmara Rosalem",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar insumos de dados",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              },
-                              {
-                                    "id": "dep-113345-ia",
-                                    "text": "IA/RPA: Everton WENNINGKAMP.",
-                                    "type": "dependencies",
-                                    "owner": "PO/Tech Lead",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar escopo de automação",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              }
-                        ]
-                  },
-                  "attachments": [],
-                  "sourceLine": 9,
-                  "sourceSquad": "Contact",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113359",
@@ -7251,7 +6970,7 @@
                   "target": "2026-11-01",
                   "status": "A iniciar",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113359 — Compensação de Cheques. Tema: Serviços Operacionais Banco. Squad: A validar. Líder da frente: Luis Fernando. PO: Mariana Nakaya. Tech Lead: Silmara Rosalem. Área de Dados: Caio / Eduardo Diana. Data de Discovery: 03/08/2026. Desenvolvimento previsto de 01/10/2026 a 01/11/2026. Consumo 2026: 2.000h.",
+                  "summary": "Iniciativa 113359 — Compensação de Cheques. Tema: Serviços Operacionais Banco. Líder da frente: Luis Fernando. PO: Mariana Nakaya. Tech Lead: Silmara Rosalem. Área de Dados: Caio / Eduardo Diana. Data de Discovery: 03/08/2026. Desenvolvimento previsto de 01/10/2026 a 01/11/2026. Consumo 2026: 2.000h.",
                   "subInitiatives": [],
                   "phases": [
                         {
@@ -7337,158 +7056,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": true
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
-                              "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113359-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113359.",
-                              "owner": "Luis Fernando",
-                              "due": "2026-08-03",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113359-dados",
-                              "title": "Validar Dados, IA/RPA e Processo",
-                              "description": "Dados: Caio / Eduardo Diana; IA/RPA: Marcus Simões",
-                              "owner": "Silmara Rosalem",
-                              "due": "2026-08-03",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Dependência",
-                              "stageReason": "Informações técnicas importadas da planilha"
-                        },
-                        {
-                              "id": "card-113359-validacao-base",
-                              "title": "Validar pontos da planilha com dono",
-                              "description": "Squad principal não informada na planilha; classificada temporariamente como A validar no APP..",
-                              "owner": "Henrique Augusto Pasquim",
-                              "due": "2026-08-03",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Validação",
-                              "stageReason": "Ponto identificado na auditoria da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113359-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Luis Fernando",
-                              "start": "2026-08-03",
-                              "end": "2026-08-03",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113359-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "Silmara Rosalem",
-                              "start": "2026-10-01",
-                              "end": "2026-11-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/10/2026 · Término Dev: 01/11/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [
-                              {
-                                    "id": "issue-113359-1",
-                                    "text": "Squad principal não informada na planilha; classificada temporariamente como A validar no APP.",
-                                    "type": "issues",
-                                    "owner": "Henrique Augusto Pasquim",
-                                    "due": "2026-08-03",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              }
-                        ],
-                        "dependencies": [
-                              {
-                                    "id": "dep-113359-dados",
-                                    "text": "Área/Responsável de Dados: Caio / Eduardo Diana.",
-                                    "type": "dependencies",
-                                    "owner": "Silmara Rosalem",
-                                    "due": "2026-08-03",
-                                    "status": "Aberto",
-                                    "action": "Validar insumos de dados",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              },
-                              {
-                                    "id": "dep-113359-ia",
-                                    "text": "IA/RPA: Marcus Simões.",
-                                    "type": "dependencies",
-                                    "owner": "PO/Tech Lead",
-                                    "due": "2026-08-03",
-                                    "status": "Aberto",
-                                    "action": "Validar escopo de automação",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              }
-                        ]
-                  },
-                  "attachments": [],
-                  "sourceLine": 11,
-                  "sourceSquad": "",
-                  "dataQualityNotes": [
-                        "Squad principal não informada na planilha; classificada temporariamente como A validar no APP."
-                  ]
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-98434",
@@ -7604,133 +7208,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": true
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
-                              "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-98434-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 98434.",
-                              "owner": "Everson Gimenez",
-                              "due": "2026-06-11",
-                              "priority": "Alta",
-                              "status": "doing",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-98434-dados",
-                              "title": "Validar Dados, IA/RPA e Processo",
-                              "description": "Dados: Felipe/ Isaque zamengo; IA/RPA: Matheus Batista",
-                              "owner": "Rodrigo D'avila",
-                              "due": "2026-06-11",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Dependência",
-                              "stageReason": "Informações técnicas importadas da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-98434-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Everson Gimenez",
-                              "start": "2026-06-11",
-                              "end": "2026-06-11",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-98434-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "Rodrigo D'avila",
-                              "start": "2026-07-01",
-                              "end": "2026-11-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/07/2026 · Término Dev: 01/11/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": [
-                              {
-                                    "id": "dep-98434-dados",
-                                    "text": "Área/Responsável de Dados: Felipe/ Isaque zamengo.",
-                                    "type": "dependencies",
-                                    "owner": "Rodrigo D'avila",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar insumos de dados",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              },
-                              {
-                                    "id": "dep-98434-ia",
-                                    "text": "IA/RPA: Matheus Batista.",
-                                    "type": "dependencies",
-                                    "owner": "PO/Tech Lead",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar escopo de automação",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              }
-                        ]
-                  },
-                  "attachments": [],
-                  "sourceLine": 12,
-                  "sourceSquad": "Contact",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-116596",
@@ -7739,8 +7253,8 @@
                   "name": "Jornada de Automação: Conversão Robôs em RPA",
                   "business": "Automação RPA",
                   "theme": "Automação RPA",
-                  "squad": "Guardiões",
-                  "squadId": "squad-guardioes",
+                  "squad": "ASD",
+                  "squadId": "squad-asd",
                   "owner": "A definir",
                   "rteOwner": "A definir",
                   "pmoOwner": "A definir",
@@ -7760,7 +7274,7 @@
                   "target": "2027-12-01",
                   "status": "Em Discovery",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 116596 — Jornada de Automação: Conversão Robôs em RPA. Tema: Automação RPA. Squad: Guardiões. Líder da frente: Cinthia Ribeiro. PO: Beatriz Miranda. Tech Lead: Juliana Ribeiro. Área de Dados: N/A. Data de Discovery: 11/06/2026. Desenvolvimento previsto de 26/07/2026 a 01/12/2027. Consumo 2026: 8.064h.",
+                  "summary": "Iniciativa 116596 — Jornada de Automação: Conversão Robôs em RPA. Tema: Automação RPA. Squad: ASD. Líder da frente: Cinthia Ribeiro. PO: Beatriz Miranda. Tech Lead: Juliana Ribeiro. Área de Dados: N/A. Data de Discovery: 11/06/2026. Desenvolvimento previsto de 26/07/2026 a 01/12/2027. Consumo 2026: 8.064h.",
                   "subInitiatives": [],
                   "phases": [
                         {
@@ -7846,144 +7360,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": true
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
-                              "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-116596-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 116596.",
-                              "owner": "Cinthia Ribeiro",
-                              "due": "2026-06-11",
-                              "priority": "Alta",
-                              "status": "doing",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-116596-dados",
-                              "title": "Validar Dados, IA/RPA e Processo",
-                              "description": "Dados: N/A; IA/RPA: N/A; Processo: N/A",
-                              "owner": "Juliana Ribeiro",
-                              "due": "2026-06-11",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Dependência",
-                              "stageReason": "Informações técnicas importadas da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-116596-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Cinthia Ribeiro",
-                              "start": "2026-06-11",
-                              "end": "2026-06-11",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-116596-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "Juliana Ribeiro",
-                              "start": "2026-07-26",
-                              "end": "2027-12-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 26/07/2026 · Término Dev: 01/12/2027.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": [
-                              {
-                                    "id": "dep-116596-dados",
-                                    "text": "Área/Responsável de Dados: N/A.",
-                                    "type": "dependencies",
-                                    "owner": "Juliana Ribeiro",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar insumos de dados",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              },
-                              {
-                                    "id": "dep-116596-ia",
-                                    "text": "IA/RPA: N/A.",
-                                    "type": "dependencies",
-                                    "owner": "PO/Tech Lead",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar escopo de automação",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              },
-                              {
-                                    "id": "dep-116596-processo",
-                                    "text": "Processo: N/A.",
-                                    "type": "dependencies",
-                                    "owner": "Cinthia Ribeiro",
-                                    "due": "2026-06-11",
-                                    "status": "Aberto",
-                                    "action": "Validar processo AS IS/TO BE",
-                                    "done": false,
-                                    "note": "Informação importada da planilha."
-                              }
-                        ]
-                  },
-                  "attachments": [],
-                  "sourceLine": 13,
-                  "sourceSquad": "Guardiões",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113319",
@@ -8011,9 +7424,9 @@
                   "endDev": "2026-08-01",
                   "startDate": "2026-07-01",
                   "target": "2026-08-01",
-                  "status": "A iniciar",
+                  "status": "Em Discovery",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113319 — Conciliação e Portabilidade Notificação Suspensão. Tema: Gestão de Consignado. Squad: Terminator. Líder da frente: Davi Lopes. PO: Jane Silva. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/08/2026 a 01/08/2026. Consumo 2026: 1.390h.",
+                  "summary": "Iniciativa 113319 — Conciliação e Portabilidade Notificação Suspensão. Tema: Gestão de Consignado. Squad: Terminator. Líder da frente: Davi Lopes. PO: Jane Silva. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/08/2026 a 01/08/2026. Consumo 2026: 1.390h.",
                   "subInitiatives": [],
                   "phases": [
                         {
@@ -8048,8 +7461,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -8099,99 +7512,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113319-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113319.",
-                              "owner": "Davi Lopes",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113319-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Davi Lopes",
-                              "start": "2026-07-01",
-                              "end": "2026-07-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113319-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-08-01",
-                              "end": "2026-08-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/08/2026 · Término Dev: 01/08/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 14,
-                  "sourceSquad": "Terminator",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113317",
@@ -8221,7 +7578,7 @@
                   "target": "2026-11-01",
                   "status": "A iniciar",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113317 — Automatização Fluxo Pagamento Veículos. Tema: Gestão de Consignado. Squad: Interstelar. Líder da frente: Davi Lopes. PO: Rodrigo Santos. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 03/08/2026. Desenvolvimento previsto de 01/10/2026 a 01/11/2026. Consumo 2026: 2.500h.",
+                  "summary": "Iniciativa 113317 — Automatização Fluxo Pagamento Veículos. Tema: Gestão de Consignado. Squad: Interstelar. Líder da frente: Davi Lopes. PO: Rodrigo Santos. Tech Lead: ASD. Data de Discovery: 03/08/2026. Desenvolvimento previsto de 01/10/2026 a 01/11/2026. Consumo 2026: 2.500h.",
                   "subInitiatives": [],
                   "phases": [
                         {
@@ -8256,8 +7613,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -8307,99 +7664,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113317-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113317.",
-                              "owner": "Davi Lopes",
-                              "due": "2026-08-03",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113317-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Davi Lopes",
-                              "start": "2026-08-03",
-                              "end": "2026-08-03",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113317-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-10-01",
-                              "end": "2026-11-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/10/2026 · Término Dev: 01/11/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 15,
-                  "sourceSquad": "Interstelar",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113315",
@@ -8429,10 +7730,10 @@
                   "target": "2026-11-01",
                   "status": "A iniciar",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113315 — Consignado, Conciliação e Portabilidade. Tema: Gestão de Consignado. Squad: A validar. Líder da frente: Davi Lopes. PO: Daniel Lima. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 10/08/2026. Desenvolvimento previsto de 01/10/2026 a 01/11/2026. Consumo 2026: 1.978h.",
+                  "summary": "Iniciativa 113315 — Consignado, Conciliação e Portabilidade. Tema: Gestão de Consignado. Líder da frente: Davi Lopes. PO: Daniel Lima. Tech Lead: ASD. Data de Discovery: 10/08/2026. Desenvolvimento previsto de 01/10/2026 a 01/11/2026. Consumo 2026: 1.978h.",
                   "subInitiatives": [
                         {
-                              "id": "child-113315-113318-18",
+                              "id": "child-113315-113318-17",
                               "initiativeNumber": "113318",
                               "name": "Validação Notas Fiscais – empresas marcadoras de margem",
                               "squad": "TopGun",
@@ -8440,19 +7741,19 @@
                               "theme": "Gestão de Consignado",
                               "frontLeader": "Davi Lopes",
                               "rawName": "└ Validação Notas Fiscais – empresas marcadoras de margem",
-                              "sourceLine": 18,
+                              "sourceLine": 17,
                               "duplicateNumber": false
                         },
                         {
-                              "id": "child-113315-113320-19",
+                              "id": "child-113315-113320-18",
                               "initiativeNumber": "113320",
                               "name": "Conciliação e Portabilidade - Produto",
                               "squad": "A validar",
-                              "sourceSquad": "",
+                              "sourceSquad": "A validar",
                               "theme": "Gestão de Consignado",
                               "frontLeader": "Davi Lopes",
                               "rawName": "└ Conciliação e Portabilidade - Produto",
-                              "sourceLine": 19,
+                              "sourceLine": 18,
                               "duplicateNumber": false
                         }
                   ],
@@ -8489,8 +7790,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -8540,164 +7841,48 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113315-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113315.",
-                              "owner": "Davi Lopes",
-                              "due": "2026-08-10",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113315-filhas",
-                              "title": "Validar iniciativas filhas vinculadas",
-                              "description": "2 iniciativa(s) filha(s) vinculada(s) à iniciativa mãe 113315.",
-                              "owner": "Davi Lopes",
-                              "due": "2026-08-10",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Governança",
-                              "stageReason": "Estrutura mãe/filha importada da planilha"
-                        },
-                        {
-                              "id": "card-113315-validacao-base",
-                              "title": "Validar pontos da planilha com dono",
-                              "description": "Squad principal não informada na planilha; classificada temporariamente como A validar no APP.; Filha 113318 está na Squad TopGun, diferente da mãe 113315 (A validar).; 1 filha(s) sem Squad informada na planilha..",
-                              "owner": "Helen Da Silva Martins",
-                              "due": "2026-08-10",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Validação",
-                              "stageReason": "Ponto identificado na auditoria da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113315-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Davi Lopes",
-                              "start": "2026-08-10",
-                              "end": "2026-08-10",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113315-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-10-01",
-                              "end": "2026-11-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/10/2026 · Término Dev: 01/11/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [
-                              {
-                                    "id": "issue-113315-1",
-                                    "text": "Squad principal não informada na planilha; classificada temporariamente como A validar no APP.",
-                                    "type": "issues",
-                                    "owner": "Helen Da Silva Martins",
-                                    "due": "2026-08-10",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              },
-                              {
-                                    "id": "issue-113315-2",
-                                    "text": "Filha 113318 está na Squad TopGun, diferente da mãe 113315 (A validar).",
-                                    "type": "issues",
-                                    "owner": "Helen Da Silva Martins",
-                                    "due": "2026-08-10",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              },
-                              {
-                                    "id": "issue-113315-3",
-                                    "text": "1 filha(s) sem Squad informada na planilha.",
-                                    "type": "issues",
-                                    "owner": "Helen Da Silva Martins",
-                                    "due": "2026-08-10",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              }
-                        ],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 17,
-                  "sourceSquad": "",
-                  "dataQualityNotes": [
-                        "Squad principal não informada na planilha; classificada temporariamente como A validar no APP.",
-                        "Filha 113318 está na Squad TopGun, diferente da mãe 113315 (A validar).",
-                        "1 filha(s) sem Squad informada na planilha."
-                  ]
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113301",
                   "initiativeNumber": "113301",
-                  "initiativeType": "MÃE",
+                  "initiativeType": "Única",
                   "name": "Consórcio - Termo",
                   "business": "Concilicação, Regulatório, Garantias e Documentos",
                   "theme": "Concilicação, Regulatório, Garantias e Documentos",
@@ -8722,10 +7907,10 @@
                   "target": "2026-12-01",
                   "status": "A iniciar",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113301 — Consórcio - Termo. Tema: Concilicação, Regulatório, Garantias e Documentos. Squad: Expresso. Líder da frente: Marcos Tasca. PO: Vinicius Barbosa. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 10/08/2026. Desenvolvimento previsto de 01/11/2026 a 01/12/2026. Consumo 2026: 1.200h.",
+                  "summary": "Iniciativa 113301 — Consórcio - Termo. Tema: Concilicação, Regulatório, Garantias e Documentos. Squad: Expresso. Líder da frente: Marcos Tasca. PO: Vinicius Barbosa. Tech Lead: ASD. Data de Discovery: 10/08/2026. Desenvolvimento previsto de 01/11/2026 a 01/12/2026. Consumo 2026: 1.200h.",
                   "subInitiatives": [
                         {
-                              "id": "child-113301-113294-16",
+                              "id": "child-113301-113294-15",
                               "initiativeNumber": "113294",
                               "name": "Disponibilização Termo Quitação Portal Consorciado",
                               "squad": "Interstelar",
@@ -8733,7 +7918,7 @@
                               "theme": "Registro em cartório",
                               "frontLeader": "Celso Perussi",
                               "rawName": "└ Disponibilização Termo Quitação Portal Consorciado",
-                              "sourceLine": 16,
+                              "sourceLine": 15,
                               "duplicateNumber": false
                         }
                   ],
@@ -8770,8 +7955,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -8821,135 +8006,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113301-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113301.",
-                              "owner": "Marcos Tasca",
-                              "due": "2026-08-10",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113301-filhas",
-                              "title": "Validar iniciativas filhas vinculadas",
-                              "description": "1 iniciativa(s) filha(s) vinculada(s) à iniciativa mãe 113301.",
-                              "owner": "Marcos Tasca",
-                              "due": "2026-08-10",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Governança",
-                              "stageReason": "Estrutura mãe/filha importada da planilha"
-                        },
-                        {
-                              "id": "card-113301-validacao-base",
-                              "title": "Validar pontos da planilha com dono",
-                              "description": "Filha 113294 está na Squad Interstelar, diferente da mãe 113301 (Expresso)..",
-                              "owner": "Tarsio Redigulo",
-                              "due": "2026-08-10",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Validação",
-                              "stageReason": "Ponto identificado na auditoria da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113301-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Marcos Tasca",
-                              "start": "2026-08-10",
-                              "end": "2026-08-10",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113301-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-11-01",
-                              "end": "2026-12-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/11/2026 · Término Dev: 01/12/2026.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [
-                              {
-                                    "id": "issue-113301-1",
-                                    "text": "Filha 113294 está na Squad Interstelar, diferente da mãe 113301 (Expresso).",
-                                    "type": "issues",
-                                    "owner": "Tarsio Redigulo",
-                                    "due": "2026-08-10",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              }
-                        ],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 20,
-                  "sourceSquad": "Expresso",
-                  "dataQualityNotes": [
-                        "Filha 113294 está na Squad Interstelar, diferente da mãe 113301 (Expresso)."
-                  ]
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113309",
@@ -8977,32 +8070,32 @@
                   "endDev": "2027-03-01",
                   "startDate": "2026-07-01",
                   "target": "2027-03-01",
-                  "status": "A iniciar",
+                  "status": "Em Discovery",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113309 — Recepção Doc. Físicos, Ofícios e Ctrl Pendências. Tema: Concilicação, Regulatório, Garantias e Documentos(varios sistemas). Squad: MadMax. Líder da frente: Marcos Tasca. PO: Sérgio Cartapatti. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/08/2026 a 01/03/2027. Consumo 2026: 5.376h.",
+                  "summary": "Iniciativa 113309 — Recepção Doc. Físicos, Ofícios e Ctrl Pendências. Tema: Concilicação, Regulatório, Garantias e Documentos(varios sistemas). Squad: MadMax. Líder da frente: Marcos Tasca. PO: Sérgio Cartapatti. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/08/2026 a 01/03/2027. Consumo 2026: 5.376h.",
                   "subInitiatives": [
                         {
-                              "id": "child-113309-113312-22",
+                              "id": "child-113309-113312-21",
                               "initiativeNumber": "113312",
                               "name": "Recepção e Análise de Documentos Físicos",
-                              "squad": "A validar",
-                              "sourceSquad": "",
+                              "squad": "MadMax",
+                              "sourceSquad": "MadMax",
                               "theme": "Gestão Documental",
                               "frontLeader": "Clovis Tadeu",
                               "rawName": "└ Recepção e Análise de Documentos Físicos",
-                              "sourceLine": 22,
+                              "sourceLine": 21,
                               "duplicateNumber": false
                         },
                         {
-                              "id": "child-113309-113313-23",
+                              "id": "child-113309-113313-22",
                               "initiativeNumber": "113313",
                               "name": "Controle de Pendências",
-                              "squad": "A validar",
-                              "sourceSquad": "",
+                              "squad": "MadMax",
+                              "sourceSquad": "MadMax",
                               "theme": "Gestão Documental",
                               "frontLeader": "Clovis Tadeu",
                               "rawName": "└ Controle de Pendências",
-                              "sourceLine": 23,
+                              "sourceLine": 22,
                               "duplicateNumber": false
                         }
                   ],
@@ -9039,8 +8132,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -9090,135 +8183,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113309-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113309.",
-                              "owner": "Marcos Tasca",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113309-filhas",
-                              "title": "Validar iniciativas filhas vinculadas",
-                              "description": "2 iniciativa(s) filha(s) vinculada(s) à iniciativa mãe 113309.",
-                              "owner": "Marcos Tasca",
-                              "due": "2026-07-01",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Governança",
-                              "stageReason": "Estrutura mãe/filha importada da planilha"
-                        },
-                        {
-                              "id": "card-113309-validacao-base",
-                              "title": "Validar pontos da planilha com dono",
-                              "description": "2 filha(s) sem Squad informada na planilha..",
-                              "owner": "Rodrigo Lopes Rubin de Almeida",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Validação",
-                              "stageReason": "Ponto identificado na auditoria da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113309-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Marcos Tasca",
-                              "start": "2026-07-01",
-                              "end": "2026-07-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113309-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-08-01",
-                              "end": "2027-03-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/08/2026 · Término Dev: 01/03/2027.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [
-                              {
-                                    "id": "issue-113309-1",
-                                    "text": "2 filha(s) sem Squad informada na planilha.",
-                                    "type": "issues",
-                                    "owner": "Rodrigo Lopes Rubin de Almeida",
-                                    "due": "2026-07-01",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              }
-                        ],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 21,
-                  "sourceSquad": "MadMax",
-                  "dataQualityNotes": [
-                        "2 filha(s) sem Squad informada na planilha."
-                  ]
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113260",
@@ -9246,9 +8247,9 @@
                   "endDev": "2027-03-01",
                   "startDate": "2026-07-01",
                   "target": "2027-03-01",
-                  "status": "A iniciar",
+                  "status": "Em Discovery",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113260 — API EXTRATO - 2ª via de extrato Bancário. Tema: Operações Jurídicas. Squad: Inception. Líder da frente: Carolina Máximo. PO: Sandra Souza. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/03/2027. Consumo 2026: 5.376h.",
+                  "summary": "Iniciativa 113260 — API EXTRATO - 2ª via de extrato Bancário. Tema: Operações Jurídicas. Squad: Inception. Líder da frente: Carolina Máximo. PO: Sandra Souza. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/03/2027. Consumo 2026: 5.376h.",
                   "subInitiatives": [],
                   "phases": [
                         {
@@ -9283,8 +8284,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -9334,99 +8335,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113260-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113260.",
-                              "owner": "Carolina Máximo",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113260-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Carolina Máximo",
-                              "start": "2026-07-01",
-                              "end": "2026-07-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113260-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-09-01",
-                              "end": "2027-03-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/09/2026 · Término Dev: 01/03/2027.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 24,
-                  "sourceSquad": "Inception",
-                  "dataQualityNotes": []
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113308",
@@ -9454,20 +8399,20 @@
                   "endDev": "2027-04-01",
                   "startDate": "2026-07-01",
                   "target": "2027-04-01",
-                  "status": "A iniciar",
+                  "status": "Em Discovery",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113308 — Gestão de Fornecedores e Indexação Legado. Tema: Concilicação, Regulatório, Garantias e Documentos (sem GCC). Squad: ASD. Líder da frente: Marcos Tasca. PO: Vinicius Barbosa. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/04/2027. Consumo 2026: 8.064h.",
+                  "summary": "Iniciativa 113308 — Gestão de Fornecedores e Indexação Legado. Tema: Concilicação, Regulatório, Garantias e Documentos (sem GCC). Squad: ASD. Líder da frente: Marcos Tasca. PO: Vinicius Barbosa. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/04/2027. Consumo 2026: 8.064h.",
                   "subInitiatives": [
                         {
-                              "id": "child-113308-113307-26",
+                              "id": "child-113308-113307-25",
                               "initiativeNumber": "113307",
                               "name": "Indexação do Legado de Contas",
-                              "squad": "A validar",
-                              "sourceSquad": "",
+                              "squad": "ASD",
+                              "sourceSquad": "ASD",
                               "theme": "Gestão Documental",
                               "frontLeader": "Clovis Tadeu",
                               "rawName": "└ Indexação do Legado de Contas",
-                              "sourceLine": 26,
+                              "sourceLine": 25,
                               "duplicateNumber": false
                         }
                   ],
@@ -9504,8 +8449,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -9555,135 +8500,43 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113308-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113308.",
-                              "owner": "Marcos Tasca",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113308-filhas",
-                              "title": "Validar iniciativas filhas vinculadas",
-                              "description": "1 iniciativa(s) filha(s) vinculada(s) à iniciativa mãe 113308.",
-                              "owner": "Marcos Tasca",
-                              "due": "2026-07-01",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Governança",
-                              "stageReason": "Estrutura mãe/filha importada da planilha"
-                        },
-                        {
-                              "id": "card-113308-validacao-base",
-                              "title": "Validar pontos da planilha com dono",
-                              "description": "1 filha(s) sem Squad informada na planilha..",
-                              "owner": "Yank Santos Almeida",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Validação",
-                              "stageReason": "Ponto identificado na auditoria da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113308-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Marcos Tasca",
-                              "start": "2026-07-01",
-                              "end": "2026-07-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113308-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-09-01",
-                              "end": "2027-04-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/09/2026 · Término Dev: 01/04/2027.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [
-                              {
-                                    "id": "issue-113308-1",
-                                    "text": "1 filha(s) sem Squad informada na planilha.",
-                                    "type": "issues",
-                                    "owner": "Yank Santos Almeida",
-                                    "due": "2026-07-01",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              }
-                        ],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 25,
-                  "sourceSquad": "ASD",
-                  "dataQualityNotes": [
-                        "1 filha(s) sem Squad informada na planilha."
-                  ]
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             },
             {
                   "id": "ini-113327",
@@ -9711,83 +8564,80 @@
                   "endDev": "2028-09-01",
                   "startDate": "2026-07-01",
                   "target": "2028-09-01",
-                  "status": "A iniciar",
+                  "status": "Em Discovery",
                   "criticality": "A validar",
-                  "summary": "Iniciativa 113327 — FIRP / Abono / Mtoken / APP RM. Tema: Operações de Contas e Cartões. Squad: ASD. Líder da frente: Luciana Possamai. PO: Paulo Nascimento. Tech Lead: ASD. Área de Dados: a validar. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/09/2028. Consumo 2026: 4.032h.",
+                  "summary": "Iniciativa 113327 — FIRP / Abono / Mtoken / APP RM. Tema: Operações de Contas e Cartões. Squad: ASD. Líder da frente: Luciana Possamai. PO: Paulo Nascimento. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/09/2028. Consumo 2026: 4.032h.",
                   "subInitiatives": [
                         {
-                              "id": "child-113327-113330-28",
+                              "id": "child-113327-113330-27",
                               "initiativeNumber": "113330",
                               "name": "Manutenção FIRP - Bacen Protege+ ServiceNow e FIRP",
-                              "squad": "A validar",
-                              "sourceSquad": "",
+                              "squad": "ASD",
+                              "sourceSquad": "ASD",
                               "theme": "Gestão BPO Poderes",
                               "frontLeader": "Luciana Possamai",
                               "rawName": "└ Manutenção FIRP - Bacen Protege+ ServiceNow e FIRP",
+                              "sourceLine": 27,
+                              "duplicateNumber": false
+                        },
+                        {
+                              "id": "child-113327-113330-28",
+                              "initiativeNumber": "113330",
+                              "name": "Manutenção FIRP - Implementar ServiceNow e IA Generativa",
+                              "squad": "ASD",
+                              "sourceSquad": "ASD",
+                              "theme": "Gestão BPO Poderes",
+                              "frontLeader": "Luciana Possamai",
+                              "rawName": "└ Manutenção FIRP - Implementar ServiceNow e IA Generativa",
                               "sourceLine": 28,
-                              "duplicateNumber": true,
-                              "validationNote": "# Filha 113330 aparece 3 vezes na planilha para a mãe 113327; mantido como informado para validação."
+                              "duplicateNumber": true
                         },
                         {
                               "id": "child-113327-113330-29",
                               "initiativeNumber": "113330",
-                              "name": "Manutenção FIRP - Implementar ServiceNow e IA Generativa",
-                              "squad": "A validar",
-                              "sourceSquad": "",
-                              "theme": "Gestão BPO Poderes",
-                              "frontLeader": "Luciana Possamai",
-                              "rawName": "└ Manutenção FIRP - Implementar ServiceNow e IA Generativa",
-                              "sourceLine": 29,
-                              "duplicateNumber": true,
-                              "validationNote": "# Filha 113330 aparece 3 vezes na planilha para a mãe 113327; mantido como informado para validação."
-                        },
-                        {
-                              "id": "child-113327-113330-30",
-                              "initiativeNumber": "113330",
                               "name": "Manutenção FIRP - Faturamento e Carta de Titularidade",
-                              "squad": "A validar",
-                              "sourceSquad": "",
+                              "squad": "ASD",
+                              "sourceSquad": "ASD",
                               "theme": "Gestão BPO Poderes",
                               "frontLeader": "Luciana Possamai",
                               "rawName": "└ Manutenção FIRP - Faturamento e Carta de Titularidade",
-                              "sourceLine": 30,
-                              "duplicateNumber": true,
-                              "validationNote": "# Filha 113330 aparece 3 vezes na planilha para a mãe 113327; mantido como informado para validação."
+                              "sourceLine": 29,
+                              "duplicateNumber": true
                         },
                         {
-                              "id": "child-113327-113331-31",
+                              "id": "child-113327-113331-30",
                               "initiativeNumber": "113331",
                               "name": "Abono - SPR - Automatizar processo operacional",
-                              "squad": "A validar",
-                              "sourceSquad": "",
+                              "squad": "ASD",
+                              "sourceSquad": "ASD",
                               "theme": "Gestão BPO Poderes",
                               "frontLeader": "Luciana Possamai",
                               "rawName": "└ Abono - SPR - Automatizar processo operacional",
+                              "sourceLine": 30,
+                              "duplicateNumber": false
+                        },
+                        {
+                              "id": "child-113327-113332-31",
+                              "initiativeNumber": "113332",
+                              "name": "Abono - Crédito - Automatizar processo operacional",
+                              "squad": "ASD",
+                              "sourceSquad": "ASD",
+                              "theme": "Gestão BPO Poderes",
+                              "frontLeader": "Luciana Possamai",
+                              "rawName": "└ Abono - Crédito - Automatizar processo operacional",
                               "sourceLine": 31,
                               "duplicateNumber": false
                         },
                         {
-                              "id": "child-113327-113332-32",
-                              "initiativeNumber": "113332",
-                              "name": "Abono - Crédito - Automatizar processo operacional",
-                              "squad": "A validar",
-                              "sourceSquad": "",
-                              "theme": "Gestão BPO Poderes",
-                              "frontLeader": "Luciana Possamai",
-                              "rawName": "└ Abono - Crédito - Automatizar processo operacional",
-                              "sourceLine": 32,
-                              "duplicateNumber": false
-                        },
-                        {
-                              "id": "child-113327-113333-33",
+                              "id": "child-113327-113333-32",
                               "initiativeNumber": "113333",
                               "name": "Prevenção a Fraude - M-Token/Senhas + Cartões",
-                              "squad": "A validar",
-                              "sourceSquad": "",
+                              "squad": "ASD",
+                              "sourceSquad": "ASD",
                               "theme": "Gestão BPO Poderes",
                               "frontLeader": "Luciana Possamai",
                               "rawName": "└ Prevenção a Fraude - M-Token/Senhas + Cartões",
-                              "sourceLine": 33,
+                              "sourceLine": 32,
                               "duplicateNumber": false
                         }
                   ],
@@ -9824,8 +8674,8 @@
                               "id": "deps",
                               "title": "Dependências",
                               "help": "Dados, integrações, arquitetura, acesso, jurídico ou negócio.",
-                              "status": "todo",
-                              "reason": "Dependências ainda precisam ser mapeadas"
+                              "status": "progress",
+                              "reason": "Área de Dados/IA/RPA/Processo mapeados na planilha"
                         },
                         {
                               "id": "stories",
@@ -9875,178 +8725,45 @@
                               "id": "asis",
                               "title": "AS IS documentado",
                               "help": "Fluxo/processo atual precisa ser anexado ou descrito.",
-                              "owner": "Negócio",
+                              "owner": "Negócio/PO",
                               "done": false
                         },
                         {
                               "id": "tobe",
-                              "title": "TO BE validado",
-                              "help": "Visão futura ainda precisa de validação com negócio/operação.",
-                              "owner": "PO/UX",
+                              "title": "TO BE desenhado",
+                              "help": "Processo futuro e experiência alvo validados.",
+                              "owner": "PO/Design",
                               "done": false
                         },
                         {
-                              "id": "dependencies",
-                              "title": "Dependências registradas",
-                              "help": "Área de Dados, IA/RPA, processo, integrações e acessos mapeados.",
-                              "owner": "LT",
-                              "done": false
-                        },
-                        {
-                              "id": "risks",
-                              "title": "Riscos e decisões registrados",
-                              "help": "Riscos, impedimentos e decisões pendentes visíveis para gestão.",
-                              "owner": "PMO",
+                              "id": "tech",
+                              "title": "Dependências técnicas mapeadas",
+                              "help": "Área de dados, IA/RPA e processos identificados.",
+                              "owner": "Tech Lead",
                               "done": false
                         },
                         {
                               "id": "stories",
-                              "title": "Histórias preparadas",
-                              "help": "Histórias com critérios de aceite, regras, anexos e evidências.",
-                              "owner": "PO/Time",
+                              "title": "Histórias de usuário escritas",
+                              "help": "Backlog inicial com critérios de aceite.",
+                              "owner": "PO",
                               "done": false
                         },
                         {
-                              "id": "estimates",
-                              "title": "Estimativa e capacidade avaliadas",
-                              "help": "Esforço 2026 foi importado; capacidade/sprint ainda precisa ser refinada.",
-                              "owner": "LT/SM",
-                              "done": true
-                        },
-                        {
-                              "id": "gono",
-                              "title": "Go/No-Go definido",
-                              "help": "Direcionamento para refinamento técnico, desenvolvimento ou nova descoberta.",
-                              "owner": "Comitê",
+                              "id": "estimate",
+                              "title": "Estimativa de esforço",
+                              "help": "Horas de desenvolvimento previstas.",
+                              "owner": "Tech Lead",
                               "done": false
                         }
                   ],
-                  "cards": [
-                        {
-                              "id": "card-113327-discovery",
-                              "title": "Preparar Discovery executivo",
-                              "description": "Consolidar objetivo, dores, dados, responsáveis e critérios de avanço da iniciativa 113327.",
-                              "owner": "Luciana Possamai",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Discovery",
-                              "stageReason": "Data de Discovery importada da planilha"
-                        },
-                        {
-                              "id": "card-113327-filhas",
-                              "title": "Validar iniciativas filhas vinculadas",
-                              "description": "6 iniciativa(s) filha(s) vinculada(s) à iniciativa mãe 113327.",
-                              "owner": "Luciana Possamai",
-                              "due": "2026-07-01",
-                              "priority": "Média",
-                              "status": "backlog",
-                              "type": "Governança",
-                              "stageReason": "Estrutura mãe/filha importada da planilha"
-                        },
-                        {
-                              "id": "card-113327-validacao-base",
-                              "title": "Validar pontos da planilha com dono",
-                              "description": "6 filha(s) sem Squad informada na planilha.; # Filha 113330 aparece 3 vezes com nomes diferentes: Manutenção FIRP - Bacen Protege+ ServiceNow e FIRP, Manutenção FIRP - Implementar ServiceNow e IA Generativa, Manutenção FIRP - Faturamento e Carta de Titularidade..",
-                              "owner": "Reginaldo Olinek",
-                              "due": "2026-07-01",
-                              "priority": "Alta",
-                              "status": "backlog",
-                              "type": "Validação",
-                              "stageReason": "Ponto identificado na auditoria da planilha"
-                        }
-                  ],
-                  "schedule": [
-                        {
-                              "id": "sch-113327-discovery",
-                              "item": "Data de Discovery",
-                              "owner": "Luciana Possamai",
-                              "start": "2026-07-01",
-                              "end": "2026-07-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Data importada da planilha Planejamento 2026.",
-                              "pdcaAction": ""
-                        },
-                        {
-                              "id": "sch-113327-dev",
-                              "item": "Janela de Desenvolvimento",
-                              "owner": "ASD",
-                              "start": "2026-09-01",
-                              "end": "2028-09-01",
-                              "progress": 0,
-                              "done": false,
-                              "observations": "Início Dev: 01/09/2026 · Término Dev: 01/09/2028.",
-                              "pdcaAction": ""
-                        }
-                  ],
-                  "raids": {
-                        "risks": [],
-                        "assumptions": [],
-                        "issues": [
-                              {
-                                    "id": "issue-113327-1",
-                                    "text": "6 filha(s) sem Squad informada na planilha.",
-                                    "type": "issues",
-                                    "owner": "Reginaldo Olinek",
-                                    "due": "2026-07-01",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              },
-                              {
-                                    "id": "issue-113327-2",
-                                    "text": "# Filha 113330 aparece 3 vezes com nomes diferentes: Manutenção FIRP - Bacen Protege+ ServiceNow e FIRP, Manutenção FIRP - Implementar ServiceNow e IA Generativa, Manutenção FIRP - Faturamento e Carta de Titularidade.",
-                                    "type": "issues",
-                                    "owner": "Reginaldo Olinek",
-                                    "due": "2026-07-01",
-                                    "status": "Aberto",
-                                    "action": "Validar com dono da iniciativa e atualizar planilha oficial",
-                                    "done": false,
-                                    "note": "Ponto mantido na ferramenta para não perder rastreabilidade da auditoria."
-                              }
-                        ],
-                        "dependencies": []
-                  },
-                  "attachments": [],
-                  "sourceLine": 27,
-                  "sourceSquad": "ASD",
-                  "dataQualityNotes": [
-                        "6 filha(s) sem Squad informada na planilha.",
-                        "# Filha 113330 aparece 3 vezes com nomes diferentes: Manutenção FIRP - Bacen Protege+ ServiceNow e FIRP, Manutenção FIRP - Implementar ServiceNow e IA Generativa, Manutenção FIRP - Faturamento e Carta de Titularidade."
-                  ]
+                  "alerts": [],
+                  "risks": [],
+                  "schedule": [],
+                  "links": [],
+                  "notes": ""
             }
-      ],
-      "source": {
-            "file": "Planejamento_2026(1).xlsx",
-            "sheet": "Planejamento 2026",
-            "importedAt": "2026-06-24",
-            "note": "Base corrigida conforme planilha oficial enviada. Números oficiais preservados; POs incluídos; filhas vinculadas dentro da mãe; divergências da auditoria mantidas como alertas/Issues para validação com donos.",
-            "validationSummary": {
-                  "mainInitiatives": 14,
-                  "childInitiatives": 13,
-                  "blankMainSquads": 2,
-                  "duplicatedChildNumbers": 1
-            },
-            "reviewedFields": [
-                  "Nº Iniciativa",
-                  "# Filha",
-                  "Nome da Iniciativa",
-                  "Squad",
-                  "Líder da frente",
-                  "Dono da Iniciativa",
-                  "PO",
-                  "Ponto Focal",
-                  "Líder Técnico",
-                  "Dados",
-                  "IA/RPA",
-                  "Discovery",
-                  "Início Dev",
-                  "Término Dev",
-                  "Consumo Horas 2026"
-            ]
-      }
+      ]
 };
 
     let data = loadData();
