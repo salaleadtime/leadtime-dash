@@ -6178,7 +6178,7 @@
     }
     .cal-modal {
       background: #fff; border-radius: 20px; box-shadow: 0 32px 80px rgba(0,0,0,.22);
-      width: min(820px, 100%); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;
+      width: min(1100px, 98vw); max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column;
     }
     .cal-modal-head {
       display: flex; align-items: center; justify-content: space-between;
@@ -11359,60 +11359,90 @@ Recomendação PMO: ${d.recommendation}`;
       const daysInPrevMonth = new Date(year, month, 0).getDate();
       const today = new Date();
       const allProjects = data.projects || [];
-      // Build discovery map: day -> [{name, squad}]
+
+      // Initiatives with discovery in this month
+      const monthProjects = allProjects.filter(p => {
+        if (!p.discoveryDate) return false;
+        const d = new Date(p.discoveryDate);
+        return d.getFullYear() === year && d.getMonth() === month;
+      }).sort((a, b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)));
+
+      // Build discovery map: day -> [{name, squad, initiativeNumber, tipo}]
       const discMap = {};
-      allProjects.forEach(p => {
-        if (!p.discoveryDate) return;
+      monthProjects.forEach(p => {
         const d = new Date(p.discoveryDate);
-        if (d.getFullYear() === year && d.getMonth() === month) {
-          const key = d.getDate();
-          if (!discMap[key]) discMap[key] = [];
-          const sq = squadForProject(p);
-          discMap[key].push({ name: p.name, squad: sq?.name || p.squad || '' });
-        }
-      });
-      // All upcoming discoveries (list below calendar)
-      const upcoming = [...allProjects].filter(p => p.discoveryDate).sort((a,b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)));
-      const upcomingHtml = upcoming.map(p => {
+        const key = d.getDate();
+        if (!discMap[key]) discMap[key] = [];
         const sq = squadForProject(p);
-        const dateStr = formatBR(p.discoveryDate);
-        const d = new Date(p.discoveryDate);
-        const isPast = d < today;
-        return `<div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #e5e9f2">
-          <div style="min-width:62px;font-weight:700;font-size:12px;color:${isPast?'#999':'#bf1830'}">${escapeHtml(dateStr.slice(0,5))}</div>
-          <div>
-            <div style="font-weight:600;font-size:13px;color:#1c2430">${escapeHtml(p.name)}</div>
-            <div style="font-size:11px;color:#687587">${escapeHtml(sq?.name || p.squad || 'A validar')} · ${escapeHtml(p.initiativeNumber||'')}</div>
-          </div>
-          ${isPast ? '<span style="margin-left:auto;font-size:10px;color:#999;white-space:nowrap">✓ realizado</span>' : ''}
-        </div>`;
-      }).join('') || '<div style="text-align:center;color:#687587;padding:20px">Nenhuma data de discovery cadastrada.</div>';
+        discMap[key].push({ name: p.name, squad: sq?.name || p.squad || '', num: p.initiativeNumber, tipo: p.initiativeType });
+      });
+
       // Build calendar grid
       let cells = '';
-      // prev month days
-      for (let i = firstDay - 1; i >= 0; i--) {
+      for (let i = firstDay - 1; i >= 0; i--)
         cells += `<div class="cal-day other-month"><span class="cal-day-num">${daysInPrevMonth - i}</span></div>`;
-      }
-      // current month
       for (let d = 1; d <= daysInMonth; d++) {
         const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
         const discs = discMap[d] || [];
         const hasDisc = discs.length > 0;
-        const chipsHtml = discs.map(item => `<span class="cal-disc-chip" title="${escapeAttr(item.name + (item.squad?' · '+item.squad:''))}">${escapeHtml(item.squad||item.name.slice(0,10))}</span>`).join('');
+        const chipsHtml = discs.map(item =>
+          `<span class="cal-disc-chip" title="${escapeAttr('#'+item.num+' · '+item.name+(item.squad?' · '+item.squad:''))}">${escapeHtml(item.squad || item.name.slice(0,10))}</span>`
+        ).join('');
         cells += `<div class="cal-day${isToday?' today':''}${hasDisc?' has-disc':''}"><span class="cal-day-num">${d}</span>${chipsHtml}</div>`;
       }
-      // next month fill
       const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
-      for (let d = 1; d <= totalCells - firstDay - daysInMonth; d++) {
+      for (let d = 1; d <= totalCells - firstDay - daysInMonth; d++)
         cells += `<div class="cal-day other-month"><span class="cal-day-num">${d}</span></div>`;
-      }
       const dayHeads = DAYS_PT.map(d => `<div class="cal-day-head">${d}</div>`).join('');
+
+      // Month initiatives table (like the spreadsheet view)
+      const monthTableRows = monthProjects.map(p => {
+        const sq = squadForProject(p);
+        const isAsd = sq?.id === 'squad-asd';
+        const sqLabel = isAsd
+          ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">ASD</span>`
+          : escapeHtml(sq?.name || p.squad || 'A validar');
+        const tipo = p.initiativeType === 'MÃE'
+          ? `<span style="background:#ffe8b0;color:#7a5000;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">MÃE</span>`
+          : '—';
+        const dObj = new Date(p.discoveryDate);
+        const isPast = dObj < today;
+        return `<tr style="${isPast?'opacity:.7':''}">
+          <td style="font-weight:700;color:#bf1830;font-size:11px;white-space:nowrap">${escapeHtml(String(p.initiativeNumber||''))}</td>
+          <td>${tipo}</td>
+          <td style="font-weight:600;color:#1c2430">${escapeHtml(p.name)}</td>
+          <td style="font-size:11px;color:#687587">${escapeHtml(p.theme||p.business||'—')}</td>
+          <td style="font-size:11px">${escapeHtml(p.frontLeader||'—')}</td>
+          <td style="font-size:11px">${escapeHtml(p.initiativeOwner||'—')}</td>
+          <td style="font-size:11px">${escapeHtml(p.po||'—')}</td>
+          <td style="font-size:11px">${escapeHtml(p.focalPoint||'—')}</td>
+          <td>${sqLabel}</td>
+          <td style="font-size:11px;font-weight:700;color:${isPast?'#999':'#bf1830'};white-space:nowrap">${escapeHtml(formatBR(p.discoveryDate)||'—')}${isPast?'<span style="font-size:9px;color:#aaa;display:block">realizado</span>':''}</td>
+        </tr>`;
+      }).join('') || `<tr><td colspan="10" style="text-align:center;color:#687587;padding:24px 0">Nenhuma iniciativa com Discovery em ${MONTHS_PT[month]} ${year}</td></tr>`;
+
+      // Future months summary
+      const futureMonths = {};
+      allProjects.filter(p => {
+        if (!p.discoveryDate) return false;
+        const d = new Date(p.discoveryDate);
+        return d.getFullYear() > year || (d.getFullYear() === year && d.getMonth() > month);
+      }).forEach(p => {
+        const d = new Date(p.discoveryDate);
+        const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`;
+        if (!futureMonths[key]) futureMonths[key] = { label: `${MONTHS_PT[d.getMonth()]} ${d.getFullYear()}`, count: 0 };
+        futureMonths[key].count++;
+      });
+      const futurePills = Object.values(futureMonths).map(m =>
+        `<span style="display:inline-flex;align-items:center;gap:6px;background:#f5f7fb;border:1px solid #e5e9f2;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:#1c2430;cursor:pointer" onclick="calGotoLabel('${escapeAttr(m.label)}')">${escapeHtml(m.label)}<span style="background:#bf1830;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px">${m.count}</span></span>`
+      ).join('');
+
       el.innerHTML = `<div class="cal-modal-backdrop" onclick="if(event.target===this)closeCalendarModal()">
-        <div class="cal-modal">
+        <div class="cal-modal" style="width:min(1100px,98vw)">
           <div class="cal-modal-head">
             <div>
-              <h2>📅 Calendário de Discoveries</h2>
-              <p>Datas de Discovery cadastradas para a Onda 1 · 2026</p>
+              <h2>📅 Calendário de Discoveries · ${MONTHS_PT[month]} ${year}</h2>
+              <p>${monthProjects.length} iniciativa(s) com Discovery neste mês · BEONC I Planejamento Ops for Ops — Onda 1 2026</p>
             </div>
             <div style="display:flex;align-items:center;gap:16px">
               <div class="cal-nav">
@@ -11423,19 +11453,48 @@ Recomendação PMO: ${d.recommendation}`;
               <button class="cal-close" onclick="closeCalendarModal()" title="Fechar">×</button>
             </div>
           </div>
-          <div class="cal-body">
-            <div class="cal-grid">${dayHeads}${cells}</div>
-            <div class="cal-legend">
-              <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f4b740;border:1px solid #f4b740"></div><span>Com Discovery</span></div>
-              <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fff0f3;border:1.5px solid #bf1830"></div><span>Hoje</span></div>
+          <div class="cal-body" style="display:grid;grid-template-columns:1fr 1.8fr;gap:24px;align-items:start">
+            <div>
+              <div class="cal-grid">${dayHeads}${cells}</div>
+              <div class="cal-legend" style="margin-top:12px">
+                <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f4b740"></div><span>Com Discovery</span></div>
+                <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fff0f3;border:1.5px solid #bf1830"></div><span>Hoje</span></div>
+              </div>
+              ${futurePills ? `<div style="margin-top:16px;border-top:1px solid #e5e9f2;padding-top:12px"><div style="font-size:11px;font-weight:700;color:#687587;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Próximos meses</div><div style="display:flex;flex-wrap:wrap;gap:6px">${futurePills}</div></div>` : ''}
             </div>
-            <div style="margin-top:24px;border-top:2px solid #e5e9f2;padding-top:16px">
-              <div style="font-weight:800;font-size:14px;color:#1c2430;margin-bottom:12px">📋 Todas as Datas de Discovery</div>
-              ${upcomingHtml}
+            <div style="overflow-x:auto">
+              <div style="font-weight:800;font-size:14px;color:#1c2430;margin-bottom:10px">
+                Iniciativas com Discovery em ${MONTHS_PT[month]} ${year}
+              </div>
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead>
+                  <tr style="background:#1c2430;color:#fff">
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;white-space:nowrap"># Mãe</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Tipo</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Nome da Iniciativa</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Tema</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Líder Da Frente</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Dono</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">PO</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Ponto Focal</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Squad</th>
+                    <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700">Discovery</th>
+                  </tr>
+                </thead>
+                <tbody>${monthTableRows}</tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>`;
+    }
+
+    function calGotoLabel(label) {
+      const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const parts = label.split(' ');
+      const yr = parseInt(parts[1]);
+      const mo = MONTHS_PT.indexOf(parts[0]);
+      if (mo >= 0 && !isNaN(yr)) { calendarYear = yr; calendarMonth = mo; _renderCalendarModal(); }
     }
 
     /* === Visão PMO (Tabela Planilha) === */
