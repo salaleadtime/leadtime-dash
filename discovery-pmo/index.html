@@ -5431,6 +5431,224 @@
       .ux-v6-rank-grid { grid-template-columns: 1fr; }
     }
 
+    /* === UX Senior: navegação do cabeçalho (abas, sino, avatar) e painel de Relatórios === */
+    .ghost-btn.active {
+      position: relative;
+      background: rgba(200, 16, 46, .22) !important;
+      border-color: rgba(255, 90, 110, .55) !important;
+    }
+
+    .ghost-btn.active::after {
+      content: '';
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: -12px;
+      height: 2px;
+      background: #ff4d63;
+      border-radius: 99px;
+    }
+
+    .ux-v6-nav-bell {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .16);
+      font-size: 14px;
+      margin-left: 4px;
+      flex: 0 0 auto;
+    }
+
+    .ux-v6-nav-avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #22314c, #0f1724);
+      border: 1px solid rgba(255, 255, 255, .2);
+      color: #fff;
+      font-size: 9.5px;
+      font-weight: 750;
+      letter-spacing: -.02em;
+      flex: 0 0 auto;
+    }
+
+    .ux-v6-report-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 17, 44, .4);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+      z-index: 140;
+    }
+
+    .ux-v6-report-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .ux-v6-report-modal {
+      position: fixed;
+      top: 4vh;
+      left: 50%;
+      transform: translate(-50%, -12px);
+      width: min(980px, 94vw);
+      max-height: 92vh;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 34px 90px rgba(7, 17, 44, .3);
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .ux-v6-report-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, 0);
+    }
+
+    .ux-v6-report-head {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--senior-line);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      background: linear-gradient(180deg, #fff, #fbfcfe);
+      border-radius: 20px 20px 0 0;
+    }
+
+    .ux-v6-report-head h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 750;
+      letter-spacing: -.03em;
+      color: #111827;
+    }
+
+    .ux-v6-report-head p {
+      margin: 6px 0 0;
+      color: var(--senior-muted);
+      font-size: 12.5px;
+      max-width: 620px;
+    }
+
+    .ux-v6-report-actions {
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .ux-v6-report-btn {
+      border: 1px solid var(--senior-line);
+      background: #fff;
+      border-radius: 11px;
+      padding: 9px 13px;
+      font-size: 12px;
+      font-weight: 650;
+      color: #24324a;
+    }
+
+    .ux-v6-report-btn.primary {
+      background: #c8102e;
+      border-color: #c8102e;
+      color: #fff;
+    }
+
+    .ux-v6-report-body {
+      padding: 18px 24px 24px;
+      overflow: auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .ux-v6-report-section {
+      border: 1px solid var(--senior-line);
+      border-radius: 16px;
+      padding: 14px 16px;
+    }
+
+    .ux-v6-report-section h3 {
+      margin: 0 0 4px;
+      font-size: 14.5px;
+      font-weight: 720;
+      color: #111827;
+      letter-spacing: -.02em;
+    }
+
+    .ux-v6-report-section p {
+      margin: 0 0 10px;
+      color: var(--senior-muted);
+      font-size: 11.6px;
+    }
+
+    .ux-v6-report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.8px;
+    }
+
+    .ux-v6-report-table th,
+    .ux-v6-report-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid #edf0f5;
+      text-align: left;
+    }
+
+    .ux-v6-report-table th {
+      color: #6c788b;
+      font-size: 9.8px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .ux-v6-report-empty {
+      color: var(--senior-muted);
+      font-size: 12px;
+      padding: 6px 2px;
+    }
+
+    @media print {
+      body.ux-v6-printing-report .sidebar,
+      body.ux-v6-printing-report .topbar,
+      body.ux-v6-printing-report #squadOverview,
+      body.ux-v6-printing-report #projectWorkspaceHero,
+      body.ux-v6-printing-report #metaGrid,
+      body.ux-v6-printing-report #discoveryWorkspace,
+      body.ux-v6-printing-report #deliveryWorkspace,
+      body.ux-v6-printing-report .ux-v6-report-backdrop {
+        display: none !important;
+      }
+      body.ux-v6-printing-report .ux-v6-report-modal {
+        position: static !important;
+        transform: none !important;
+        opacity: 1 !important;
+        box-shadow: none !important;
+        max-height: none !important;
+        width: 100% !important;
+      }
+      body.ux-v6-printing-report .ux-v6-report-actions {
+        display: none !important;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .ux-v6-report-modal { top: 0; width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; }
+      .ux-v6-report-head { border-radius: 0; }
+    }
+
     .ux-v6-panel-head {
       display: flex;
       justify-content: space-between;
@@ -5771,7 +5989,7 @@
         <div class="brand-mark">D</div>
         <div>
           <div class="brand-title">Discovery<br/>PMO Tracker</div>
-          <div class="brand-subtitle">Dashboard executivo por Squad</div>
+          <div class="brand-subtitle">Monitoramento executivo de Discoveries</div>
         </div>
       </div>
 
@@ -5779,8 +5997,13 @@
       <div id="projectList" class="project-list"></div>
 
       <div class="side-actions">
+        <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
+        <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6NextDiscoveriesCard')" title="Ver próximos Discoveries">⌕ Discoveries</button>
+        <button type="button" class="ghost-btn" onclick="openReportsPanel()" title="Abrir relatórios executivos">▤ Relatórios</button>
         <button type="button" class="ghost-btn" onclick="openProjectModal()">+ Iniciativa</button>
         <button type="button" class="ghost-btn" onclick="duplicateCurrentProject()">Duplicar</button>
+        <span class="ux-v6-nav-bell" title="Notificações (em breve)">🔔</span>
+        <span class="ux-v6-nav-avatar" title="Usuário">PMO</span>
       </div>
 
       <div class="quiet-config">
@@ -5936,6 +6159,8 @@
   </div>
 
   <div id="toast" class="toast">Salvo</div>
+
+  <div id="uxV6ReportsRoot"></div>
 
   <script>
     const today = new Date();
@@ -9701,6 +9926,7 @@
     let dashboardSearchTerm = '';
     let squadDrawerOpen = false;
     let squadDrawerSearchTerm = '';
+    let reportsOpen = false;
     let modalState = {};
     let draggedCardId = null;
     let isCardDragging = false;
@@ -10071,6 +10297,7 @@
         if (!safeProject) return;
         renderSidebar();
         renderSquadOverview();
+        renderReportsPanel();
         renderHero(safeProject);
         renderMetrics(safeProject);
         renderKanban(safeProject);
@@ -12050,6 +12277,141 @@ Recomendação PMO: ${d.recommendation}`;
         .slice(0, limit);
     }
 
+    /* === UX Senior: navegação para seções do Painel Executivo e painel de Relatórios === */
+    function focusDashboardSection(sectionId) {
+      viewMode = 'dashboard';
+      squadDrawerOpen = false;
+      persistViewState();
+      render();
+      setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+    }
+
+    function projectHasDuplicateChild(project) {
+      return (project.subInitiatives || []).some(child => child.duplicateNumber === true);
+    }
+
+    function projectCrossSquadChildren(project) {
+      return (project.subInitiatives || []).filter(child => child.squad && project.squad && child.squad !== project.squad);
+    }
+
+    function openReportsPanel() {
+      reportsOpen = true;
+      renderReportsPanel();
+    }
+
+    function closeReportsPanel() {
+      reportsOpen = false;
+      renderReportsPanel();
+    }
+
+    function printReportsPanel() {
+      document.body.classList.add('ux-v6-printing-report');
+      const done = () => {
+        document.body.classList.remove('ux-v6-printing-report');
+        window.removeEventListener('afterprint', done);
+      };
+      window.addEventListener('afterprint', done);
+      setTimeout(() => window.print(), 60);
+    }
+
+    function renderReportsPanel() {
+      const root = document.getElementById('uxV6ReportsRoot');
+      if (!root) return;
+      if (!reportsOpen) {
+        root.innerHTML = '';
+        return;
+      }
+      data = enhanceSquadData(data);
+      const squads = sortedSquadsList();
+      const allProjects = data.projects || [];
+      const unassignedProjects = allProjects.filter(p => normalizeSearchText(p.squad || '') === normalizeSearchText('A validar') || !p.squadId);
+      const duplicateChildProjects = allProjects.filter(projectHasDuplicateChild);
+      const crossSquadProjects = allProjects.filter(p => projectCrossSquadChildren(p).length > 0);
+      const alertProjects = allProjects.filter(p => projectAlertCount(p) > 0);
+      const rankedSquads = topSquadsByHours(squads.length);
+      const maxHours = Math.max(...rankedSquads.map(item => item.hours), 1);
+
+      const squadReportRows = squads.map(squad => {
+        const health = squadHealthInfo(squad);
+        return `<tr><td>${escapeHtml(squad.name)}</td><td>${squadProjects(squad.id).length}</td><td>${childCountForSquad(squad.id)}</td><td>${formatHours(hoursForSquad(squad.id))}</td><td>${health.label}</td></tr>`;
+      }).join('') || `<tr><td colspan="5" class="ux-v6-report-empty">Nenhuma squad cadastrada.</td></tr>`;
+
+      const initiativeReportRows = allProjects.map(project => {
+        const squad = squadForProject(project);
+        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${escapeHtml(project.status || 'Sem status')}</td><td>${formatHours(project.hours2026)}</td><td>${calculateProgress(project)}%</td></tr>`;
+      }).join('') || `<tr><td colspan="6" class="ux-v6-report-empty">Nenhuma iniciativa cadastrada.</td></tr>`;
+
+      const alertsReportRows = alertProjects.map(project => {
+        const squad = squadForProject(project);
+        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${projectAlertCount(project)}</td></tr>`;
+      }).join('') || `<tr><td colspan="4" class="ux-v6-report-empty">Nenhuma iniciativa com alertas PMO/RTE em aberto.</td></tr>`;
+
+      const rankingReportRows = rankedSquads.map((item, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(item.squad.name)}</td><td>${formatHours(item.hours)}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Sem horas cadastradas.</td></tr>`;
+
+      const unassignedRows = unassignedProjects.map(project => `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.theme || project.business || 'Não informado')}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Todas as iniciativas têm Squad definida.</td></tr>`;
+
+      const duplicateRows = duplicateChildProjects.map(project => {
+        const dupNames = (project.subInitiatives || []).filter(c => c.duplicateNumber).map(c => escapeHtml(c.name)).join('; ');
+        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${dupNames}</td></tr>`;
+      }).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Nenhuma iniciativa com número de filha duplicado.</td></tr>`;
+
+      const crossSquadRows = crossSquadProjects.map(project => {
+        const crossNames = projectCrossSquadChildren(project).map(c => `${escapeHtml(c.name)} (${escapeHtml(c.squad)})`).join('; ');
+        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.squad || 'A validar')}</td><td>${crossNames}</td></tr>`;
+      }).join('') || `<tr><td colspan="4" class="ux-v6-report-empty">Nenhuma iniciativa com filha cross-squad.</td></tr>`;
+
+      root.innerHTML = `<div id="uxV6ReportsBackdrop" class="ux-v6-report-backdrop active" onclick="closeReportsPanel()"></div>
+        <section class="ux-v6-report-modal active" role="dialog" aria-label="Relatórios executivos">
+          <div class="ux-v6-report-head">
+            <div>
+              <h2>Relatórios executivos</h2>
+              <p>Leitura gerencial da Onda 1: squads, iniciativas, alertas e rankings, prontos para exportar em PDF e levar ao comitê.</p>
+            </div>
+            <div class="ux-v6-report-actions">
+              <button type="button" class="ux-v6-report-btn primary" onclick="printReportsPanel()">⭳ Exportar PDF</button>
+              <button type="button" class="ux-v6-report-btn" onclick="closeReportsPanel()">Fechar</button>
+            </div>
+          </div>
+          <div class="ux-v6-report-body">
+            <div class="ux-v6-report-section">
+              <h3>Relatório por Squad</h3>
+              <p>${squads.length} squad(s) · ${allProjects.length} iniciativa(s) principais vinculadas.</p>
+              <table class="ux-v6-report-table"><thead><tr><th>Squad</th><th>Iniciativas</th><th>Filhas</th><th>Horas 2026</th><th>Saúde</th></tr></thead><tbody>${squadReportRows}</tbody></table>
+            </div>
+            <div class="ux-v6-report-section">
+              <h3>Relatório por iniciativa</h3>
+              <p>Todas as iniciativas principais da base importada.</p>
+              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Horas 2026</th><th>Maturidade</th></tr></thead><tbody>${initiativeReportRows}</tbody></table>
+            </div>
+            <div class="ux-v6-report-section">
+              <h3>Relatório de alertas da base</h3>
+              <p>${alertProjects.length} iniciativa(s) com riscos, bloqueios ou PDCA em aberto.</p>
+              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Alertas</th></tr></thead><tbody>${alertsReportRows}</tbody></table>
+            </div>
+            <div class="ux-v6-report-section">
+              <h3>Ranking por horas 2026</h3>
+              <p>Squads ordenadas pelo consumo total de horas planejadas.</p>
+              <table class="ux-v6-report-table"><thead><tr><th>#</th><th>Squad</th><th>Horas 2026</th></tr></thead><tbody>${rankingReportRows}</tbody></table>
+            </div>
+            <div class="ux-v6-report-section">
+              <h3>Iniciativas sem Squad</h3>
+              <p>${unassignedProjects.length} iniciativa(s) aguardando definição de Squad.</p>
+              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Tema</th></tr></thead><tbody>${unassignedRows}</tbody></table>
+            </div>
+            <div class="ux-v6-report-section">
+              <h3>Iniciativas com filha duplicada</h3>
+              <p>${duplicateChildProjects.length} iniciativa(s) com número de filha repetido na planilha importada.</p>
+              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Filha(s) duplicada(s)</th></tr></thead><tbody>${duplicateRows}</tbody></table>
+            </div>
+            <div class="ux-v6-report-section">
+              <h3>Iniciativas cross-squad</h3>
+              <p>${crossSquadProjects.length} iniciativa(s) com filha vinculada a Squad diferente da mãe.</p>
+              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad da mãe</th><th>Filha(s) cross-squad</th></tr></thead><tbody>${crossSquadRows}</tbody></table>
+            </div>
+          </div>
+        </section>`;
+    }
+
     /* === UX Senior: busca do Painel Executivo da Onda (iniciativa/squad/PO/Tech Lead/líder/responsável/tema) === */
     function normalizeSearchText(value) {
       return String(value || '')
@@ -12210,8 +12572,8 @@ Recomendação PMO: ${d.recommendation}`;
         dashBtn.type = 'button';
         dashBtn.id = 'dashboardViewBtn';
         dashBtn.className = 'ghost-btn';
-        dashBtn.textContent = 'Dashboard';
-        dashBtn.title = 'Visualizar dashboard executivo de Squads';
+        dashBtn.textContent = 'Visão Executiva';
+        dashBtn.title = 'Visualizar a Visão Executiva da Onda 1';
         dashBtn.onclick = () => setDashboardMode();
         actions.insertBefore(dashBtn, actions.firstChild);
       }
@@ -12223,7 +12585,8 @@ Recomendação PMO: ${d.recommendation}`;
         btn.textContent = 'Squads';
         btn.title = 'Cadastrar e gerenciar Squads';
         btn.onclick = () => openSquadModal();
-        if (newBtn?.nextSibling) actions.insertBefore(btn, newBtn.nextSibling);
+        const dashBtnEl = document.getElementById('dashboardViewBtn');
+        if (dashBtnEl?.nextSibling) actions.insertBefore(btn, dashBtnEl.nextSibling);
         else actions.appendChild(btn);
       }
       const dup = Array.from(actions.querySelectorAll('.ghost-btn')).find(btn => btn.textContent.trim() === 'Duplicar');
@@ -12521,6 +12884,7 @@ Recomendação PMO: ${d.recommendation}`;
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && squadDrawerOpen) closeSquadDrawer();
+      if (e.key === 'Escape' && reportsOpen) closeReportsPanel();
     });
 
 
@@ -12712,7 +13076,7 @@ Recomendação PMO: ${d.recommendation}`;
         </section>
         <section class="ux-v6-main-grid" aria-label="Dashboard clicável por Squad">
           <div class="ux-v6-content-col">
-            <section class="ux-v6-left">
+            <section class="ux-v6-left" id="uxV6SquadsSection">
               <div class="ux-v6-section-head">
                 <div><strong>Squads</strong><span>Cards clicáveis com volume, horas, próximos Discoveries e pontos de atenção. ${pendingDataCount} iniciativa(s) com dados pendentes.</span></div>
                 <span class="ux-v6-panel-pill">${activeDiscoveries} em acompanhamento</span>
@@ -12742,7 +13106,7 @@ Recomendação PMO: ${d.recommendation}`;
               <div class="ux-v6-side-title"><strong>Atenções da base</strong><span class="ux-v6-side-link">Ver todas</span></div>
               <div class="ux-v6-alert-list">${alertsHtml}</div>
             </section>
-            <section class="ux-v6-side-card">
+            <section class="ux-v6-side-card" id="uxV6NextDiscoveriesCard">
               <div class="ux-v6-side-title"><strong>Próximos Discoveries</strong><span class="ux-v6-side-link">Ver calendário</span></div>
               <div class="ux-v6-date-list">${nextDiscoveriesHtml}</div>
             </section>
