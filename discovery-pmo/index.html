@@ -6525,17 +6525,7 @@
     const defaultData = {
       "activeProjectId": "ini-113286",
       "squads": [
-            {
-                  "id": "squad-a-validar",
-                  "name": "A validar",
-                  "code": "AVALID",
-                  "business": "Serviços Operacionais Banco",
-                  "rteOwner": "",
-                  "owner": "",
-                  "totalHours2026": 3978,
-                  "defaultLeader": "",
-                  "defaultPo": ""
-            },
+
             {
                   "id": "squad-asd",
                   "name": "Ainda Sem Definição",
@@ -7102,8 +7092,8 @@
                   "name": "Compensação de Cheques",
                   "business": "Serviços Operacionais Banco",
                   "theme": "Serviços Operacionais Banco",
-                  "squad": "A validar",
-                  "squadId": "squad-a-validar",
+                  "squad": "Ainda Sem Definição",
+                  "squadId": "squad-asd",
                   "owner": "A definir",
                   "rteOwner": "A definir",
                   "pmoOwner": "A definir",
@@ -7862,8 +7852,8 @@
                   "name": "Consignado, Conciliação e Portabilidade",
                   "business": "Gestão de Consignado",
                   "theme": "Gestão de Consignado",
-                  "squad": "A validar",
-                  "squadId": "squad-a-validar",
+                  "squad": "Ainda Sem Definição",
+                  "squadId": "squad-asd",
                   "owner": "A definir",
                   "rteOwner": "A definir",
                   "pmoOwner": "A definir",
@@ -7901,8 +7891,8 @@
                               "id": "child-113315-113320-18",
                               "initiativeNumber": "113320",
                               "name": "Conciliação e Portabilidade - Produto",
-                              "squad": "A validar",
-                              "sourceSquad": "A validar",
+                              "squad": "Ainda Sem Definição",
+                              "sourceSquad": "ASD",
                               "theme": "Gestão de Consignado",
                               "frontLeader": "Davi Lopes",
                               "rawName": "└ Conciliação e Portabilidade - Produto",
@@ -9000,10 +8990,25 @@
           const existing = cloned.squads.find(s => s.id === defSq.id);
           if (existing) { existing.name = defSq.name; existing.code = defSq.code; }
         });
-        // Remove squads sem nome ou com nome-padrão inválido
+        // Remove squad-a-validar legado e squads com nome inválido
         cloned.squads = cloned.squads.filter(s => {
           const n = String(s.name || '').trim();
-          return n && n !== 'Squad sem nome' && n !== 'A definir' || s.id === 'squad-a-validar';
+          return s.id !== 'squad-a-validar' && n && n !== 'Squad sem nome' && n !== 'A definir' && n !== 'A validar';
+        });
+      }
+      // Migração: projetos com squad-a-validar ou "A validar" → squad-asd (Ainda Sem Definição)
+      if (Array.isArray(cloned.projects)) {
+        cloned.projects.forEach(p => {
+          if (p.squadId === 'squad-a-validar' || String(p.squad || '').trim().toLowerCase() === 'a validar') {
+            p.squadId = 'squad-asd';
+            p.squad = 'Ainda Sem Definição';
+          }
+          (p.subInitiatives || []).forEach(child => {
+            if (String(child.squad || '').trim().toLowerCase() === 'a validar') {
+              child.squad = 'Ainda Sem Definição';
+              child.sourceSquad = 'ASD';
+            }
+          });
         });
       }
       // Segurança: evita abrir tela vazia caso o navegador tenha salvado uma carga incompleta de versão anterior.
@@ -11266,7 +11271,7 @@ Recomendação PMO: ${d.recommendation}`;
 
     /* === UX Senior: agregações de leitura da Visão Executiva da Onda 1 (aside, saúde e rankings) === */
     function squadHealthInfo(squad) {
-      const isUnassigned = normalizeSearchText(squad.name || '') === normalizeSearchText('A validar');
+      const isUnassigned = squad.id === 'squad-asd' || normalizeSearchText(squad.name || '') === normalizeSearchText('Ainda Sem Definição');
       const hasDuplicateChild = squadProjects(squad.id).some(projectHasDuplicateChild);
       if (isUnassigned || hasDuplicateChild) return { cls: 'crit', label: 'Crítico' };
       const hasCrossSquad = squadProjects(squad.id).some(p => projectCrossSquadChildren(p).length > 0);
@@ -11280,7 +11285,7 @@ Recomendação PMO: ${d.recommendation}`;
     const SQ_HEALTH_ACCENT_SOLID = { good: '#2e9f5f', warn: '#f2a900', crit: '#c8102e' };
 
     function unassignedProjectsCount() {
-      return (data.projects || []).filter(p => normalizeSearchText(p.squad || '') === normalizeSearchText('A validar') || !p.squadId).length;
+      return (data.projects || []).filter(p => p.squadId === 'squad-asd' || normalizeSearchText(p.squad || '') === normalizeSearchText('Ainda Sem Definição') || !p.squadId).length;
     }
 
     function buildDonutGradient(counts, total) {
@@ -11396,22 +11401,34 @@ Recomendação PMO: ${d.recommendation}`;
       const dayHeads = DAYS_PT.map(d => `<div class="cal-day-head">${d}</div>`).join('');
 
       // Month initiatives table (like the spreadsheet view)
+      // Separar ASD (sem squad) das demais para destaque
+      const asdProjects = monthProjects.filter(p => { const sq = squadForProject(p); return sq?.id === 'squad-asd'; });
+      const asdBanner = asdProjects.length
+        ? `<div style="background:#fff8e1;border:1.5px solid #f4b740;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">⚠️</span>
+            <div>
+              <div style="font-weight:700;font-size:13px;color:#7a5000">${asdProjects.length} iniciativa(s) com Discovery em ${MONTHS_PT[month]} ainda <strong>Sem Squad Definida (ASD)</strong></div>
+              <div style="font-size:11px;color:#9a6700;margin-top:2px">${asdProjects.map(p=>'#'+escapeHtml(p.initiativeNumber||'')+' '+escapeHtml(p.name)).join(' · ')}</div>
+            </div>
+           </div>`
+        : '';
       const monthTableRows = monthProjects.map(p => {
         const sq = squadForProject(p);
         const isAsd = sq?.id === 'squad-asd';
         const sqLabel = isAsd
-          ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">ASD</span>`
-          : escapeHtml(sq?.name || p.squad || 'A validar');
+          ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700" title="Ainda Sem Definição">ASD</span>`
+          : `<span style="background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">${escapeHtml(sq?.name || p.squad || '—')}</span>`;
         const tipo = p.initiativeType === 'MÃE'
           ? `<span style="background:#ffe8b0;color:#7a5000;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">MÃE</span>`
           : '—';
         const dObj = new Date(p.discoveryDate);
         const isPast = dObj < today;
-        return `<tr style="${isPast?'opacity:.7':''}">
+        const rowBg = isAsd ? 'background:#fffbf0' : (isPast ? 'opacity:.7' : '');
+        return `<tr style="${rowBg}">
           <td style="font-weight:700;color:#bf1830;font-size:11px;white-space:nowrap">${escapeHtml(String(p.initiativeNumber||''))}</td>
           <td>${tipo}</td>
           <td style="font-weight:600;color:#1c2430">${escapeHtml(p.name)}</td>
-          <td style="font-size:11px;color:#687587">${escapeHtml(p.theme||p.business||'—')}</td>
+          <td style="font-size:11px;color:#687587;max-width:140px">${escapeHtml(p.theme||p.business||'—')}</td>
           <td style="font-size:11px">${escapeHtml(p.frontLeader||'—')}</td>
           <td style="font-size:11px">${escapeHtml(p.initiativeOwner||'—')}</td>
           <td style="font-size:11px">${escapeHtml(p.po||'—')}</td>
@@ -11466,6 +11483,7 @@ Recomendação PMO: ${d.recommendation}`;
               <div style="font-weight:800;font-size:14px;color:#1c2430;margin-bottom:10px">
                 Iniciativas com Discovery em ${MONTHS_PT[month]} ${year}
               </div>
+              ${asdBanner}
               <table style="width:100%;border-collapse:collapse;font-size:12px">
                 <thead>
                   <tr style="background:#1c2430;color:#fff">
@@ -11713,7 +11731,7 @@ Recomendação PMO: ${d.recommendation}`;
       data = enhanceSquadData(data);
       const squads = sortedSquadsList();
       const allProjects = data.projects || [];
-      const unassignedProjects = allProjects.filter(p => normalizeSearchText(p.squad || '') === normalizeSearchText('A validar') || !p.squadId);
+      const unassignedProjects = allProjects.filter(p => p.squadId === 'squad-asd' || normalizeSearchText(p.squad || '') === normalizeSearchText('Ainda Sem Definição') || !p.squadId);
       const duplicateChildProjects = allProjects.filter(projectHasDuplicateChild);
       const crossSquadProjects = allProjects.filter(p => projectCrossSquadChildren(p).length > 0);
       const alertProjects = allProjects.filter(p => projectAlertCount(p) > 0);
@@ -12419,7 +12437,7 @@ Recomendação PMO: ${d.recommendation}`;
 
       const alertRows = [
         ['Iniciativas com dados pendentes', pendingDataCount, pendingDataCount > 0 ? 'amber' : ''],
-        ['Iniciativas a validar (sem Squad definida)', unassignedCount, unassignedCount > 0 ? 'amber' : ''],
+        ['Iniciativas ASD - Ainda Sem Definição de Squad', unassignedCount, unassignedCount > 0 ? 'amber' : ''],
         ['Squads com ponto de atenção ou crítico', healthCounts.warn + healthCounts.crit, (healthCounts.warn + healthCounts.crit) > 0 ? 'amber' : ''],
         ['Iniciativas com alertas PMO/RTE', allProjects.filter(p => projectAlertCount(p) > 0).length, '']
       ];
@@ -12462,7 +12480,7 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="ux-v6-kpi"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">👥</div><div><span>Total de squads</span><strong>${squads.length}</strong><span class="ux-v6-kpi-note">ativas</span></div></div></div>
           <div class="ux-v6-kpi"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">▧</div><div><span>Total de iniciativas</span><strong>${totalProjects + totalChildren}</strong><span class="ux-v6-kpi-note">${totalProjects} principais | ${totalChildren} filhas</span></div></div></div>
           <div class="ux-v6-kpi"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">◷</div><div><span>Total de horas 2026</span><strong>${formatHours(totalHours)}</strong><span class="ux-v6-kpi-note">planejadas</span></div></div></div>
-          <div class="ux-v6-kpi warn"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon amber">▣</div><div><span>Iniciativas a validar</span><strong>${unassignedCount}</strong><span class="ux-v6-kpi-note">${(totalProjects ? (unassignedCount / totalProjects) * 100 : 0).toFixed(1).replace('.', ',')}% do total</span></div></div></div>
+          <div class="ux-v6-kpi warn"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon amber">▣</div><div><span>ASD / Sem Squad</span><strong>${unassignedCount}</strong><span class="ux-v6-kpi-note">${(totalProjects ? (unassignedCount / totalProjects) * 100 : 0).toFixed(1).replace('.', ',')}% do total</span></div></div></div>
           <div class="ux-v6-kpi"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">⚠</div><div><span>Alertas de qualidade</span><strong>${totalAlerts}</strong><span class="ux-v6-kpi-note">dados a revisar</span></div></div></div>
         </section>
         <section class="ux-v6-main-grid" aria-label="Dashboard clicável por Squad">
