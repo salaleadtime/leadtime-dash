@@ -6113,6 +6113,99 @@
       .ux-v6-drawer { width: 100vw; }
     }
 
+    /* === Modal Calendário de Discoveries === */
+    .cal-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(10,14,22,.62); backdrop-filter: blur(3px);
+      z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .cal-modal {
+      background: #fff; border-radius: 20px; box-shadow: 0 32px 80px rgba(0,0,0,.22);
+      width: min(820px, 100%); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;
+    }
+    .cal-modal-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 28px 16px; border-bottom: 1px solid #e5e9f2;
+    }
+    .cal-modal-head h2 { margin: 0; font-size: 18px; font-weight: 800; color: #1c2430; }
+    .cal-modal-head p { margin: 4px 0 0; font-size: 13px; color: #687587; }
+    .cal-close { background: none; border: none; font-size: 22px; color: #687587; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+    .cal-close:hover { background: #f5f7fb; }
+    .cal-nav { display: flex; align-items: center; gap: 12px; }
+    .cal-nav-btn { background: #f5f7fb; border: none; border-radius: 10px; width: 34px; height: 34px; font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+    .cal-nav-btn:hover { background: #e5e9f2; }
+    .cal-month-label { font-weight: 700; font-size: 15px; color: #1c2430; min-width: 140px; text-align: center; }
+    .cal-body { padding: 20px 28px 28px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-day-head { text-align: center; font-size: 11px; font-weight: 700; color: #687587; padding: 6px 2px; text-transform: uppercase; letter-spacing: .04em; }
+    .cal-day {
+      min-height: 68px; border-radius: 10px; padding: 6px; font-size: 12px;
+      background: #f9fafb; border: 1px solid #e5e9f2; position: relative;
+    }
+    .cal-day.other-month { opacity: .35; }
+    .cal-day.today { border-color: #bf1830; background: #fff0f3; }
+    .cal-day.has-disc { background: #fff8e1; border-color: #f4b740; }
+    .cal-day-num { font-weight: 700; font-size: 13px; color: #1c2430; display: block; margin-bottom: 4px; }
+    .cal-day.today .cal-day-num { color: #bf1830; }
+    .cal-disc-chip {
+      display: block; background: #bf1830; color: #fff; border-radius: 5px; padding: 2px 5px;
+      font-size: 10px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      cursor: default;
+    }
+    .cal-disc-chip[title]:hover::after {
+      content: attr(title); position: absolute; left: 0; top: 100%; background: #1c2430; color: #fff;
+      padding: 4px 8px; border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 1; max-width: 240px;
+      white-space: normal; line-height: 1.4;
+    }
+    .cal-legend { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #687587; }
+    .cal-legend-item { display: flex; align-items: center; gap: 6px; }
+    .cal-legend-dot { width: 12px; height: 12px; border-radius: 4px; }
+
+    /* === Modal Visão PMO (Tabela) === */
+    .pmo-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(10,14,22,.62); backdrop-filter: blur(3px);
+      z-index: 9000; display: flex; align-items: flex-start; justify-content: center; padding: 20px;
+      overflow-y: auto;
+    }
+    .pmo-modal {
+      background: #fff; border-radius: 20px; box-shadow: 0 32px 80px rgba(0,0,0,.22);
+      width: min(1200px, 100%); margin: auto; display: flex; flex-direction: column;
+    }
+    .pmo-modal-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 22px 28px 16px; border-bottom: 2px solid #bf1830; position: sticky; top: 0;
+      background: #fff; border-radius: 20px 20px 0 0; z-index: 1;
+    }
+    .pmo-modal-head h2 { margin: 0; font-size: 17px; font-weight: 800; color: #1c2430; }
+    .pmo-modal-head p { margin: 4px 0 0; font-size: 12px; color: #687587; }
+    .pmo-tbl-wrap { padding: 0 0 28px; overflow-x: auto; }
+    .pmo-tbl {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .pmo-tbl th {
+      background: #1c2430; color: #fff; text-align: left; padding: 10px 12px; font-weight: 700;
+      font-size: 11px; white-space: nowrap; letter-spacing: .03em;
+    }
+    .pmo-tbl td { padding: 8px 12px; border-bottom: 1px solid #e5e9f2; vertical-align: middle; }
+    .pmo-tbl tr:hover td { background: #f5f7fb; }
+    .pmo-section-row td {
+      background: #e8f5e9; font-weight: 800; color: #1c2430; font-size: 13px;
+      padding: 10px 12px; border-top: 2px solid #1f9d75;
+    }
+    .pmo-mae-row td { background: #fff8e1; }
+    .pmo-child-row td { background: #f9fafb; color: #687587; }
+    .pmo-badge { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+    .pmo-badge.mae { background: #ffe8b0; color: #7a5000; }
+    .pmo-badge.filha { background: #e8f0ff; color: #1a3a8a; }
+    .pmo-badge.asd { background: #fff0f0; color: #c8102e; }
+    .pmo-num { color: #bf1830; font-weight: 700; font-size: 11px; }
+    .pmo-date { font-size: 11px; white-space: nowrap; }
+    .pmo-hours { font-weight: 700; color: #1c2430; }
+    .pmo-squad-chip {
+      display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700;
+      background: #e0e7ff; color: #3730a3; white-space: nowrap;
+    }
+    .pmo-squad-chip.asd { background: #fee2e2; color: #991b1b; }
+
 </style>
 </head>
 <body>
@@ -6131,7 +6224,8 @@
 
       <div class="side-actions">
         <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
-        <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6NextDiscoveriesCard')" title="Ver próximos Discoveries">⌕ Discoveries</button>
+        <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
+        <button type="button" class="ghost-btn" onclick="openPmoTable()" title="Visão tabela PMO (planilha)">⊞ Visão PMO</button>
         <button type="button" class="ghost-btn" onclick="openReportsPanel()" title="Abrir relatórios executivos">▤ Relatórios</button>
         <button type="button" class="ghost-btn" onclick="openProjectModal()">+ Iniciativa</button>
         <button type="button" class="ghost-btn" onclick="duplicateCurrentProject()">Duplicar</button>
@@ -6385,7 +6479,7 @@
             },
             {
                   "id": "squad-asd",
-                  "name": "ASD",
+                  "name": "Ainda Sem Definição",
                   "code": "ASD",
                   "business": "Automação RPA",
                   "rteOwner": "",
@@ -8774,6 +8868,10 @@
     let viewMode = 'dashboard';
     let dashboardSquadId = '';
     let dashboardSearchTerm = '';
+    let calendarModalOpen = false;
+    let calendarYear = new Date().getFullYear();
+    let calendarMonth = new Date().getMonth();
+    let pmoTableOpen = false;
     let squadDrawerOpen = false;
     let squadDrawerSearchTerm = '';
     let reportsOpen = false;
@@ -11156,6 +11254,202 @@ Recomendação PMO: ${d.recommendation}`;
       setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
     }
 
+    /* === Calendário de Discoveries === */
+    function openCalendarModal() {
+      calendarModalOpen = true;
+      const today = new Date();
+      calendarYear = today.getFullYear();
+      calendarMonth = today.getMonth();
+      _renderCalendarModal();
+    }
+    function closeCalendarModal() {
+      calendarModalOpen = false;
+      const el = document.getElementById('calendarModalRoot');
+      if (el) el.remove();
+    }
+    function calNavPrev() {
+      if (calendarMonth === 0) { calendarMonth = 11; calendarYear--; } else calendarMonth--;
+      _renderCalendarModal();
+    }
+    function calNavNext() {
+      if (calendarMonth === 11) { calendarMonth = 0; calendarYear++; } else calendarMonth++;
+      _renderCalendarModal();
+    }
+    function _renderCalendarModal() {
+      let el = document.getElementById('calendarModalRoot');
+      if (!el) { el = document.createElement('div'); el.id = 'calendarModalRoot'; document.body.appendChild(el); }
+      const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const DAYS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+      const year = calendarYear, month = calendarMonth;
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
+      const today = new Date();
+      const allProjects = data.projects || [];
+      // Build discovery map: day -> [{name, squad}]
+      const discMap = {};
+      allProjects.forEach(p => {
+        if (!p.discoveryDate) return;
+        const d = new Date(p.discoveryDate);
+        if (d.getFullYear() === year && d.getMonth() === month) {
+          const key = d.getDate();
+          if (!discMap[key]) discMap[key] = [];
+          const sq = squadForProject(p);
+          discMap[key].push({ name: p.name, squad: sq?.name || p.squad || '' });
+        }
+      });
+      // All upcoming discoveries (list below calendar)
+      const upcoming = [...allProjects].filter(p => p.discoveryDate).sort((a,b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)));
+      const upcomingHtml = upcoming.map(p => {
+        const sq = squadForProject(p);
+        const dateStr = formatBR(p.discoveryDate);
+        const d = new Date(p.discoveryDate);
+        const isPast = d < today;
+        return `<div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #e5e9f2">
+          <div style="min-width:62px;font-weight:700;font-size:12px;color:${isPast?'#999':'#bf1830'}">${escapeHtml(dateStr.slice(0,5))}</div>
+          <div>
+            <div style="font-weight:600;font-size:13px;color:#1c2430">${escapeHtml(p.name)}</div>
+            <div style="font-size:11px;color:#687587">${escapeHtml(sq?.name || p.squad || 'A validar')} · ${escapeHtml(p.initiativeNumber||'')}</div>
+          </div>
+          ${isPast ? '<span style="margin-left:auto;font-size:10px;color:#999;white-space:nowrap">✓ realizado</span>' : ''}
+        </div>`;
+      }).join('') || '<div style="text-align:center;color:#687587;padding:20px">Nenhuma data de discovery cadastrada.</div>';
+      // Build calendar grid
+      let cells = '';
+      // prev month days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        cells += `<div class="cal-day other-month"><span class="cal-day-num">${daysInPrevMonth - i}</span></div>`;
+      }
+      // current month
+      for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
+        const discs = discMap[d] || [];
+        const hasDisc = discs.length > 0;
+        const chipsHtml = discs.map(item => `<span class="cal-disc-chip" title="${escapeAttr(item.name + (item.squad?' · '+item.squad:''))}">${escapeHtml(item.squad||item.name.slice(0,10))}</span>`).join('');
+        cells += `<div class="cal-day${isToday?' today':''}${hasDisc?' has-disc':''}"><span class="cal-day-num">${d}</span>${chipsHtml}</div>`;
+      }
+      // next month fill
+      const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+      for (let d = 1; d <= totalCells - firstDay - daysInMonth; d++) {
+        cells += `<div class="cal-day other-month"><span class="cal-day-num">${d}</span></div>`;
+      }
+      const dayHeads = DAYS_PT.map(d => `<div class="cal-day-head">${d}</div>`).join('');
+      el.innerHTML = `<div class="cal-modal-backdrop" onclick="if(event.target===this)closeCalendarModal()">
+        <div class="cal-modal">
+          <div class="cal-modal-head">
+            <div>
+              <h2>📅 Calendário de Discoveries</h2>
+              <p>Datas de Discovery cadastradas para a Onda 1 · 2026</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px">
+              <div class="cal-nav">
+                <button class="cal-nav-btn" onclick="calNavPrev()" title="Mês anterior">‹</button>
+                <span class="cal-month-label">${MONTHS_PT[month]} ${year}</span>
+                <button class="cal-nav-btn" onclick="calNavNext()" title="Próximo mês">›</button>
+              </div>
+              <button class="cal-close" onclick="closeCalendarModal()" title="Fechar">×</button>
+            </div>
+          </div>
+          <div class="cal-body">
+            <div class="cal-grid">${dayHeads}${cells}</div>
+            <div class="cal-legend">
+              <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f4b740;border:1px solid #f4b740"></div><span>Com Discovery</span></div>
+              <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fff0f3;border:1.5px solid #bf1830"></div><span>Hoje</span></div>
+            </div>
+            <div style="margin-top:24px;border-top:2px solid #e5e9f2;padding-top:16px">
+              <div style="font-weight:800;font-size:14px;color:#1c2430;margin-bottom:12px">📋 Todas as Datas de Discovery</div>
+              ${upcomingHtml}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    /* === Visão PMO (Tabela Planilha) === */
+    function openPmoTable() {
+      pmoTableOpen = true;
+      _renderPmoTable();
+    }
+    function closePmoTable() {
+      pmoTableOpen = false;
+      const el = document.getElementById('pmoTableRoot');
+      if (el) el.remove();
+    }
+    function _renderPmoTable() {
+      let el = document.getElementById('pmoTableRoot');
+      if (!el) { el = document.createElement('div'); el.id = 'pmoTableRoot'; document.body.appendChild(el); }
+      const allProjects = data.projects || [];
+      // Group: first list MÃE+Única, then insert children after their parent
+      const rows = [];
+      const added = new Set();
+      allProjects.forEach(p => {
+        if (added.has(p.id)) return;
+        rows.push({ type: 'main', project: p });
+        added.add(p.id);
+        (p.subInitiatives || []).forEach(child => {
+          rows.push({ type: 'child', project: child, parent: p });
+        });
+      });
+      const squadDisplayName = (sq, project) => {
+        if (!sq) return escapeHtml(project.squad || 'A validar');
+        if (sq.id === 'squad-asd') return `<span class="pmo-squad-chip asd" title="Ainda Sem Definição">ASD</span>`;
+        return `<span class="pmo-squad-chip">${escapeHtml(sq.name)}</span>`;
+      };
+      const rowsHtml = rows.map(({ type, project, parent }) => {
+        if (type === 'child') {
+          return `<tr class="pmo-child-row">
+            <td class="pmo-num">${escapeHtml(String(parent?.initiativeNumber||''))}</td>
+            <td><span class="pmo-badge filha">└ Filha</span></td>
+            <td class="pmo-num">${escapeHtml(String(project.initiativeNumber||''))}</td>
+            <td style="padding-left:20px">${escapeHtml(project.name||'')}</td>
+            <td colspan="7" style="color:#999;font-size:11px">${escapeHtml(project.theme||'')} · Líder: ${escapeHtml(project.frontLeader||'—')}</td>
+          </tr>`;
+        }
+        const sq = squadForProject(project);
+        const tipo = project.initiativeType === 'MÃE' ? `<span class="pmo-badge mae">MÃE</span>` : '—';
+        const asdTechLead = String(project.techLead||'').toUpperCase() === 'ASD';
+        return `<tr class="${project.initiativeType==='MÃE'?'pmo-mae-row':''}">
+          <td class="pmo-num">${escapeHtml(String(project.initiativeNumber||''))}</td>
+          <td>${tipo}</td>
+          <td>—</td>
+          <td><strong>${escapeHtml(project.name||'')}</strong></td>
+          <td>${escapeHtml(project.theme||'')}</td>
+          <td>${escapeHtml(project.frontLeader||'—')}</td>
+          <td>${escapeHtml(project.initiativeOwner||'—')}</td>
+          <td>${escapeHtml(project.po||'—')}</td>
+          <td>${escapeHtml(project.focalPoint||'—')}</td>
+          <td>${squadDisplayName(sq, project)}</td>
+          <td>${asdTechLead ? '<span class="pmo-badge asd" title="Ainda Sem Definição">ASD</span>' : escapeHtml(project.techLead||'—')}</td>
+          <td class="pmo-date">${escapeHtml(formatBR(project.discoveryDate)||'—')}</td>
+          <td class="pmo-date">${escapeHtml(formatBR(project.startDev)||'—')}</td>
+          <td class="pmo-date">${escapeHtml(formatBR(project.endDev)||'—')}</td>
+          <td class="pmo-hours">${formatHours(project.hours2026)}</td>
+        </tr>`;
+      }).join('');
+      el.innerHTML = `<div class="pmo-modal-backdrop" onclick="if(event.target===this)closePmoTable()">
+        <div class="pmo-modal">
+          <div class="pmo-modal-head">
+            <div>
+              <h2>⊞ Visão PMO · BEONC I Planejamento Ops for Ops — Onda 1 2026</h2>
+              <p>${allProjects.length} iniciativas principais · ASD = Ainda Sem Definição · Dados importados da planilha</p>
+            </div>
+            <button class="cal-close" onclick="closePmoTable()" title="Fechar" style="margin-left:16px">×</button>
+          </div>
+          <div class="pmo-tbl-wrap">
+            <table class="pmo-tbl">
+              <thead><tr>
+                <th># Mãe</th><th>Tipo</th><th># Filha</th><th>Nome da Iniciativa</th>
+                <th>Tema</th><th>Líder Da Frente</th><th>Dono da Iniciativa</th>
+                <th>PO</th><th>Ponto Focal</th><th>Squad</th><th>Líder Técnico</th>
+                <th>Discovery</th><th>Início Dev</th><th>Término Dev</th><th>Horas 2026</th>
+              </tr></thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+    }
+
     function projectHasDuplicateChild(project) {
       return (project.subInitiatives || []).some(child => child.duplicateNumber === true);
     }
@@ -11984,7 +12278,7 @@ Recomendação PMO: ${d.recommendation}`;
               <div class="ux-v6-alert-list">${alertsHtml}</div>
             </section>
             <section class="ux-v6-side-card" id="uxV6NextDiscoveriesCard">
-              <div class="ux-v6-side-title"><strong>Próximos Discoveries</strong><span class="ux-v6-side-link">Ver calendário</span></div>
+              <div class="ux-v6-side-title"><strong>Próximos Discoveries</strong><span class="ux-v6-side-link" onclick="openCalendarModal()" style="cursor:pointer" title="Abrir calendário de Discoveries">📅 Ver calendário</span></div>
               <div class="ux-v6-date-list">${nextDiscoveriesHtml}</div>
             </section>
             <section class="ux-v6-side-card">
