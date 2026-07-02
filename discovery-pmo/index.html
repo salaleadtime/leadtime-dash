@@ -4853,9 +4853,9 @@
 
     .ux-v6-kpis {
       display: grid;
-      grid-template-columns: repeat(4, minmax(106px, 1fr));
+      grid-template-columns: repeat(5, minmax(96px, 1fr));
       gap: 8px;
-      min-width: min(100%, 560px);
+      min-width: min(100%, 660px);
     }
 
     .ux-v6-kpi {
@@ -4887,34 +4887,165 @@
       white-space: nowrap;
     }
 
-    .ux-v6-layout {
-      display: grid;
-      grid-template-columns: minmax(520px, .92fr) minmax(520px, 1.08fr);
-      gap: 14px;
-      align-items: start;
-    }
-
-    .ux-v6-left,
-    .ux-v6-side-panel {
+    .ux-v6-left {
       border: 1px solid var(--senior-line);
       border-radius: 20px;
       background: #fff;
       box-shadow: 0 14px 30px rgba(15, 23, 42, .052);
-    }
-
-    .ux-v6-left {
       padding: 14px;
     }
 
-    .ux-v6-side-panel {
-      position: sticky;
-      top: 82px;
-      min-height: 460px;
-      max-height: calc(100vh - 105px);
-      overflow: hidden;
+    /* === UX Senior: busca do Painel Executivo da Onda === */
+    .ux-v6-search-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .ux-v6-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: min(360px, 100%);
+      height: 38px;
+      padding: 0 13px;
+      border: 1px solid var(--senior-line);
+      border-radius: 999px;
+      background: linear-gradient(180deg, #fff, #fbfcfe);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, .045);
+      transition: .16s ease;
+    }
+
+    .ux-v6-search:focus-within {
+      border-color: #f3b6c0;
+      box-shadow: 0 0 0 4px rgba(200, 16, 46, .08);
+    }
+
+    .ux-v6-search svg {
+      width: 15px;
+      height: 15px;
+      flex: 0 0 auto;
+      color: #94a3b8;
+    }
+
+    .ux-v6-search input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #1f2937;
+      font-size: 12.3px;
+      font-weight: 500;
+    }
+
+    .ux-v6-search input::placeholder {
+      color: #94a3b8;
+    }
+
+    .ux-v6-squads-empty {
+      grid-column: 1/-1;
+      border: 1px dashed #ccd6e4;
+      border-radius: 16px;
+      padding: 26px 18px;
+      text-align: center;
+      color: var(--senior-muted);
+      background: #fbfcfe;
+      font-size: 12.5px;
+    }
+
+    .ux-v6-squads-empty strong {
+      display: block;
+      color: #111827;
+      font-size: 15px;
+      margin-bottom: 5px;
+    }
+
+    /* === UX Senior: drawer/modal lateral de iniciativas da Squad === */
+    .ux-v6-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .38);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+      z-index: 120;
+    }
+
+    .ux-v6-drawer-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .ux-v6-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: min(480px, 94vw);
+      background: #fff;
+      border-left: 1px solid var(--senior-line);
+      box-shadow: -24px 0 60px rgba(15, 23, 42, .22);
+      transform: translateX(105%);
+      transition: transform .24s cubic-bezier(.22, .85, .33, 1);
+      z-index: 130;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ux-v6-drawer.active {
+      transform: translateX(0);
+    }
+
+    .ux-v6-drawer-head {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--senior-line);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      background: linear-gradient(180deg, #fff, #fbfcfe);
+    }
+
+    .ux-v6-drawer-close {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--senior-line);
+      background: #fff;
+      color: #334155;
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
-      padding: 0;
+      place-items: center;
+      font-size: 18px;
+      font-weight: 700;
+      flex: 0 0 auto;
+    }
+
+    .ux-v6-drawer-body {
+      padding: 14px 16px 18px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .ux-v6-drawer-search {
+      width: 100%;
+      border: 1px solid var(--senior-line);
+      border-radius: 12px;
+      padding: 9px 12px;
+      background: #fbfcfe;
+      color: #1f2937;
+      outline: none;
+      font-size: 12px;
+    }
+
+    .ux-v6-drawer-search:focus {
+      border-color: #f3b6c0;
+      box-shadow: 0 0 0 4px rgba(200, 16, 46, .08);
     }
 
     .ux-v6-panel-head {
@@ -4995,7 +5126,7 @@
 
     .ux-v6-squad-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 10px;
     }
 
@@ -5226,9 +5357,7 @@
 
     @media (max-width: 1180px) {
       .ux-v6-hero { grid-template-columns: 1fr; }
-      .ux-v6-kpis { min-width: 0; }
-      .ux-v6-layout { grid-template-columns: 1fr; }
-      .ux-v6-side-panel { position: relative; top: auto; max-height: none; }
+      .ux-v6-kpis { min-width: 0; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
     }
 
     @media (max-width: 760px) {
@@ -5245,6 +5374,9 @@
       .ux-v6-source, .ux-v6-section-head, .ux-v6-panel-head { flex-direction: column; align-items: flex-start; }
       .ux-v6-project-item { grid-template-columns: 1fr; }
       .ux-v6-project-open { justify-self: start; }
+      .ux-v6-search { width: 100%; }
+      .ux-v6-search-row { justify-content: flex-start; }
+      .ux-v6-drawer { width: 100vw; }
     }
 
 </style>
@@ -9183,6 +9315,9 @@
     const DASHBOARD_SQUAD_KEY = STORAGE_KEY + '_dashboard_squad_v5';
     let viewMode = 'dashboard';
     let dashboardSquadId = '';
+    let dashboardSearchTerm = '';
+    let squadDrawerOpen = false;
+    let squadDrawerSearchTerm = '';
     let modalState = {};
     let draggedCardId = null;
     let isCardDragging = false;
@@ -11153,9 +11288,35 @@ Recomendação PMO: ${d.recommendation}`;
       }
       dashboardSquadId = squadId;
       viewMode = 'squadProjects';
+      squadDrawerOpen = true;
+      squadDrawerSearchTerm = '';
       persistViewState();
       render();
-      setTimeout(() => document.getElementById('squadProjectListPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+
+    function closeSquadDrawer() {
+      squadDrawerOpen = false;
+      renderSquadOverview();
+    }
+
+    function refocusSearchInput(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.focus();
+      const pos = input.value.length;
+      input.setSelectionRange(pos, pos);
+    }
+
+    function handleDashboardSearchInput(value) {
+      dashboardSearchTerm = value || '';
+      renderSquadOverview();
+      refocusSearchInput('dashboardSearchInput');
+    }
+
+    function handleSquadDrawerSearchInput(value) {
+      squadDrawerSearchTerm = value || '';
+      renderSquadOverview();
+      refocusSearchInput('squadDrawerSearchInput');
     }
 
     function openProjectFromDashboard(projectId) {
@@ -11447,6 +11608,44 @@ Recomendação PMO: ${d.recommendation}`;
 
     function projectOfficialNumber(project) {
       return initiativeNumber(project) || 'Nº oficial pendente';
+    }
+
+    /* === UX Senior: busca do Painel Executivo da Onda (iniciativa/squad/PO/Tech Lead/líder/responsável/tema) === */
+    function normalizeSearchText(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    }
+
+    function projectSearchHaystack(project) {
+      return normalizeSearchText([
+        initiativeNumber(project),
+        displayProjectTitle(project),
+        project?.squad,
+        project?.theme,
+        project?.po,
+        project?.techLead,
+        project?.frontLeader,
+        project?.initiativeOwner,
+        project?.owner,
+        project?.focalPoint
+      ].join(' '));
+    }
+
+    function squadMatchesSearch(squad, term) {
+      const q = normalizeSearchText(term);
+      if (!q) return true;
+      const squadText = normalizeSearchText([squad?.name, squad?.business].join(' '));
+      if (squadText.includes(q)) return true;
+      return squadProjects(squad.id).some(project => projectSearchHaystack(project).includes(q));
+    }
+
+    function projectMatchesSearch(project, term) {
+      const q = normalizeSearchText(term);
+      if (!q) return true;
+      return projectSearchHaystack(project).includes(q);
     }
 
     function openProjectModal(projectId = null) {
@@ -11880,6 +12079,10 @@ Recomendação PMO: ${d.recommendation}`;
       }
     });
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && squadDrawerOpen) closeSquadDrawer();
+    });
+
 
     document.querySelectorAll('.tab').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -11926,12 +12129,16 @@ Recomendação PMO: ${d.recommendation}`;
       }
     }
 
-    function renderProjectCardsForSquad(squad) {
+    function renderProjectCardsForSquad(squad, searchTerm = '') {
       const projects = squadProjects(squad.id);
       if (!projects.length) {
         return `<div class="ux-v6-empty"><div><strong>Nenhuma iniciativa vinculada.</strong>Cadastre uma iniciativa oficial e vincule à Squad ${escapeHtml(squad.name)}.</div></div>`;
       }
-      return projects.map(project => {
+      const filtered = searchTerm ? projects.filter(project => projectMatchesSearch(project, searchTerm)) : projects;
+      if (!filtered.length) {
+        return `<div class="ux-v6-empty"><div><strong>Nenhuma iniciativa encontrada.</strong>Revise o termo buscado ou limpe o filtro.</div></div>`;
+      }
+      return filtered.map(project => {
         const alerts = projectAlertCount(project);
         const readiness = deliveryReadinessDetails(project);
         const progress = calculateProgress(project);
@@ -11975,9 +12182,12 @@ Recomendação PMO: ${d.recommendation}`;
       const avgProgress = totalProjects ? Math.round(allProjects.reduce((acc, project) => acc + calculateProgress(project), 0) / totalProjects) : 0;
       const activeDiscoveries = allProjects.filter(p => ['Em Discovery', 'A iniciar', 'Atenção', 'Crítico', 'No prazo'].includes(p.status)).length;
       const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
+      const pendingDataCount = allProjects.reduce((acc, p) => acc + (missingDataCount(p) > 0 ? 1 : 0), 0);
       const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
+      const searchTerm = dashboardSearchTerm || '';
+      const visibleSquads = searchTerm ? squads.filter(squad => squadMatchesSearch(squad, searchTerm)) : squads;
 
-      const squadCards = squads.map((squad, index) => {
+      const squadCardsHtml = visibleSquads.length ? visibleSquads.map((squad, index) => {
         const projects = squadProjects(squad.id);
         const count = projects.length;
         const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
@@ -11986,7 +12196,7 @@ Recomendação PMO: ${d.recommendation}`;
         const hours = hoursForSquad(squad.id);
         const nextDisc = nextDiscoveryForSquad(squad.id);
         const missing = projects.reduce((acc, project) => acc + (missingDataCount(project) > 0 ? 1 : 0), 0);
-        const active = selectedSquad?.id === squad.id ? 'active' : '';
+        const active = squadDrawerOpen && selectedSquad?.id === squad.id ? 'active' : '';
         return `<button type="button" class="ux-v6-squad-card ${active}" style="--squad-accent:${uxV6Accent(index)}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
           <div class="ux-v6-card-top">
             <div class="ux-v6-card-title">
@@ -12004,54 +12214,58 @@ Recomendação PMO: ${d.recommendation}`;
             <span>Atenção/crítico</span><strong>${critical}</strong>
           </div>
         </button>`;
-      }).join('');
+      }).join('') : `<div class="ux-v6-squads-empty"><strong>Nenhuma squad encontrada.</strong>Revise o termo buscado ou pesquise por iniciativa, squad, PO, Tech Lead, líder ou tema.</div>`;
 
-      const panel = selectedSquad ? `<aside id="squadProjectListPanel" class="ux-v6-side-panel" aria-label="Projetos da Squad selecionada">
-        <div class="ux-v6-panel-head">
-          <div class="ux-v6-panel-title">
-            <strong>Projetos da Squad ${escapeHtml(selectedSquad.name)}</strong>
-            <span>Lista lateral para manter o contexto do dashboard e abrir o Discovery completo.</span>
-          </div>
-          <span class="ux-v6-panel-pill">${squadProjects(selectedSquad.id).length} projeto(s)</span>
-        </div>
-        <div class="ux-v6-panel-body">${renderProjectCardsForSquad(selectedSquad)}</div>
-      </aside>` : `<aside id="squadProjectListPanel" class="ux-v6-side-panel" aria-label="Projetos da Squad selecionada">
-        <div class="ux-v6-panel-head">
-          <div class="ux-v6-panel-title">
-            <strong>Projetos da Squad</strong>
-            <span>Clique em uma Squad à esquerda para abrir a lista lateral de iniciativas.</span>
-          </div>
-          <span class="ux-v6-panel-pill">Aguardando seleção</span>
-        </div>
-        <div class="ux-v6-panel-body"><div class="ux-v6-empty"><div><strong>Selecione uma Squad.</strong>Os projetos aparecem aqui sem poluir o topo da ferramenta.</div></div></div>
-      </aside>`;
+      const drawerSquad = selectedSquad || { id: '', name: 'Squad', business: '' };
+      const drawerHours = selectedSquad ? hoursForSquad(selectedSquad.id) : 0;
+      const drawerProjectCount = selectedSquad ? squadProjects(selectedSquad.id).length : 0;
+      const drawerSearchTerm = squadDrawerSearchTerm || '';
 
       el.innerHTML = `<div class="ux-v6-shell">
         <div class="ux-v6-source"><strong>Planejamento 2026</strong><span>Números oficiais preservados · ${totalProjects} iniciativas principais · ${totalChildren} filhas vinculadas · ${formatHours(totalHours)}</span></div>
-        <section class="ux-v6-hero" aria-label="Resumo executivo das Squads">
+        <section class="ux-v6-hero" aria-label="Resumo executivo da Onda 1">
           <div>
             <span class="ux-v6-eyebrow">Visão executiva</span>
-            <h2>Dashboard de Squads e Discoveries</h2>
-            <p>Escolha uma Squad para abrir uma lista lateral com os projetos vinculados. Assim o topo fica limpo, sem nomes truncados, e a navegação continua rápida para gestão.</p>
+            <h2>Visão Executiva da Onda 1</h2>
+            <p>Panorama geral das squads e iniciativas da Onda 1 do Discovery. Escolha uma Squad para abrir a lista de iniciativas vinculadas e siga para o Mapa de Discovery completo.</p>
           </div>
           <div class="ux-v6-kpis">
             <div class="ux-v6-kpi"><span>Squads</span><strong>${squads.length}</strong></div>
-            <div class="ux-v6-kpi"><span>Projetos</span><strong>${totalProjects}</strong></div>
+            <div class="ux-v6-kpi"><span>Iniciativas</span><strong>${totalProjects}</strong></div>
+            <div class="ux-v6-kpi"><span>Horas 2026</span><strong>${formatHours(totalHours)}</strong></div>
             <div class="ux-v6-kpi"><span>Maturidade</span><strong>${avgProgress}%</strong></div>
             <div class="ux-v6-kpi"><span>Alertas</span><strong>${totalAlerts}</strong></div>
           </div>
         </section>
-        <section class="ux-v6-layout" aria-label="Dashboard clicável por Squad">
-          <div class="ux-v6-left">
-            <div class="ux-v6-section-head">
-              <div><strong>Squads</strong><span>Cards clicáveis com volume, horas, próximos Discoveries e pontos de atenção.</span></div>
-              <span class="ux-v6-panel-pill">${activeDiscoveries} em acompanhamento</span>
-            </div>
-            <div class="ux-v6-squad-grid">${squadCards}</div>
+        <section class="ux-v6-left" aria-label="Dashboard clicável por Squad">
+          <div class="ux-v6-section-head">
+            <div><strong>Squads</strong><span>Cards clicáveis com volume, horas, próximos Discoveries e pontos de atenção. ${pendingDataCount} iniciativa(s) com dados pendentes.</span></div>
+            <span class="ux-v6-panel-pill">${activeDiscoveries} em acompanhamento</span>
           </div>
-          ${panel}
+          <div class="ux-v6-search-row">
+            <span class="ux-v6-panel-pill">${searchTerm ? `${visibleSquads.length} squad(s) encontrada(s)` : 'Busca por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema'}</span>
+            <label class="ux-v6-search" for="dashboardSearchInput" aria-label="Buscar no painel executivo da Onda 1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+              <input id="dashboardSearchInput" type="search" autocomplete="off" placeholder="Buscar por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema..." value="${escapeAttr(searchTerm)}" oninput="handleDashboardSearchInput(this.value)" />
+            </label>
+          </div>
+          <div class="ux-v6-squad-grid">${squadCardsHtml}</div>
         </section>
-      </div>`;
+      </div>
+      <div id="squadDrawerBackdrop" class="ux-v6-drawer-backdrop ${squadDrawerOpen ? 'active' : ''}" onclick="closeSquadDrawer()"></div>
+      <aside id="squadProjectListPanel" class="ux-v6-drawer ${squadDrawerOpen ? 'active' : ''}" aria-hidden="${squadDrawerOpen ? 'false' : 'true'}" aria-label="Iniciativas da Squad selecionada">
+        <div class="ux-v6-drawer-head">
+          <div class="ux-v6-panel-title">
+            <strong>${escapeHtml(drawerSquad.name)}</strong>
+            <span>${drawerProjectCount} iniciativa(s) · ${formatHours(drawerHours)} em 2026</span>
+          </div>
+          <button type="button" class="ux-v6-drawer-close" onclick="closeSquadDrawer()" title="Fechar">×</button>
+        </div>
+        <div class="ux-v6-drawer-body">
+          <input class="ux-v6-drawer-search" id="squadDrawerSearchInput" type="search" autocomplete="off" placeholder="Buscar por iniciativa, PO, Tech Lead ou tema..." value="${escapeAttr(drawerSearchTerm)}" oninput="handleSquadDrawerSearchInput(this.value)" />
+          ${selectedSquad ? renderProjectCardsForSquad(selectedSquad, drawerSearchTerm) : '<div class="ux-v6-empty"><div><strong>Selecione uma Squad.</strong>Clique em um card acima para ver as iniciativas vinculadas.</div></div>'}
+        </div>
+      </aside>`;
     }
 
     render();
