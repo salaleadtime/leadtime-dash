@@ -9017,6 +9017,18 @@
           });
         });
       }
+      // Sincroniza campos críticos dos projetos com o defaultData (resolve datas e flags adicionadas após o carregamento inicial)
+      if (Array.isArray(cloned.projects) && Array.isArray(defaultData.projects)) {
+        const syncFields = ['discoveryDate','startDev','endDev','startDate','target','startType',
+          'frontLeader','initiativeOwner','po','focalPoint','theme','business','name','initiativeType',
+          'hours2026','status','summary','subInitiatives','phases'];
+        defaultData.projects.forEach(defP => {
+          const existing = cloned.projects.find(p => p.id === defP.id);
+          if (existing) {
+            syncFields.forEach(f => { if (defP[f] !== undefined) existing[f] = defP[f]; });
+          }
+        });
+      }
       // Segurança: evita abrir tela vazia caso o navegador tenha salvado uma carga incompleta de versão anterior.
       const hasMeaningfulProject = cloned.projects.some(project =>
         String(project?.name || '').trim() ||
