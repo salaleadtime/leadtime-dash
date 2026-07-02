@@ -6214,6 +6214,7 @@
       padding: 4px 8px; border-radius: 6px; font-size: 11px; white-space: nowrap; z-index: 1; max-width: 240px;
       white-space: normal; line-height: 1.4;
     }
+    .cal-chip-imediato { background: #f59e0b !important; color: #fff !important; }
     .cal-legend { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #687587; }
     .cal-legend-item { display: flex; align-items: center; gap: 6px; }
     .cal-legend-dot { width: 12px; height: 12px; border-radius: 4px; }
@@ -7562,6 +7563,7 @@
                   "aiRpa": "",
                   "processName": "",
                   "hours2026": 1390,
+                  "startType": "Inicio Imediato",
                   "discoveryDate": "2026-07-01",
                   "startDev": "2026-08-01",
                   "endDev": "2026-08-01",
@@ -8213,6 +8215,7 @@
                   "endDev": "2027-03-01",
                   "startDate": "2026-07-01",
                   "target": "2027-03-01",
+                  "startType": "Inicio Imediato",
                   "status": "Em Discovery",
                   "criticality": "A validar",
                   "summary": "Iniciativa 113309 — Recepção Doc. Físicos, Ofícios e Ctrl Pendências. Tema: Concilicação, Regulatório, Garantias e Documentos(varios sistemas). Squad: MadMax. Líder da frente: Marcos Tasca. PO: Sérgio Cartapatti. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/08/2026 a 01/03/2027. Consumo 2026: 5.376h.",
@@ -8390,6 +8393,7 @@
                   "endDev": "2027-03-01",
                   "startDate": "2026-07-01",
                   "target": "2027-03-01",
+                  "startType": "Inicio Imediato",
                   "status": "Em Discovery",
                   "criticality": "A validar",
                   "summary": "Iniciativa 113260 — API EXTRATO - 2ª via de extrato Bancário. Tema: Operações Jurídicas. Squad: Inception. Líder da frente: Carolina Máximo. PO: Sandra Souza. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/03/2027. Consumo 2026: 5.376h.",
@@ -8542,6 +8546,7 @@
                   "endDev": "2027-04-01",
                   "startDate": "2026-07-01",
                   "target": "2027-04-01",
+                  "startType": "Inicio Imediato",
                   "status": "Em Discovery",
                   "criticality": "A validar",
                   "summary": "Iniciativa 113308 — Gestão de Fornecedores e Indexação Legado. Tema: Concilicação, Regulatório, Garantias e Documentos (sem GCC). Squad: ASD. Líder da frente: Marcos Tasca. PO: Vinicius Barbosa. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/04/2027. Consumo 2026: 8.064h.",
@@ -8707,6 +8712,7 @@
                   "endDev": "2028-09-01",
                   "startDate": "2026-07-01",
                   "target": "2028-09-01",
+                  "startType": "Inicio Imediato",
                   "status": "Em Discovery",
                   "criticality": "A validar",
                   "summary": "Iniciativa 113327 — FIRP / Abono / Mtoken / APP RM. Tema: Operações de Contas e Cartões. Squad: ASD. Líder da frente: Luciana Possamai. PO: Paulo Nascimento. Tech Lead: ASD. Data de Discovery: 01/07/2026. Desenvolvimento previsto de 01/09/2026 a 01/09/2028. Consumo 2026: 4.032h.",
@@ -11379,7 +11385,7 @@ Recomendação PMO: ${d.recommendation}`;
         const key = d.getDate();
         if (!discMap[key]) discMap[key] = [];
         const sq = squadForProject(p);
-        discMap[key].push({ name: p.name, squad: sq?.name || p.squad || '', num: p.initiativeNumber, tipo: p.initiativeType });
+        discMap[key].push({ name: p.name, squad: sq?.name || p.squad || '', num: p.initiativeNumber, tipo: p.initiativeType, imediato: p.startType === 'Inicio Imediato' });
       });
 
       // Build calendar grid
@@ -11391,7 +11397,8 @@ Recomendação PMO: ${d.recommendation}`;
         const discs = discMap[d] || [];
         const hasDisc = discs.length > 0;
         const chipsHtml = discs.map(item =>
-          `<span class="cal-disc-chip" title="${escapeAttr('#'+item.num+' · '+item.name+(item.squad?' · '+item.squad:''))}">${escapeHtml(item.squad || item.name.slice(0,10))}</span>`
+          `<span class="cal-disc-chip${item.imediato?' cal-chip-imediato':''}" title="${escapeAttr('#'+item.num+' · '+item.name+(item.squad?' · '+item.squad:''))+(item.imediato?' 🚀 Início Imediato':'')}">
+            ${item.imediato?'🚀 ':''}${escapeHtml(item.squad || item.name.slice(0,10))}</span>`
         ).join('');
         cells += `<div class="cal-day${isToday?' today':''}${hasDisc?' has-disc':''}"><span class="cal-day-num">${d}</span>${chipsHtml}</div>`;
       }
@@ -11399,6 +11406,34 @@ Recomendação PMO: ${d.recommendation}`;
       for (let d = 1; d <= totalCells - firstDay - daysInMonth; d++)
         cells += `<div class="cal-day other-month"><span class="cal-day-num">${d}</span></div>`;
       const dayHeads = DAYS_PT.map(d => `<div class="cal-day-head">${d}</div>`).join('');
+
+      // Inicio Imediato: iniciativas sem data definida mas com startType marcado
+      const inicioImediatoAll = allProjects.filter(p => p.startType === 'Inicio Imediato');
+      const inicioImediatoBanner = inicioImediatoAll.length && month === 6 && year === 2026
+        ? `<div style="background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 100%);border:2px solid #f59e0b;border-radius:12px;padding:12px 16px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <span style="font-size:20px">🚀</span>
+              <div>
+                <div style="font-weight:800;font-size:13px;color:#92400e">INÍCIO IMEDIATO — Julho 2026</div>
+                <div style="font-size:11px;color:#b45309">${inicioImediatoAll.length} iniciativa(s) com início imediato — Discovery começa em Julho, data exata a confirmar</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${inicioImediatoAll.map(p => {
+                const sq = squadForProject(p);
+                const isAsd = sq?.id === 'squad-asd';
+                const sqChip = isAsd
+                  ? `<span style="background:#fee2e2;color:#991b1b;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px">ASD</span>`
+                  : `<span style="background:#dbeafe;color:#1e40af;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px">${escapeHtml(sq?.name || p.squad || '?')}</span>`;
+                return `<div style="background:#fff;border:1px solid #fcd34d;border-radius:8px;padding:6px 10px;font-size:11px;min-width:180px;max-width:280px">
+                  <div style="font-weight:700;color:#92400e;font-size:10px">#${escapeHtml(String(p.initiativeNumber||''))} ${p.initiativeType==='MÃE'?'<span style=\'background:#ffe8b0;color:#7a5000;padding:1px 4px;border-radius:3px;font-size:9px\'>MÃE</span>':''}</div>
+                  <div style="font-weight:600;color:#1c2430;margin:2px 0">${escapeHtml(p.name)}</div>
+                  <div style="display:flex;align-items:center;gap:4px;margin-top:3px">${sqChip}<span style="font-size:9px;color:#687587">${escapeHtml(p.frontLeader||'—')}</span></div>
+                </div>`;
+              }).join('')}
+            </div>
+           </div>`
+        : '';
 
       // Month initiatives table (like the spreadsheet view)
       // Separar ASD (sem squad) das demais para destaque
@@ -11423,9 +11458,11 @@ Recomendação PMO: ${d.recommendation}`;
           : '—';
         const dObj = new Date(p.discoveryDate);
         const isPast = dObj < today;
-        const rowBg = isAsd ? 'background:#fffbf0' : (isPast ? 'opacity:.7' : '');
+        const isImediato = p.startType === 'Inicio Imediato';
+        const rowBg = isAsd ? 'background:#fffbf0' : isImediato ? 'background:#fffbea' : (isPast ? 'opacity:.7' : '');
+        const imediatoFlag = isImediato ? `<span style="background:#f59e0b;color:#fff;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700;margin-left:4px">🚀 IMEDIATO</span>` : '';
         return `<tr style="${rowBg}">
-          <td style="font-weight:700;color:#bf1830;font-size:11px;white-space:nowrap">${escapeHtml(String(p.initiativeNumber||''))}</td>
+          <td style="font-weight:700;color:#bf1830;font-size:11px;white-space:nowrap">${escapeHtml(String(p.initiativeNumber||''))}${imediatoFlag}</td>
           <td>${tipo}</td>
           <td style="font-weight:600;color:#1c2430">${escapeHtml(p.name)}</td>
           <td style="font-size:11px;color:#687587;max-width:140px">${escapeHtml(p.theme||p.business||'—')}</td>
@@ -11475,6 +11512,7 @@ Recomendação PMO: ${d.recommendation}`;
               <div class="cal-grid">${dayHeads}${cells}</div>
               <div class="cal-legend" style="margin-top:12px">
                 <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f4b740"></div><span>Com Discovery</span></div>
+                <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f59e0b"></div><span>🚀 Início Imediato</span></div>
                 <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fff0f3;border:1.5px solid #bf1830"></div><span>Hoje</span></div>
               </div>
               ${futurePills ? `<div style="margin-top:16px;border-top:1px solid #e5e9f2;padding-top:12px"><div style="font-size:11px;font-weight:700;color:#687587;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Próximos meses</div><div style="display:flex;flex-wrap:wrap;gap:6px">${futurePills}</div></div>` : ''}
@@ -11483,6 +11521,7 @@ Recomendação PMO: ${d.recommendation}`;
               <div style="font-weight:800;font-size:14px;color:#1c2430;margin-bottom:10px">
                 Iniciativas com Discovery em ${MONTHS_PT[month]} ${year}
               </div>
+              ${inicioImediatoBanner}
               ${asdBanner}
               <table style="width:100%;border-collapse:collapse;font-size:12px">
                 <thead>
