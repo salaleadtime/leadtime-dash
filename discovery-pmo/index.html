@@ -5914,7 +5914,36 @@
       border-radius: 16px;
       background: #fff;
       color: #111827;
+      cursor: pointer;
       transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .ux-v6-copy-btn {
+      appearance: none;
+      border: 1px solid #ffd0d9;
+      background: #fff1f4;
+      color: #b5122b;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      margin-left: 2px;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .16s ease;
+      vertical-align: middle;
+    }
+
+    .ux-v6-copy-btn:hover {
+      background: #b5122b;
+      color: #fff;
+      border-color: #b5122b;
+      transform: translateY(-1px);
     }
 
     .ux-v6-project-item:hover {
@@ -5933,6 +5962,9 @@
     }
 
     .ux-v6-project-code {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
       flex: 0 0 auto;
       color: #b5122b;
       background: #fff1f4;
@@ -11491,15 +11523,15 @@ Recomendação PMO: ${d.recommendation}`;
       copyText(text);
     }
 
-    function copyText(text) {
+    function copyText(text, message = 'Leitura executiva copiada') {
       if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(() => toast('Leitura executiva copiada')).catch(() => fallbackCopyText(text));
+        navigator.clipboard.writeText(text).then(() => toast(message)).catch(() => fallbackCopyText(text, message));
       } else {
-        fallbackCopyText(text);
+        fallbackCopyText(text, message);
       }
     }
 
-    function fallbackCopyText(text) {
+    function fallbackCopyText(text, message = 'Leitura executiva copiada') {
       const area = document.createElement('textarea');
       area.value = text;
       area.setAttribute('readonly', '');
@@ -11507,9 +11539,16 @@ Recomendação PMO: ${d.recommendation}`;
       area.style.left = '-9999px';
       document.body.appendChild(area);
       area.select();
-      try { document.execCommand('copy'); toast('Leitura executiva copiada'); }
+      try { document.execCommand('copy'); toast(message); }
       catch (e) { toast('Não foi possível copiar automaticamente'); }
       document.body.removeChild(area);
+    }
+
+    function copyInitiativeNumber(number, event) {
+      event?.stopPropagation();
+      const value = String(number || '').trim();
+      if (!value) return;
+      copyText(value, `Nº ${value} copiado`);
     }
 
     function exportData() {
@@ -13007,10 +13046,11 @@ Recomendação PMO: ${d.recommendation}`;
         const alerts = projectAlertCount(project);
         const readiness = deliveryReadinessDetails(project);
         const progress = calculateProgress(project);
-        return `<button type="button" class="ux-v6-project-item" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" title="Abrir ${escapeAttr(displayProjectTitle(project))}">
+        const officialNumber = projectOfficialNumber(project);
+        return `<div class="ux-v6-project-item" role="button" tabindex="0" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" onkeydown="if(event.key==='Enter'){openProjectFromDashboard('${escapeAttr(project.id)}')}" title="Abrir ${escapeAttr(displayProjectTitle(project))}">
           <div>
             <div class="ux-v6-project-title">
-              <span class="ux-v6-project-code">${escapeHtml(projectOfficialNumber(project))}</span>
+              <span class="ux-v6-project-code">${escapeHtml(officialNumber)}<button type="button" class="ux-v6-copy-btn" onclick="copyInitiativeNumber('${escapeAttr(officialNumber)}', event)" aria-label="Copiar número ${escapeAttr(officialNumber)}" title="Copiar número">⧉</button></span>
               <strong>${escapeHtml(displayProjectTitle(project))}</strong>
             </div>
             <div class="ux-v6-project-meta">
@@ -13029,7 +13069,7 @@ Recomendação PMO: ${d.recommendation}`;
             </div>
           </div>
           <span class="ux-v6-project-open">Abrir ›</span>
-        </button>`;
+        </div>`;
       }).join('');
     }
 
