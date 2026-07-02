@@ -5946,6 +5946,27 @@
       transform: translateY(-1px);
     }
 
+    .ux-v6-init-code {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #9f1239;
+      background: #fff7f8;
+      border: 1px solid #ffd6de;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10.6px;
+      font-weight: 720;
+      letter-spacing: -.01em;
+      white-space: nowrap;
+    }
+
+    .initiative-highlight {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 4px;
+    }
+
     .ux-v6-project-item:hover {
       transform: translateY(-1px);
       border-color: #ccd6e4;
@@ -10376,7 +10397,7 @@
 
       const breadcrumbCode = document.getElementById('breadcrumbProjectCode');
       if (breadcrumbCode) {
-        if (normalizedMode === 'project') breadcrumbCode.textContent = initiativeNumber(project) || 'Iniciativa';
+        if (normalizedMode === 'project') breadcrumbCode.textContent = initiativeCodeLabel(project);
         else if (dashboardSquadId && squadById(dashboardSquadId)) breadcrumbCode.textContent = `Squad ${squadById(dashboardSquadId).name}`;
         else breadcrumbCode.textContent = 'Dashboard';
       }
@@ -11551,6 +11572,19 @@ Recomendação PMO: ${d.recommendation}`;
       copyText(value, `Nº ${value} copiado`);
     }
 
+    /* === UX Senior: código "IN nnnnn" + copiar em todo local que exibe o número da iniciativa === */
+    function initiativeCodeLabel(project) {
+      const number = initiativeNumber(project);
+      return number ? `IN ${number}` : 'Nº pendente';
+    }
+
+    function initiativeCodeHtml(project, className = 'ux-v6-init-code') {
+      const number = initiativeNumber(project);
+      const label = escapeHtml(initiativeCodeLabel(project));
+      const copyBtn = number ? `<button type="button" class="ux-v6-copy-btn" onclick="copyInitiativeNumber('${escapeAttr(number)}', event)" aria-label="Copiar número ${escapeAttr(number)}" title="Copiar número">⧉</button>` : '';
+      return `<span class="${className}">${label}${copyBtn}</span>`;
+    }
+
     function exportData() {
       data.projects.forEach(project => (project.schedule || []).forEach(item => item.progress = automaticScheduleProgress(item)));
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -12065,9 +12099,9 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function squadInitials(name) {
-      const words = String(name || 'SQ').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
-      if (!words.length) return 'SQ';
-      return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      const words = String(name || 'S').replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+      if (!words.length) return 'S';
+      return words[0][0].toUpperCase();
     }
 
     function renderProjectCardsForSquad(squad) {
@@ -12324,9 +12358,6 @@ Recomendação PMO: ${d.recommendation}`;
       return keys.filter(k => !String(project?.[k] || '').trim() || String(project?.[k]).trim() === 'A validar').length;
     }
 
-    function projectOfficialNumber(project) {
-      return initiativeNumber(project) || 'Nº oficial pendente';
-    }
 
     /* === UX Senior: agregações de leitura da Visão Executiva da Onda 1 (aside, saúde e rankings) === */
     function squadHealthInfo(squad) {
@@ -12443,26 +12474,26 @@ Recomendação PMO: ${d.recommendation}`;
 
       const initiativeReportRows = allProjects.map(project => {
         const squad = squadForProject(project);
-        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${escapeHtml(project.status || 'Sem status')}</td><td>${formatHours(project.hours2026)}</td><td>${calculateProgress(project)}%</td></tr>`;
+        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${escapeHtml(project.status || 'Sem status')}</td><td>${formatHours(project.hours2026)}</td><td>${calculateProgress(project)}%</td></tr>`;
       }).join('') || `<tr><td colspan="6" class="ux-v6-report-empty">Nenhuma iniciativa cadastrada.</td></tr>`;
 
       const alertsReportRows = alertProjects.map(project => {
         const squad = squadForProject(project);
-        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${projectAlertCount(project)}</td></tr>`;
+        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${projectAlertCount(project)}</td></tr>`;
       }).join('') || `<tr><td colspan="4" class="ux-v6-report-empty">Nenhuma iniciativa com alertas PMO/RTE em aberto.</td></tr>`;
 
       const rankingReportRows = rankedSquads.map((item, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(item.squad.name)}</td><td>${formatHours(item.hours)}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Sem horas cadastradas.</td></tr>`;
 
-      const unassignedRows = unassignedProjects.map(project => `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.theme || project.business || 'Não informado')}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Todas as iniciativas têm Squad definida.</td></tr>`;
+      const unassignedRows = unassignedProjects.map(project => `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.theme || project.business || 'Não informado')}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Todas as iniciativas têm Squad definida.</td></tr>`;
 
       const duplicateRows = duplicateChildProjects.map(project => {
         const dupNames = (project.subInitiatives || []).filter(c => c.duplicateNumber).map(c => escapeHtml(c.name)).join('; ');
-        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${dupNames}</td></tr>`;
+        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${dupNames}</td></tr>`;
       }).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Nenhuma iniciativa com número de filha duplicado.</td></tr>`;
 
       const crossSquadRows = crossSquadProjects.map(project => {
         const crossNames = projectCrossSquadChildren(project).map(c => `${escapeHtml(c.name)} (${escapeHtml(c.squad)})`).join('; ');
-        return `<tr><td>${escapeHtml(projectOfficialNumber(project))}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.squad || 'A validar')}</td><td>${crossNames}</td></tr>`;
+        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.squad || 'A validar')}</td><td>${crossNames}</td></tr>`;
       }).join('') || `<tr><td colspan="4" class="ux-v6-report-empty">Nenhuma iniciativa com filha cross-squad.</td></tr>`;
 
       root.innerHTML = `<div id="uxV6ReportsBackdrop" class="ux-v6-report-backdrop active" onclick="closeReportsPanel()"></div>
@@ -12715,9 +12746,9 @@ Recomendação PMO: ${d.recommendation}`;
       document.getElementById('scoreText').textContent = progress >= 80 ? 'Discovery maduro para tomada de decisão e próximo passo.' : progress >= 55 ? 'Discovery em boa evolução, com pontos de atenção controláveis.' : 'Discovery ainda precisa de decisões, dados e clareza para avançar com segurança.';
       const ini = initiativeNumber(project);
       const breadcrumbCode = document.getElementById('breadcrumbProjectCode');
-      if (breadcrumbCode) breadcrumbCode.textContent = ini || 'Iniciativa';
+      if (breadcrumbCode) breadcrumbCode.textContent = ini ? `IN ${ini}` : 'Iniciativa';
       document.getElementById('projectTags').innerHTML = `
-        ${ini ? `<span class="initiative-highlight">Nº Iniciativa: ${escapeHtml(ini)}</span><span class="dot">•</span>` : ''}
+        ${ini ? `${initiativeCodeHtml(project, 'initiative-highlight')}<span class="dot">•</span>` : ''}
         <span>Squad: <strong>${escapeHtml(squad?.name || project.squad || 'A validar')}</strong></span><span class="dot">•</span>
         <span>Líder: <strong>${escapeHtml(peopleValue(project, 'frontLeader'))}</strong></span><span class="dot">•</span>
         <span>PO: <strong>${escapeHtml(peopleValue(project, 'po'))}</strong></span><span class="dot">•</span>
@@ -12786,7 +12817,7 @@ Recomendação PMO: ${d.recommendation}`;
         return `<button type="button" class="dashboard-project-card" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" title="Abrir projeto ${escapeAttr(displayProjectTitle(project))}">
           <div class="dash-project-head">
             <strong>${escapeHtml(displayProjectTitle(project))}</strong>
-            <span class="dash-project-code">${escapeHtml(projectOfficialNumber(project))}</span>
+            <span class="dash-project-code">${initiativeCodeHtml(project)}</span>
           </div>
           <div class="dash-project-meta">
             <span>Discovery ${escapeHtml(formatBR(project.discoveryDate))}</span>
@@ -13046,11 +13077,10 @@ Recomendação PMO: ${d.recommendation}`;
         const alerts = projectAlertCount(project);
         const readiness = deliveryReadinessDetails(project);
         const progress = calculateProgress(project);
-        const officialNumber = projectOfficialNumber(project);
         return `<div class="ux-v6-project-item" role="button" tabindex="0" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" onkeydown="if(event.key==='Enter'){openProjectFromDashboard('${escapeAttr(project.id)}')}" title="Abrir ${escapeAttr(displayProjectTitle(project))}">
           <div>
             <div class="ux-v6-project-title">
-              <span class="ux-v6-project-code">${escapeHtml(officialNumber)}<button type="button" class="ux-v6-copy-btn" onclick="copyInitiativeNumber('${escapeAttr(officialNumber)}', event)" aria-label="Copiar número ${escapeAttr(officialNumber)}" title="Copiar número">⧉</button></span>
+              ${initiativeCodeHtml(project, 'ux-v6-project-code')}
               <strong>${escapeHtml(displayProjectTitle(project))}</strong>
             </div>
             <div class="ux-v6-project-meta">
@@ -13152,7 +13182,7 @@ Recomendação PMO: ${d.recommendation}`;
 
       const topInitiativesHtml = topInitiativesByHours(5).map((project, index) => {
         const squad = squadForProject(project);
-        return `<tr><td>${index + 1}</td><td><span class="ux-v6-init-id">${escapeHtml(projectOfficialNumber(project))}</span><br>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td><strong>${formatHours(project.hours2026)}</strong></td><td>${subInitiativeCount(project)}</td><td><span class="ux-v6-pill">${escapeHtml(project.status || 'Sem status')}</span></td></tr>`;
+        return `<tr><td>${index + 1}</td><td>${initiativeCodeHtml(project)}<br>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td><strong>${formatHours(project.hours2026)}</strong></td><td>${subInitiativeCount(project)}</td><td><span class="ux-v6-pill">${escapeHtml(project.status || 'Sem status')}</span></td></tr>`;
       }).join('') || `<tr><td colspan="6" style="text-align:center;color:#667387;padding:20px">Nenhuma iniciativa cadastrada.</td></tr>`;
 
       const drawerSquad = selectedSquad || { id: '', name: 'Squad', business: '' };
