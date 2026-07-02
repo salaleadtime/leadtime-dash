@@ -5752,6 +5752,17 @@
       .ux-v6-squad-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
+    .ux-v6-show-all-btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; margin-top: 14px; padding: 10px 16px;
+      border: 1.5px solid rgba(99,115,129,0.22); border-radius: 10px;
+      background: transparent; color: #637381; font-size: 0.8125rem; font-weight: 500;
+      cursor: pointer; transition: background 0.18s, border-color 0.18s, color 0.18s;
+      letter-spacing: 0.01em;
+    }
+    .ux-v6-show-all-btn:hover { background: rgba(99,115,129,0.07); border-color: rgba(99,115,129,0.38); color: #454f5b; }
+    .ux-v6-show-all-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
     .ux-v6-squad-card {
       position: relative;
       min-height: 154px;
@@ -10049,6 +10060,7 @@
     let squadDrawerOpen = false;
     let squadDrawerSearchTerm = '';
     let reportsOpen = false;
+    let showAllSquads = false;
     let modalState = {};
     let draggedCardId = null;
     let isCardDragging = false;
@@ -12051,6 +12063,11 @@ Recomendação PMO: ${d.recommendation}`;
       renderSquadOverview();
     }
 
+    function toggleShowAllSquads() {
+      showAllSquads = !showAllSquads;
+      renderSquadOverview();
+    }
+
     function refocusSearchInput(inputId) {
       const input = document.getElementById(inputId);
       if (!input) return;
@@ -13119,7 +13136,12 @@ Recomendação PMO: ${d.recommendation}`;
       const pendingDataCount = allProjects.reduce((acc, p) => acc + (missingDataCount(p) > 0 ? 1 : 0), 0);
       const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
       const searchTerm = dashboardSearchTerm || '';
-      const visibleSquads = searchTerm ? squads.filter(squad => squadMatchesSearch(squad, searchTerm)) : squads;
+      const SQUAD_INITIAL_LIMIT = 8;
+      const filteredSquads = searchTerm ? squads.filter(squad => squadMatchesSearch(squad, searchTerm)) : squads;
+      const visibleSquads = (!searchTerm && !showAllSquads && filteredSquads.length > SQUAD_INITIAL_LIMIT)
+        ? filteredSquads.slice(0, SQUAD_INITIAL_LIMIT)
+        : filteredSquads;
+      const hasMoreSquads = !searchTerm && !showAllSquads && filteredSquads.length > SQUAD_INITIAL_LIMIT;
 
       const unassignedCount = unassignedProjectsCount();
       const healthCounts = { good: 0, warn: 0, crit: 0 };
@@ -13211,17 +13233,22 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="ux-v6-content-col">
             <section class="ux-v6-left" id="uxV6SquadsSection">
               <div class="ux-v6-section-head">
-                <div><strong>Squads</strong><span>Cards clicáveis com volume, horas, próximos Discoveries e pontos de atenção. ${pendingDataCount} iniciativa(s) com dados pendentes.</span></div>
+                <div><strong>Painel Executivo da Onda 2026</strong><span>Cards clicáveis com volume, horas, próximos Discoveries e pontos de atenção. ${pendingDataCount} iniciativa(s) com dados pendentes.</span></div>
                 <span class="ux-v6-panel-pill">${activeDiscoveries} em acompanhamento</span>
               </div>
               <div class="ux-v6-search-row">
-                <span class="ux-v6-panel-pill">${searchTerm ? `${visibleSquads.length} squad(s) encontrada(s)` : 'Busca por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema'}</span>
+                <span class="ux-v6-panel-pill">${searchTerm ? `${filteredSquads.length} squad(s) encontrada(s)` : 'Busca por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema'}</span>
                 <label class="ux-v6-search" for="dashboardSearchInput" aria-label="Buscar no painel executivo da Onda 1">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
                   <input id="dashboardSearchInput" type="search" autocomplete="off" placeholder="Buscar por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema..." value="${escapeAttr(searchTerm)}" oninput="handleDashboardSearchInput(this.value)" />
                 </label>
               </div>
               <div class="ux-v6-squad-grid">${squadCardsHtml}</div>
+              ${!searchTerm && filteredSquads.length > SQUAD_INITIAL_LIMIT ? `
+              <button type="button" class="ux-v6-show-all-btn" onclick="toggleShowAllSquads()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${showAllSquads ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'}"/></svg>
+                ${showAllSquads ? `Ver menos squads` : `Ver todos os squads (${filteredSquads.length - SQUAD_INITIAL_LIMIT} ocultos)`}
+              </button>` : ''}
             </section>
             <section class="ux-v6-rank-grid" aria-label="Rankings executivos">
               <div class="ux-v6-rank-card">
