@@ -5356,14 +5356,15 @@
     .ux-v6-card-stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      border-top: 1px solid #f0f3f7;
-      border-bottom: 1px solid #f0f3f7;
+      margin: 8px 0 9px;
       padding: 9px 0;
+      border-top: 1px solid rgba(226, 232, 240, .78);
+      border-bottom: 1px solid rgba(226, 232, 240, .78);
     }
 
     .ux-v6-card-stats > div {
       text-align: center;
-      border-right: 1px solid #eef2f7;
+      border-right: 1px solid rgba(226, 232, 240, .78);
     }
 
     .ux-v6-card-stats > div:last-child {
@@ -5372,9 +5373,9 @@
 
     .ux-v6-card-stats strong {
       display: block;
-      font-size: 16px;
-      font-weight: 730;
-      letter-spacing: -.025em;
+      font-size: 16.5px;
+      font-weight: 735;
+      letter-spacing: -.026em;
       color: #0f1b2d;
     }
 
@@ -5382,7 +5383,7 @@
       display: block;
       color: #748096;
       font-size: 9.2px;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
     .ux-v6-card-bottom {
@@ -5390,16 +5391,15 @@
       align-items: flex-end;
       justify-content: space-between;
       gap: 10px;
-      color: #657386;
-      font-size: 10.6px;
-      margin-top: 9px;
+      color: #667387;
+      font-size: 10.8px;
     }
 
     .ux-v6-card-bottom strong {
       display: block;
-      color: #23314a;
-      font-weight: 700;
-      font-size: 11.4px;
+      color: #24324a;
+      font-weight: 720;
+      font-size: 11.8px;
       margin-top: 2px;
     }
 
@@ -5407,35 +5407,27 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 8px;
+      padding: 4px 7px;
       border-radius: 999px;
-      background: #f7f9fc;
-      border: 1px solid #edf1f6;
-      font-size: 10.3px;
-      font-weight: 680;
-      color: #3e4c62;
+      background: rgba(var(--sq-accent, 148, 163, 184), .075);
+      border: 1px solid rgba(var(--sq-accent, 148, 163, 184), .11);
+      color: var(--sq-accent-solid, #64748b);
+      font-size: 10.7px;
+      font-weight: 720;
       white-space: nowrap;
     }
 
     .ux-v6-health-badge .ux-v6-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: #2e9f5f;
-    }
-
-    .ux-v6-health-badge.warn .ux-v6-dot {
-      background: #f2a900;
-    }
-
-    .ux-v6-health-badge.crit .ux-v6-dot {
-      background: #c8102e;
+      background: var(--sq-accent-solid, #64748b);
     }
 
     .ux-v6-card-progress {
       height: 4px;
       border-radius: 999px;
-      background: #eef2f7;
+      background: rgba(226, 232, 240, .92);
       margin-top: 9px;
       overflow: hidden;
     }
@@ -5444,15 +5436,7 @@
       display: block;
       height: 100%;
       border-radius: 999px;
-      background: #2e9f5f;
-    }
-
-    .ux-v6-card-progress.warn span {
-      background: #f2a900;
-    }
-
-    .ux-v6-card-progress.crit span {
-      background: #c8102e;
+      background: linear-gradient(90deg, rgba(var(--sq-accent, 148, 163, 184), .88), rgba(var(--sq-accent, 148, 163, 184), .48));
     }
 
     @media (max-width: 1180px) {
@@ -5770,90 +5754,138 @@
 
     .ux-v6-squad-card {
       position: relative;
-      min-height: 142px;
+      min-height: 154px;
       display: grid;
-      grid-template-rows: auto 1fr auto;
-      gap: 10px;
+      grid-template-rows: auto auto 1fr;
       text-align: left;
       width: 100%;
-      padding: 13px 14px;
-      border: 1px solid #e2e8f0;
-      border-radius: 17px;
-      background: linear-gradient(180deg, #ffffff, #fcfdff);
+      padding: 13px 14px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(226, 232, 240, .96);
+      background:
+        radial-gradient(circle at 10% 6%, rgba(var(--sq-accent, 47, 111, 221), .115), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,.98) 0%, rgba(251,253,255,.97) 58%, rgba(var(--sq-accent, 47, 111, 221), .045) 100%);
       color: #111827;
       overflow: hidden;
-      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+      isolation: isolate;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
     }
 
     .ux-v6-squad-card::before {
       content: "";
       position: absolute;
-      left: 0;
-      top: 18px;
-      bottom: 18px;
+      inset: 0;
       width: 4px;
-      border-radius: 0 999px 999px 0;
-      background: var(--squad-accent, #c8102e);
+      border-radius: 20px 0 0 20px;
+      background: linear-gradient(90deg, rgba(var(--sq-accent, 47, 111, 221), .72), rgba(var(--sq-accent, 47, 111, 221), 0));
+      opacity: .9;
+      pointer-events: none;
+    }
+
+    .ux-v6-squad-card::after {
+      content: "";
+      position: absolute;
+      right: -44px;
+      top: -54px;
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      background: rgba(var(--sq-accent, 47, 111, 221), .07);
+      z-index: -1;
     }
 
     .ux-v6-squad-card:hover {
-      transform: translateY(-1px);
-      border-color: #ccd6e4;
-      box-shadow: 0 14px 24px rgba(15, 23, 42, .075);
+      transform: translateY(-2px);
+      border-color: rgba(var(--sq-accent, 47, 111, 221), .22);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, .075);
     }
 
     .ux-v6-squad-card.active {
-      border-color: #ffc8d2;
-      background: linear-gradient(135deg, #ffffff, #fff7f8);
-      box-shadow: 0 14px 28px rgba(200, 16, 46, .08);
+      border-color: rgba(var(--sq-accent, 47, 111, 221), .34);
+      box-shadow: inset 0 0 0 1px rgba(var(--sq-accent, 47, 111, 221), .1), 0 14px 30px rgba(15, 23, 42, .075);
+    }
+
+    .ux-v6-squad-card.active::before {
+      width: 5px;
+      background: linear-gradient(180deg, rgba(var(--sq-accent, 47, 111, 221), .95), rgba(var(--sq-accent, 47, 111, 221), .55));
     }
 
     .ux-v6-card-top {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .ux-v6-card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .ux-v6-squad-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 13px;
+      background: rgba(var(--sq-accent, 47, 111, 221), .11);
+      color: var(--sq-accent-solid, #2f6fdd);
+      border: 1px solid rgba(var(--sq-accent, 47, 111, 221), .14);
+      display: grid;
+      place-items: center;
+      font-size: 12.5px;
+      font-weight: 800;
+      flex: 0 0 auto;
     }
 
     .ux-v6-card-title strong {
       display: block;
-      font-size: 17px;
+      font-size: 14px;
       line-height: 1.15;
-      font-weight: 650;
-      letter-spacing: -.025em;
+      font-weight: 720;
+      letter-spacing: -.018em;
       color: #111827;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 150px;
     }
 
     .ux-v6-card-title span {
       display: block;
-      margin-top: 3px;
+      margin-top: 2px;
       color: var(--senior-muted);
-      font-size: 11.6px;
+      font-size: 10.8px;
       line-height: 1.25;
-      max-width: 200px;
+      max-width: 150px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .ux-v6-count {
+    .ux-v6-squad-arrow {
+      width: 30px;
+      height: 30px;
+      border-radius: 11px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(226,232,240,.88);
+      color: rgba(45,55,72,.72);
+      font-size: 18px;
+      display: grid;
+      place-items: center;
       flex: 0 0 auto;
-      padding: 5px 8px;
-      border: 1px solid #e3e9f2;
-      border-radius: 999px;
-      background: #f8fafc;
-      color: #475569;
-      font-size: 11px;
-      font-weight: 620;
-      white-space: nowrap;
     }
 
-    .ux-v6-hours {
-      color: #111827;
-      font-size: 26px;
-      line-height: 1;
-      font-weight: 650;
-      letter-spacing: -.04em;
+    .ux-v6-squad-card:hover .ux-v6-squad-arrow,
+    .ux-v6-squad-card.active .ux-v6-squad-arrow {
+      color: var(--sq-accent-solid, #2f6fdd);
+      background: rgba(var(--sq-accent, 47, 111, 221), .08);
+      border-color: rgba(var(--sq-accent, 47, 111, 221), .15);
+    }
+
+    .ux-v6-count {
+      display: none;
     }
 
     .ux-v6-card-meta {
@@ -12258,22 +12290,19 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     /* === UX Senior: agregações de leitura da Visão Executiva da Onda 1 (aside, saúde e rankings) === */
-    function squadCriticalCount(squadId) {
-      return squadProjects(squadId).filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
-    }
-
-    function squadMissingCount(squadId) {
-      return squadProjects(squadId).reduce((acc, project) => acc + (missingDataCount(project) > 0 ? 1 : 0), 0);
-    }
-
     function squadHealthInfo(squad) {
-      const critical = squadCriticalCount(squad.id);
-      const alerts = squadProjects(squad.id).reduce((acc, p) => acc + projectAlertCount(p), 0);
-      const missing = squadMissingCount(squad.id);
-      if (critical > 0) return { cls: 'crit', label: 'Crítico' };
-      if (alerts > 0 || missing > 0) return { cls: 'warn', label: 'Atenção' };
+      const isUnassigned = normalizeSearchText(squad.name || '') === normalizeSearchText('A validar');
+      const hasDuplicateChild = squadProjects(squad.id).some(projectHasDuplicateChild);
+      if (isUnassigned || hasDuplicateChild) return { cls: 'crit', label: 'Crítico' };
+      const hasCrossSquad = squadProjects(squad.id).some(p => projectCrossSquadChildren(p).length > 0);
+      const projectCount = squadProjects(squad.id).length;
+      const childCount = childCountForSquad(squad.id);
+      if (hasCrossSquad || childCount > projectCount * 2) return { cls: 'warn', label: 'Atenção' };
       return { cls: 'good', label: 'Saudável' };
     }
+
+    const SQ_HEALTH_ACCENT = { good: '46, 159, 95', warn: '242, 169, 0', crit: '200, 16, 46' };
+    const SQ_HEALTH_ACCENT_SOLID = { good: '#2e9f5f', warn: '#f2a900', crit: '#c8102e' };
 
     function unassignedProjectsCount() {
       return (data.projects || []).filter(p => normalizeSearchText(p.squad || '') === normalizeSearchText('A validar') || !p.squadId).length;
@@ -12954,11 +12983,6 @@ Recomendação PMO: ${d.recommendation}`;
 
 
 
-    /* === UX SENIOR OPTION 6: navegação por Squad com painel lateral === */
-    function uxV6Accent(index) {
-      const palette = ['#c8102e', '#2563eb', '#059669', '#d97706', '#7c3aed', '#0891b2', '#b91c1c', '#475569', '#0f766e'];
-      return palette[index % palette.length];
-    }
 
     function renderSidebar() {
       data = enhanceSquadData(data);
@@ -13033,7 +13057,7 @@ Recomendação PMO: ${d.recommendation}`;
       const healthLabels = { good: 'Saudável', warn: 'Atenção', crit: 'Crítico' };
       const healthLegendColors = { good: '#2e9f5f', warn: '#f2a900', crit: '#c8102e' };
 
-      const squadCardsHtml = visibleSquads.length ? visibleSquads.map((squad, index) => {
+      const squadCardsHtml = visibleSquads.length ? visibleSquads.map((squad) => {
         const projects = squadProjects(squad.id);
         const count = projects.length;
         const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
@@ -13041,13 +13065,16 @@ Recomendação PMO: ${d.recommendation}`;
         const nextDisc = nextDiscoveryForSquad(squad.id);
         const health = squadHealthInfo(squad);
         const active = squadDrawerOpen && selectedSquad?.id === squad.id ? 'active' : '';
-        return `<button type="button" class="ux-v6-squad-card ${active}" style="--squad-accent:${uxV6Accent(index)}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
+        return `<button type="button" class="ux-v6-squad-card ${active}" style="--sq-accent:${SQ_HEALTH_ACCENT[health.cls]};--sq-accent-solid:${SQ_HEALTH_ACCENT_SOLID[health.cls]}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
           <div class="ux-v6-card-top">
             <div class="ux-v6-card-title">
-              <strong>${escapeHtml(squad.name || 'Squad sem nome')}</strong>
-              <span>${escapeHtml(squad.business || 'Área não informada')}</span>
+              <span class="ux-v6-squad-avatar">${escapeHtml(squadInitials(squad.name))}</span>
+              <div>
+                <strong>${escapeHtml(squad.name || 'Squad sem nome')}</strong>
+                <span>${escapeHtml(squad.business || 'Área não informada')}</span>
+              </div>
             </div>
-            <span class="ux-v6-count">${count} projeto${count === 1 ? '' : 's'}</span>
+            <span class="ux-v6-squad-arrow">›</span>
           </div>
           <div class="ux-v6-card-stats">
             <div><strong>${count}</strong><span>Iniciativas</span></div>
@@ -13055,7 +13082,7 @@ Recomendação PMO: ${d.recommendation}`;
             <div><strong>${formatHours(hours)}</strong><span>Horas 2026</span></div>
           </div>
           <div class="ux-v6-card-bottom">
-            <span>Próx. Discovery<strong>${escapeHtml(formatBR(nextDisc))}</strong></span>
+            <span>▣ Próximo discovery<strong>${escapeHtml(formatBR(nextDisc))}</strong></span>
             <span class="ux-v6-health-badge ${health.cls}"><span class="ux-v6-dot"></span>${health.label}</span>
           </div>
           <div class="ux-v6-card-progress ${health.cls}"><span style="width:${average}%"></span></div>
