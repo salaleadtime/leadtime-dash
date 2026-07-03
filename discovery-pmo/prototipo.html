@@ -1,1 +1,1446 @@
-teste
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Protótipo · Discovery PMO Tracker Executivo</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root {
+      --bg:#f5f7fb;
+      --panel:#fff;
+      --panel-2:#fbfcfe;
+      --ink:#172033;
+      --muted:#667287;
+      --line:#e3e8f2;
+      --line-strong:#cfd7e6;
+      --primary:#bf1830;
+      --primary-dark:#8e1125;
+      --primary-soft:#fff0f3;
+      --navy:#111827;
+      --blue:#2454a6;
+      --blue-soft:#edf4ff;
+      --green:#17815f;
+      --green-soft:#eaf8f2;
+      --amber:#b7791f;
+      --amber-soft:#fff7df;
+      --red:#d33f49;
+      --red-soft:#fff0f1;
+      --purple:#6d5bd0;
+      --purple-soft:#f2f0ff;
+      --shadow:0 18px 45px rgba(17,24,39,.08);
+      --radius:20px;
+      --radius-sm:14px;
+      --radius-xs:10px;
+    }
+
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      margin:0;
+      font-family:Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(191,24,48,.10), transparent 32%),
+        radial-gradient(circle at 90% 4%, rgba(36,84,166,.10), transparent 28%),
+        var(--bg);
+      color:var(--ink);
+    }
+    button, input, select, textarea { font:inherit; }
+    button { border:0; cursor:pointer; }
+    .wrap { width:min(1480px, calc(100% - 40px)); margin:0 auto; }
+
+    .hero {
+      padding:22px 0 16px;
+      position:sticky;
+      top:0;
+      z-index:20;
+      backdrop-filter: blur(14px);
+      background:rgba(245,247,251,.84);
+      border-bottom:1px solid rgba(227,232,242,.82);
+    }
+    .topline {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:18px;
+    }
+    .brand {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+    .brand-mark {
+      width:42px;
+      height:42px;
+      border-radius:15px;
+      background:linear-gradient(135deg, var(--primary), #ff6b81);
+      color:#fff;
+      display:grid;
+      place-items:center;
+      font-weight:900;
+      box-shadow:0 14px 30px rgba(191,24,48,.28);
+    }
+    .eyebrow {
+      margin:0 0 4px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      font-weight:800;
+    }
+    h1 {
+      margin:0;
+      font-size:clamp(24px, 3vw, 38px);
+      line-height:1;
+      letter-spacing:-.055em;
+    }
+    h1 span { color:var(--primary); }
+    .actions {
+      display:flex;
+      gap:9px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .btn {
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      min-height:34px;
+      border-radius:13px;
+      padding:8px 12px;
+      background:var(--panel);
+      color:var(--ink);
+      border:1px solid var(--line);
+      font-size:12px;
+      font-weight:800;
+      box-shadow:0 8px 18px rgba(17,24,39,.05);
+      transition:.18s ease;
+      text-decoration:none;
+      white-space:nowrap;
+    }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 12px 24px rgba(17,24,39,.09); }
+    .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .btn.dark { background:var(--navy); color:#fff; border-color:var(--navy); }
+    .btn.soft { background:var(--primary-soft); color:var(--primary-dark); border-color:#ffd4dc; }
+    .btn.small { min-height:28px; padding:6px 9px; font-size:11px; border-radius:10px; box-shadow:none; }
+
+    .nav {
+      display:flex;
+      gap:8px;
+      overflow:auto;
+      padding:14px 0 0;
+    }
+    .nav a {
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      padding:8px 11px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(255,255,255,.78);
+      color:var(--muted);
+      text-decoration:none;
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .nav a:hover { color:var(--primary-dark); border-color:#ffd4dc; background:#fff; }
+
+    main { padding:22px 0 46px; }
+    .notice {
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      padding:14px 16px;
+      border:1px solid #ffd4dc;
+      background:linear-gradient(135deg, #fff, var(--primary-soft));
+      border-radius:var(--radius-sm);
+      color:#5f2530;
+      margin-bottom:16px;
+      box-shadow:0 12px 28px rgba(191,24,48,.06);
+    }
+    .notice strong { color:var(--primary-dark); }
+
+    .grid { display:grid; gap:16px; }
+    .grid.cards { grid-template-columns:repeat(4, minmax(160px, 1fr)); }
+    .grid.main-grid { grid-template-columns:minmax(0, 1.55fr) minmax(360px, .9fr); align-items:start; }
+    .grid.two { grid-template-columns:repeat(2, minmax(0,1fr)); }
+
+    .card {
+      background:rgba(255,255,255,.92);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card.pad { padding:18px; }
+    .card-head {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      padding:17px 18px 12px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(251,252,254,.88));
+    }
+    .card-title {
+      margin:0;
+      font-size:16px;
+      letter-spacing:-.02em;
+    }
+    .card-subtitle {
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    .metric {
+      padding:16px;
+      min-height:118px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      position:relative;
+    }
+    .metric::after {
+      content:"";
+      position:absolute;
+      inset:auto 14px 12px auto;
+      width:52px;
+      height:52px;
+      border-radius:18px;
+      background:var(--primary-soft);
+      opacity:.9;
+    }
+    .metric.blue::after { background:var(--blue-soft); }
+    .metric.green::after { background:var(--green-soft); }
+    .metric.amber::after { background:var(--amber-soft); }
+    .metric .label {
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .metric .value {
+      font-size:34px;
+      font-weight:900;
+      letter-spacing:-.055em;
+      z-index:1;
+    }
+    .metric .hint {
+      color:var(--muted);
+      font-size:12px;
+      z-index:1;
+    }
+
+    .filters {
+      display:grid;
+      grid-template-columns:1.4fr repeat(4, minmax(120px, .75fr));
+      gap:10px;
+      padding:14px 18px;
+      border-bottom:1px solid var(--line);
+    }
+    .field label {
+      display:block;
+      color:var(--muted);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.05em;
+      text-transform:uppercase;
+      margin-bottom:5px;
+    }
+    input, select, textarea {
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fff;
+      color:var(--ink);
+      padding:9px 10px;
+      outline:none;
+      font-size:13px;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color:#f3a9b5;
+      box-shadow:0 0 0 4px rgba(191,24,48,.08);
+    }
+
+    table {
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+    }
+    th {
+      text-align:left;
+      color:var(--muted);
+      background:#fbfcfe;
+      border-bottom:1px solid var(--line);
+      font-size:11px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      padding:10px 12px;
+      white-space:nowrap;
+    }
+    td {
+      border-bottom:1px solid var(--line);
+      padding:11px 12px;
+      vertical-align:top;
+      font-size:13px;
+    }
+    tr:hover td { background:#fffafd; }
+    .initiative-link {
+      border:0;
+      background:transparent;
+      padding:0;
+      color:var(--ink);
+      text-align:left;
+      font-weight:850;
+      line-height:1.25;
+    }
+    .initiative-link:hover { color:var(--primary); text-decoration:underline; }
+    .muted { color:var(--muted); }
+    .tiny { font-size:11px; }
+    .nowrap { white-space:nowrap; }
+
+    .badge {
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:850;
+      border:1px solid transparent;
+      white-space:nowrap;
+    }
+    .badge.green { background:var(--green-soft); color:var(--green); border-color:#cceee1; }
+    .badge.amber { background:var(--amber-soft); color:var(--amber); border-color:#fae6ad; }
+    .badge.red { background:var(--red-soft); color:var(--red); border-color:#ffd3d8; }
+    .badge.blue { background:var(--blue-soft); color:var(--blue); border-color:#d9e8ff; }
+    .badge.purple { background:var(--purple-soft); color:var(--purple); border-color:#dfd9ff; }
+    .badge.gray { background:#eef1f6; color:#5c6678; border-color:#dde3ec; }
+
+    .panel-list { padding:10px; display:grid; gap:9px; }
+    .upcoming {
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      gap:10px;
+      align-items:center;
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+    }
+    .date-chip {
+      display:grid;
+      place-items:center;
+      min-width:54px;
+      height:44px;
+      border-radius:13px;
+      background:var(--blue-soft);
+      color:var(--blue);
+      font-weight:900;
+      font-size:12px;
+      text-align:center;
+      line-height:1.05;
+    }
+    .hierarchy-item {
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:#fff;
+      overflow:hidden;
+    }
+    .hierarchy-top {
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      align-items:center;
+      gap:10px;
+      padding:12px;
+    }
+    .toggle {
+      width:28px;
+      height:28px;
+      border-radius:10px;
+      background:var(--primary-soft);
+      color:var(--primary-dark);
+      font-weight:900;
+    }
+    .children { padding:0 12px 12px 50px; display:none; }
+    .children.open { display:grid; gap:8px; }
+    .child {
+      padding:10px;
+      border:1px dashed var(--line-strong);
+      border-radius:13px;
+      background:#fbfcfe;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
+
+    .timeline { padding:16px 18px 18px; display:grid; gap:12px; }
+    .time-row {
+      display:grid;
+      grid-template-columns:160px 1fr 92px;
+      gap:12px;
+      align-items:center;
+    }
+    .time-title {
+      font-size:12px;
+      font-weight:900;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .bar-track {
+      height:12px;
+      background:#eef1f6;
+      border-radius:999px;
+      overflow:hidden;
+      position:relative;
+    }
+    .bar {
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg, var(--primary), var(--blue));
+    }
+
+    .drawer {
+      position:fixed;
+      top:0;
+      right:0;
+      width:min(610px, 96vw);
+      height:100vh;
+      background:#fff;
+      box-shadow:-24px 0 60px rgba(17,24,39,.18);
+      z-index:50;
+      transform:translateX(110%);
+      transition:.24s ease;
+      display:flex;
+      flex-direction:column;
+      border-left:1px solid var(--line);
+    }
+    .drawer.open { transform:translateX(0); }
+    .drawer-head {
+      padding:20px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(135deg, #fff, #fbfcfe);
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-start;
+    }
+    .drawer-body { padding:18px 20px 28px; overflow:auto; display:grid; gap:14px; }
+    .close-btn {
+      width:34px;
+      height:34px;
+      border-radius:12px;
+      background:#eef1f6;
+      color:var(--ink);
+      font-weight:900;
+    }
+    .info-grid {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:10px;
+    }
+    .info {
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:11px;
+      background:#fbfcfe;
+    }
+    .info .k {
+      color:var(--muted);
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:900;
+      margin-bottom:5px;
+    }
+    .info .v { font-size:13px; font-weight:760; overflow-wrap:anywhere; }
+    .section {
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:13px;
+      background:#fff;
+    }
+    .section h3 {
+      margin:0 0 10px;
+      font-size:14px;
+      letter-spacing:-.02em;
+    }
+    .checklist { display:grid; gap:8px; }
+    .check {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding:8px 9px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fbfcfe;
+      font-size:12px;
+    }
+
+    .modal-backdrop {
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(17,24,39,.42);
+      backdrop-filter:blur(8px);
+      z-index:60;
+      padding:24px;
+      overflow:auto;
+    }
+    .modal-backdrop.open { display:block; }
+    .modal {
+      width:min(980px, 100%);
+      background:#fff;
+      border-radius:24px;
+      margin:0 auto;
+      box-shadow:0 24px 80px rgba(17,24,39,.24);
+      overflow:hidden;
+    }
+    .modal-head {
+      padding:18px 20px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      background:linear-gradient(135deg, #fff, #fbfcfe);
+    }
+    .modal-body { padding:18px 20px; }
+    .form-grid {
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:12px;
+    }
+    .form-grid .span-2 { grid-column:span 2; }
+    .form-grid .span-4 { grid-column:span 4; }
+    .modal-actions {
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      padding:14px 20px 20px;
+      border-top:1px solid var(--line);
+      background:#fbfcfe;
+    }
+
+    .toast {
+      position:fixed;
+      left:50%;
+      bottom:24px;
+      transform:translateX(-50%);
+      background:var(--navy);
+      color:#fff;
+      border-radius:999px;
+      padding:10px 14px;
+      font-size:12px;
+      font-weight:800;
+      box-shadow:0 18px 45px rgba(17,24,39,.22);
+      opacity:0;
+      pointer-events:none;
+      transition:.2s ease;
+      z-index:90;
+    }
+    .toast.show { opacity:1; bottom:32px; }
+    .print-only { display:none; }
+
+    @media (max-width: 1120px) {
+      .grid.cards { grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .grid.main-grid, .grid.two { grid-template-columns:1fr; }
+      .filters { grid-template-columns:1fr 1fr; }
+      .form-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .form-grid .span-4 { grid-column:span 2; }
+    }
+    @media (max-width: 680px) {
+      .wrap { width:min(100% - 24px, 1480px); }
+      .topline { align-items:flex-start; flex-direction:column; }
+      .actions { justify-content:flex-start; }
+      .grid.cards, .filters, .form-grid, .info-grid { grid-template-columns:1fr; }
+      .form-grid .span-2, .form-grid .span-4 { grid-column:span 1; }
+      .time-row { grid-template-columns:1fr; }
+      table { min-width:980px; }
+      .table-scroll { overflow:auto; }
+    }
+    @media print {
+      .hero, .actions, .filters, .drawer, .modal-backdrop, .toast { display:none !important; }
+      body { background:#fff; }
+      .wrap { width:100%; }
+      .card { box-shadow:none; break-inside:avoid; }
+      .print-only { display:block; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="topline">
+        <div class="brand">
+          <div class="brand-mark">PMO</div>
+          <div>
+            <p class="eyebrow">Protótipo navegável · Discovery PMO Tracker</p>
+            <h1>Visão Executiva da <span>Onda 1</span></h1>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="btn" href="./index.html">← Voltar para página atual</a>
+          <button class="btn soft" onclick="openModal()">＋ Nova iniciativa</button>
+          <button class="btn" onclick="exportExcel()">⬇ Excel .xlsx</button>
+          <button class="btn" onclick="exportPDF()">⬇ PDF executivo</button>
+          <button class="btn dark" onclick="resetDemo()">Restaurar demo</button>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Navegação do protótipo">
+        <a href="#dashboard">📊 Dashboard</a>
+        <a href="#cadastro">🧾 Cadastro</a>
+        <a href="#mae-filhas">🌳 Mãe & Filhas</a>
+        <a href="#cronograma">🗓 Cronograma</a>
+        <a href="#tabela">📋 Iniciativas</a>
+        <a href="#exportacoes">📤 Exportações</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="notice">
+      <div>✨</div>
+      <div>
+        <strong>Protótipo seguro:</strong> esta tela é uma proposta visual/funcional separada para validar cadastro, hierarquia Mãe/Filhas, próximos discoveries, atualização automática e exportações. Não substitui a página oficial.
+        <div class="tiny muted" id="updatedAt">◷ Atualizado em -</div>
+      </div>
+    </section>
+
+    <section id="dashboard" class="grid cards" aria-label="Cards executivos">
+      <article class="card metric">
+        <div class="label">Iniciativas</div>
+        <div class="value" id="mTotal">0</div>
+        <div class="hint">Total na visão atual</div>
+      </article>
+      <article class="card metric blue">
+        <div class="label">Mães</div>
+        <div class="value" id="mMothers">0</div>
+        <div class="hint">Macroentregas agrupadoras</div>
+      </article>
+      <article class="card metric green">
+        <div class="label">Filhas</div>
+        <div class="value" id="mChildren">0</div>
+        <div class="hint">Subentregas vinculadas</div>
+      </article>
+      <article class="card metric amber">
+        <div class="label">Sem Squad</div>
+        <div class="value" id="mNoSquad">0</div>
+        <div class="hint">Tratadas como ASD / Sem Squad</div>
+      </article>
+    </section>
+
+    <section class="grid main-grid" style="margin-top:16px;">
+      <div class="card" id="tabela">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Iniciativas da Onda 1</h2>
+            <p class="card-subtitle">Clique em uma iniciativa para abrir o detalhe executivo com Mãe, Filhas, riscos, dependências e prontidão.</p>
+          </div>
+          <button class="btn small primary" onclick="openModal()">Cadastrar</button>
+        </div>
+        <div class="filters" id="cadastro">
+          <div class="field">
+            <label>Buscar</label>
+            <input id="q" placeholder="Número, nome, squad, PO..." oninput="renderAll()" />
+          </div>
+          <div class="field">
+            <label>Squad</label>
+            <select id="fSquad" onchange="renderAll()"></select>
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="fStatus" onchange="renderAll()"></select>
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select id="fTipo" onchange="renderAll()">
+              <option value="">Todos</option>
+              <option value="mae">Mãe</option>
+              <option value="filha">Filha</option>
+              <option value="sem-vinculo">Sem vínculo</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Discovery</label>
+            <select id="fDiscovery" onchange="renderAll()">
+              <option value="">Todos</option>
+              <option value="com-data">Com data</option>
+              <option value="sem-data">Sem data</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table id="initiativeTable">
+            <thead>
+              <tr>
+                <th>Iniciativa</th>
+                <th>Squad</th>
+                <th>Status</th>
+                <th>Discovery</th>
+                <th>Término</th>
+                <th>Mãe / Filhas</th>
+                <th>Prontidão</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="grid">
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Próximos Discoveries</h2>
+              <p class="card-subtitle">Sempre com prefixo IN, nome e data. Sem data aparece como “-”.</p>
+            </div>
+          </div>
+          <div class="panel-list" id="upcomingList"></div>
+        </section>
+
+        <section class="card" id="mae-filhas">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">Mãe & Filhas</h2>
+              <p class="card-subtitle">Hierarquia por campo # Mãe, independente da ordem das linhas.</p>
+            </div>
+          </div>
+          <div class="panel-list" id="hierarchyList"></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="grid two" style="margin-top:16px;">
+      <article class="card" id="cronograma">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Cronograma executivo</h2>
+            <p class="card-subtitle">Visual simples para apresentar datas de Discovery e término.</p>
+          </div>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </article>
+
+      <article class="card" id="exportacoes">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Exportações e atualização</h2>
+            <p class="card-subtitle">PDF executivo e Excel .xlsx sempre com dados filtrados e atualizados.</p>
+          </div>
+        </div>
+        <div class="panel-list">
+          <div class="upcoming">
+            <div class="date-chip">XLSX</div>
+            <div>
+              <strong>Excel estruturado</strong>
+              <div class="tiny muted">Número, nome, Squad, status, Mãe/Filha, datas, horas e última atualização.</div>
+            </div>
+            <button class="btn small" onclick="exportExcel()">Gerar</button>
+          </div>
+          <div class="upcoming">
+            <div class="date-chip">PDF</div>
+            <div>
+              <strong>PDF executivo</strong>
+              <div class="tiny muted">Resumo pronto para gestão, com cards, próximos discoveries e lista principal.</div>
+            </div>
+            <button class="btn small" onclick="exportPDF()">Gerar</button>
+          </div>
+          <div class="upcoming">
+            <div class="date-chip">AUTO</div>
+            <div>
+              <strong>Atualização automática</strong>
+              <div class="tiny muted">Ao salvar qualquer dado, todas as visões são recalculadas e o horário é atualizado.</div>
+            </div>
+            <span class="badge green">Ativo</span>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <aside class="drawer" id="drawer" aria-label="Detalhe da iniciativa">
+    <div class="drawer-head">
+      <div>
+        <p class="eyebrow">Detalhe executivo</p>
+        <h2 class="card-title" id="drawerTitle">-</h2>
+        <p class="card-subtitle" id="drawerSubtitle">-</p>
+      </div>
+      <button class="close-btn" onclick="closeDrawer()">×</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Cadastro de Squad / Iniciativa</p>
+          <h2 class="card-title" id="modalTitle">Nova iniciativa</h2>
+          <p class="card-subtitle">Campos organizados para operação, PMO/RTE e visão executiva. Tech Lead pode ficar em branco.</p>
+        </div>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <form id="initiativeForm" onsubmit="saveInitiative(event)">
+        <div class="modal-body">
+          <div class="form-grid">
+            <input type="hidden" name="id" />
+            <div class="field">
+              <label>Número da iniciativa</label>
+              <input name="numero" placeholder="113327" required />
+            </div>
+            <div class="field span-2">
+              <label>Nome da iniciativa</label>
+              <input name="nome" placeholder="FIRP / Abono / Mtoken / APP RM" required />
+            </div>
+            <div class="field">
+              <label># Mãe</label>
+              <input name="mae" placeholder="113327 ou vazio" />
+            </div>
+
+            <div class="field">
+              <label>Squad</label>
+              <select name="squad">
+                <option value="">ASD / Sem Squad</option>
+                <option>Expresso</option>
+                <option>OBF</option>
+                <option>Subsídios</option>
+                <option>Inter</option>
+                <option>Contact</option>
+                <option>Guardiões</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Tema</label>
+              <input name="tema" placeholder="Operações / Portabilidade" />
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select name="status">
+                <option>Em Discovery</option>
+                <option>Planejado</option>
+                <option>Em Validação</option>
+                <option>Risco</option>
+                <option>Pronto para Delivery</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Prontidão</label>
+              <select name="prontidao">
+                <option>Baixa</option>
+                <option>Média</option>
+                <option>Alta</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Discovery</label>
+              <input type="date" name="discovery" />
+            </div>
+            <div class="field">
+              <label>Término Discovery</label>
+              <input type="date" name="termino" />
+            </div>
+            <div class="field">
+              <label>Horas DS</label>
+              <input type="number" name="horasDS" min="0" placeholder="80" />
+            </div>
+            <div class="field">
+              <label>Horas Total</label>
+              <input type="number" name="horasTotal" min="0" placeholder="160" />
+            </div>
+
+            <div class="field">
+              <label>Consumo Horas 2026</label>
+              <input type="number" name="consumoHoras2026" min="0" placeholder="40" />
+            </div>
+            <div class="field">
+              <label>Líder da frente</label>
+              <input name="liderFrente" placeholder="Nome" />
+            </div>
+            <div class="field">
+              <label>Dono da iniciativa</label>
+              <input name="dono" placeholder="Nome" />
+            </div>
+            <div class="field">
+              <label>PO</label>
+              <input name="po" placeholder="Nome" />
+            </div>
+
+            <div class="field">
+              <label>Ponto focal</label>
+              <input name="pontoFocal" placeholder="Nome" />
+            </div>
+            <div class="field">
+              <label>Líder técnico / Tech Lead</label>
+              <input name="techLead" placeholder="Opcional" />
+            </div>
+            <div class="field">
+              <label>Dados</label>
+              <select name="dados">
+                <option>Mapeado</option>
+                <option>Pendente</option>
+                <option>Não se aplica</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>IA/RPA</label>
+              <select name="iaRpa">
+                <option>Não avaliado</option>
+                <option>Com potencial</option>
+                <option>Não se aplica</option>
+              </select>
+            </div>
+
+            <div class="field span-2">
+              <label>Riscos</label>
+              <textarea name="riscos" rows="3" placeholder="Riscos, bloqueios ou pontos de atenção"></textarea>
+            </div>
+            <div class="field span-2">
+              <label>Dependências</label>
+              <textarea name="dependencias" rows="3" placeholder="Dependências internas, negócio, dados, arquitetura..."></textarea>
+            </div>
+            <div class="field span-4">
+              <label>Observações / anexos</label>
+              <textarea name="observacoes" rows="3" placeholder="Links, anexos, contexto executivo e próximos passos"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn primary">Salvar e atualizar visões</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Atualizado com sucesso</div>
+
+  <script>
+    const STORAGE_KEY = "discoveryPmoPrototype.v1";
+    const nowText = () => new Intl.DateTimeFormat("pt-BR", { dateStyle:"short", timeStyle:"short" }).format(new Date());
+
+    const seed = [
+      {
+        id:"113327", numero:"113327", nome:"FIRP / Abono / Mtoken / APP RM", mae:"",
+        squad:"Expresso", tema:"Portabilidade AS IS", liderFrente:"Frente Operacional",
+        dono:"Gestão Executiva", po:"PO Expresso", pontoFocal:"PMO/RTE", techLead:"", dados:"Mapeado", iaRpa:"Com potencial",
+        status:"Em Discovery", discovery:"2026-07-06", termino:"2026-07-17", horasDS:80, horasTotal:220, consumoHoras2026:58,
+        prontidao:"Média", riscos:"Dependência de validação com negócio e priorização de dados.", dependencias:"Negócio, dados e arquitetura.", observacoes:"Iniciativa Mãe com frentes vinculadas."
+      },
+      {
+        id:"113331", numero:"113331", nome:"Abono - SPR - Automatizar processo operacional", mae:"113327",
+        squad:"Expresso", tema:"Automação", liderFrente:"Operações", dono:"Dono Operacional", po:"PO Expresso", pontoFocal:"Ponto Focal 1", techLead:"Tech Lead 1", dados:"Mapeado", iaRpa:"Com potencial",
+        status:"Planejado", discovery:"2026-07-08", termino:"2026-07-15", horasDS:40, horasTotal:120, consumoHoras2026:20,
+        prontidao:"Média", riscos:"Critérios de aceite ainda em evolução.", dependencias:"Refinamento técnico e validação de regra.", observacoes:"Filha vinculada à macroentrega FIRP."
+      },
+      {
+        id:"113332", numero:"113332", nome:"Mtoken - APP RM - Jornada e regra operacional", mae:"113327",
+        squad:"OBF", tema:"Jornada APP", liderFrente:"Canal Digital", dono:"Dono Canal", po:"PO OBF", pontoFocal:"Ponto Focal 2", techLead:"Tech Lead 2", dados:"Pendente", iaRpa:"Não avaliado",
+        status:"Risco", discovery:"2026-07-10", termino:"2026-07-24", horasDS:56, horasTotal:140, consumoHoras2026:35,
+        prontidao:"Baixa", riscos:"Base de dados pendente para validação.", dependencias:"DBA e arquitetura.", observacoes:"Acompanhar dependência de dados."
+      },
+      {
+        id:"113286", numero:"113286", nome:"Consórcio Cobrança", mae:"",
+        squad:"Subsídios", tema:"Cobrança", liderFrente:"Frente Cobrança", dono:"Dono Produto", po:"PO Subsídios", pontoFocal:"Ponto Focal 3", techLead:"Tech Lead 3", dados:"Mapeado", iaRpa:"Não se aplica",
+        status:"Em Validação", discovery:"2026-07-11", termino:"2026-07-18", horasDS:32, horasTotal:90, consumoHoras2026:41,
+        prontidao:"Alta", riscos:"Risco baixo.", dependencias:"Homologação do negócio.", observacoes:"Próxima decisão: seguir para Delivery."
+      },
+      {
+        id:"113444", numero:"113444", nome:"Esteira de anexos e evidências", mae:"",
+        squad:"", tema:"Anexos", liderFrente:"PMO", dono:"Gestão", po:"", pontoFocal:"PMO", techLead:"", dados:"Não se aplica", iaRpa:"Não avaliado",
+        status:"Planejado", discovery:"", termino:"", horasDS:0, horasTotal:40, consumoHoras2026:0,
+        prontidao:"Baixa", riscos:"Sem Squad definida.", dependencias:"Definição de responsável.", observacoes:"Deve aparecer como ASD / Sem Squad."
+      }
+    ];
+
+    let state = loadState();
+    let activeId = null;
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (err) {
+        console.warn("Falha ao ler localStorage", err);
+      }
+      return { updatedAt: nowText(), initiatives: structuredClone(seed) };
+    }
+
+    function persist() {
+      state.updatedAt = nowText();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      document.getElementById("updatedAt").textContent = "◷ Atualizado em " + state.updatedAt;
+    }
+
+    function normalizeSquad(value) {
+      const clean = String(value || "").trim();
+      return clean || "ASD / Sem Squad";
+    }
+
+    function initiativeLabel(item) {
+      const n = String(item.numero || item.id || "").trim();
+      const prefix = n ? "IN " + n + " - " : "";
+      return prefix + (item.nome || "Iniciativa sem nome");
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const [year, month, day] = value.split("-");
+      if (!year || !month || !day) return "-";
+      return `${day}/${month}/${year}`;
+    }
+
+    function dateChip(value) {
+      if (!value) return "-";
+      const [year, month, day] = value.split("-");
+      const months = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+      return `${day}<br>${months[Number(month)-1] || month}`;
+    }
+
+    function statusBadge(status) {
+      const map = {
+        "Pronto para Delivery":"green",
+        "Em Discovery":"blue",
+        "Em Validação":"purple",
+        "Planejado":"amber",
+        "Risco":"red"
+      };
+      return `<span class="badge ${map[status] || "gray"}">${status || "-"}</span>`;
+    }
+
+    function readinessBadge(value) {
+      const map = { "Alta":"green", "Média":"amber", "Baixa":"red" };
+      return `<span class="badge ${map[value] || "gray"}">${value || "-"}</span>`;
+    }
+
+    function getMother(item) {
+      if (!item.mae) return null;
+      return state.initiatives.find(x => String(x.numero) === String(item.mae) || String(x.id) === String(item.mae)) || null;
+    }
+
+    function getChildren(item) {
+      const key = String(item.numero || item.id);
+      return state.initiatives.filter(x => String(x.mae || "") === key);
+    }
+
+    function getFiltered() {
+      const q = document.getElementById("q")?.value.trim().toLowerCase() || "";
+      const squad = document.getElementById("fSquad")?.value || "";
+      const status = document.getElementById("fStatus")?.value || "";
+      const tipo = document.getElementById("fTipo")?.value || "";
+      const discovery = document.getElementById("fDiscovery")?.value || "";
+
+      return state.initiatives.filter(item => {
+        const searchable = [
+          item.numero, item.nome, normalizeSquad(item.squad), item.tema, item.po, item.techLead,
+          item.dono, item.pontoFocal, item.status, item.mae
+        ].join(" ").toLowerCase();
+
+        const children = getChildren(item);
+        const mother = getMother(item);
+        const itemTipo = children.length ? "mae" : mother ? "filha" : "sem-vinculo";
+
+        return (!q || searchable.includes(q))
+          && (!squad || normalizeSquad(item.squad) === squad)
+          && (!status || item.status === status)
+          && (!tipo || itemTipo === tipo)
+          && (!discovery || (discovery === "com-data" ? !!item.discovery : !item.discovery));
+      });
+    }
+
+    function hydrateFilters() {
+      const squads = [...new Set(state.initiatives.map(i => normalizeSquad(i.squad)))].sort();
+      const statuses = [...new Set(state.initiatives.map(i => i.status || "Sem status"))].sort();
+      const fSquad = document.getElementById("fSquad");
+      const fStatus = document.getElementById("fStatus");
+      const selectedSquad = fSquad.value;
+      const selectedStatus = fStatus.value;
+      fSquad.innerHTML = `<option value="">Todas</option>` + squads.map(s => `<option>${s}</option>`).join("");
+      fStatus.innerHTML = `<option value="">Todos</option>` + statuses.map(s => `<option>${s}</option>`).join("");
+      fSquad.value = selectedSquad;
+      fStatus.value = selectedStatus;
+    }
+
+    function renderMetrics() {
+      const items = getFiltered();
+      document.getElementById("mTotal").textContent = items.length;
+      document.getElementById("mMothers").textContent = items.filter(i => getChildren(i).length).length;
+      document.getElementById("mChildren").textContent = items.filter(i => !!getMother(i)).length;
+      document.getElementById("mNoSquad").textContent = items.filter(i => normalizeSquad(i.squad) === "ASD / Sem Squad").length;
+    }
+
+    function renderTable() {
+      const rows = getFiltered().map(item => {
+        const children = getChildren(item);
+        const mother = getMother(item);
+        const relation = children.length
+          ? `<span class="badge blue">Mãe · ${children.length} filha(s)</span>`
+          : mother
+            ? `<span class="badge purple">Filha de IN ${mother.numero}</span>`
+            : item.mae
+              ? `<span class="badge red">Mãe não localizada</span>`
+              : `<span class="badge gray">Sem vínculo</span>`;
+
+        return `
+          <tr>
+            <td>
+              <button class="initiative-link" onclick="openDrawer('${item.id}')">${initiativeLabel(item)}</button>
+              <div class="tiny muted">${item.tema || "-"}</div>
+            </td>
+            <td>${normalizeSquad(item.squad)}</td>
+            <td>${statusBadge(item.status)}</td>
+            <td class="nowrap">${formatDate(item.discovery)}</td>
+            <td class="nowrap">${formatDate(item.termino)}</td>
+            <td>${relation}</td>
+            <td>${readinessBadge(item.prontidao)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      document.getElementById("tableBody").innerHTML = rows || `<tr><td colspan="7" class="muted">Nenhuma iniciativa encontrada.</td></tr>`;
+    }
+
+    function renderUpcoming() {
+      const items = [...getFiltered()]
+        .sort((a,b) => (a.discovery || "9999-12-31").localeCompare(b.discovery || "9999-12-31"))
+        .slice(0, 6);
+
+      document.getElementById("upcomingList").innerHTML = items.map(item => `
+        <div class="upcoming">
+          <div class="date-chip">${dateChip(item.discovery)}</div>
+          <div>
+            <button class="initiative-link" onclick="openDrawer('${item.id}')">${initiativeLabel(item)}</button>
+            <div class="tiny muted">${normalizeSquad(item.squad)} · ${item.status || "-"}</div>
+          </div>
+          ${readinessBadge(item.prontidao)}
+        </div>
+      `).join("") || `<div class="muted">Sem próximos discoveries.</div>`;
+    }
+
+    function renderHierarchy() {
+      const mothers = state.initiatives.filter(item => !item.mae || getChildren(item).length);
+      document.getElementById("hierarchyList").innerHTML = mothers.map(item => {
+        const children = getChildren(item);
+        return `
+          <div class="hierarchy-item">
+            <div class="hierarchy-top">
+              <button class="toggle" onclick="toggleChildren('${item.id}')">${children.length ? "＋" : "•"}</button>
+              <div>
+                <button class="initiative-link" onclick="openDrawer('${item.id}')">${initiativeLabel(item)}</button>
+                <div class="tiny muted">${normalizeSquad(item.squad)} · ${children.length ? children.length + " filha(s)" : "Nenhuma filha vinculada"}</div>
+              </div>
+              ${statusBadge(item.status)}
+            </div>
+            <div class="children" id="children-${item.id}">
+              ${children.length ? children.map(child => `
+                <div class="child">
+                  <div>
+                    <button class="initiative-link" onclick="openDrawer('${child.id}')">${initiativeLabel(child)}</button>
+                    <div class="tiny muted">${normalizeSquad(child.squad)} · Filha de IN ${item.numero}</div>
+                  </div>
+                  ${statusBadge(child.status)}
+                </div>
+              `).join("") : `<div class="child muted">Nenhuma filha vinculada</div>`}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function toggleChildren(id) {
+      const el = document.getElementById("children-" + id);
+      if (el) el.classList.toggle("open");
+    }
+
+    function renderTimeline() {
+      const dated = getFiltered().filter(i => i.discovery || i.termino).slice(0, 8);
+      document.getElementById("timeline").innerHTML = dated.map(item => {
+        const progress = item.prontidao === "Alta" ? 86 : item.prontidao === "Média" ? 56 : 28;
+        return `
+          <div class="time-row">
+            <div class="time-title">${initiativeLabel(item)}</div>
+            <div class="bar-track"><div class="bar" style="width:${progress}%"></div></div>
+            <div class="tiny muted nowrap">${formatDate(item.discovery)} → ${formatDate(item.termino)}</div>
+          </div>
+        `;
+      }).join("") || `<div class="muted">Sem datas para exibir no cronograma.</div>`;
+    }
+
+    function openDrawer(id) {
+      activeId = id;
+      const item = state.initiatives.find(i => i.id === id);
+      if (!item) return;
+      const mother = getMother(item);
+      const children = getChildren(item);
+
+      document.getElementById("drawerTitle").textContent = initiativeLabel(item);
+      document.getElementById("drawerSubtitle").textContent = `${normalizeSquad(item.squad)} · ${item.tema || "-"} · ${item.status || "-"}`;
+
+      const relationBlock = children.length
+        ? `<div class="section"><h3>Filhas vinculadas</h3>${children.map(child => `<div class="child"><button class="initiative-link" onclick="openDrawer('${child.id}')">${initiativeLabel(child)}</button>${statusBadge(child.status)}</div>`).join("")}</div>`
+        : mother
+          ? `<div class="section"><h3>Iniciativa Mãe</h3><div class="child"><button class="initiative-link" onclick="openDrawer('${mother.id}')">${initiativeLabel(mother)}</button>${statusBadge(mother.status)}</div></div>`
+          : item.mae
+            ? `<div class="section"><h3>Iniciativa Mãe</h3><span class="badge red">Mãe não localizada</span></div>`
+            : `<div class="section"><h3>Filhas vinculadas</h3><div class="muted">Nenhuma filha vinculada</div></div>`;
+
+      document.getElementById("drawerBody").innerHTML = `
+        <div class="actions">
+          <button class="btn small primary" onclick="editInitiative('${item.id}')">Editar</button>
+          <button class="btn small" onclick="duplicateInitiative('${item.id}')">Duplicar como filha</button>
+        </div>
+        <div class="info-grid">
+          ${info("Número", "IN " + (item.numero || "-"))}
+          ${info("Squad", normalizeSquad(item.squad))}
+          ${info("Discovery", formatDate(item.discovery))}
+          ${info("Término Discovery", formatDate(item.termino))}
+          ${info("Líder da frente", item.liderFrente || "-")}
+          ${info("Dono da iniciativa", item.dono || "-")}
+          ${info("PO", item.po || "-")}
+          ${info("Ponto focal", item.pontoFocal || "-")}
+          ${info("Líder técnico / Tech Lead", item.techLead || "-")}
+          ${info("Dados", item.dados || "-")}
+          ${info("IA/RPA", item.iaRpa || "-")}
+          ${info("Horas", `DS: ${item.horasDS || 0} · Total: ${item.horasTotal || 0} · Consumo 2026: ${item.consumoHoras2026 || 0}`)}
+        </div>
+        ${relationBlock}
+        <div class="section">
+          <h3>Checklist de prontidão para Delivery</h3>
+          <div class="checklist">
+            <div class="check"><span>História e critérios de aceite claros</span>${readinessBadge(item.prontidao)}</div>
+            <div class="check"><span>Dependências mapeadas</span>${item.dependencias ? '<span class="badge green">Sim</span>' : '<span class="badge amber">Pendente</span>'}</div>
+            <div class="check"><span>Riscos mapeados</span>${item.riscos ? '<span class="badge green">Sim</span>' : '<span class="badge amber">Pendente</span>'}</div>
+            <div class="check"><span>Dados / IA / RPA avaliados</span><span class="badge blue">${item.dados || "-"}</span></div>
+          </div>
+        </div>
+        <div class="section">
+          <h3>Riscos e dependências</h3>
+          <p><strong>Riscos:</strong> ${item.riscos || "-"}</p>
+          <p><strong>Dependências:</strong> ${item.dependencias || "-"}</p>
+          <p><strong>Observações / anexos:</strong> ${item.observacoes || "-"}</p>
+        </div>
+      `;
+
+      document.getElementById("drawer").classList.add("open");
+    }
+
+    function info(k, v) {
+      return `<div class="info"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+    }
+
+    function closeDrawer() {
+      document.getElementById("drawer").classList.remove("open");
+    }
+
+    function openModal(item = null) {
+      const modal = document.getElementById("modal");
+      const form = document.getElementById("initiativeForm");
+      form.reset();
+      form.id.value = "";
+
+      if (item) {
+        document.getElementById("modalTitle").textContent = "Editar iniciativa";
+        Object.entries(item).forEach(([key, value]) => {
+          if (form.elements[key]) form.elements[key].value = value ?? "";
+        });
+      } else {
+        document.getElementById("modalTitle").textContent = "Nova iniciativa";
+        form.status.value = "Planejado";
+        form.prontidao.value = "Baixa";
+        form.dados.value = "Pendente";
+        form.iaRpa.value = "Não avaliado";
+      }
+
+      modal.classList.add("open");
+    }
+
+    function closeModal() {
+      document.getElementById("modal").classList.remove("open");
+    }
+
+    function editInitiative(id) {
+      const item = state.initiatives.find(i => i.id === id);
+      if (item) openModal(item);
+    }
+
+    function duplicateInitiative(id) {
+      const item = state.initiatives.find(i => i.id === id);
+      if (!item) return;
+      const copy = { ...item, id: String(Date.now()), numero:"", nome:item.nome + " - Nova filha", mae:item.numero || item.id, status:"Planejado", prontidao:"Baixa" };
+      openModal(copy);
+    }
+
+    function saveInitiative(event) {
+      event.preventDefault();
+      const form = event.target;
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.id = data.id || data.numero || String(Date.now());
+      data.squad = normalizeSquad(data.squad);
+      data.horasDS = Number(data.horasDS || 0);
+      data.horasTotal = Number(data.horasTotal || 0);
+      data.consumoHoras2026 = Number(data.consumoHoras2026 || 0);
+
+      const idx = state.initiatives.findIndex(i => i.id === data.id);
+      if (idx >= 0) state.initiatives[idx] = data;
+      else state.initiatives.push(data);
+
+      persist();
+      closeModal();
+      hydrateFilters();
+      renderAll(false);
+      showToast("Dados salvos e visões atualizadas");
+      if (activeId === data.id) openDrawer(data.id);
+    }
+
+    function exportRows() {
+      return getFiltered().map(item => {
+        const mother = getMother(item);
+        const children = getChildren(item);
+        return {
+          "Número": item.numero ? "IN " + item.numero : "-",
+          "Nome da Iniciativa": item.nome || "-",
+          "Squad": normalizeSquad(item.squad),
+          "Tema": item.tema || "-",
+          "Status": item.status || "-",
+          "Discovery": formatDate(item.discovery),
+          "Término Discovery": formatDate(item.termino),
+          "Tipo": children.length ? "Mãe" : mother ? "Filha" : item.mae ? "Filha com mãe não localizada" : "Sem vínculo",
+          "# Mãe": item.mae ? "IN " + item.mae : "-",
+          "Filhas": children.length ? children.map(c => "IN " + c.numero).join(", ") : "-",
+          "Prontidão": item.prontidao || "-",
+          "Líder da frente": item.liderFrente || "-",
+          "Dono da Iniciativa": item.dono || "-",
+          "PO": item.po || "-",
+          "Ponto Focal": item.pontoFocal || "-",
+          "Líder Técnico": item.techLead || "-",
+          "Dados": item.dados || "-",
+          "IA/RPA": item.iaRpa || "-",
+          "Horas DS": item.horasDS || 0,
+          "Horas Total": item.horasTotal || 0,
+          "Consumo Horas 2026": item.consumoHoras2026 || 0,
+          "Riscos": item.riscos || "-",
+          "Dependências": item.dependencias || "-",
+          "Observações / Anexos": item.observacoes || "-",
+          "Última atualização": state.updatedAt
+        };
+      });
+    }
+
+    function exportExcel() {
+      const rows = exportRows();
+      if (!rows.length) return showToast("Não há dados para exportar");
+      if (window.XLSX) {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws["!cols"] = Object.keys(rows[0]).map(k => ({ wch: Math.min(Math.max(k.length + 6, 14), 42) }));
+        XLSX.utils.book_append_sheet(wb, ws, "Discovery PMO");
+        XLSX.writeFile(wb, `Discovery_PMO_Tracker_${new Date().toISOString().slice(0,10)}.xlsx`);
+      } else {
+        const csv = [Object.keys(rows[0]).join(";"), ...rows.map(row => Object.values(row).map(v => `"${String(v).replaceAll('"','""')}"`).join(";"))].join("\n");
+        downloadBlob(csv, "Discovery_PMO_Tracker.csv", "text/csv;charset=utf-8");
+      }
+      showToast("Arquivo Excel gerado");
+    }
+
+    function exportPDF() {
+      const rows = exportRows();
+      if (!rows.length) return showToast("Não há dados para exportar");
+      const jsPDF = window.jspdf?.jsPDF;
+      if (!jsPDF) {
+        window.print();
+        return;
+      }
+      const doc = new jsPDF({ orientation:"landscape", unit:"pt", format:"a4" });
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("Discovery PMO Tracker - Visão Executiva", 36, 36);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`Arquivo gerado em ${state.updatedAt}`, 36, 52);
+
+      const summary = [
+        ["Iniciativas", String(getFiltered().length)],
+        ["Mães", String(getFiltered().filter(i => getChildren(i).length).length)],
+        ["Filhas", String(getFiltered().filter(i => !!getMother(i)).length)],
+        ["Sem Squad", String(getFiltered().filter(i => normalizeSquad(i.squad) === "ASD / Sem Squad").length)]
+      ];
+
+      doc.autoTable({
+        startY: 68,
+        head:[["Indicador", "Valor"]],
+        body:summary,
+        theme:"grid",
+        styles:{ fontSize:8, cellPadding:5 },
+        headStyles:{ fillColor:[191,24,48] }
+      });
+
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 16,
+        head:[["Iniciativa", "Squad", "Status", "Discovery", "Término", "Tipo", "Prontidão"]],
+        body: rows.map(r => [r["Número"] + " - " + r["Nome da Iniciativa"], r["Squad"], r["Status"], r["Discovery"], r["Término Discovery"], r["Tipo"], r["Prontidão"]]),
+        styles:{ fontSize:7, cellPadding:4, overflow:"linebreak" },
+        headStyles:{ fillColor:[17,24,39] },
+        columnStyles:{ 0:{ cellWidth:230 }, 1:{ cellWidth:90 }, 2:{ cellWidth:85 }, 3:{ cellWidth:65 }, 4:{ cellWidth:65 }, 5:{ cellWidth:95 }, 6:{ cellWidth:65 } }
+      });
+
+      doc.save(`Discovery_PMO_Tracker_${new Date().toISOString().slice(0,10)}.pdf`);
+      showToast("PDF executivo gerado");
+    }
+
+    function downloadBlob(content, filename, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function resetDemo() {
+      if (!confirm("Restaurar dados de demonstração?")) return;
+      state = { updatedAt: nowText(), initiatives: structuredClone(seed) };
+      persist();
+      hydrateFilters();
+      renderAll(false);
+      showToast("Protótipo restaurado");
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2100);
+    }
+
+    function renderAll(refreshFilters = true) {
+      if (refreshFilters) hydrateFilters();
+      document.getElementById("updatedAt").textContent = "◷ Atualizado em " + (state.updatedAt || "-");
+      renderMetrics();
+      renderTable();
+      renderUpcoming();
+      renderHierarchy();
+      renderTimeline();
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeDrawer();
+        closeModal();
+      }
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
