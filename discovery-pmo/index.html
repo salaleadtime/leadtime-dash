@@ -5201,8 +5201,8 @@
 
     .ux-v6-date-row {
       display: grid;
-      grid-template-columns: 48px 1fr;
-      gap: 10px;
+      grid-template-columns: 40px 1fr auto;
+      gap: 8px;
       align-items: center;
     }
 
@@ -5558,10 +5558,17 @@
       max-width: 620px;
     }
 
+    .ux-v6-report-updated {
+      margin: 8px 0 0;
+      color: var(--senior-muted);
+      font-size: 11.5px;
+    }
+
     .ux-v6-report-actions {
       display: flex;
       gap: 8px;
       flex: 0 0 auto;
+      flex-wrap: wrap;
     }
 
     .ux-v6-report-btn {
@@ -9189,6 +9196,8 @@
 
     function saveData(show = false) {
       data.activeProjectId = activeProjectId;
+      data.source = data.source || {};
+      data.source.importedAt = new Date().toISOString();
       storageSet(STORAGE_KEY, JSON.stringify(data));
       if (show) toast('Salvo automaticamente');
       render();
@@ -10413,6 +10422,15 @@
       return `${d}/${m}/${y}`;
     }
 
+    // Formata data+hora (ISO) para exibir carimbo "Atualizado em" com precisão de minutos
+    function formatBRDateTime(isoValue) {
+      if (!isoValue) return '';
+      const d = new Date(isoValue);
+      if (Number.isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
     function slugify(str) {
       return String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'projeto';
     }
@@ -10606,6 +10624,10 @@ Recomendação PMO: ${d.recommendation}`;
       });
       if (!base.squads.length) {
         base.squads.push({ id: 'squad-default', name: 'A definir', code: 'SQD', business: 'Crédito / Portabilidade', rteOwner: 'Amanda', owner: 'Amanda' });
+      }
+      // ASD / Sem Squad precisa sempre aparecer na lista de squads, mesmo que a base carregada não a traga
+      if (!base.squads.some(s => s.id === 'squad-asd')) {
+        base.squads.unshift(normalizeSquadRecord({ id: 'squad-asd', name: 'Ainda Sem Definição', code: 'ASD', business: '', rteOwner: '', owner: '' }));
       }
       normalizeNeutralInitiativeNumbers(base);
       (base.projects || []).forEach(project => {
@@ -11261,6 +11283,13 @@ Recomendação PMO: ${d.recommendation}`;
       return String(project?.[key] || '').trim() || fallback;
     }
 
+    // Tech Lead ainda não é cadastrado na planilha ou vem como placeholder "ASD" (Ainda Sem Definição) -> exibir em branco (—)
+    function techLeadDisplay(project) {
+      const value = String(project?.techLead || '').trim();
+      if (!value || value.toUpperCase() === 'ASD') return '—';
+      return value;
+    }
+
     function subInitiativeCount(project) {
       return Array.isArray(project?.subInitiatives) ? project.subInitiatives.length : 0;
     }
@@ -11322,10 +11351,20 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function upcomingDiscoveries(limit = 5) {
-      return (data.projects || [])
+      const withDate = (data.projects || [])
         .filter(p => p.discoveryDate)
-        .sort((a, b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)))
-        .slice(0, limit);
+        .sort((a, b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)));
+      const withoutDate = (data.projects || []).filter(p => !p.discoveryDate);
+      return [...withDate, ...withoutDate].slice(0, limit);
+    }
+
+    // Permite parametrizar a Data de Discovery direto no card "Próximos Discoveries" e propaga a mudança para todo o dashboard
+    function updateDiscoveryDateInline(projectId, value) {
+      const project = (data.projects || []).find(p => p.id === projectId);
+      if (!project) return;
+      project.discoveryDate = value || '';
+      saveData();
+      toast('Data de Discovery atualizada');
     }
 
     function topSquadsByHours(limit = 5) {
@@ -11689,7 +11728,7 @@ Recomendação PMO: ${d.recommendation}`;
         totalHours2026: 0
       });
       data.squads.push(newSquad);
-      storageSet(STORAGE_KEY, JSON.stringify(data));
+      saveData();
       squadListSelected = newSquad.id;
       _renderSquadListPanel();
     }
@@ -11762,6 +11801,152 @@ Recomendação PMO: ${d.recommendation}`;
       renderReportsPanel();
     }
 
+    /* === Exportação de PDF e Excel com carimbo de data/hora da atualização === */
+    function timestampLabel() {
+      return formatBRDateTime(data.source?.importedAt || new Date().toISOString());
+    }
+
+    function fileTimestamp() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+    }
+
+    function loadExternalScript(src) {
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) { existing.addEventListener('load', resolve); if (existing.dataset.loaded) resolve(); return; }
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => { script.dataset.loaded = '1'; resolve(); };
+        script.onerror = () => reject(new Error('Falha ao carregar ' + src));
+        document.head.appendChild(script);
+      });
+    }
+
+    function exportPdfReport() {
+      data = enhanceSquadData(data);
+      const squads = sortedSquadsList();
+      const allProjects = data.projects || [];
+      Promise.resolve()
+        .then(() => (window.jspdf && window.jspdf.jsPDF) ? null : loadExternalScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js'))
+        .then(() => (window.jspdf?.jsPDF?.API?.autoTable) ? null : loadExternalScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js'))
+        .then(() => {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'landscape' });
+          doc.setFontSize(14);
+          doc.text('Discovery PMO Tracker · BEONC I Planejamento Ops for Ops — Onda 1 2026', 14, 14);
+          doc.setFontSize(9);
+          doc.text(`Atualizado em ${timestampLabel()}`, 14, 20);
+          doc.autoTable({
+            startY: 26,
+            head: [['Squad', 'Iniciativas', 'Filhas', 'Horas 2026', 'Saúde']],
+            body: squads.map(sq => [sq.name, String(squadProjects(sq.id).length), String(childCountForSquad(sq.id)), formatHours(hoursForSquad(sq.id)), squadHealthInfo(sq).label]),
+            styles: { fontSize: 8 }
+          });
+          doc.addPage();
+          doc.setFontSize(12);
+          doc.text('Iniciativas · Planejamento 2026', 14, 14);
+          doc.setFontSize(8);
+          doc.text(`Atualizado em ${timestampLabel()}`, 14, 20);
+          doc.autoTable({
+            startY: 26,
+            head: [['# Mãe', 'Nome da Iniciativa', 'Squad', 'Tech Lead', 'Discovery', 'Horas 2026']],
+            body: allProjects.map(p => {
+              const sq = squadForProject(p);
+              return [
+                String(p.initiativeNumber || '—'),
+                p.name || '',
+                sq?.id === 'squad-asd' ? 'ASD' : (sq?.name || p.squad || '—'),
+                techLeadDisplay(p),
+                p.discoveryDate ? formatBR(p.discoveryDate) : '-',
+                formatHours(p.hours2026)
+              ];
+            }),
+            styles: { fontSize: 7 }
+          });
+          doc.save(`discovery-pmo-onda1_${fileTimestamp()}.pdf`);
+          toast('PDF gerado com sucesso');
+        })
+        .catch(() => {
+          toast('Sem conexão para gerar o PDF automaticamente. Abrindo impressão (Salvar como PDF)…');
+          printReportsPanel();
+        });
+    }
+
+    // Gera um Excel XML (SpreadsheetML) nativo, sem depender de bibliotecas externas via CDN,
+    // para funcionar mesmo em redes corporativas restritas.
+    function xmlEscape(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[ch]));
+    }
+
+    function xmlCell(value) {
+      const isNumber = typeof value === 'number' && Number.isFinite(value);
+      const type = isNumber ? 'Number' : 'String';
+      return `<Cell><Data ss:Type="${type}">${xmlEscape(value)}</Data></Cell>`;
+    }
+
+    function xmlSheet(name, rows) {
+      const rowsXml = rows.map(row => `<Row>${row.map(xmlCell).join('')}</Row>`).join('');
+      return `<Worksheet ss:Name="${xmlEscape(name).slice(0, 31)}"><Table>${rowsXml}</Table></Worksheet>`;
+    }
+
+    function exportExcelReport() {
+      data = enhanceSquadData(data);
+      const squads = sortedSquadsList();
+      const allProjects = data.projects || [];
+
+      const metaRows = [
+        ['Discovery PMO Tracker · BEONC I Planejamento Ops for Ops — Onda 1 2026'],
+        ['Atualizado em', timestampLabel()],
+        ['Total de squads', squads.length],
+        ['Total de iniciativas principais', allProjects.length]
+      ];
+
+      const squadRows = [['Squad', 'Iniciativas', 'Filhas', 'Horas 2026', 'Saúde']];
+      squads.forEach(sq => squadRows.push([sq.name, squadProjects(sq.id).length, childCountForSquad(sq.id), Number(hoursForSquad(sq.id) || 0), squadHealthInfo(sq).label]));
+
+      const initRows = [['# Mãe', 'Tipo', 'Nome da Iniciativa', 'Tema', 'Líder da Frente', 'Dono da Iniciativa', 'PO', 'Ponto Focal', 'Squad', 'Tech Lead', 'Data de Discovery', 'Início Dev', 'Término Dev', 'Horas 2026']];
+      allProjects.forEach(p => {
+        const sq = squadForProject(p);
+        initRows.push([
+          p.initiativeNumber || '',
+          p.initiativeType || '',
+          p.name || '',
+          p.theme || p.business || '',
+          p.frontLeader || '',
+          p.initiativeOwner || '',
+          p.po || '',
+          p.focalPoint || '',
+          sq?.id === 'squad-asd' ? 'ASD' : (sq?.name || p.squad || ''),
+          techLeadDisplay(p) === '—' ? '' : p.techLead,
+          p.discoveryDate ? formatBR(p.discoveryDate) : '',
+          p.startDev ? formatBR(p.startDev) : '',
+          p.endDev ? formatBR(p.endDev) : '',
+          Number(p.hours2026 || 0)
+        ]);
+      });
+
+      const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+${xmlSheet('Resumo', metaRows)}
+${xmlSheet('Squads', squadRows)}
+${xmlSheet('Iniciativas', initRows)}
+</Workbook>`;
+
+      const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `discovery-pmo-onda1_${fileTimestamp()}.xls`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast('Excel gerado com sucesso');
+    }
+
     function printReportsPanel() {
       document.body.classList.add('ux-v6-printing-report');
       const done = () => {
@@ -11824,9 +12009,12 @@ Recomendação PMO: ${d.recommendation}`;
             <div>
               <h2>Relatórios executivos</h2>
               <p>Leitura gerencial da Onda 1: squads, iniciativas, alertas e rankings, prontos para exportar em PDF e levar ao comitê.</p>
+              <p class="ux-v6-report-updated">◷ Dados atualizados em <strong>${escapeHtml(formatBRDateTime(data.source?.importedAt) || 'Ainda não atualizado')}</strong></p>
             </div>
             <div class="ux-v6-report-actions">
-              <button type="button" class="ux-v6-report-btn primary" onclick="printReportsPanel()">⭳ Exportar PDF</button>
+              <button type="button" class="ux-v6-report-btn primary" onclick="exportPdfReport()">⭳ Baixar PDF</button>
+              <button type="button" class="ux-v6-report-btn" onclick="exportExcelReport()">⭳ Baixar Excel (.xls)</button>
+              <button type="button" class="ux-v6-report-btn" onclick="printReportsPanel()">🖶 Imprimir</button>
               <button type="button" class="ux-v6-report-btn" onclick="closeReportsPanel()">Fechar</button>
             </div>
           </div>
@@ -12074,7 +12262,7 @@ Recomendação PMO: ${d.recommendation}`;
         <span>Squad: <strong>${escapeHtml(squad?.name || project.squad || 'A validar')}</strong></span><span class="dot">•</span>
         <span>Líder: <strong>${escapeHtml(peopleValue(project, 'frontLeader'))}</strong></span><span class="dot">•</span>
         <span>PO: <strong>${escapeHtml(peopleValue(project, 'po'))}</strong></span><span class="dot">•</span>
-        <span>Tech Lead: <strong>${escapeHtml(peopleValue(project, 'techLead'))}</strong></span>
+        <span>Tech Lead: <strong>${escapeHtml(techLeadDisplay(project))}</strong></span>
       `;
       const indicators = [
         { label: 'Data Discovery', value: formatBR(project.discoveryDate), note: project.status || 'Status a validar', color: statusColor(project.status) },
@@ -12109,7 +12297,7 @@ Recomendação PMO: ${d.recommendation}`;
           ['Tema', project.theme || project.business || 'A validar'],
           ['Dono', peopleValue(project, 'initiativeOwner')],
           ['PO', peopleValue(project, 'po')],
-          ['Tech Lead', peopleValue(project, 'techLead')],
+          ['Tech Lead', techLeadDisplay(project)],
           ['Dados', peopleValue(project, 'dataArea')],
           ['IA/RPA', peopleValue(project, 'aiRpa')],
           ['Processo', peopleValue(project, 'processName')],
@@ -12152,7 +12340,7 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="dash-project-people">
             <span>Líder: ${escapeHtml(peopleValue(project, 'frontLeader'))}</span>
             <span>PO: ${escapeHtml(peopleValue(project, 'po'))}</span>
-            <span>TL: ${escapeHtml(peopleValue(project, 'techLead'))}</span>
+            <span>TL: ${escapeHtml(techLeadDisplay(project))}</span>
             <span>Dados: ${escapeHtml(peopleValue(project, 'dataArea'))}</span>
           </div>
           <div class="dash-project-footer">
@@ -12296,7 +12484,7 @@ Recomendação PMO: ${d.recommendation}`;
             <span class="readiness-pill ${d.pdca ? 'low' : 'high'}">${d.pdca} PDCA cronograma</span>
           </div>
         </div>`,
-        `<div class="exec-card" style="--exec-color:var(--blue)"><div class="exec-label">Pessoas-chave</div><div class="exec-value">${escapeHtml(peopleValue(project, 'frontLeader'))}</div><div class="exec-note">PO: ${escapeHtml(peopleValue(project, 'po'))} · Tech Lead: ${escapeHtml(peopleValue(project, 'techLead'))}</div></div>`,
+        `<div class="exec-card" style="--exec-color:var(--blue)"><div class="exec-label">Pessoas-chave</div><div class="exec-value">${escapeHtml(peopleValue(project, 'frontLeader'))}</div><div class="exec-note">PO: ${escapeHtml(peopleValue(project, 'po'))} · Tech Lead: ${escapeHtml(techLeadDisplay(project))}</div></div>`,
         `<div class="exec-card" style="--exec-color:var(--purple)"><div class="exec-label">Dados / Processo</div><div class="exec-value">${escapeHtml(peopleValue(project, 'dataArea'))}</div><div class="exec-note">IA/RPA: ${escapeHtml(peopleValue(project, 'aiRpa'))} · Processo: ${escapeHtml(peopleValue(project, 'processName'))}</div></div>`,
         `<div class="exec-card" style="--exec-color:var(--amber)"><div class="exec-label">Cronograma 2026</div><div class="exec-value">${escapeHtml(formatBR(project.discoveryDate))}</div><div class="exec-note">Dev: ${escapeHtml(formatBR(project.startDev))} até ${escapeHtml(formatBR(project.endDev))} · ${escapeHtml(formatHours(project.hours2026))}</div></div>`,
         renderReadinessCriterion('MVP definido', d.mvp.cls === 'ok' ? 'Sim' : d.mvp.cls === 'partial' ? 'Parcial' : 'Não', 'Escopo mínimo, fora de escopo e valor esperado.', d.mvp, 'var(--blue)'),
@@ -12319,7 +12507,7 @@ Recomendação PMO: ${d.recommendation}`;
       const p = getProject();
       const d = deliveryReadinessDetails(p);
       const squad = squadForProject(p);
-      const text = `Leitura executiva — Discovery PMO Tracker\n\nIniciativa: ${initiativeNumber(p) || 'Não informada'}\nNome: ${p.name}\nSquad: ${squad?.name || p.squad || 'Não informada'}\nTema/Área: ${p.business || p.theme || 'Não informado'}\nLíder da frente: ${peopleValue(p, 'frontLeader')}\nDono da iniciativa: ${peopleValue(p, 'initiativeOwner')}\nPO: ${peopleValue(p, 'po')}\nPonto focal: ${peopleValue(p, 'focalPoint')}\nTech Lead: ${peopleValue(p, 'techLead')}\nÁrea de Dados: ${peopleValue(p, 'dataArea')}\nIA/RPA: ${peopleValue(p, 'aiRpa')}\nProcesso: ${peopleValue(p, 'processName')}\nConsumo Horas 2026: ${formatHours(p.hours2026)}\nData de Discovery: ${formatBR(p.discoveryDate)}\nInício Dev: ${formatBR(p.startDev)}\nTérmino Dev: ${formatBR(p.endDev)}\nIniciativas filhas vinculadas: ${subInitiativeCount(p)}\nStatus executivo: ${p.status}\nProntidão atual: ${d.readiness}\nMaturidade do Discovery: ${d.progress}%\nFase atual: ${currentDiscoveryPhase(p)}\nPróximo marco: ${nextMilestone(p)}\nRiscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma\nRecomendação PMO: ${d.recommendation}`;
+      const text = `Leitura executiva — Discovery PMO Tracker\n\nIniciativa: ${initiativeNumber(p) || 'Não informada'}\nNome: ${p.name}\nSquad: ${squad?.name || p.squad || 'Não informada'}\nTema/Área: ${p.business || p.theme || 'Não informado'}\nLíder da frente: ${peopleValue(p, 'frontLeader')}\nDono da iniciativa: ${peopleValue(p, 'initiativeOwner')}\nPO: ${peopleValue(p, 'po')}\nPonto focal: ${peopleValue(p, 'focalPoint')}\nTech Lead: ${techLeadDisplay(p)}\nÁrea de Dados: ${peopleValue(p, 'dataArea')}\nIA/RPA: ${peopleValue(p, 'aiRpa')}\nProcesso: ${peopleValue(p, 'processName')}\nConsumo Horas 2026: ${formatHours(p.hours2026)}\nData de Discovery: ${formatBR(p.discoveryDate)}\nInício Dev: ${formatBR(p.startDev)}\nTérmino Dev: ${formatBR(p.endDev)}\nIniciativas filhas vinculadas: ${subInitiativeCount(p)}\nStatus executivo: ${p.status}\nProntidão atual: ${d.readiness}\nMaturidade do Discovery: ${d.progress}%\nFase atual: ${currentDiscoveryPhase(p)}\nPróximo marco: ${nextMilestone(p)}\nRiscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma\nRecomendação PMO: ${d.recommendation}`;
       copyText(text);
     }
 
@@ -12416,7 +12604,7 @@ Recomendação PMO: ${d.recommendation}`;
             </div>
             <div class="ux-v6-project-people">
               <span>PO: <strong>${escapeHtml(peopleValue(project, 'po'))}</strong></span>
-              <span>Tech Lead: <strong>${escapeHtml(peopleValue(project, 'techLead'))}</strong></span>
+              <span>Tech Lead: <strong>${escapeHtml(techLeadDisplay(project))}</strong></span>
               <span>Dados: <strong>${escapeHtml(peopleValue(project, 'dataArea'))}</strong></span>
             </div>
           </div>
@@ -12494,11 +12682,16 @@ Recomendação PMO: ${d.recommendation}`;
       ];
       const alertsHtml = alertRows.map(([label, value, tone]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span class="ux-v6-bullet ${tone}"></span><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('');
 
-      const nextDiscoveriesHtml = upcomingDiscoveries(5).map(project => {
+      const nextDiscoveriesHtml = upcomingDiscoveries(8).map(project => {
         const squad = squadForProject(project);
-        const dateLabel = formatBR(project.discoveryDate).slice(0, 5);
-        return `<div class="ux-v6-date-row"><span class="ux-v6-date">${escapeHtml(dateLabel)}</span><span>${escapeHtml(squad?.name || project.squad || 'A validar')}<br><span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span></span></div>`;
-      }).join('') || `<div class="ux-v6-empty"><div><strong>Sem datas cadastradas.</strong>Nenhuma iniciativa com Discovery agendado.</div></div>`;
+        const dateLabel = project.discoveryDate ? formatBR(project.discoveryDate).slice(0, 5) : '-';
+        const num = escapeHtml(String(project.initiativeNumber || '—'));
+        return `<div class="ux-v6-date-row">
+          <span class="ux-v6-date">${escapeHtml(dateLabel)}</span>
+          <span><strong>#${num}</strong> ${escapeHtml(squad?.name || project.squad || 'A validar')}<br><span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span></span>
+          <input type="date" class="ux-v6-date-inline-input" style="justify-self:end;border:1px solid #d8dee8;border-radius:6px;font-size:11px;padding:3px 4px;color:#1c2430;background:#fff" value="${escapeAttr(project.discoveryDate || '')}" title="Definir/editar data de Discovery" onchange="updateDiscoveryDateInline('${project.id}', this.value)" onclick="event.stopPropagation()" />
+        </div>`;
+      }).join('') || `<div class="ux-v6-empty"><div><strong>Sem iniciativas cadastradas.</strong>Nenhuma iniciativa disponível.</div></div>`;
 
       const donutGradient = buildDonutGradient(healthCounts, squads.length);
       const legendHtml = ['good', 'warn', 'crit'].filter(key => healthCounts[key] > 0).map(key => `<div class="ux-v6-legend-row"><span class="ux-v6-legend-dot" style="background:${healthLegendColors[key]}"></span><span>${healthLabels[key]}</span><strong>${healthCounts[key]}</strong></div>`).join('');
@@ -12516,7 +12709,7 @@ Recomendação PMO: ${d.recommendation}`;
       const drawerHours = selectedSquad ? hoursForSquad(selectedSquad.id) : 0;
       const drawerProjectCount = selectedSquad ? squadProjects(selectedSquad.id).length : 0;
       const drawerSearchTerm = squadDrawerSearchTerm || '';
-      const updatedAtLabel = formatBR(data.source?.importedAt) || 'Não informado';
+      const updatedAtLabel = formatBRDateTime(data.source?.importedAt) || 'Ainda não atualizado';
 
       el.innerHTML = `<div class="ux-v6-shell">
         <div class="ux-v6-source"><strong>Planejamento 2026</strong><span>Números oficiais preservados · ${totalProjects} iniciativas principais · ${totalChildren} filhas vinculadas · ${formatHours(totalHours)}</span></div>
