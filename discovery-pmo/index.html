@@ -12604,5 +12604,627 @@ Recomendação PMO: ${d.recommendation}`;
 
     render();
   </script>
+
+  <!-- ===== PATCH UX: experiência pós-clique Squad/Iniciativa ===== -->
+  <style>
+    /* Formulário didático: títulos de seção */
+    .pmo-form-section-title {
+      grid-column: 1 / -1;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--primary);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 6px;
+      margin-top: 8px;
+    }
+    .form-grid > .pmo-form-section-title { margin-bottom: 0; }
+    .pmo-field-note {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--muted);
+      text-transform: none;
+      letter-spacing: 0;
+      margin-left: 4px;
+    }
+
+    /* Mãe / Filhas */
+    .pmo-mae-filhas-section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 20px;
+      margin: 0 0 14px;
+    }
+    .pmo-mf-inner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .pmo-mf-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; border-radius: 6px;
+      padding: 2px 7px; white-space: nowrap;
+    }
+    .pmo-mf-badge.mae { background: #ffe8b0; color: #7a5000; }
+    .pmo-mf-badge.filha { background: #e8f0ff; color: #1a3a8a; }
+    .pmo-mf-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+    .pmo-mf-children { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+    .pmo-mf-child { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .pmo-mf-child-label em { font-style: normal; color: var(--muted); }
+    .pmo-mf-mae-link {
+      background: none; border: 1px solid var(--line); border-radius: 8px;
+      padding: 5px 12px; font-size: 13px; font-weight: 600; color: var(--primary);
+      cursor: pointer; transition: .15s ease;
+    }
+    .pmo-mf-mae-link:hover { background: var(--primary-soft); border-color: var(--primary); }
+    .pmo-mf-empty { font-size: 13px; color: var(--muted); }
+
+    /* Barra de exportação */
+    .pmo-export-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; margin-bottom: 10px;
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+    }
+    .pmo-export-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted);
+    }
+    .pmo-export-btn { font-size: 12px !important; padding: 5px 12px !important; }
+    .pmo-export-ref { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    /* Controle de data de referência */
+    .pmo-refdate-ctrl {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 16px; margin-bottom: 14px;
+      background: #fff8e1; border: 1px solid #ffe082;
+      border-radius: var(--radius-xs); flex-wrap: wrap;
+    }
+    .pmo-refdate-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; color: #7a5000;
+    }
+    .pmo-refdate-label input[type=date] {
+      border: 1px solid #ffe082; border-radius: 6px;
+      padding: 3px 8px; font-size: 12px; background: #fff;
+    }
+    .pmo-refdate-reset {
+      font-size: 11px; color: var(--primary); background: none;
+      border: 1px solid var(--primary); border-radius: 6px;
+      padding: 2px 8px; cursor: pointer;
+    }
+    .pmo-refdate-today { font-size: 11px; color: var(--muted); }
+
+    /* Drawer — iniciativa com IN + data */
+    .ux-v6-project-meta span strong { font-weight: 700; }
+
+    @media print {
+      .pmo-export-bar, .pmo-refdate-ctrl, .pmo-mae-filhas-section { display: none !important; }
+    }
+  </style>
+
+  <script>
+  /* eslint-disable */
+  (function() {
+
+    // ── 1. saveData com timestamp dinâmico ──────────────────────────────────
+    const _origSaveData = saveData;
+    saveData = function(show = false) {
+      data.activeProjectId = activeProjectId;
+      const today = new Date().toISOString().slice(0, 10);
+      data.savedAt = today;
+      if (!data.source) data.source = {};
+      if (!data.source.importedAt) data.source.importedAt = today;
+      storageSet(STORAGE_KEY, JSON.stringify(data));
+      if (show) toast('Salvo com sucesso');
+      render();
+      // Atualiza pill sem aguardar re-render completo
+      const pill = document.querySelector('.ux-v6-update-pill strong');
+      if (pill) pill.textContent = formatBR(data.savedAt || data.source.importedAt);
+    };
+
+    // ── 2. Export PDF ───────────────────────────────────────────────────────
+    window.exportProjectPDF = function() {
+      window.print();
+    };
+
+    // ── 3. Export CSV / Excel ───────────────────────────────────────────────
+    window.exportProjectCSV = function() {
+      const p = getProject();
+      if (!p) { toast('Nenhuma iniciativa ativa'); return; }
+      const squad = squadForProject(p);
+      const readiness = deliveryReadinessDetails(p);
+      const rows = [
+        ['Campo', 'Valor'],
+        ['Nº Iniciativa', p.initiativeNumber || ''],
+        ['Nome', p.name || ''],
+        ['Squad', squad?.name || p.squad || ''],
+        ['Tipo', p.initiativeType || 'Única'],
+        ['Status', p.status || ''],
+        ['Criticidade', p.criticality || ''],
+        ['Área / Negócio', p.business || ''],
+        ['Líder da frente', p.frontLeader || ''],
+        ['Dono da iniciativa', p.initiativeOwner || ''],
+        ['PO', p.po || ''],
+        ['Ponto focal', p.focalPoint || ''],
+        ['Tech Lead', p.techLead || ''],
+        ['Área de Dados', p.dataArea || ''],
+        ['IA/RPA', p.aiRpa || ''],
+        ['Processo', p.processName || ''],
+        ['Horas 2026', p.hours2026 || 0],
+        ['Data Discovery', formatBR(p.discoveryDate)],
+        ['Início Dev', formatBR(p.startDev)],
+        ['Término Dev', formatBR(p.endDev)],
+        ['RTE', p.rteOwner || ''],
+        ['PMO', p.owner || ''],
+        ['Prontidão', readiness.readiness],
+        ['Maturidade', calculateProgress(p) + '%'],
+        ['Filhas vinculadas', (p.subInitiatives || []).length],
+        ['Resumo executivo', p.summary || ''],
+      ];
+      const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'iniciativa-' + (p.initiativeNumber || 'export') + '.csv';
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast('Exportado como CSV — abra no Excel');
+    };
+
+    // ── 4. Data de referência parametrizável ────────────────────────────────
+    window.setRefDate = function(value) {
+      if (!value) {
+        localStorage.removeItem('pmo_ref_date');
+        toast('Data de referência: hoje');
+      } else {
+        localStorage.setItem('pmo_ref_date', value);
+        toast('Data de referência: ' + formatBR(value));
+      }
+      render();
+    };
+
+    // ── 5. openProjectModal mais didático (4ª versão — prevalece) ───────────
+    openProjectModal = function(projectId = null) {
+      data = enhanceSquadData(data);
+      const isEdit = Boolean(projectId);
+      const asdSquad = (data.squads || []).find(s => s.id === 'squad-asd');
+      const firstSquad = sortedSquadsList()[0] || { id: '', name: 'A definir', code: 'SQD' };
+      const defaultSquad = asdSquad || firstSquad;
+      const project = isEdit ? data.projects.find(p => p.id === projectId) : {
+        id: slugify('nova-iniciativa-' + Date.now()),
+        initiativeNumber: '', initiativeType: 'Única',
+        name: '', business: '', theme: '',
+        squad: defaultSquad.name, squadId: defaultSquad.id,
+        owner: 'A definir', rteOwner: 'A definir',
+        frontLeader: '', initiativeOwner: '', po: '', focalPoint: '',
+        techLead: '', dataArea: '', aiRpa: '', processName: '', hours2026: 0,
+        discoveryDate: '', startDev: '', endDev: '',
+        startDate: plusDays(0), status: 'A iniciar', criticality: 'A validar',
+        target: '', summary: '', subInitiatives: [],
+        phases: phaseTemplate.map(ph => ({ ...ph, status: 'todo' })),
+        checklist: checklistTemplate.map(c => ({ ...c, done: false })),
+        cards: [], schedule: [],
+        raids: { risks: [], assumptions: [], issues: [], dependencies: [] },
+        attachments: []
+      };
+      if (!project) { toast('Iniciativa não encontrada'); return; }
+      const squad = squadForProject(project) || defaultSquad;
+      project.squadId = squad.id;
+      project.squad = squad.name;
+      modalState = { type: 'project', isEdit, project };
+
+      const typeOpts = ['Única', 'MÃE', 'ASD'].map(t =>
+        `<option value="${t}" ${(project.initiativeType || 'Única') === t ? 'selected' : ''}>${
+          t === 'MÃE' ? 'MÃE — tem iniciativas filhas' :
+          t === 'ASD' ? 'ASD — Ainda Sem Definição de Squad' : 'Única'}</option>`
+      ).join('');
+
+      openModal(
+        isEdit ? 'Editar iniciativa' : 'Nova iniciativa',
+        isEdit
+          ? `Editando: ${project.initiativeNumber ? 'IN ' + project.initiativeNumber + ' · ' : ''}${project.name || 'sem nome'}`
+          : 'Apenas Nº e Nome são obrigatórios. Demais campos podem ser preenchidos depois.',
+        `<div class="automation-note"><span class="automation-dot"></span><div>
+          <strong>Número oficial obrigatório</strong>
+          Use o Nº da Iniciativa da planilha Planejamento 2026. Campos marcados com <em>(opcional)</em> podem ficar em branco.
+        </div></div>
+
+        <div class="pmo-form-section-title">Identificação</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Squad <span class="pmo-field-note">(obrigatório)</span></label>
+            <select id="project-squad-id" onchange="handleProjectSquadChange()">${squadOptions(squad.id)}</select>
+            <div class="squad-inline-actions">
+              <button type="button" onclick="openSquadModal()">+ Cadastrar Squad</button>
+              <button type="button" onclick="openSquadModal(document.getElementById('project-squad-id').value)">Editar Squad</button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Tipo da iniciativa</label>
+            <select id="project-initiative-type">${typeOpts}</select>
+            <div class="official-number-note">MÃE = tem filhas. ASD = sem Squad definida ainda.</div>
+          </div>
+          <div class="form-field">
+            <label>Nº da Iniciativa oficial <span class="pmo-field-note">(obrigatório)</span></label>
+            <input id="project-initiative-number" type="text"
+              value="${escapeAttr(project.initiativeNumber || '')}"
+              placeholder="Ex.: 113286" />
+            <div id="auto-number-note" class="official-number-note">Informe o número exato da planilha. Não há geração automática nesta versão.</div>
+          </div>
+          <div class="form-field">
+            <label>Nome da iniciativa / projeto <span class="pmo-field-note">(obrigatório)</span></label>
+            <input id="project-name" type="text"
+              value="${escapeAttr(project.name || '')}"
+              placeholder="Ex.: Portabilidade AS IS — Fase 2" />
+          </div>
+          <div class="form-field full">
+            <label>Área / negócio <span class="pmo-field-note">(opcional)</span></label>
+            <input id="project-business" type="text"
+              value="${escapeAttr(project.business || project.theme || squad.business || '')}"
+              placeholder="Ex.: Gestão de Consignado" />
+          </div>
+        </div>
+
+        <div class="pmo-form-section-title">Pessoas responsáveis <span style="font-weight:400;color:var(--muted);font-size:11px">(todos opcionais)</span></div>
+        <div class="form-grid">
+          ${field('Líder da frente', 'project-front-leader', project.frontLeader || '')}
+          ${field('Dono da iniciativa', 'project-initiative-owner', project.initiativeOwner || '')}
+          ${field('Product Owner / PO', 'project-po', project.po || '')}
+          ${field('Ponto focal', 'project-focal-point', project.focalPoint || '')}
+          <div class="form-field">
+            <label>Tech Lead <span class="pmo-field-note">(opcional — pode ficar em branco)</span></label>
+            <input id="project-tech-lead" type="text"
+              value="${escapeAttr(project.techLead || '')}"
+              placeholder="Deixe em branco se ainda não definido" />
+          </div>
+          ${field('Área de Dados', 'project-data-area', project.dataArea || '')}
+          ${field('IA / RPA', 'project-ai-rpa', project.aiRpa || '')}
+          ${field('Processo', 'project-process-name', project.processName || '')}
+          ${field('RTE Resp.', 'project-rte-owner', project.rteOwner || '')}
+          ${field('Responsável PMO', 'project-owner', project.owner || '')}
+        </div>
+
+        <div class="pmo-form-section-title">Datas e esforço <span style="font-weight:400;color:var(--muted);font-size:11px">(opcionais)</span></div>
+        <div class="form-grid">
+          ${field('Data de Discovery', 'project-discovery-date', project.discoveryDate || '', 'date')}
+          ${field('Início Dev', 'project-start-dev', project.startDev || '', 'date')}
+          ${field('Término Dev', 'project-end-dev', project.endDev || '', 'date')}
+          ${field('Consumo Horas 2026', 'project-hours-2026', project.hours2026 || '', 'number')}
+        </div>
+
+        <div class="pmo-form-section-title">Status e avaliação</div>
+        <div class="form-grid">
+          <div class="form-field"><label>Status</label><select id="project-status">
+            ${['A iniciar','Em Discovery','No prazo','Atenção','Crítico','Concluído'].map(s => `<option ${project.status===s?'selected':''}>${s}</option>`).join('')}
+          </select></div>
+          <div class="form-field"><label>Criticidade</label><select id="project-criticality">
+            ${['A validar','Baixa','Média','Alta','Crítica'].map(s => `<option ${project.criticality===s?'selected':''}>${s}</option>`).join('')}
+          </select></div>
+          <div class="form-field full">
+            <label>Resumo executivo <span class="pmo-field-note">(opcional)</span></label>
+            <textarea id="project-summary" placeholder="Contexto, objetivo e impacto esperado da iniciativa...">${escapeHtml(project.summary || '')}</textarea>
+          </div>
+        </div>`,
+        [
+          isEdit ? `<button type="button" class="btn" onclick="deleteProject('${project.id}')">Excluir</button>` : '',
+          `<button type="button" class="btn" onclick="closeModal()">Cancelar</button>`,
+          `<button type="button" class="btn primary" onclick="saveProjectModal()">Salvar iniciativa</button>`
+        ]
+      );
+    };
+
+    // ── 6. saveProjectModal — captura initiativeType (sobrescreve) ──────────
+    saveProjectModal = function() {
+      data = enhanceSquadData(data);
+      const p = modalState.project;
+      const squadId = document.getElementById('project-squad-id')?.value || (data.squads || [])[0]?.id || '';
+      const squad = squadById(squadId);
+      p.name = document.getElementById('project-name').value.trim() || 'Projeto sem nome';
+      p.squadId = squad?.id || '';
+      p.squad = squad?.name || 'A validar';
+      p.initiativeNumber = document.getElementById('project-initiative-number').value.trim();
+      if (!p.initiativeNumber) { toast('Informe o Nº oficial da iniciativa'); return; }
+      const exists = data.projects.some(ex => ex.id !== p.id &&
+        String(ex.initiativeNumber || '').trim().toLowerCase() === p.initiativeNumber.toLowerCase());
+      if (exists) { toast('Já existe uma iniciativa com esse número'); return; }
+      p.initiativeType = document.getElementById('project-initiative-type')?.value || p.initiativeType || 'Única';
+      p.business = document.getElementById('project-business').value.trim() || squad?.business || 'A validar';
+      p.theme = p.business;
+      p.frontLeader = document.getElementById('project-front-leader').value.trim();
+      p.initiativeOwner = document.getElementById('project-initiative-owner').value.trim();
+      p.po = document.getElementById('project-po').value.trim();
+      p.focalPoint = document.getElementById('project-focal-point').value.trim();
+      p.techLead = document.getElementById('project-tech-lead').value.trim(); // pode ficar em branco
+      p.dataArea = document.getElementById('project-data-area').value.trim();
+      p.aiRpa = document.getElementById('project-ai-rpa').value.trim();
+      p.processName = document.getElementById('project-process-name').value.trim();
+      p.hours2026 = Number(document.getElementById('project-hours-2026').value || 0);
+      p.discoveryDate = document.getElementById('project-discovery-date').value || '';
+      p.startDev = document.getElementById('project-start-dev').value || '';
+      p.endDev = document.getElementById('project-end-dev').value || '';
+      p.rteOwner = document.getElementById('project-rte-owner').value.trim() || 'A definir';
+      p.owner = document.getElementById('project-owner').value.trim() || 'A definir';
+      p.status = document.getElementById('project-status').value;
+      p.criticality = document.getElementById('project-criticality').value;
+      p.startDate = p.discoveryDate || p.startDev || '';
+      p.target = p.endDev || 'A definir';
+      p.summary = document.getElementById('project-summary').value.trim();
+      if (!modalState.isEdit) {
+        p.id = 'ini-' + slugify(p.initiativeNumber) + '-' + Date.now().toString(36);
+        if (!Array.isArray(p.subInitiatives)) p.subInitiatives = [];
+        data.projects.push(p);
+      }
+      activeProjectId = p.id;
+      closeModal();
+      saveData(true);
+    };
+
+    // ── 7. openSquadModal mais didático (sobrescreve) ───────────────────────
+    openSquadModal = function(squadId = null) {
+      data = enhanceSquadData(data);
+      const isEdit = Boolean(squadId);
+      const squad = isEdit ? squadById(squadId) : { id: uid('squad'), name: '', code: '', business: '', rteOwner: '', owner: '' };
+      if (!squad) { toast('Squad não encontrada'); return; }
+      const isAsd = squad.id === 'squad-asd';
+      modalState = { type: 'squad', isEdit, squad: deepClone(squad), originalSquadId: squadId };
+
+      openModal(
+        isEdit ? (isAsd ? 'Squad ASD — Ainda Sem Definição' : 'Editar Squad') : 'Cadastrar Nova Squad',
+        isEdit
+          ? `Editando: ${squad.name}${squad.business ? ' · ' + squad.business : ''}`
+          : 'Cada Squad é cadastrada uma vez e reutilizada em várias iniciativas.',
+        `<div class="automation-note"><span class="automation-dot"></span><div>
+          <strong>Cadastro único por Squad</strong>
+          Nome e código são propagados automaticamente para as iniciativas vinculadas ao salvar.
+        </div></div>
+        ${squadListHtml(squadId || '')}
+
+        <div class="pmo-form-section-title">Dados da Squad</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Nome da Squad <span class="pmo-field-note">(obrigatório)</span></label>
+            <input id="squad-name" type="text"
+              value="${escapeAttr(squad.name || '')}"
+              placeholder="Ex.: Terminator, MadMax, Inception..."
+              ${isAsd ? 'readonly' : ''} />
+            ${isAsd ? '<div class="official-number-note">A Squad ASD é reservada para iniciativas sem Squad definida. Não pode ser renomeada.</div>' : ''}
+          </div>
+          <div class="form-field">
+            <label>Código <span class="pmo-field-note">(opcional — gerado automaticamente se vazio)</span></label>
+            <input id="squad-code" type="text"
+              value="${escapeAttr(squad.code || '')}"
+              placeholder="Ex.: TERM, MADM, INC" maxlength="6"
+              ${isAsd ? 'readonly' : ''} />
+          </div>
+        </div>
+
+        <div class="pmo-form-section-title">Padrões da Squad <span style="font-weight:400;color:var(--muted);font-size:11px">(opcionais — preenchidos nas novas iniciativas desta Squad)</span></div>
+        <div class="form-grid">
+          <div class="form-field full">
+            <label>Área / negócio padrão</label>
+            <input id="squad-business" type="text"
+              value="${escapeAttr(squad.business || '')}"
+              placeholder="Ex.: Gestão de Consignado, Operações de Contas..." />
+          </div>
+          ${field('RTE padrão', 'squad-rte-owner', squad.rteOwner || '')}
+          ${field('PMO padrão', 'squad-owner', squad.owner || '')}
+        </div>
+
+        <div class="pmo-form-section-title">Informativo</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Próximo Nº previsto</label>
+            <input type="text" readonly value="${escapeAttr(nextInitiativeNumber(squad.id))}"
+              style="background:var(--panel-2);color:var(--muted)" />
+            <div class="official-number-note">Apenas referência. O Nº oficial vem da planilha.</div>
+          </div>
+          <div class="form-field">
+            <label>Iniciativas vinculadas</label>
+            <input type="text" readonly
+              value="${escapeAttr(String(squadInitiativeCount(squad.id)) + ' iniciativa(s)')}"
+              style="background:var(--panel-2);color:var(--muted)" />
+          </div>
+        </div>`,
+        [
+          (isEdit && !isAsd) ? `<button type="button" class="btn" onclick="deleteSquad('${squad.id}')">Excluir Squad</button>` : '',
+          `<button type="button" class="btn" onclick="closeModal()">Cancelar</button>`,
+          isAsd ? '' : `<button type="button" class="btn primary" onclick="saveSquadModal()">Salvar Squad</button>`
+        ]
+      );
+    };
+
+    // ── 8. renderHero com Mãe/Filhas + botões de exportação + data ref ──────
+    const _origRenderHero = renderHero;
+    renderHero = function(project) {
+      _origRenderHero(project);
+      _renderMaeFilhas(project);
+      _renderExportBar(project);
+      _renderRefDateCtrl();
+    };
+
+    function _renderMaeFilhas(project) {
+      const heroEl = document.getElementById('projectWorkspaceHero');
+      if (!heroEl) return;
+
+      let sec = document.getElementById('pmoMaeFilhasSection');
+      if (!sec) {
+        sec = document.createElement('div');
+        sec.id = 'pmoMaeFilhasSection';
+        sec.className = 'pmo-mae-filhas-section';
+        heroEl.after(sec);
+      }
+
+      const type = project.initiativeType || 'Única';
+      const filhas = Array.isArray(project.subInitiatives) ? project.subInitiatives : [];
+      const mae = (data.projects || []).find(p =>
+        p.id !== project.id && p.initiativeType === 'MÃE' &&
+        (p.subInitiatives || []).some(c =>
+          String(c.initiativeNumber || c.numero || '') === String(project.initiativeNumber || '')
+        )
+      );
+
+      if (type === 'Única' && !mae && filhas.length === 0) {
+        sec.style.display = 'none';
+        sec.innerHTML = '';
+        return;
+      }
+      sec.style.display = '';
+
+      let html = '<div class="pmo-mf-inner">';
+      if (type === 'MÃE' || filhas.length > 0) {
+        html += `<div class="pmo-mf-badge mae">MÃE</div>`;
+        html += `<div class="pmo-mf-label">IN ${escapeHtml(String(project.initiativeNumber || ''))} · ${escapeHtml(project.name || '')}</div>`;
+        if (filhas.length) {
+          html += `<div class="pmo-mf-children">`;
+          filhas.forEach(child => {
+            const ini = String(child.initiativeNumber || child.numero || '');
+            const nm = child.name || child.nome || '';
+            const sq = child.squad || child.sourceSquad || '';
+            const discDate = child.discoveryDate ? ' · ' + formatBR(child.discoveryDate).slice(0, 5) : '';
+            html += `<div class="pmo-mf-child">
+              <span class="pmo-mf-badge filha">Filha</span>
+              <span class="pmo-mf-child-label">
+                ${ini ? 'IN ' + escapeHtml(ini) : ''}${nm ? ' · ' + escapeHtml(nm) : ''}${discDate ? escapeHtml(discDate) : ''}
+                ${sq ? ' <em>(' + escapeHtml(sq) + ')</em>' : ''}
+              </span>
+            </div>`;
+          });
+          html += '</div>';
+        } else {
+          html += `<div class="pmo-mf-empty">Nenhuma iniciativa filha vinculada.</div>`;
+        }
+      } else if (mae) {
+        html += `<div class="pmo-mf-badge filha">Filha de</div>`;
+        html += `<button type="button" class="pmo-mf-mae-link"
+          onclick="openProjectFromDashboard('${escapeAttr(mae.id)}')"
+          title="Abrir iniciativa mãe">
+          IN ${escapeHtml(String(mae.initiativeNumber || ''))} · ${escapeHtml(mae.name || '')} →
+        </button>`;
+      }
+      html += '</div>';
+      sec.innerHTML = html;
+    }
+
+    function _renderExportBar(project) {
+      const heroEl = document.getElementById('projectWorkspaceHero');
+      if (!heroEl) return;
+      let bar = document.getElementById('pmoExportBar');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'pmoExportBar';
+        bar.className = 'pmo-export-bar';
+        const anchor = document.getElementById('pmoMaeFilhasSection') || heroEl;
+        anchor.after(bar);
+      }
+      const ini = project ? (project.initiativeNumber ? 'IN ' + project.initiativeNumber : project.name || '') : '';
+      bar.innerHTML = `
+        <span class="pmo-export-label">Exportar</span>
+        <button type="button" class="btn soft pmo-export-btn" onclick="exportProjectPDF()" title="Gerar PDF desta iniciativa">📄 PDF</button>
+        <button type="button" class="btn soft pmo-export-btn" onclick="exportProjectCSV()" title="Exportar dados para Excel / CSV">📊 Excel</button>
+        <span class="pmo-export-ref">${escapeHtml(ini)}</span>
+      `;
+    }
+
+    function _renderRefDateCtrl() {
+      const heroEl = document.getElementById('projectWorkspaceHero');
+      if (!heroEl) return;
+      let ctrl = document.getElementById('pmoRefDateCtrl');
+      if (!ctrl) {
+        ctrl = document.createElement('div');
+        ctrl.id = 'pmoRefDateCtrl';
+        ctrl.className = 'pmo-refdate-ctrl';
+        const anchor = document.getElementById('pmoExportBar') || heroEl;
+        anchor.after(ctrl);
+      }
+      const stored = localStorage.getItem('pmo_ref_date') || '';
+      ctrl.innerHTML = `
+        <label class="pmo-refdate-label" for="pmoRefDateInput">
+          <span>📅 Data de referência</span>
+          <input id="pmoRefDateInput" type="date" value="${escapeAttr(stored)}"
+            onchange="setRefDate(this.value)"
+            title="Parametrize a data de hoje para simular cálculos em outra data" />
+        </label>
+        ${stored
+          ? `<button type="button" class="pmo-refdate-reset" onclick="setRefDate('')">Resetar para hoje</button>`
+          : `<span class="pmo-refdate-today">Usando data de hoje (${formatBR(new Date().toISOString().slice(0,10))})</span>`
+        }
+      `;
+    }
+
+    // ── 9. renderProjectCardsForSquad com IN + data e badge de tipo ─────────
+    renderProjectCardsForSquad = function(squad, searchTerm = '') {
+      const projects = squadProjects(squad.id);
+      if (!projects.length) {
+        return `<div class="ux-v6-empty"><div><strong>Nenhuma iniciativa vinculada.</strong> Cadastre uma iniciativa oficial e vincule à Squad ${escapeHtml(squad.name)}.</div></div>`;
+      }
+      const filtered = searchTerm
+        ? projects.filter(p => projectMatchesSearch(p, searchTerm))
+        : projects;
+      if (!filtered.length) {
+        return `<div class="ux-v6-empty"><div><strong>Nenhuma iniciativa encontrada.</strong> Revise o termo buscado.</div></div>`;
+      }
+
+      // Ordena: MÃE primeiro, depois por discoveryDate
+      const sorted = [...filtered].sort((a, b) => {
+        if (a.initiativeType === 'MÃE' && b.initiativeType !== 'MÃE') return -1;
+        if (b.initiativeType === 'MÃE' && a.initiativeType !== 'MÃE') return 1;
+        return String(a.discoveryDate || 'z').localeCompare(String(b.discoveryDate || 'z'));
+      });
+
+      return sorted.map(project => {
+        const alerts = projectAlertCount(project);
+        const readiness = deliveryReadinessDetails(project);
+        const progress = calculateProgress(project);
+        const ini = initiativeNumber(project);
+        // "Próximos Discoveries": IN + data ou "—"
+        const discDate = project.discoveryDate ? formatBR(project.discoveryDate).slice(0, 5) : null;
+        const discLabel = ini
+          ? `IN ${ini}${discDate ? ' · ' + discDate : ''}`
+          : (discDate || '—');
+        const typeTag = project.initiativeType === 'MÃE'
+          ? `<span class="pmo-mf-badge mae" style="font-size:10px;padding:1px 5px;vertical-align:middle">MÃE</span>`
+          : project.initiativeType === 'ASD'
+            ? `<span class="pmo-mf-badge" style="font-size:10px;padding:1px 5px;vertical-align:middle;background:#fef3c7;color:#92400e">ASD</span>`
+            : '';
+        const tl = String(project.techLead || '').trim();
+        const tlLabel = (tl && tl !== 'A validar' && tl !== 'A definir') ? tl : '—';
+        const devDate = project.startDev ? formatBR(project.startDev).slice(0, 5) : '—';
+
+        return `<div class="ux-v6-project-item" role="button" tabindex="0"
+          onclick="openProjectFromDashboard('${escapeAttr(project.id)}')"
+          onkeydown="if(event.key==='Enter'){openProjectFromDashboard('${escapeAttr(project.id)}')}"
+          title="Abrir ${escapeAttr(displayProjectTitle(project))}">
+          <div>
+            <div class="ux-v6-project-title">
+              ${initiativeCodeHtml(project, 'ux-v6-project-code')}
+              <strong>${escapeHtml(displayProjectTitle(project))}</strong>
+              ${typeTag}
+            </div>
+            <div class="ux-v6-project-meta">
+              <span>Discovery <strong>${escapeHtml(discLabel)}</strong></span>
+              <span>Dev <strong>${escapeHtml(devDate)}</strong></span>
+              <span>${escapeHtml(formatHours(project.hours2026))}</span>
+              <span>${(project.subInitiatives || []).length} filha(s)</span>
+              <span>${alerts} alerta(s)</span>
+              <span>${progress}% maturidade</span>
+              <span>${escapeHtml(readiness.readiness)} prontidão</span>
+            </div>
+            <div class="ux-v6-project-people">
+              <span>PO: <strong>${escapeHtml(peopleValue(project, 'po'))}</strong></span>
+              <span>Tech Lead: <strong>${escapeHtml(tlLabel)}</strong></span>
+              <span>Dados: <strong>${escapeHtml(peopleValue(project, 'dataArea'))}</strong></span>
+            </div>
+          </div>
+          <span class="ux-v6-project-open">Abrir ›</span>
+        </div>`;
+      }).join('');
+    };
+
+    // Re-renderiza com os novos overrides ativos
+    render();
+
+  })();
+  </script>
 </body>
 </html>
