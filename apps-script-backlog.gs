@@ -37,7 +37,8 @@ var VP_SHEET_MAP = {
   vpDeliveries: '_vp_deliveries',
   vpOpUpdates:  '_vp_opupdates',
   vpQuickNotes: '_vp_quicknotes',
-  vpEpicMeta:   '_vp_epic_meta'  // mapa {id:{squad,resumo}} para todos os épicos
+  vpEpicMeta:   '_vp_epic_meta',  // mapa {id:{squad,resumo}} para todos os épicos
+  discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
 };
 
 function getVpSheet_(key) {
