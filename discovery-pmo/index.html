@@ -961,6 +961,54 @@
       white-space: nowrap;
     }
 
+    .checklist-note {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 2px;
+    }
+
+    .check-item.derived {
+      background: var(--purple-soft, #f1eeff);
+      border-color: #d9d2ff;
+    }
+
+    .check-derived-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      border: 2px solid #cbd3df;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 15px;
+      margin: 1px 0 0;
+    }
+
+    .check-derived-mark.done {
+      background: var(--purple);
+      border-color: var(--purple);
+    }
+
+    .check-help.derived-source {
+      color: var(--purple);
+      font-weight: 800;
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+
+    .check-owner.derived {
+      background: #ece7ff;
+      color: var(--purple);
+    }
+
     .raids {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -6431,7 +6479,7 @@
             <button type="button" class="tab active" data-tab="kanban">Cards</button>
             <button type="button" class="tab" data-tab="timeline">Timeline</button>
             <button type="button" class="tab" data-tab="schedule">Cronograma <span id="scheduleTabBadge" class="tab-badge hidden"></span></button>
-            <button type="button" class="tab" data-tab="checklist">Checklist do Gestor</button>
+            <button type="button" class="tab" data-tab="checklist">Prontidão</button>
             <button type="button" class="tab" data-tab="raid">Riscos e Dependências</button>
             <button type="button" class="tab" data-tab="attachments">Anexos <span id="attachmentTabBadge" class="tab-badge hidden"></span></button>
           </div>
@@ -9202,6 +9250,12 @@
         project.startDate = project.startDate || project.dtInicio || '';
         project.phases = Array.isArray(project.phases) && project.phases.length ? project.phases : phaseTemplate.map(p => ({ ...p, status: 'todo' }));
         project.checklist = Array.isArray(project.checklist) && project.checklist.length ? project.checklist : checklistTemplate.map(c => ({ ...c, done: false }));
+        // Preenche itens canônicos ausentes (bases antigas tinham ids divergentes, ex.
+        // "tech"/"estimate" em vez de "dependencies"/"estimates", e sem "risks"/"gono"),
+        // sem remover nenhum item já existente.
+        checklistTemplate.forEach(tpl => {
+          if (!project.checklist.some(c => c.id === tpl.id)) project.checklist.push({ ...tpl, done: false });
+        });
         project.cards = Array.isArray(project.cards) ? project.cards : [];
         project.schedule = Array.isArray(project.schedule) ? project.schedule : [];
         project.schedule = project.schedule.map(item => ({
@@ -9932,14 +9986,36 @@
 
     function renderChecklist(project) {
       const wrap = document.getElementById('checklist');
-      wrap.innerHTML = project.checklist.map(item => `<div class="check-item">
-        <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleCheck('${item.id}', this.checked)" />
-        <div>
-          <div class="check-title">${escapeHtml(item.title)}</div>
-          <div class="check-help">${escapeHtml(item.help)}</div>
-        </div>
-        <span class="check-owner">${escapeHtml(item.owner)}</span>
-      </div>`).join('');
+      const manualCount = CHECKLIST_MANUAL_IDS.length;
+      const derivedCount = checklistTemplate.length - manualCount;
+      const note = `<div class="checklist-note"><strong>${manualCount} manuais</strong> preenchidos pelo RTE · <strong>${derivedCount} automáticos</strong>, calculados a partir do Timeline e do RAID</div>`;
+      // Sempre os 10 itens canônicos, na ordem do template — bases antigas com ids
+      // divergentes (ex. "tech"/"estimate") ficam preservadas nos dados, mas não
+      // duplicam a lista aqui.
+      const items = checklistTemplate.map(tpl => {
+        const item = project.checklist.find(c => c.id === tpl.id) || tpl;
+        const source = checklistDerivedSource(tpl.id);
+        const done = checklistDone(project, tpl.id);
+        if (!source) {
+          return `<div class="check-item">
+            <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleCheck('${item.id}', this.checked)" />
+            <div>
+              <div class="check-title">${escapeHtml(item.title)}</div>
+              <div class="check-help">${escapeHtml(item.help)}</div>
+            </div>
+            <span class="check-owner">${escapeHtml(item.owner)}</span>
+          </div>`;
+        }
+        return `<div class="check-item derived" title="Calculado automaticamente — não é editável aqui">
+          <span class="check-derived-mark ${done ? 'done' : ''}">${done ? '✓' : ''}</span>
+          <div>
+            <div class="check-title">${escapeHtml(item.title)}</div>
+            <div class="check-help derived-source">derivado do ${escapeHtml(source)}</div>
+          </div>
+          <span class="check-owner derived">${done ? 'Completo' : 'Pendente'}</span>
+        </div>`;
+      }).join('');
+      wrap.innerHTML = note + items;
     }
 
 
@@ -10200,7 +10276,32 @@
       saveData(true);
     }
 
+    // Itens do Prontidão (ex-Checklist do Gestor) que não têm nenhuma outra fonte de
+    // dados no app: continuam preenchidos manualmente pelo RTE. Os demais são calculados
+    // a partir do Timeline/RAID, então nunca ficam com informação desatualizada em relação
+    // a essas abas (ver .checklistDerivedSource abaixo).
+    const CHECKLIST_MANUAL_IDS = ['stakeholders', 'problem', 'scope'];
+
+    function checklistDerivedSource(id) {
+      return ({ asis: 'Timeline', tobe: 'Timeline', dependencies: 'RAID', risks: 'RAID', stories: 'Timeline', estimates: 'Timeline', gono: 'Timeline' })[id] || null;
+    }
+
+    function checklistDerivedStatus(project, id) {
+      const raids = project.raids || {};
+      switch (id) {
+        case 'asis': return phaseStatus(project, 'asis') === 'done';
+        case 'tobe': return phaseStatus(project, 'tobe') === 'done';
+        case 'dependencies': return (raids.dependencies || []).length > 0;
+        case 'risks': return (raids.risks || []).length + (raids.issues || []).length > 0;
+        case 'stories': return phaseStatus(project, 'stories') === 'done';
+        case 'estimates': return phaseStatus(project, 'estimates') === 'done';
+        case 'gono': return phaseStatus(project, 'go') === 'done';
+        default: return false;
+      }
+    }
+
     function checklistDone(project, id) {
+      if (checklistDerivedSource(id)) return checklistDerivedStatus(project, id);
       return Boolean((project.checklist || []).find(item => item.id === id && item.done));
     }
 
