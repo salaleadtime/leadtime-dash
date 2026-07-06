@@ -8918,6 +8918,97 @@
     let data = loadData();
     let activeProjectId = data.activeProjectId || data.projects[0]?.id;
     if (!data.projects.some(p => p.id === activeProjectId)) activeProjectId = data.projects[0]?.id || defaultData.activeProjectId;
+
+    // ─── Sync entre navegadores (mesmo Apps Script/planilha usados no dashboard principal) ───
+    // Sem isso, cada usuário só enxerga as próprias edições (tudo ficava só no localStorage
+    // do navegador). Guarda a base inteira sob uma chave própria no mesmo Web App do GAS.
+    const DISC_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+    const DISC_GAS_KEY = 'discoveryPmo';
+    let _discGasSaving = false;
+    let _discGasSaveTimer = null;
+    let _discGasApplyingRemote = false;
+
+    function _discGasJsonp(url, cb) {
+      const name = '_discGP_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const script = document.createElement('script');
+      let done = false;
+      const timer = setTimeout(() => {
+        if (done) return; done = true;
+        delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
+        cb('timeout');
+      }, 20000);
+      window[name] = (payload) => {
+        if (done) return; done = true; clearTimeout(timer);
+        delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
+        cb(null, payload);
+      };
+      script.onerror = () => {
+        if (done) return; done = true; clearTimeout(timer);
+        delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
+        cb('script error');
+      };
+      script.src = url + '&callback=' + name;
+      document.head.appendChild(script);
+    }
+
+    function discGasLoad(cb) {
+      if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
+      _discGasJsonp(DISC_GAS_URL + '?action=getVpData&key=' + DISC_GAS_KEY + '&t=' + Date.now(), (err, json) => {
+        if (err) { if (cb) cb(err); return; }
+        if (json && json.ok && json.data) { if (cb) cb(null, json.data); }
+        else { if (cb) cb(null, null); }
+      });
+    }
+
+    function discGasSave(payload) {
+      if (!DISC_GAS_URL) return;
+      fetch(DISC_GAS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=saveVpData&key=' + DISC_GAS_KEY + '&payload=' + encodeURIComponent(JSON.stringify(payload))
+      }).catch(() => {});
+    }
+
+    function scheduleDiscGasSave() {
+      if (_discGasSaveTimer) clearTimeout(_discGasSaveTimer);
+      _discGasSaveTimer = setTimeout(() => {
+        _discGasSaveTimer = null;
+        if (_discGasSaving) return;
+        _discGasSaving = true;
+        discGasSave(data);
+        setTimeout(() => { _discGasSaving = false; }, 800);
+      }, 400);
+    }
+
+    // Aplica a base vinda do servidor se ela for mais recente que a local. Preserva a
+    // iniciativa que o usuário está vendo (activeProjectId é seleção de tela, não dado
+    // compartilhado) para não "puxar o tapete" de quem já está com um projeto aberto.
+    function applyRemoteDiscData(remote) {
+      if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
+      const remoteTime = Date.parse(remote.updatedAt || '') || 0;
+      const localTime = Date.parse(data.updatedAt || '') || 0;
+      if (remoteTime <= localTime) return false;
+      if (document.getElementById('modalBackdrop')?.classList.contains('active')) return false;
+
+      const keepActiveId = activeProjectId;
+      _discGasApplyingRemote = true;
+      data = normalizeData(deepClone(remote));
+      activeProjectId = data.projects.some(p => p.id === keepActiveId) ? keepActiveId : (data.activeProjectId || data.projects[0].id);
+      data.activeProjectId = activeProjectId;
+      storageSet(STORAGE_KEY, JSON.stringify(data));
+      render();
+      _discGasApplyingRemote = false;
+      return true;
+    }
+
+    function discGasSyncPull() {
+      discGasLoad((err, remote) => { if (!err) applyRemoteDiscData(remote); });
+    }
+
+    setInterval(discGasSyncPull, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasSyncPull(); });
+    // ─────────────────────────────────────────────────────────────────────────
     const VIEW_MODE_KEY = STORAGE_KEY + '_view_mode_v5';
     const DASHBOARD_SQUAD_KEY = STORAGE_KEY + '_dashboard_squad_v5';
     let viewMode = 'dashboard';
@@ -9017,7 +9108,10 @@
           });
         });
       }
-      // Sincroniza campos críticos dos projetos com o defaultData (resolve datas e flags adicionadas após o carregamento inicial)
+      // Preenche campos ausentes dos projetos com o defaultData (resolve campos adicionados
+      // após o carregamento inicial). IMPORTANTE: só preenche quando o campo ainda não existe
+      // na base salva — nunca sobrescreve um valor já presente, para não apagar edições do
+      // usuário (status, summary, phases, datas etc.) a cada reload da página.
       if (Array.isArray(cloned.projects) && Array.isArray(defaultData.projects)) {
         const syncFields = ['discoveryDate','startDev','endDev','startDate','target','startType',
           'frontLeader','initiativeOwner','po','focalPoint','theme','business','name','initiativeType',
@@ -9025,7 +9119,7 @@
         defaultData.projects.forEach(defP => {
           const existing = cloned.projects.find(p => p.id === defP.id);
           if (existing) {
-            syncFields.forEach(f => { if (defP[f] !== undefined) existing[f] = defP[f]; });
+            syncFields.forEach(f => { if (defP[f] !== undefined && existing[f] === undefined) existing[f] = defP[f]; });
           }
         });
       }
@@ -9189,9 +9283,11 @@
 
     function saveData(show = false) {
       data.activeProjectId = activeProjectId;
+      data.updatedAt = new Date().toISOString();
       storageSet(STORAGE_KEY, JSON.stringify(data));
       if (show) toast('Salvo automaticamente');
       render();
+      if (!_discGasApplyingRemote) scheduleDiscGasSave();
     }
 
     function getProject() {
@@ -10411,6 +10507,14 @@
       if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return value;
       const [y,m,d] = value.slice(0,10).split('-');
       return `${d}/${m}/${y}`;
+    }
+
+    function formatBRDateTime(isoDate) {
+      const parsed = isoDate ? new Date(isoDate) : null;
+      if (!parsed || Number.isNaN(parsed.getTime())) return 'Não informado';
+      const dateLabel = formatBR(isoDate);
+      const timeLabel = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return `${dateLabel} às ${timeLabel}`;
     }
 
     function slugify(str) {
@@ -12516,7 +12620,7 @@ Recomendação PMO: ${d.recommendation}`;
       const drawerHours = selectedSquad ? hoursForSquad(selectedSquad.id) : 0;
       const drawerProjectCount = selectedSquad ? squadProjects(selectedSquad.id).length : 0;
       const drawerSearchTerm = squadDrawerSearchTerm || '';
-      const updatedAtLabel = formatBR(data.source?.importedAt) || 'Não informado';
+      const updatedAtLabel = formatBRDateTime(data.updatedAt);
 
       el.innerHTML = `<div class="ux-v6-shell">
         <div class="ux-v6-source"><strong>Planejamento 2026</strong><span>Números oficiais preservados · ${totalProjects} iniciativas principais · ${totalChildren} filhas vinculadas · ${formatHours(totalHours)}</span></div>
@@ -12603,6 +12707,7 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     render();
+    setTimeout(discGasSyncPull, 300);
   </script>
 </body>
 </html>
