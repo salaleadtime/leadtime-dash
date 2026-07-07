@@ -12608,6 +12608,8 @@ Recomendação PMO: ${d.recommendation}`;
           displayProjectTitle(project),
           squad?.name || project.squad || 'A validar',
           project.status || 'Sem status',
+          formatBR(project.discoveryDate),
+          formatBR(project.discoveryEndDate),
           actionsSummaryTextForReport(project),
           timelineSummaryTextForReport(project),
           risksSummaryTextForReport(project)
@@ -12616,7 +12618,7 @@ Recomendação PMO: ${d.recommendation}`;
 
       downloadXlsx('relatorio-executivo.xlsx', [
         { name: 'Relatório por Squad', headers: ['Squad', 'Iniciativas', 'Filhas', 'Horas 2026', 'Saúde'], rows: squadRows },
-        { name: 'Relatório por Iniciativa', headers: ['Nº', 'Iniciativa', 'Squad', 'Status', 'Ações', 'Timeline', 'Riscos e Dependências'], rows: initiativeRows }
+        { name: 'Relatório por Iniciativa', headers: ['Nº', 'Iniciativa', 'Squad', 'Status', 'Início Discovery', 'Término Discovery', 'Ações', 'Timeline', 'Riscos e Dependências'], rows: initiativeRows }
       ]);
       toast('✅ Relatório exportado em .xlsx (2 abas)');
     }
@@ -12645,8 +12647,8 @@ Recomendação PMO: ${d.recommendation}`;
 
       const initiativeReportRows = allProjects.map(project => {
         const squad = squadForProject(project);
-        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${escapeHtml(project.status || 'Sem status')}</td><td>${actionsSummaryHtmlForReport(project)}</td><td>${timelineSummaryHtmlForReport(project)}</td><td>${risksSummaryHtmlForReport(project)}</td></tr>`;
-      }).join('') || `<tr><td colspan="7" class="ux-v6-report-empty">Nenhuma iniciativa cadastrada.</td></tr>`;
+        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${escapeHtml(project.status || 'Sem status')}</td><td>${escapeHtml(formatBR(project.discoveryDate))}</td><td>${escapeHtml(formatBR(project.discoveryEndDate))}</td><td>${actionsSummaryHtmlForReport(project)}</td><td>${timelineSummaryHtmlForReport(project)}</td><td>${risksSummaryHtmlForReport(project)}</td></tr>`;
+      }).join('') || `<tr><td colspan="9" class="ux-v6-report-empty">Nenhuma iniciativa cadastrada.</td></tr>`;
 
       const alertsReportRows = alertProjects.map(project => {
         const squad = squadForProject(project);
@@ -12703,7 +12705,7 @@ Recomendação PMO: ${d.recommendation}`;
         <div class="ux-v6-report-section">
           <h3>Relatório por Iniciativa</h3>
           <p>${allProjects.length} iniciativa(s) · Ações, Timeline e Riscos/Dependências de cada uma, num só lugar.</p>
-          <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Ações</th><th>Timeline</th><th>Riscos e Dependências</th></tr></thead><tbody>${initiativeReportRows}</tbody></table>
+          <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Início Discovery</th><th>Término Discovery</th><th>Ações</th><th>Timeline</th><th>Riscos e Dependências</th></tr></thead><tbody>${initiativeReportRows}</tbody></table>
         </div>`;
 
       root.innerHTML = `<div id="uxV6ReportsBackdrop" class="ux-v6-report-backdrop active" onclick="closeReportsPanel()"></div>
