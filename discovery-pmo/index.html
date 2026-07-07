@@ -596,6 +596,27 @@
       margin-bottom: 10px;
     }
 
+    .card-insquad {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: #9aa5b5;
+      margin-bottom: 6px;
+    }
+
+    .work-card.overdue {
+      border-color: #f3b9b9;
+      background: #fff8f8;
+    }
+
+    .work-card.overdue:hover { border-color: var(--red); }
+
+    .card-due-overdue {
+      color: var(--red) !important;
+      font-weight: 850;
+    }
+
     .work-card .title {
       font-weight: 870;
       line-height: 1.22;
@@ -6440,13 +6461,16 @@
         <div class="section-head">
           <div>
             <h3 class="section-title">Andamento do Discovery</h3>
-            <p class="section-desc">Cards leves, editáveis e clicáveis. O status alimenta automaticamente a visão executiva.</p>
+            <p class="section-desc">Ações combinadas em reunião, com dono e prazo. Atrasadas aparecem em destaque e entram em Atenções da base.</p>
           </div>
-          <button type="button" class="btn primary" onclick="openCardModal()">Adicionar andamento</button>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
+            <button type="button" class="btn primary" onclick="openCardModal()">Adicionar andamento</button>
+          </div>
         </div>
         <div class="section-body">
           <div class="tabs">
-            <button type="button" class="tab active" data-tab="kanban">Cards</button>
+            <button type="button" class="tab active" data-tab="kanban">Ações</button>
             <button type="button" class="tab" data-tab="timeline">Timeline</button>
             <button type="button" class="tab" data-tab="schedule">Cronograma <span id="scheduleTabBadge" class="tab-badge hidden"></span></button>
             <button type="button" class="tab" data-tab="checklist">Prontidão</button>
@@ -6547,17 +6571,17 @@
     const STORAGE_KEY = 'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3';
 
     const lanes = [
-      { id: 'backlog', title: 'A iniciar', icon: '○', tone: '#526173' },
-      { id: 'doing', title: 'Em descoberta', icon: '◐', tone: '#2d6cdf' },
-      { id: 'validation', title: 'Validação', icon: '◇', tone: '#9a6a12' },
-      { id: 'done', title: 'Concluído', icon: '✓', tone: '#1f8f6a' }
+      { id: 'backlog', title: 'A fazer', icon: '○', tone: '#526173' },
+      { id: 'doing', title: 'Em andamento', icon: '◐', tone: '#2d6cdf' },
+      { id: 'validation', title: 'Aguardando validação', icon: '◇', tone: '#9a6a12' },
+      { id: 'done', title: 'Concluída', icon: '✓', tone: '#1f8f6a' }
     ];
 
     const stageReasonOptions = {
-      backlog: ['Demanda recebida', 'Aguardando priorização', 'Aguardando PO', 'Escopo inicial', 'Aguardando insumo'],
-      doing: ['Levantamento AS IS', 'Mapeamento de impactos', 'Dependência técnica', 'Dependência de dados', 'Definição de MVP'],
-      validation: ['Validação com negócio', 'Mockup em análise', 'Aceite pendente', 'Regra de negócio pendente', 'Go/No-Go pendente'],
-      done: ['MVP definido', 'Critérios validados', 'Backlog preparado', 'Pronto para Delivery', 'Evidência registrada']
+      backlog: ['Combinado em reunião', 'Aguardando definição', 'Aguardando responsável', 'Prioridade a definir', 'Aguardando insumo'],
+      doing: ['Em execução', 'Dependência técnica', 'Dependência de terceiros', 'Aguardando retorno', 'Em análise'],
+      validation: ['Aguardando validação de negócio', 'Aguardando aprovação', 'Revisão em andamento', 'Aceite pendente', 'Aguardando decisão'],
+      done: ['Apresentado em reunião', 'Entregue', 'Validado', 'Aprovado', 'Registrado como concluído']
     };
 
     const phaseReasonOptions = {
@@ -8987,6 +9011,7 @@
       ]
 };
 
+    let _cardsJustReset = false;
     let data = loadData();
     let activeProjectId = data.activeProjectId || data.projects[0]?.id;
     if (!data.projects.some(p => p.id === activeProjectId)) activeProjectId = data.projects[0]?.id || defaultData.activeProjectId;
@@ -9056,12 +9081,20 @@
     // Aplica a base vinda do servidor se ela for mais recente que a local. Preserva a
     // iniciativa que o usuário está vendo (activeProjectId é seleção de tela, não dado
     // compartilhado) para não "puxar o tapete" de quem já está com um projeto aberto.
+    // Evita aplicar dados remotos por cima de algo que o usuário está digitando
+    // agora (modal aberto ou foco num campo de texto/seleção).
+    function isUserEditingNow() {
+      if (document.getElementById('modalBackdrop')?.classList.contains('active')) return true;
+      const ae = document.activeElement;
+      return Boolean(ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName));
+    }
+
     function applyRemoteDiscData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
       const remoteTime = Date.parse(remote.updatedAt || '') || 0;
       const localTime = Date.parse(data.updatedAt || '') || 0;
       if (remoteTime <= localTime) return false;
-      if (document.getElementById('modalBackdrop')?.classList.contains('active')) return false;
+      if (isUserEditingNow()) return false;
 
       const keepActiveId = activeProjectId;
       _discGasApplyingRemote = true;
@@ -9074,12 +9107,29 @@
       return true;
     }
 
-    function discGasSyncPull() {
-      discGasLoad((err, remote) => { if (!err) applyRemoteDiscData(remote); });
+    function discGasSyncPull(cb) {
+      discGasLoad((err, remote) => {
+        if (err) { if (cb) cb(err); return; }
+        const applied = applyRemoteDiscData(remote);
+        if (cb) cb(null, applied);
+      });
+    }
+
+    function manualSyncRefresh() {
+      const btn = document.getElementById('discSyncBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '↻ Sincronizando…'; }
+      discGasSyncPull((err, applied) => {
+        if (btn) { btn.disabled = false; btn.textContent = '↻ Atualizar'; }
+        if (err) { toast('⚠️ Sem conexão com o servidor agora'); return; }
+        toast(applied ? '✅ Atualizado com o servidor' : 'Já está tudo atualizado');
+      });
     }
 
     setInterval(discGasSyncPull, 15000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasSyncPull(); });
+    // O reset único de cards (ver normalizeData) só vale pra todo mundo se chegar ao
+    // servidor — sem isso, ficaria só no localStorage de quem abriu a página primeiro.
+    if (_cardsJustReset) { data.updatedAt = new Date().toISOString(); scheduleDiscGasSave(); }
     // ─────────────────────────────────────────────────────────────────────────
     const VIEW_MODE_KEY = STORAGE_KEY + '_view_mode_v5';
     const DASHBOARD_SQUAD_KEY = STORAGE_KEY + '_dashboard_squad_v5';
@@ -9153,6 +9203,14 @@
     function normalizeData(payload) {
       const cloned = payload || deepClone(defaultData);
       if (!Array.isArray(cloned.projects) || !cloned.projects.length) cloned.projects = deepClone(defaultData.projects);
+      // Reset único (pedido explícito): zera os cards de "Ações" de todas as iniciativas,
+      // para todos os usuários, na primeira carga após esta versão. Roda uma única vez —
+      // o flag abaixo impede que isso aconteça de novo em cargas futuras.
+      if (!cloned.cardsResetV1) {
+        cloned.cardsResetV1 = true;
+        if (Array.isArray(cloned.projects)) cloned.projects.forEach(p => { p.cards = []; });
+        _cardsJustReset = true;
+      }
       // Migração: sincroniza nome/code das squads com o defaultData (resolve renames como ASD → Ainda Sem Definição)
       if (Array.isArray(cloned.squads)) {
         defaultData.squads.forEach(defSq => {
@@ -9654,20 +9712,37 @@
         return `<div class="lane" data-lane="${l.id}" ondragover="handleLaneDragOver(event)" ondragleave="handleLaneDragLeave(event)" ondrop="handleLaneDrop(event, '${l.id}')">
           <div class="lane-head"><div class="lane-title"><span class="lane-icon">${l.icon}</span>${l.title}</div><span class="count">${cards.length}</span></div>
           <div class="card-stack" data-lane="${l.id}">
-            ${cards.map(cardTemplate).join('') || `<div class="empty-state">Sem cards nesta etapa</div>`}
+            ${cards.map(c => cardTemplate(c, project)).join('') || `<div class="empty-state">Sem cards nesta etapa</div>`}
           </div>
           <button type="button" class="add-card-btn" onclick="openCardModal(null, '${l.id}')">+ adicionar</button>
         </div>`;
       }).join('');
     }
 
-    function cardTemplate(c) {
+    // Ação combinada em reunião com prazo vencido e ainda não concluída.
+    function isCardOverdue(c) {
+      if (!c.due || c.status === 'done') return false;
+      const due = parseISODate(c.due);
+      const today = parseISODate(fmtDate(new Date()));
+      return Boolean(due && today && due < today);
+    }
+
+    function overdueActionCount(project) {
+      return (project.cards || []).filter(isCardOverdue).length;
+    }
+
+    function cardTemplate(c, project) {
       const tone = laneTone(c.status);
       const reason = c.stageReason ? `<span class="stage-reason" title="Motivo da etapa">${escapeHtml(c.stageReason)}</span>` : '';
-      return `<button type="button" class="work-card" draggable="true" data-card-id="${c.id}" style="--card-accent:${tone}" onclick="openCardFromClick('${c.id}')" ondragstart="handleCardDragStart(event, '${c.id}')" ondragend="handleCardDragEnd(event)">
+      const overdue = isCardOverdue(c);
+      const squad = squadForProject(project);
+      const inSquadLabel = [project.initiativeNumber, squad?.name || project.squad].filter(Boolean).join(' · ');
+      const inSquadHtml = inSquadLabel ? `<div class="card-insquad">${escapeHtml(inSquadLabel)}</div>` : '';
+      return `<button type="button" class="work-card ${overdue ? 'overdue' : ''}" draggable="true" data-card-id="${c.id}" style="--card-accent:${tone}" onclick="openCardFromClick('${c.id}')" ondragstart="handleCardDragStart(event, '${c.id}')" ondragend="handleCardDragEnd(event)">
+        ${inSquadHtml}
         <div class="top"><div class="title">${escapeHtml(c.title)}</div><span class="badge ${badgeClass(c.priority)}">${escapeHtml(c.priority)}</span></div>
         <p class="desc">${escapeHtml(c.description || 'Sem descrição cadastrada.')}</p>
-        <div class="card-foot"><span>${escapeHtml(c.owner || 'Sem dono')}</span><span>${formatBR(c.due)}</span></div>
+        <div class="card-foot"><span>${escapeHtml(c.owner || 'Sem dono')}</span><span class="${overdue ? 'card-due-overdue' : ''}">${overdue ? '⚠ ' : ''}${formatBR(c.due)}</span></div>
         ${reason}
       </button>`;
     }
@@ -12850,10 +12925,12 @@ Recomendação PMO: ${d.recommendation}`;
         </button>`;
       }).join('') : `<div class="ux-v6-squads-empty"><strong>Nenhuma squad encontrada.</strong>Revise o termo buscado ou pesquise por iniciativa, squad, PO, Tech Lead, líder ou tema.</div>`;
 
+      const overdueActionsTotal = allProjects.reduce((acc, p) => acc + overdueActionCount(p), 0);
       const alertRows = [
         ['Iniciativas com dados pendentes', pendingDataCount, pendingDataCount > 0 ? 'amber' : ''],
         ['Iniciativas ASD - Ainda Sem Definição de Squad', unassignedCount, unassignedCount > 0 ? 'amber' : ''],
         ['Squads com ponto de atenção ou crítico', healthCounts.warn + healthCounts.crit, (healthCounts.warn + healthCounts.crit) > 0 ? 'amber' : ''],
+        ['Ações de reunião atrasadas', overdueActionsTotal, overdueActionsTotal > 0 ? 'amber' : ''],
         ['Iniciativas com alertas PMO/RTE', allProjects.filter(p => projectAlertCount(p) > 0).length, '']
       ];
       const alertsHtml = alertRows.map(([label, value, tone]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span class="ux-v6-bullet ${tone}"></span><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('');
