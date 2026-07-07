@@ -3497,6 +3497,20 @@
       text-overflow: ellipsis !important;
     }
 
+    .breadcrumb-current-link {
+      border: 0 !important;
+      background: transparent !important;
+      padding: 0 !important;
+      font: inherit !important;
+      cursor: pointer !important;
+    }
+
+    .breadcrumb-current-link:hover,
+    .breadcrumb-current-link:focus-visible {
+      color: var(--primary-dark) !important;
+      text-decoration: underline !important;
+    }
+
     .breadcrumb-context {
       display: inline-flex !important;
       align-items: center !important;
@@ -6476,7 +6490,7 @@
               <span>Dashboard</span>
             </a>
             <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current">Discovery PMO Tracker</span>
+            <button type="button" class="breadcrumb-current breadcrumb-current-link" onclick="setDashboardMode()" title="Voltar para o painel executivo">Discovery PMO Tracker</button>
             <span class="breadcrumb-separator">/</span>
             <span id="breadcrumbProjectCode" class="breadcrumb-context">DISC-001</span>
           </nav>
@@ -9631,8 +9645,6 @@
         else breadcrumbCode.textContent = 'Dashboard';
       }
 
-      const dashBtn = document.getElementById('dashboardViewBtn');
-      if (dashBtn) dashBtn.classList.toggle('active', normalizedMode !== 'project');
       const duplicateBtn = Array.from(document.querySelectorAll('.side-actions .ghost-btn')).find(btn => btn.textContent.trim() === 'Duplicar');
       if (duplicateBtn) duplicateBtn.style.display = normalizedMode === 'project' ? '' : 'none';
     }
@@ -12616,16 +12628,6 @@ Recomendação PMO: ${d.recommendation}`;
         newBtn.textContent = '+ Iniciativa';
         newBtn.title = 'Cadastrar iniciativa com número oficial da planilha';
       }
-      if (!document.getElementById('dashboardViewBtn')) {
-        const dashBtn = document.createElement('button');
-        dashBtn.type = 'button';
-        dashBtn.id = 'dashboardViewBtn';
-        dashBtn.className = 'ghost-btn';
-        dashBtn.textContent = 'Visão Executiva';
-        dashBtn.title = 'Visualizar Ops for Ops - 2026';
-        dashBtn.onclick = () => setDashboardMode();
-        actions.insertBefore(dashBtn, actions.firstChild);
-      }
       if (!document.getElementById('squadManagerBtn')) {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -12634,9 +12636,7 @@ Recomendação PMO: ${d.recommendation}`;
         btn.textContent = 'Squads';
         btn.title = 'Cadastrar e gerenciar Squads';
         btn.onclick = () => openSquadModal();
-        const dashBtnEl = document.getElementById('dashboardViewBtn');
-        if (dashBtnEl?.nextSibling) actions.insertBefore(btn, dashBtnEl.nextSibling);
-        else actions.appendChild(btn);
+        actions.insertBefore(btn, actions.firstChild);
       }
       const dup = Array.from(actions.querySelectorAll('.ghost-btn')).find(btn => btn.textContent.trim() === 'Duplicar');
       if (dup) dup.title = 'Duplicação automática desativada para preservar números oficiais da planilha';
@@ -13021,7 +13021,9 @@ Recomendação PMO: ${d.recommendation}`;
       const el = document.getElementById('squadOverview');
       if (!el) return;
 
-      const squads = sortedSquadsList();
+      // Squad sem nenhuma iniciativa vinculada não aparece no painel executivo;
+      // assim que uma iniciativa é cadastrada nela, passa a aparecer para todos.
+      const squads = sortedSquadsList().filter(squad => squadProjects(squad.id).length > 0);
       ensureDefaultDashboardSquad();
       const allProjects = data.projects || [];
       const totalProjects = allProjects.length;
