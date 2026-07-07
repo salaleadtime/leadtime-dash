@@ -648,102 +648,71 @@
 
     .timeline {
       display: grid;
-      grid-template-columns: repeat(4, minmax(180px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(4, minmax(230px, 1fr));
+      gap: 14px;
       overflow-x: auto;
       padding-bottom: 3px;
       align-items: start;
     }
 
-    .stage-lane {
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 10px;
-      min-height: 120px;
-      display: grid;
-      gap: 8px;
-      align-content: start;
-    }
-
-    .stage-lane.drag-over {
-      border-color: var(--blue);
-      background: #eef4ff;
-    }
-
-    .stage-lane-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 10.5px;
-      font-weight: 900;
-      letter-spacing: .03em;
-      text-transform: uppercase;
-      color: #3b4656;
-      padding: 2px 2px 0;
-    }
-
-    .stage-lane-head .count {
-      font-size: 10px;
-      font-weight: 900;
-      background: #e9edf5;
-      color: #566377;
-      border-radius: 999px;
-      padding: 3px 7px;
-    }
-
-    .stage-card {
+    .tl-stage {
       background: #fff;
       border: 1px solid var(--line);
-      border-radius: 13px;
-      padding: 9px 10px;
-      box-shadow: 0 6px 14px rgba(17, 24, 39, .04);
-      cursor: grab;
-      transition: .14s ease;
+      border-radius: 20px;
+      padding: 18px 16px 16px;
+      box-shadow: 0 14px 32px rgba(17, 24, 39, .05);
+      transition: .16s ease;
     }
 
-    .stage-card:hover { border-color: var(--line-strong); box-shadow: 0 10px 18px rgba(17, 24, 39, .07); }
-    .stage-card.dragging { opacity: .45; }
+    .tl-stage.drag-over {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(45, 108, 223, .15), 0 14px 32px rgba(17, 24, 39, .05);
+    }
 
-    .stage-eyebrow {
+    .tl-eyebrow {
       display: inline-block;
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 900;
-      letter-spacing: .08em;
+      letter-spacing: .09em;
       text-transform: uppercase;
       color: var(--blue);
       background: #eaf1ff;
       border-radius: 999px;
-      padding: 2px 7px;
-      margin-bottom: 6px;
+      padding: 4px 10px;
+      margin-bottom: 10px;
     }
 
-    .stage-title {
-      margin: 0 0 7px;
-      font-size: 12px;
-      font-weight: 800;
+    .tl-title {
+      margin: 0 0 12px;
+      font-size: 14.5px;
+      font-weight: 850;
       line-height: 1.25;
       letter-spacing: -.01em;
       color: var(--ink);
     }
 
-    .stage-items {
+    .tl-items {
       display: grid;
-      gap: 1px;
       border-top: 1px solid var(--line);
     }
 
-    .stage-item {
+    .tl-item {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 0;
+      gap: 10px;
+      padding: 10px 0;
       border-bottom: 1px solid var(--line);
+      cursor: grab;
+      transition: .12s ease;
     }
 
-    .stage-item-icon {
-      width: 18px;
-      height: 18px;
+    .tl-item:active { cursor: grabbing; }
+    .tl-item.dragging { opacity: .4; }
+    .tl-item.done .tl-item-label { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+
+    .tl-item-icon {
+      width: 30px;
+      height: 30px;
       border-radius: 999px;
       display: grid;
       place-items: center;
@@ -752,77 +721,71 @@
       color: var(--blue);
     }
 
-    .stage-item-icon svg { width: 10px; height: 10px; }
+    .tl-item-icon svg { width: 16px; height: 16px; }
+    .tl-item.done .tl-item-icon { background: #eef2f8; color: #97a2b4; }
 
-    .stage-item-icon.status-done { background: var(--green); color: #fff; }
-    .stage-item-icon.status-progress { background: var(--amber); color: #4b3100; }
-    .stage-item-icon.status-blocked { background: var(--red); color: #fff; }
-
-    .stage-item-label {
+    .tl-item-label {
       flex: 1;
-      font-size: 10.8px;
-      font-weight: 700;
+      font-size: 12.5px;
+      font-weight: 650;
       color: var(--ink);
-      line-height: 1.2;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      line-height: 1.3;
     }
 
-    .stage-item-reason {
+    .tl-item-check {
       flex: none;
-      max-width: 74px;
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      font-size: 9px;
-      font-weight: 600;
-      text-align: right;
-      text-overflow: ellipsis;
-    }
-
-    .stage-item-dot {
-      flex: none;
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: #d9dee8;
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      border: 1.6px solid #cbd3df;
+      background: #fff;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
       cursor: pointer;
-      border: 0;
       padding: 0;
     }
 
-    .stage-item-dot.status-done { background: var(--green); }
-    .stage-item-dot.status-progress { background: var(--amber); }
-    .stage-item-dot.status-blocked { background: var(--red); }
-
-    .stage-progress {
-      margin-top: 7px;
+    .tl-item-check.done {
+      background: var(--blue);
+      border-color: var(--blue);
     }
 
-    .stage-progress-head {
+    .tl-empty {
+      padding: 18px 0;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    .tl-progress { margin-top: 14px; }
+
+    .tl-progress-head {
       display: flex;
       justify-content: space-between;
-      font-size: 8.5px;
+      font-size: 9.5px;
       font-weight: 900;
-      letter-spacing: .05em;
+      letter-spacing: .06em;
       text-transform: uppercase;
       color: #8c98a8;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
-    .stage-progress-track {
-      height: 4px;
+    .tl-progress-track {
+      height: 6px;
       border-radius: 999px;
       background: #e9edf5;
       overflow: hidden;
     }
 
-    .stage-progress-fill {
+    .tl-progress-fill {
       display: block;
       height: 100%;
       border-radius: 999px;
       background: var(--blue);
+      transition: width .2s ease;
     }
 
     .schedule-grid {
@@ -9702,153 +9665,140 @@
       </button>`;
     }
 
-    // Agrupa as 8 fases (mesmos ids/status usados em phaseScore, projectAlertCount,
-    // currentDiscoveryPhase e deliveryReadinessDetails — não renomear/remover ids)
-    // em 4 grandes etapas, só para exibição compacta e arrastável no Timeline.
-    const timelineGroups = [
-      { id: 'entendimento', title: 'Entendimento do Problema', phaseIds: ['kickoff'] },
-      { id: 'analise', title: 'Levantamento e Análise', phaseIds: ['asis'] },
-      { id: 'desenho', title: 'Desenho da Solução', phaseIds: ['tobe', 'mvp'] },
-      { id: 'validacao', title: 'Validação e Prontidão', phaseIds: ['deps', 'stories', 'estimates', 'go'] }
+    // Timeline visual: 4 etapas fixas do Discovery, com itens soltos que o RTE pode
+    // marcar como feito e arrastar entre etapas. Independente de project.phases (que
+    // continua alimentando phaseScore, projectAlertCount, currentDiscoveryPhase e
+    // deliveryReadinessDetails) — mexer nos ids/status de phases quebraria essas contas.
+    const TIMELINE_STAGES = [
+      { id: 'entendimento', title: 'Entendimento do Problema' },
+      { id: 'analise', title: 'Levantamento e Análise' },
+      { id: 'desenho', title: 'Desenho da Solução' },
+      { id: 'validacao', title: 'Validação e Prontidão' }
     ];
 
-    const timelineLanes = [
-      { id: 'todo', title: 'A iniciar' },
-      { id: 'progress', title: 'Em andamento' },
-      { id: 'blocked', title: 'Bloqueado' },
-      { id: 'done', title: 'Concluído' }
+    const timelineItemTemplate = [
+      { id: 'ti-objetivo', stageId: 'entendimento', icon: 'target', label: 'Objetivo do discovery' },
+      { id: 'ti-dor', stageId: 'entendimento', icon: 'heart', label: 'Dor do usuário e do negócio' },
+      { id: 'ti-escopo', stageId: 'entendimento', icon: 'doc', label: 'Escopo inicial' },
+      { id: 'ti-stakeholders', stageId: 'entendimento', icon: 'group', label: 'Stakeholders envolvidos' },
+      { id: 'ti-asis', stageId: 'analise', icon: 'map', label: 'Mapeamento AS IS' },
+      { id: 'ti-dados', stageId: 'analise', icon: 'chart', label: 'Dados e evidências' },
+      { id: 'ti-riscosdeps', stageId: 'analise', icon: 'warn', label: 'Riscos e dependências' },
+      { id: 'ti-requisitos', stageId: 'analise', icon: 'clip', label: 'Requisitos iniciais' },
+      { id: 'ti-solucao', stageId: 'desenho', icon: 'doc', label: 'Solução proposta' },
+      { id: 'ti-hipoteses', stageId: 'desenho', icon: 'bulb', label: 'Hipóteses e alternativas' },
+      { id: 'ti-priorizacao', stageId: 'desenho', icon: 'chart', label: 'Priorização' },
+      { id: 'ti-criterios', stageId: 'desenho', icon: 'target', label: 'Critérios de sucesso' },
+      { id: 'ti-viabilidade', stageId: 'validacao', icon: 'gear', label: 'Viabilidade técnica' },
+      { id: 'ti-validacaonegocio', stageId: 'validacao', icon: 'group', label: 'Validação com negócio' },
+      { id: 'ti-proximos', stageId: 'validacao', icon: 'route', label: 'Próximos passos' },
+      { id: 'ti-ready', stageId: 'validacao', icon: 'flag', label: 'Ready para épico e histórias' }
     ];
 
-    const PHASE_ICON_SVG = {
-      kickoff: '<svg viewBox="0 0 20 20" fill="none"><path d="M4 2v16M4 3h9l-2 3 2 3H4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
-      asis: '<svg viewBox="0 0 20 20" fill="none"><path d="M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 3v12M12 5v12" stroke="currentColor" stroke-width="1.1"/></svg>',
-      tobe: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M13 7l-2 5-5 2 2-5z" fill="currentColor"/></svg>',
-      mvp: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 2l7 4v8l-7 4-7-4V6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 6l7 4 7-4M10 10v8" stroke="currentColor" stroke-width="1.1"/></svg>',
-      deps: '<svg viewBox="0 0 20 20" fill="none"><rect x="2" y="7" width="8" height="6" rx="3" stroke="currentColor" stroke-width="1.5"/><rect x="10" y="7" width="8" height="6" rx="3" stroke="currentColor" stroke-width="1.5"/></svg>',
-      stories: '<svg viewBox="0 0 20 20" fill="none"><path d="M3 4h6a2 2 0 012 2v10a2 2 0 00-2-2H3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M17 4h-6a2 2 0 00-2 2v10a2 2 0 012-2h6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
-      estimates: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 11l4-3M10 4v1.4M4.6 6.6l1 1M15.4 6.6l-1 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
-      go: '<svg viewBox="0 0 20 20" fill="none"><path d="M5 2v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 3h4l1 2h4l-1 2h-4l-1-2H5z" fill="currentColor"/></svg>'
+    const TIMELINE_ICONS = {
+      target: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r="3.2" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="10" r=".6" fill="currentColor"/></svg>',
+      heart: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 16.5s-6-3.8-6-8.2A3.8 3.8 0 0110 6.1a3.8 3.8 0 016 2.2c0 4.4-6 8.2-6 8.2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+      doc: '<svg viewBox="0 0 20 20" fill="none"><rect x="4.5" y="2.5" width="11" height="15" rx="1.6" stroke="currentColor" stroke-width="1.4"/><path d="M7.3 7h5.4M7.3 10.2h5.4M7.3 13.4h3.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+      group: '<svg viewBox="0 0 20 20" fill="none"><circle cx="7.3" cy="7" r="2.4" stroke="currentColor" stroke-width="1.3"/><circle cx="13.2" cy="7.6" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M2.8 16c.5-2.6 2.3-4 4.5-4s4 1.4 4.5 4M11.4 12.3c1.6.2 3 1.4 3.4 3.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+      map: '<svg viewBox="0 0 20 20" fill="none"><path d="M3 5.5l4.5-1.7 4.5 1.7 4.5-1.7v11l-4.5 1.7-4.5-1.7L3 16.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="12" cy="7.8" r="1.7" stroke="currentColor" stroke-width="1.2"/></svg>',
+      chart: '<svg viewBox="0 0 20 20" fill="none"><path d="M4 16V11M10 16V7M16 16V4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+      warn: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 3.2l7.5 13H2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M10 8.4v3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="14.2" r=".7" fill="currentColor"/></svg>',
+      clip: '<svg viewBox="0 0 20 20" fill="none"><rect x="4" y="3.5" width="12" height="14" rx="1.8" stroke="currentColor" stroke-width="1.3"/><rect x="7.3" y="2" width="5.4" height="2.6" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M6.8 10.5l1.8 1.8 3.6-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      bulb: '<svg viewBox="0 0 20 20" fill="none"><path d="M7 14.2h6M7.8 16.4h4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M10 2.6a5 5 0 00-2.7 9.2c.5.4.8 1 .8 1.7h3.8c0-.7.3-1.3.8-1.7A5 5 0 0010 2.6z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',
+      gear: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3.2" stroke="currentColor" stroke-width="1.3"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1L4.7 4.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+      route: '<svg viewBox="0 0 20 20" fill="none"><path d="M3 14c3-3 3-6 6-6s3 4 6 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2.2 2.2"/><circle cx="15.5" cy="12" r="2" stroke="currentColor" stroke-width="1.3"/></svg>',
+      flag: '<svg viewBox="0 0 20 20" fill="none"><path d="M5 2.5v15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M5 3.3h8l-1.8 3 1.8 3H5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>'
     };
 
-    function phaseIcon(id) { return PHASE_ICON_SVG[id] || ''; }
-
-    function phaseStatusLabel(status) {
-      return (timelineLanes.find(l => l.id === status) || {}).title || 'A iniciar';
-    }
-
-    function groupPhases(project, group) {
-      return group.phaseIds.map(id => project.phases.find(p => p.id === id)).filter(Boolean);
-    }
-
-    function groupAggregateStatus(project, group) {
-      const items = groupPhases(project, group);
-      if (!items.length) return 'todo';
-      if (items.every(p => p.status === 'done')) return 'done';
-      if (items.some(p => p.status === 'blocked')) return 'blocked';
-      if (items.some(p => p.status === 'progress' || p.status === 'done')) return 'progress';
-      return 'todo';
-    }
-
-    function groupProgressPct(project, group) {
-      const items = groupPhases(project, group);
-      if (!items.length) return 0;
-      const sum = items.reduce((acc, p) => acc + (p.status === 'done' ? 1 : p.status === 'progress' ? .5 : 0), 0);
-      return Math.round((sum / items.length) * 100);
+    function ensureTimelineItems(project) {
+      if (!Array.isArray(project.timelineItems)) project.timelineItems = [];
+      timelineItemTemplate.forEach(tpl => {
+        if (!project.timelineItems.some(it => it.id === tpl.id)) {
+          project.timelineItems.push({ id: tpl.id, stageId: tpl.stageId, done: false });
+        }
+      });
+      return project.timelineItems;
     }
 
     function renderTimeline(project) {
       const wrap = document.getElementById('timeline');
-      wrap.innerHTML = timelineLanes.map(lane => {
-        const groups = timelineGroups.filter(g => groupAggregateStatus(project, g) === lane.id);
-        return `<div class="stage-lane" data-lane="${lane.id}" ondragover="handleStageDragOver(event)" ondragleave="handleStageDragLeave(event)" ondrop="handleStageDrop(event, '${lane.id}')">
-          <div class="stage-lane-head"><span>${escapeHtml(lane.title)}</span><span class="count">${groups.length}</span></div>
-          ${groups.map(g => stageCardTemplate(project, g)).join('') || `<div class="empty-state">Nenhuma etapa aqui</div>`}
+      const allItems = ensureTimelineItems(project);
+      wrap.innerHTML = TIMELINE_STAGES.map((stage, idx) => {
+        const items = allItems.filter(it => it.stageId === stage.id);
+        const doneCount = items.filter(it => it.done).length;
+        const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+        return `<div class="tl-stage" data-stage="${stage.id}" ondragover="handleTlDragOver(event)" ondragleave="handleTlDragLeave(event)" ondrop="handleTlDrop(event, '${stage.id}')">
+          <span class="tl-eyebrow">Discovery</span>
+          <h4 class="tl-title">${idx + 1}. ${escapeHtml(stage.title)}</h4>
+          <div class="tl-items">
+            ${items.map(timelineItemRow).join('') || `<div class="tl-empty">Arraste um item para cá</div>`}
+          </div>
+          <div class="tl-progress">
+            <div class="tl-progress-head"><span>Progresso</span><span>${pct}%</span></div>
+            <div class="tl-progress-track"><span class="tl-progress-fill" style="width:${pct}%"></span></div>
+          </div>
         </div>`;
       }).join('');
     }
 
-    function stageCardTemplate(project, group) {
-      const num = timelineGroups.indexOf(group) + 1;
-      const pct = groupProgressPct(project, group);
-      const items = groupPhases(project, group);
-      const itemsHtml = items.map(p => `<div class="stage-item">
-        <button type="button" class="stage-item-dot status-${p.status}" title="Clique para avançar o status (${phaseStatusLabel(p.status)})" onclick="cycleTimelinePhase(event, '${p.id}')"></button>
-        <span class="stage-item-icon status-${p.status}">${phaseIcon(p.id)}</span>
-        <span class="stage-item-label" title="${escapeAttr(p.help)}">${escapeHtml(p.title)}</span>
-        <select class="stage-item-reason" title="Motivo" onclick="event.stopPropagation()" onchange="updatePhaseReason('${p.id}', this.value)">${phaseReasonSelectOptions(p)}</select>
-      </div>`).join('');
-      return `<div class="stage-card" draggable="true" data-group="${group.id}" ondragstart="handleStageDragStart(event, '${group.id}')" ondragend="handleStageDragEnd(event)">
-        <span class="stage-eyebrow">Discovery</span>
-        <h4 class="stage-title">${num}. ${escapeHtml(group.title)}</h4>
-        <div class="stage-items">${itemsHtml}</div>
-        <div class="stage-progress">
-          <div class="stage-progress-head"><span>Progresso</span><span>${pct}%</span></div>
-          <div class="stage-progress-track"><span class="stage-progress-fill" style="width:${pct}%"></span></div>
-        </div>
+    function timelineItemRow(it) {
+      const tpl = timelineItemTemplate.find(t => t.id === it.id) || {};
+      return `<div class="tl-item ${it.done ? 'done' : ''}" draggable="true" data-item="${it.id}"
+          ondragstart="handleTlItemDragStart(event, '${it.id}')" ondragend="handleTlItemDragEnd(event)">
+        <span class="tl-item-icon">${TIMELINE_ICONS[tpl.icon] || ''}</span>
+        <span class="tl-item-label">${escapeHtml(tpl.label || it.id)}</span>
+        <button type="button" class="tl-item-check ${it.done ? 'done' : ''}" onclick="toggleTimelineItem(event, '${it.id}')" aria-label="Marcar como concluído">${it.done ? '✓' : ''}</button>
       </div>`;
     }
 
-    function cycleTimelinePhase(event, id) {
+    function toggleTimelineItem(event, id) {
       event.stopPropagation();
-      const order = ['todo', 'progress', 'blocked', 'done'];
       const p = getProject();
-      const phase = p.phases.find(x => x.id === id);
-      if (!phase) return;
-      const next = order[(order.indexOf(phase.status) + 1) % order.length];
-      updatePhase(id, next);
+      ensureTimelineItems(p);
+      const item = p.timelineItems.find(x => x.id === id);
+      if (!item) return;
+      item.done = !item.done;
+      saveData(true);
     }
 
-    let draggedStageGroupId = null;
+    let draggedTlItemId = null;
 
-    function handleStageDragStart(event, groupId) {
-      draggedStageGroupId = groupId;
+    function handleTlItemDragStart(event, id) {
+      draggedTlItemId = id;
       event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', groupId);
+      event.dataTransfer.setData('text/plain', id);
       event.currentTarget.classList.add('dragging');
     }
 
-    function handleStageDragEnd(event) {
+    function handleTlItemDragEnd(event) {
       event.currentTarget.classList.remove('dragging');
-      document.querySelectorAll('.stage-lane.drag-over').forEach(el => el.classList.remove('drag-over'));
-      draggedStageGroupId = null;
+      document.querySelectorAll('.tl-stage.drag-over').forEach(el => el.classList.remove('drag-over'));
+      draggedTlItemId = null;
     }
 
-    function handleStageDragOver(event) {
+    function handleTlDragOver(event) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
       event.currentTarget.classList.add('drag-over');
     }
 
-    function handleStageDragLeave(event) {
+    function handleTlDragLeave(event) {
       if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('drag-over');
     }
 
-    function handleStageDrop(event, laneId) {
+    function handleTlDrop(event, stageId) {
       event.preventDefault();
       event.stopPropagation();
-      document.querySelectorAll('.stage-lane.drag-over').forEach(el => el.classList.remove('drag-over'));
-      const groupId = event.dataTransfer.getData('text/plain') || draggedStageGroupId;
-      if (!groupId) return;
-      moveStageGroupToLane(groupId, laneId);
-    }
-
-    function moveStageGroupToLane(groupId, laneId) {
-      const group = timelineGroups.find(g => g.id === groupId);
-      if (!group) return;
+      document.querySelectorAll('.tl-stage.drag-over').forEach(el => el.classList.remove('drag-over'));
+      const id = event.dataTransfer.getData('text/plain') || draggedTlItemId;
+      if (!id) return;
       const p = getProject();
-      let changed = false;
-      group.phaseIds.forEach(id => {
-        const phase = p.phases.find(x => x.id === id);
-        if (phase && phase.status !== laneId) {
-          phase.status = laneId;
-          phase.reason = defaultPhaseReason(phase.id, laneId);
-          changed = true;
-        }
-      });
-      if (changed) {
-        saveData(true);
-        toast(`Etapa movida para ${phaseStatusLabel(laneId)}`);
-      }
+      ensureTimelineItems(p);
+      const item = p.timelineItems.find(x => x.id === id);
+      if (!item || item.stageId === stageId) return;
+      item.stageId = stageId;
+      saveData(true);
+      toast('Item movido');
     }
 
     function openCardFromClick(id) {
