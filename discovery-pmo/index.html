@@ -262,6 +262,16 @@
     .btn.dark { background: #1c2430; color: #fff; border-color: #1c2430; }
     .btn.icon-only { width: 30px; padding: 5px; justify-content: center; }
 
+    .btn-compact-import {
+      font-size: 9.5px !important;
+      padding: 3px 8px !important;
+      min-height: 0 !important;
+      border-radius: 999px !important;
+      cursor: pointer;
+      opacity: .82;
+    }
+    .btn-compact-import:hover { opacity: 1; }
+
     .hero {
       background:
         radial-gradient(circle at 0% 0%, rgba(191, 24, 48, .13), transparent 34%),
@@ -9359,6 +9369,8 @@
         project.status = project.status || 'A iniciar';
         project.criticality = project.criticality || 'Média';
         project.target = project.target || 'A definir';
+        project.readinessStage = project.readinessStage || 'Em análise';
+        project.discoveryEndDate = project.discoveryEndDate || '';
         project.summary = project.summary || '';
         project.squad = project.squad || inferSquad(project);
         project.rteOwner = project.rteOwner || project.rte || project.owner || 'PMO/RTE';
@@ -12521,7 +12533,7 @@ Recomendação PMO: ${d.recommendation}`;
         initiativeType: 'Única',
         name: '', business: '', theme: '', squad: selectedDefaultSquad.name, squadId: selectedDefaultSquad.id,
         owner: 'A definir', rteOwner: 'A definir', pmoOwner: 'A definir', frontLeader: '', initiativeOwner: '', po: '', focalPoint: '', techLead: '', dataArea: '', aiRpa: '', processName: '', hours2026: 0,
-        discoveryDate: '', startDev: '', endDev: '', startDate: plusDays(0), status: 'A iniciar', criticality: 'A validar', target: '', summary: '', subInitiatives: [],
+        discoveryDate: '', discoveryEndDate: '', startDev: '', endDev: '', startDate: plusDays(0), status: 'A iniciar', criticality: 'A validar', target: '', readinessStage: READINESS_STAGE_DEFAULT, summary: '', subInitiatives: [],
         phases: phaseTemplate.map(p => ({ ...p, status: 'todo' })),
         checklist: checklistTemplate.map(c => ({ ...c, done: false })),
         cards: [], schedule: [], raids: { risks: [], assumptions: [], issues: [], dependencies: [] }, attachments: []
@@ -12532,8 +12544,21 @@ Recomendação PMO: ${d.recommendation}`;
       project.squad = squad.name;
       modalState = { type: 'project', isEdit, project };
       openModal(isEdit ? 'Editar iniciativa' : 'Nova iniciativa', 'Os números oficiais vêm da planilha Planejamento 2026. Nesta versão não há geração automática DISC.', `
-        <div class="automation-note"><span class="automation-dot"></span><div><strong>Número oficial preservado</strong>Use o Nº da Iniciativa da planilha. As iniciativas filhas ficam vinculadas dentro da iniciativa mãe e não entram na contagem principal do Dashboard.</div></div>
+        <div class="automation-note"><span class="automation-dot"></span><div><strong>Número oficial preservado</strong>Use o Nº da Iniciativa da planilha. Tipo "Filha" vincula a iniciativa dentro da Mãe pelo número — ela não entra na contagem principal do Dashboard.</div></div>
         <div class="form-grid">
+          <div class="form-field">
+            <label>Tipo da Iniciativa</label>
+            <select id="project-initiative-type">${['Única', 'MÃE', 'Filha'].map(t => `<option value="${t}" ${((project.initiativeType || 'Única') === t) ? 'selected' : ''}>${t === 'MÃE' ? 'Mãe' : t}</option>`).join('')}</select>
+          </div>
+          <div class="form-field">
+            <label>Número da Mãe</label>
+            <input id="project-mother-number" type="text" value="${escapeAttr(isEdit ? (project.initiativeNumber || '') : '')}" placeholder="Ex.: 113286" />
+          </div>
+          <div class="form-field">
+            <label>Número da Filha</label>
+            <input id="project-child-number" type="text" placeholder="Só para Tipo = Filha" />
+          </div>
+          ${field('Nome da Iniciativa', 'project-name', project.name)}
           <div class="form-field">
             <label>Squad</label>
             <select id="project-squad-id" onchange="handleProjectSquadChange()">${squadOptions(squad.id)}</select>
@@ -12542,71 +12567,82 @@ Recomendação PMO: ${d.recommendation}`;
               <button type="button" onclick="openSquadModal(document.getElementById('project-squad-id').value)">Editar Squad</button>
             </div>
           </div>
-          <div class="form-field">
-            <label>Nº da Iniciativa oficial</label>
-            <input id="project-initiative-number" type="text" value="${escapeAttr(project.initiativeNumber || '')}" placeholder="Ex.: 113286" />
-            <div id="auto-number-note" class="official-number-note">Sem geração automática. Informe ou preserve o número oficial da planilha.</div>
-          </div>
-          ${field('Nome da iniciativa/projeto', 'project-name', project.name)}
-          ${field('Tema / área de negócio', 'project-business', project.business || project.theme || squad.business || '')}
-          ${field('Líder da frente', 'project-front-leader', project.frontLeader || '')}
-          ${field('Dono da iniciativa', 'project-initiative-owner', project.initiativeOwner || '')}
-          ${field('Product Owner / PO', 'project-po', project.po || '')}
-          ${field('Ponto focal', 'project-focal-point', project.focalPoint || '')}
+          ${field('Tema', 'project-business', project.business || project.theme || squad.business || '')}
           ${field('Tech Lead', 'project-tech-lead', project.techLead || '')}
-          ${field('Área de Dados', 'project-data-area', project.dataArea || '')}
-          ${field('IA/RPA', 'project-ai-rpa', project.aiRpa || '')}
-          ${field('Processo', 'project-process-name', project.processName || '')}
-          ${field('Consumo Horas 2026', 'project-hours-2026', project.hours2026 || '', 'number')}
-          ${field('Data de Discovery', 'project-discovery-date', project.discoveryDate || '', 'date')}
-          ${field('Início Dev', 'project-start-dev', project.startDev || '', 'date')}
-          ${field('Término Dev', 'project-end-dev', project.endDev || '', 'date')}
-          ${field('RTE Resp.', 'project-rte-owner', project.rteOwner || '')}
-          ${field('Responsável PMO', 'project-owner', project.owner || '')}
-          <div class="form-field"><label>Status</label><select id="project-status"><option ${project.status==='A iniciar'?'selected':''}>A iniciar</option><option ${project.status==='Em Discovery'?'selected':''}>Em Discovery</option><option ${project.status==='No prazo'?'selected':''}>No prazo</option><option ${project.status==='Atenção'?'selected':''}>Atenção</option><option ${project.status==='Crítico'?'selected':''}>Crítico</option><option ${project.status==='Concluído'?'selected':''}>Concluído</option></select></div>
-          <div class="form-field"><label>Criticidade</label><select id="project-criticality"><option ${project.criticality==='A validar'?'selected':''}>A validar</option><option ${project.criticality==='Baixa'?'selected':''}>Baixa</option><option ${project.criticality==='Média'?'selected':''}>Média</option><option ${project.criticality==='Alta'?'selected':''}>Alta</option><option ${project.criticality==='Crítica'?'selected':''}>Crítica</option></select></div>
-          <div class="form-field full"><label>Resumo executivo</label><textarea id="project-summary">${escapeHtml(project.summary)}</textarea></div>
+          ${field('PO', 'project-po', project.po || '')}
+          ${field('Ponto Focal', 'project-focal-point', project.focalPoint || '')}
+          ${field('Discovery', 'project-discovery-date', project.discoveryDate || '', 'date')}
+          ${field('Término Discovery', 'project-discovery-end-date', project.discoveryEndDate || '', 'date')}
+          <div class="form-field">
+            <label>Prontidão Delivery</label>
+            <select id="project-readiness-stage">${READINESS_STAGE_OPTIONS.map(o => `<option ${((project.readinessStage || READINESS_STAGE_DEFAULT) === o) ? 'selected' : ''}>${o}</option>`).join('')}</select>
+          </div>
+          <div class="form-field full"><label>Riscos / Dependências</label><textarea id="project-risks-dependencies" placeholder="Ex.: dependência de negócio, tecnologia, dados, arquitetura..."></textarea></div>
         </div>
       `, [
         isEdit ? `<button type="button" class="btn" onclick="deleteProject('${project.id}')">Excluir</button>` : '',
+        `<label class="btn soft btn-compact-import" title="Importar planilha Ops4Ops (.xlsx) e criar/atualizar iniciativas, ações e dependências automaticamente">⇪ Importar planilha<input type="file" accept=".xlsx" style="display:none" onchange="handleImportFileSelected(event)"></label>`,
         `<button type="button" class="btn" onclick="closeModal()">Cancelar</button>`,
-        `<button type="button" class="btn primary" onclick="saveProjectModal()">Salvar</button>`
+        `<button type="button" class="btn primary" onclick="saveProjectModal()">Salvar e atualizar visão</button>`
       ]);
     }
 
+    // Iniciativa Tipo "Filha": não vira um projeto de nível principal — é anexada dentro
+    // de subInitiatives da Mãe (mesma estrutura que a importação da planilha original usa),
+    // pra não duplicar contagens no Dashboard nem quebrar quem já lê subInitiatives.
     function saveProjectModal() {
       data = enhanceSquadData(data);
       const p = modalState.project;
+      const tipo = document.getElementById('project-initiative-type').value;
+      const motherNumber = document.getElementById('project-mother-number').value.trim();
+      const childNumber = document.getElementById('project-child-number').value.trim();
       const squadId = document.getElementById('project-squad-id')?.value || (data.squads || [])[0]?.id || '';
       const squad = squadById(squadId);
-      p.name = document.getElementById('project-name').value.trim() || 'Projeto sem nome';
+      const name = document.getElementById('project-name').value.trim() || 'Projeto sem nome';
+      const tema = document.getElementById('project-business').value.trim() || squad?.business || '';
+      const risksText = document.getElementById('project-risks-dependencies').value.trim();
+
+      if (tipo === 'Filha') {
+        if (!motherNumber) { toast('Informe o Nº da Mãe para vincular a Filha'); return; }
+        if (!childNumber) { toast('Informe o Nº da Filha'); return; }
+        const mother = data.projects.find(mp => matchesInitiativeNumber(mp.initiativeNumber, motherNumber));
+        if (!mother) { toast('Iniciativa Mãe não encontrada com esse número'); return; }
+        mother.subInitiatives = Array.isArray(mother.subInitiatives) ? mother.subInitiatives : [];
+        let child = mother.subInitiatives.find(c => matchesInitiativeNumber(c.initiativeNumber, childNumber));
+        if (!child) { child = { id: 'child-' + slugify(motherNumber + '-' + childNumber) + '-' + Date.now().toString(36) }; mother.subInitiatives.push(child); }
+        child.initiativeNumber = childNumber;
+        child.motherNumber = motherNumber;
+        child.name = name;
+        child.squad = squad?.name || '';
+        child.sourceSquad = child.sourceSquad || squad?.name || mother.squad;
+        child.theme = tema;
+        child.rawName = name;
+        child.duplicateNumber = false;
+        if (risksText) upsertDependencyText(mother, risksText);
+        closeModal();
+        saveData(true);
+        return;
+      }
+
+      p.initiativeType = tipo;
+      p.name = name;
       p.squadId = squad?.id || '';
       p.squad = squad?.name || 'A validar';
-      p.initiativeNumber = document.getElementById('project-initiative-number').value.trim();
+      p.initiativeNumber = motherNumber;
       if (!p.initiativeNumber) { toast('Informe o Nº oficial da iniciativa'); return; }
-      const exists = data.projects.some(existing => existing.id !== p.id && String(existing.initiativeNumber || '').trim().toLowerCase() === p.initiativeNumber.toLowerCase());
+      const exists = data.projects.some(existing => existing.id !== p.id && matchesInitiativeNumber(existing.initiativeNumber, p.initiativeNumber));
       if (exists) { toast('Já existe uma iniciativa com esse número'); return; }
-      p.business = document.getElementById('project-business').value.trim() || squad?.business || 'A validar';
+      p.business = tema || 'A validar';
       p.theme = p.business;
-      p.frontLeader = document.getElementById('project-front-leader').value.trim();
-      p.initiativeOwner = document.getElementById('project-initiative-owner').value.trim();
+      p.techLead = document.getElementById('project-tech-lead').value.trim();
       p.po = document.getElementById('project-po').value.trim();
       p.focalPoint = document.getElementById('project-focal-point').value.trim();
-      p.techLead = document.getElementById('project-tech-lead').value.trim();
-      p.dataArea = document.getElementById('project-data-area').value.trim();
-      p.aiRpa = document.getElementById('project-ai-rpa').value.trim();
-      p.processName = document.getElementById('project-process-name').value.trim();
-      p.hours2026 = Number(document.getElementById('project-hours-2026').value || 0);
       p.discoveryDate = document.getElementById('project-discovery-date').value || '';
-      p.startDev = document.getElementById('project-start-dev').value || '';
-      p.endDev = document.getElementById('project-end-dev').value || '';
-      p.rteOwner = document.getElementById('project-rte-owner').value.trim() || 'A definir';
-      p.owner = document.getElementById('project-owner').value.trim() || 'A definir';
-      p.status = document.getElementById('project-status').value;
-      p.criticality = document.getElementById('project-criticality').value;
-      p.startDate = p.discoveryDate || p.startDev || '';
-      p.target = p.endDev || 'A definir';
-      p.summary = document.getElementById('project-summary').value.trim();
+      p.discoveryEndDate = document.getElementById('project-discovery-end-date').value || '';
+      p.readinessStage = document.getElementById('project-readiness-stage').value;
+      p.startDate = p.discoveryDate || p.startDate || '';
+      if (p.discoveryEndDate) p.target = p.discoveryEndDate;
+      if (risksText) upsertDependencyText(p, risksText);
       if (!modalState.isEdit) {
         p.id = 'ini-' + slugify(p.initiativeNumber) + '-' + Date.now().toString(36);
         data.projects.push(p);
@@ -12614,6 +12650,362 @@ Recomendação PMO: ${d.recommendation}`;
       activeProjectId = p.id;
       closeModal();
       saveData(true);
+    }
+
+    const READINESS_STAGE_OPTIONS = ['Em análise', 'Não iniciada', 'Em validação', 'Pronta'];
+    const READINESS_STAGE_DEFAULT = READINESS_STAGE_OPTIONS[0];
+
+    function matchesInitiativeNumber(a, b) {
+      const norm = s => String(s || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+      const na = norm(a), nb = norm(b);
+      return Boolean(na && nb && na === nb);
+    }
+
+    // Riscos/Dependências do cadastro rápido e da importação de planilha caem aqui,
+    // sempre por cima do que já existe (nunca duplica o mesmo texto).
+    function upsertDependencyText(project, text) {
+      const clean = String(text || '').trim();
+      if (!clean) return false;
+      project.raids = normalizeRaids(project.raids);
+      const already = project.raids.dependencies.some(d => String(d.text || '').trim() === clean);
+      if (already) return false;
+      project.raids.dependencies.push(normalizeRaidItem({ text: clean, note: 'Cadastrado via formulário' }, 'dependencies'));
+      return true;
+    }
+
+    // ── Motor de importação da planilha Ops4Ops (.xlsx) ─────────────────────────
+    // 100% client-side, sem biblioteca externa: lê o .xlsx como zip (formato ZIP é
+    // simples o bastante pra parsear na mão) e usa DecompressionStream('deflate-raw'),
+    // nativo do Chrome/Edge, pra inflar as entradas comprimidas. Sem isso, cai num aviso
+    // claro em vez de travar (navegadores sem essa API, ex. Safari antigo).
+    async function parseXlsxArrayBuffer(buf) {
+      const bytes = new Uint8Array(buf);
+      const dv = new DataView(buf);
+      let eocdOffset = -1;
+      for (let i = bytes.length - 22; i >= 0; i--) {
+        if (dv.getUint32(i, true) === 0x06054b50) { eocdOffset = i; break; }
+      }
+      if (eocdOffset === -1) throw new Error('Arquivo .xlsx inválido (fim de diretório central não encontrado)');
+      const cdOffset = dv.getUint32(eocdOffset + 16, true);
+      const cdEntries = dv.getUint16(eocdOffset + 10, true);
+      const entries = {};
+      let ptr = cdOffset;
+      for (let i = 0; i < cdEntries; i++) {
+        if (dv.getUint32(ptr, true) !== 0x02014b50) throw new Error('Diretório central do .xlsx corrompido');
+        const method = dv.getUint16(ptr + 10, true);
+        const compSize = dv.getUint32(ptr + 20, true);
+        const nameLen = dv.getUint16(ptr + 28, true);
+        const extraLen = dv.getUint16(ptr + 30, true);
+        const commentLen = dv.getUint16(ptr + 32, true);
+        const localHeaderOffset = dv.getUint32(ptr + 42, true);
+        const name = new TextDecoder('utf-8').decode(bytes.subarray(ptr + 46, ptr + 46 + nameLen));
+        entries[name] = { method, compSize, localHeaderOffset };
+        ptr += 46 + nameLen + extraLen + commentLen;
+      }
+      async function readEntry(name) {
+        const meta = entries[name];
+        if (!meta) return null;
+        const lh = meta.localHeaderOffset;
+        if (dv.getUint32(lh, true) !== 0x04034b50) throw new Error('Cabeçalho local corrompido para ' + name);
+        const lNameLen = dv.getUint16(lh + 26, true);
+        const lExtraLen = dv.getUint16(lh + 28, true);
+        const dataStart = lh + 30 + lNameLen + lExtraLen;
+        const compData = bytes.subarray(dataStart, dataStart + meta.compSize);
+        if (meta.method === 0) return compData;
+        if (meta.method !== 8) throw new Error('Método de compressão não suportado: ' + meta.method);
+        const ds = new DecompressionStream('deflate-raw');
+        const writer = ds.writable.getWriter();
+        writer.write(compData);
+        writer.close();
+        return new Uint8Array(await new Response(ds.readable).arrayBuffer());
+      }
+      const sharedStringsRaw = await readEntry('xl/sharedStrings.xml');
+      const sharedStrings = [];
+      if (sharedStringsRaw) {
+        const doc = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(sharedStringsRaw), 'application/xml');
+        doc.querySelectorAll('si').forEach(si => {
+          sharedStrings.push(Array.from(si.querySelectorAll('t')).map(t => t.textContent || '').join(''));
+        });
+      }
+      let sheetPath = 'xl/worksheets/sheet1.xml';
+      const workbookRaw = await readEntry('xl/workbook.xml');
+      const relsRaw = await readEntry('xl/_rels/workbook.xml.rels');
+      if (workbookRaw && relsRaw) {
+        const wbDoc = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(workbookRaw), 'application/xml');
+        const relsDoc = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(relsRaw), 'application/xml');
+        const firstSheet = wbDoc.querySelector('sheets sheet');
+        if (firstSheet) {
+          const rid = firstSheet.getAttribute('r:id');
+          const rel = Array.from(relsDoc.querySelectorAll('Relationship')).find(r => r.getAttribute('Id') === rid);
+          if (rel) sheetPath = 'xl/' + rel.getAttribute('Target').replace(/^\/?xl\//, '');
+        }
+      }
+      const sheetRaw = await readEntry(sheetPath);
+      if (!sheetRaw) throw new Error('Planilha não encontrada dentro do arquivo');
+      const sheetDoc = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(sheetRaw), 'application/xml');
+      function colLetterToIndex(ref) {
+        const m = ref.match(/^([A-Z]+)/);
+        if (!m) return 0;
+        let n = 0;
+        for (const ch of m[1]) n = n * 26 + (ch.charCodeAt(0) - 64);
+        return n - 1;
+      }
+      const rows = [];
+      sheetDoc.querySelectorAll('row').forEach(rowEl => {
+        const cells = [];
+        rowEl.querySelectorAll('c').forEach(c => {
+          const idx = colLetterToIndex(c.getAttribute('r') || '');
+          const t = c.getAttribute('t');
+          const vEl = c.querySelector('v');
+          const isEl = c.querySelector('is t');
+          let val = '';
+          if (t === 's' && vEl) val = sharedStrings[parseInt(vEl.textContent, 10)] || '';
+          else if (t === 'inlineStr' && isEl) val = isEl.textContent || '';
+          else if (vEl) val = vEl.textContent || '';
+          cells[idx] = val;
+        });
+        rows.push(cells);
+      });
+      return rows;
+    }
+
+    function normalizeImportHeader(h) {
+      return String(h || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+
+    const IMPORT_HEADER_MAP = {
+      '# mae': 'motherNumber', 'tipo': 'tipo', '# filha': 'childNumber',
+      'nome da iniciativa': 'nome', 'squad': 'squad', 'tema': 'tema',
+      'lider da frente': 'frontLeader', 'dono da iniciativa': 'initiativeOwner', 'po': 'po',
+      'ponto focal': 'focalPoint', 'lider tecnico': 'techLead', 'dados': 'dataArea',
+      'ia/rpa': 'aiRpa', 'processo': 'processName', 'consumo horas 2026': 'hours2026',
+      'discovery': 'discoveryDate', 'inicio dev': 'startDev', 'termino dev': 'endDev',
+      'nota': 'nota', 'dependencias': 'dependencias', 'prazos': 'prazos'
+    };
+
+    function excelSerialToISO(serial) {
+      const n = Number(serial);
+      if (!Number.isFinite(n) || n < 1) return '';
+      const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+      return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+    }
+
+    function parseFlexibleDate(raw) {
+      const s = String(raw || '').trim();
+      if (!s) return '';
+      if (/^\d+(\.\d+)?$/.test(s) && Number(s) > 1000) {
+        const iso = excelSerialToISO(s);
+        if (iso) return iso;
+      }
+      const m = s.match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
+      if (m) {
+        let [, d, mo, y] = m;
+        d = d.padStart(2, '0'); mo = mo.padStart(2, '0');
+        if (y.length === 2) y = '20' + y;
+        if (Number(mo) >= 1 && Number(mo) <= 12 && Number(d) >= 1 && Number(d) <= 31) return `${y}-${mo}-${d}`;
+      }
+      return '';
+    }
+
+    function findFirstDateInText(text) {
+      const m = String(text || '').match(/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/);
+      return m ? parseFlexibleDate(m[0]) : '';
+    }
+
+    function buildImportRecords(rows) {
+      const headerRowIdx = rows.findIndex(r => (r || []).some(cell => normalizeImportHeader(cell) === 'nome da iniciativa'));
+      if (headerRowIdx === -1) throw new Error('Não encontrei a coluna "Nome da Iniciativa". Confirme se é o modelo de planilha Ops4Ops.');
+      const headerRow = rows[headerRowIdx];
+      const colIndex = {};
+      headerRow.forEach((h, i) => { const key = IMPORT_HEADER_MAP[normalizeImportHeader(h)]; if (key) colIndex[key] = i; });
+      const records = [];
+      for (let i = headerRowIdx + 1; i < rows.length; i++) {
+        const row = rows[i] || [];
+        const get = key => { const idx = colIndex[key]; return idx === undefined ? '' : String(row[idx] ?? '').trim(); };
+        const nome = get('nome');
+        if (!nome) continue;
+        records.push({
+          motherNumber: get('motherNumber'), tipo: get('tipo'), childNumber: get('childNumber'),
+          nome, squad: get('squad'), tema: get('tema'), frontLeader: get('frontLeader'),
+          initiativeOwner: get('initiativeOwner'), po: get('po'), focalPoint: get('focalPoint'),
+          techLead: get('techLead'), dataArea: get('dataArea'), aiRpa: get('aiRpa'),
+          processName: get('processName'), hours2026: get('hours2026'), discoveryDate: get('discoveryDate'),
+          startDev: get('startDev'), endDev: get('endDev'), nota: get('nota'),
+          dependencias: get('dependencias'), prazos: get('prazos')
+        });
+      }
+      return records;
+    }
+
+    function planImportChanges(records) {
+      const plan = { updates: [], creates: [], childUpserts: [], skipped: [] };
+      records.forEach(rec => {
+        const isFilha = /filha/.test(normalizeImportHeader(rec.tipo));
+        if (isFilha) {
+          if (!rec.childNumber || !rec.motherNumber) { plan.skipped.push(rec.nome); return; }
+          plan.childUpserts.push({ rec });
+          return;
+        }
+        if (!rec.motherNumber) { plan.skipped.push(rec.nome); return; }
+        const existing = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, rec.motherNumber));
+        if (existing) plan.updates.push({ rec, project: existing });
+        else plan.creates.push({ rec });
+      });
+      return plan;
+    }
+
+    function upsertActionCardFromNote(project, noteText, dueISO) {
+      const clean = String(noteText || '').trim();
+      if (!clean) return false;
+      project.cards = Array.isArray(project.cards) ? project.cards : [];
+      const match = project.cards.find(c => (c.description || '') === clean);
+      if (match) { if (dueISO && !match.due) match.due = dueISO; return false; }
+      const lower = clean.toLowerCase();
+      let status = 'backlog';
+      if (/conclu[ií]d/.test(lower)) status = 'done';
+      else if (/iniciad|em andamento|em curso/.test(lower)) status = 'doing';
+      const firstLine = clean.split('\n')[0];
+      const title = firstLine.length > 70 ? firstLine.slice(0, 67).trimEnd() + '…' : firstLine;
+      project.cards.push({
+        id: uid('card'), title: title || 'Ação importada', description: clean, status, priority: 'Média', owner: '',
+        due: dueISO || plusDays(14), notes: 'Importado da planilha Ops4Ops', type: 'Entendimento',
+        stageReason: defaultStageReason(status), movedAt: '', movementHistory: []
+      });
+      return true;
+    }
+
+    function upsertScheduleFromPrazo(project, prazoText, dueISO) {
+      const clean = String(prazoText || '').trim();
+      if (!clean || !dueISO) return false;
+      project.schedule = Array.isArray(project.schedule) ? project.schedule : [];
+      if (project.schedule.some(s => (s.item || '') === clean)) return false;
+      project.schedule.push({ id: uid('sch'), item: clean, owner: '', start: fmtDate(new Date()), end: dueISO, done: false, observations: 'Importado da planilha Ops4Ops', pdcaAction: '' });
+      return true;
+    }
+
+    function applyImportPlan(plan) {
+      let cardsAdded = 0, depsAdded = 0, scheduleAdded = 0, projectsCreated = 0, projectsUpdated = 0, childrenUpserted = 0;
+      const squadsByName = new Map(sortedSquadsList().map(s => [normalizeImportHeader(s.name), s]));
+
+      function applyCoreFields(project, rec) {
+        if (rec.nome) project.name = rec.nome;
+        if (rec.squad) { const sq = squadsByName.get(normalizeImportHeader(rec.squad)); if (sq) { project.squadId = sq.id; project.squad = sq.name; } }
+        if (rec.tema) { project.theme = rec.tema; if (!project.business || project.business === 'Não informado') project.business = rec.tema; }
+        if (rec.frontLeader) project.frontLeader = rec.frontLeader;
+        if (rec.initiativeOwner) project.initiativeOwner = rec.initiativeOwner;
+        if (rec.po) project.po = rec.po;
+        if (rec.focalPoint) project.focalPoint = rec.focalPoint;
+        if (rec.techLead) project.techLead = rec.techLead;
+        if (rec.dataArea) project.dataArea = rec.dataArea;
+        if (rec.aiRpa) project.aiRpa = rec.aiRpa;
+        if (rec.processName) project.processName = rec.processName;
+        const hrs = Number(String(rec.hours2026).replace(',', '.'));
+        if (Number.isFinite(hrs) && hrs > 0) project.hours2026 = hrs;
+        const disc = parseFlexibleDate(rec.discoveryDate); if (disc) project.discoveryDate = disc;
+        const sd = parseFlexibleDate(rec.startDev); if (sd) project.startDev = sd;
+        const ed = parseFlexibleDate(rec.endDev); if (ed) project.endDev = ed;
+      }
+      function applyDerived(project, rec) {
+        if (rec.dependencias && upsertDependencyText(project, rec.dependencias)) depsAdded++;
+        const dueISO = findFirstDateInText(rec.prazos);
+        if (rec.nota && upsertActionCardFromNote(project, rec.nota, dueISO)) cardsAdded++;
+        if (rec.prazos && dueISO && upsertScheduleFromPrazo(project, rec.prazos, dueISO)) scheduleAdded++;
+      }
+
+      plan.updates.forEach(({ rec, project }) => { applyCoreFields(project, rec); applyDerived(project, rec); projectsUpdated++; });
+
+      plan.creates.forEach(({ rec }) => {
+        const sq = squadsByName.get(normalizeImportHeader(rec.squad)) || sortedSquadsList()[0];
+        const project = {
+          id: 'ini-' + slugify(rec.motherNumber || rec.nome) + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          initiativeNumber: rec.motherNumber,
+          initiativeType: /mae/.test(normalizeImportHeader(rec.tipo)) ? 'MÃE' : 'Única',
+          name: rec.nome || 'Projeto sem nome', business: rec.tema || '', theme: rec.tema || '',
+          squad: sq?.name || 'Ainda Sem Definição', squadId: sq?.id || '',
+          owner: 'A definir', rteOwner: 'A definir', pmoOwner: 'A definir',
+          frontLeader: '', initiativeOwner: '', po: '', focalPoint: '', techLead: '', dataArea: '', aiRpa: '', processName: '', hours2026: 0,
+          discoveryDate: '', discoveryEndDate: '', startDev: '', endDev: '', startDate: '', status: 'A iniciar', criticality: 'A validar', target: '',
+          readinessStage: READINESS_STAGE_DEFAULT, summary: '', subInitiatives: [],
+          phases: phaseTemplate.map(ph => ({ ...ph, status: 'todo' })),
+          checklist: checklistTemplate.map(c => ({ ...c, done: false })),
+          cards: [], schedule: [], raids: { risks: [], assumptions: [], issues: [], dependencies: [] }, attachments: []
+        };
+        applyCoreFields(project, rec);
+        applyDerived(project, rec);
+        data.projects.push(project);
+        projectsCreated++;
+      });
+
+      plan.childUpserts.forEach(({ rec }) => {
+        const mother = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, rec.motherNumber));
+        if (!mother) { plan.skipped.push(rec.nome); return; }
+        mother.subInitiatives = Array.isArray(mother.subInitiatives) ? mother.subInitiatives : [];
+        let child = mother.subInitiatives.find(c => matchesInitiativeNumber(c.initiativeNumber, rec.childNumber));
+        if (!child) { child = { id: 'child-' + slugify(rec.motherNumber + '-' + rec.childNumber) + '-' + Date.now().toString(36) }; mother.subInitiatives.push(child); childrenUpserted++; }
+        child.initiativeNumber = rec.childNumber;
+        child.motherNumber = rec.motherNumber;
+        if (rec.nome) child.name = rec.nome;
+        if (rec.squad) child.squad = rec.squad;
+        child.sourceSquad = child.sourceSquad || mother.squad;
+        if (rec.tema) child.theme = rec.tema;
+        if (rec.frontLeader) child.frontLeader = rec.frontLeader;
+        child.rawName = child.rawName || rec.nome;
+        child.duplicateNumber = false;
+        if (rec.dependencias && upsertDependencyText(mother, rec.dependencias)) depsAdded++;
+      });
+
+      saveData(true);
+      return { projectsCreated, projectsUpdated, childrenUpserted, cardsAdded, depsAdded, scheduleAdded, skipped: plan.skipped.length };
+    }
+
+    let _pendingImportPlan = null;
+
+    function handleImportFileSelected(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      if (typeof DecompressionStream === 'undefined') {
+        toast('⚠️ Seu navegador não suporta importação de .xlsx. Use um Chrome/Edge atualizado.');
+        return;
+      }
+      toast('Lendo planilha…');
+      file.arrayBuffer().then(async buf => {
+        try {
+          const rows = await parseXlsxArrayBuffer(buf);
+          const records = buildImportRecords(rows);
+          if (!records.length) { toast('Nenhuma linha reconhecida nessa planilha.'); return; }
+          _pendingImportPlan = planImportChanges(records);
+          openImportPreviewModal(_pendingImportPlan);
+        } catch (e) {
+          console.error('Discovery PMO Tracker: falha ao importar planilha.', e);
+          toast('⚠️ Não consegui ler essa planilha: ' + (e.message || 'formato inesperado'));
+        }
+      });
+    }
+
+    function openImportPreviewModal(plan) {
+      const rows = [
+        ['Iniciativas que serão atualizadas', plan.updates.length],
+        ['Iniciativas novas que serão criadas', plan.creates.length],
+        ['Filhas vinculadas/atualizadas dentro da Mãe', plan.childUpserts.length],
+        ['Linhas sem número (ignoradas)', plan.skipped.length]
+      ];
+      const body = `
+        <div class="ux-v6-alert-list">${rows.map(([label, value]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('')}</div>
+        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">Ações (aba Ações), riscos/dependências e cronograma são criados automaticamente a partir das colunas Nota, Dependências e Prazos — sem duplicar o que já existe numa nova importação.</p>
+      `;
+      openModal('Confirmar importação da planilha', 'Revise antes de aplicar. Isso atualiza a base para todos os usuários.', body, [
+        `<button type="button" class="btn" onclick="_pendingImportPlan=null;closeModal()">Cancelar</button>`,
+        `<button type="button" class="btn primary" onclick="confirmImportPlan()">Aplicar importação</button>`
+      ]);
+    }
+
+    function confirmImportPlan() {
+      if (!_pendingImportPlan) { closeModal(); return; }
+      const result = applyImportPlan(_pendingImportPlan);
+      _pendingImportPlan = null;
+      closeModal();
+      toast(`✅ Importado: ${result.projectsCreated} nova(s) · ${result.projectsUpdated} atualizada(s) · ${result.cardsAdded} ação(ões) · ${result.depsAdded} dependência(s)`);
     }
 
     function duplicateCurrentProject() {
