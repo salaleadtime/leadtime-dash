@@ -4848,6 +4848,34 @@
       white-space: nowrap;
     }
 
+    .ux-v6-donut.jira-donut::after { content: attr(data-total) '\A histórias'; }
+
+    .jira-overview-list {
+      display: grid;
+      gap: 14px;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .jira-overview-project {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #fbfcfe;
+    }
+
+    .jira-overview-project-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .jira-overview-project-head strong { font-size: 12.5px; color: var(--ink); }
+
+    .jira-overview-project .jira-epic-list { max-height: none; }
+
     @media (max-width: 1120px) {
       .exec-hero-indicators.pmo-people-grid,
       .project-intelligence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -13763,10 +13791,10 @@ Recomendação PMO: ${d.recommendation}`;
       return Array.from(byEpic.entries()).map(([epicKey, epicStories]) => ({ epicKey, stories: epicStories }));
     }
 
-    function renderJiraEpicsCard(project) {
-      const epics = groupJiraStoriesByEpic(project);
-      const storyCount = (project.jiraStories || []).length;
-      const bodyHtml = epics.length ? `<div class="jira-epic-list">${epics.map(epic => `
+    // Markup do épico expansível (usado no card da iniciativa e no resumo geral do
+    // Dashboard) — extraído pra um só lugar pra não divergir quando um dos dois mudar.
+    function renderJiraEpicListHtml(epics) {
+      return `<div class="jira-epic-list">${epics.map(epic => `
           <details class="jira-epic-item">
             <summary class="jira-epic-summary">
               ${epic.epicKey !== 'Sem épico'
@@ -13781,7 +13809,13 @@ Recomendação PMO: ${d.recommendation}`;
                 <span class="jira-story-title">${escapeHtml(truncateText(story.summary, 58))}</span>
               </a>`).join('')}
             </div>
-          </details>`).join('')}</div>`
+          </details>`).join('')}</div>`;
+    }
+
+    function renderJiraEpicsCard(project) {
+      const epics = groupJiraStoriesByEpic(project);
+      const storyCount = (project.jiraStories || []).length;
+      const bodyHtml = epics.length ? renderJiraEpicListHtml(epics)
         : `<div class="exec-note">Nenhum épico/história do Jira importado ainda para esta iniciativa. Use "⇪ Importar Jira" no menu lateral.</div>`;
       return `<div class="exec-card action jira-epics-card" style="--exec-color:var(--purple)">
           <div class="exec-label">Épicos &amp; Histórias (Jira)</div>
@@ -13789,6 +13823,76 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="exec-note">Clique no épico ou na história para abrir no Jira.</div>
           ${bodyHtml}
         </div>`;
+    }
+
+    // Resumo agregado pro Dashboard principal (todas as iniciativas, não só a aberta).
+    function aggregateJiraStats() {
+      const counts = { done: 0, progress: 0, backlog: 0, cancelled: 0 };
+      const epicKeys = new Set();
+      let stories = 0, projectsWithJira = 0;
+      (data.projects || []).forEach(project => {
+        const list = Array.isArray(project.jiraStories) ? project.jiraStories : [];
+        if (!list.length) return;
+        projectsWithJira++;
+        list.forEach(story => {
+          stories++;
+          if (story.epicKey) epicKeys.add(story.epicKey);
+          counts[jiraStatusClass(story.status)]++;
+        });
+      });
+      return { epics: epicKeys.size, stories, counts, projectsWithJira };
+    }
+
+    const JIRA_STATUS_COLORS = { done: '#1f9d75', progress: '#f4b740', backlog: '#2d6cdf', cancelled: '#c3cad6' };
+    const JIRA_STATUS_LABELS = { done: 'Concluída', progress: 'Em andamento', backlog: 'Backlog', cancelled: 'Cancelada' };
+
+    function buildJiraStatusDonutGradient(counts, total) {
+      if (!total) return '#e2e8f0';
+      let acc = 0;
+      const stops = [];
+      Object.keys(JIRA_STATUS_COLORS).forEach(key => {
+        const val = counts[key] || 0;
+        if (!val) return;
+        const start = acc;
+        acc += (val / total) * 100;
+        stops.push(`${JIRA_STATUS_COLORS[key]} ${start.toFixed(2)}% ${acc.toFixed(2)}%`);
+      });
+      return stops.length ? `conic-gradient(${stops.join(', ')})` : '#e2e8f0';
+    }
+
+    function renderJiraOverviewSideCard() {
+      const stats = aggregateJiraStats();
+      const gradient = buildJiraStatusDonutGradient(stats.counts, stats.stories);
+      const legendHtml = Object.keys(JIRA_STATUS_COLORS)
+        .filter(key => stats.counts[key] > 0)
+        .map(key => `<div class="ux-v6-legend-row"><span class="ux-v6-legend-dot" style="background:${JIRA_STATUS_COLORS[key]}"></span><span>${JIRA_STATUS_LABELS[key]}</span><strong>${stats.counts[key]}</strong></div>`)
+        .join('') || '<div class="ux-v6-legend-row"><span>Nenhuma história importada ainda.</span></div>';
+      return `<section class="ux-v6-side-card">
+          <div class="ux-v6-side-title"><strong>Épicos &amp; Histórias (Jira)</strong><span class="ux-v6-side-link" onclick="openJiraOverviewModal()" style="cursor:pointer" title="Ver detalhes por iniciativa">Ver detalhes</span></div>
+          <div class="ux-v6-donut-wrap">
+            <div class="ux-v6-donut jira-donut" data-total="${stats.stories}" style="background:${gradient}"></div>
+            <div class="ux-v6-legend">${legendHtml}</div>
+          </div>
+          <div class="ux-v6-kpi-note" style="margin-top:10px">${stats.epics} épico(s) · ${stats.projectsWithJira} iniciativa(s) com Jira vinculado</div>
+        </section>`;
+    }
+
+    function openJiraOverviewModal() {
+      const projects = (data.projects || []).filter(p => (p.jiraStories || []).length);
+      const body = projects.length ? `<div class="jira-overview-list">${projects.map(project => {
+          const epics = groupJiraStoriesByEpic(project);
+          return `<div class="jira-overview-project">
+              <div class="jira-overview-project-head">
+                <strong>${escapeHtml(initiativeNumber(project) || '—')} · ${escapeHtml(displayProjectTitle(project))}</strong>
+                <button type="button" class="btn soft" onclick="closeModal();openProjectFromDashboard('${escapeAttr(project.id)}')">Abrir iniciativa</button>
+              </div>
+              ${renderJiraEpicListHtml(epics)}
+            </div>`;
+        }).join('')}</div>`
+        : `<div class="ux-v6-attention-empty">Nenhuma iniciativa com épicos/histórias do Jira importados ainda. Use "⇪ Importar Jira" no menu lateral.</div>`;
+      openModal('Épicos & Histórias (Jira)', 'Visão geral por iniciativa — clique no épico ou na história para abrir no Jira.', body, [
+        `<button type="button" class="btn" onclick="closeModal()">Fechar</button>`
+      ]);
     }
 
     function insertSquadAutomationControls() {
@@ -14351,6 +14455,7 @@ Recomendação PMO: ${d.recommendation}`;
                 <div class="ux-v6-legend">${legendHtml}</div>
               </div>
             </section>
+            ${renderJiraOverviewSideCard()}
           </aside>
         </section>
         <div class="ux-v6-footer-note">Discovery PMO Tracker · Dashboard Oficial O4O — Onda 1 2026 · Dados importados da planilha enviada.</div>
