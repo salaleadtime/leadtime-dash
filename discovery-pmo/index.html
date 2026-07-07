@@ -12777,6 +12777,94 @@ Recomendação PMO: ${d.recommendation}`;
       return true;
     }
 
+    // A planilha não diz qual dos 16 itens da Timeline foi feito — mas a data de Discovery
+    // e o Início Dev são sinais confiáveis de estágio. Regra: só avança item que ainda está
+    // "Não iniciada" (nunca mexe em algo que um humano já tocou — progresso, bloqueio,
+    // aguardando, concluída — pra não mascarar um bloqueio real nem desfazer trabalho manual).
+    function advanceTimelineFromDates(project) {
+      const items = ensureTimelineItems(project);
+      const today = parseISODate(fmtDate(new Date()));
+      const discoveryDate = parseISODate(project.discoveryDate);
+      const startDev = parseISODate(project.startDev);
+      const discoveryHappened = Boolean(discoveryDate && today && discoveryDate <= today);
+      const devStarted = Boolean(startDev && today && startDev <= today);
+      let advanced = 0;
+      items.forEach(it => {
+        if (it.status && it.status !== 'notstarted') return;
+        if (devStarted) { it.status = 'done'; advanced++; }
+        else if (discoveryHappened && it.stageId === 'entendimento') { it.status = 'done'; advanced++; }
+        else if (discoveryHappened && it.stageId === 'analise') { it.status = 'progress'; advanced++; }
+      });
+      return advanced;
+    }
+
+    // Regras textuais de Nota: pedido explícito de maximizar automação, mas revisadas por
+    // dois agentes (um propôs o desenho, outro fez red-team dos riscos). Ficou deste jeito
+    // deliberadamente restrito: só 5 dos 16 itens (os com vocabulário menos ambíguo), cada
+    // um exige tópico + verbo de estado NA MESMA LINHA da nota (nunca no texto inteiro, pra
+    // não vazar sinal de uma linha pra outro item), e sempre checa negação perto da palavra
+    // de conclusão antes de aceitar "done" — o próprio exemplo real usado nos dois relatórios
+    // ("não foi criado card") é exatamente o caso que essa checagem existe pra pegar.
+    const TIMELINE_TEXT_RULES = [
+      { itemId: 'ti-asis', topics: ['mapeamento as is', 'as-is', 'as is', 'mapeamento do processo atual', 'processo atual'], doneWords: ['conclu', 'realizad', 'finalizad'], progressWords: ['iniciad', 'em andamento'] },
+      { itemId: 'ti-requisitos', topics: ['requisito', 'historia', 'historias', 'user stor'], doneWords: ['conclu', 'aprovad'], progressWords: ['iniciad', 'escrit', 'em andamento'] },
+      { itemId: 'ti-solucao', topics: ['solucao proposta', 'desenho da solucao'], doneWords: ['conclu', 'definid', 'aprovad'], progressWords: ['iniciad', 'em elaboracao', 'em desenho'] },
+      { itemId: 'ti-validacaonegocio', topics: ['validacao com negocio', 'validado com negocio', 'aprovacao do negocio', 'aprovacao do po'], doneWords: ['conclu', 'validad', 'aprovad'], progressWords: [] },
+      { itemId: 'ti-ready', topics: ['card criado', 'epico criado', 'epico aberto', 'backlog pronto', 'pronto para dev'], doneWords: ['conclu', 'criad', 'abert', 'pront'], progressWords: [] }
+    ];
+    const TIMELINE_NEGATION_WORDS = ['nao ', 'sem ', 'pendente', 'falta ', 'ate o momento nao'];
+
+    function stripAccentsLower(text) {
+      return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    function hasNearbyNegation(line, wordIndex) {
+      const before = line.slice(Math.max(0, wordIndex - 40), wordIndex);
+      return TIMELINE_NEGATION_WORDS.some(neg => before.includes(neg));
+    }
+
+    function advanceTimelineFromNota(project, notaText) {
+      const clean = String(notaText || '');
+      if (!clean.trim()) return 0;
+      const items = ensureTimelineItems(project);
+      const lines = clean.split(/\n+/).map(stripAccentsLower);
+      let advanced = 0;
+      TIMELINE_TEXT_RULES.forEach(rule => {
+        const item = items.find(it => it.id === rule.itemId);
+        if (!item || (item.status && item.status !== 'notstarted')) return;
+        for (const line of lines) {
+          if (!rule.topics.some(t => line.includes(t))) continue;
+          const doneMatch = rule.doneWords.find(w => line.includes(w) && !hasNearbyNegation(line, line.indexOf(w)));
+          if (doneMatch) { item.status = 'done'; advanced++; break; }
+          const progressMatch = rule.progressWords.find(w => line.includes(w));
+          if (progressMatch) { item.status = 'progress'; advanced++; break; }
+        }
+      });
+      return advanced;
+    }
+
+    // Dependências/Prazos são campos curtos e mais estruturados que a Nota — risco de falso
+    // positivo bem menor. Aqui o pior caso é marcar "aguardando" indevidamente (nunca "done"),
+    // o que é uma imprecisão leve, não um "está tudo pronto" falso.
+    function advanceTimelineFromDependencies(project, rec) {
+      const items = ensureTimelineItems(project);
+      const text = stripAccentsLower(`${rec.dependencias || ''} ${rec.prazos || ''}`);
+      if (!text.trim()) return 0;
+      let advanced = 0;
+      const setIfNotStarted = (id, status) => {
+        const item = items.find(it => it.id === id);
+        if (item && (!item.status || item.status === 'notstarted')) { item.status = status; advanced++; }
+      };
+      if (/arquitet/.test(text)) {
+        ['ti-riscosdeps', 'ti-solucao', 'ti-viabilidade'].forEach(id => setIfNotStarted(id, 'waiting-arch'));
+      } else if (/neg[oó]cio|stakeholder|aprovac|\bpo\b/.test(text)) {
+        setIfNotStarted('ti-validacaonegocio', 'waiting-business');
+      } else {
+        setIfNotStarted('ti-riscosdeps', 'progress');
+      }
+      return advanced;
+    }
+
     // Squad em branco na planilha = Ainda Sem Definição (ASD), nunca "a primeira squad
     // em ordem alfabética" — evita cair na squad errada por coincidência de ordenação.
     function asdSquad() {
@@ -12786,7 +12874,7 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function applyImportPlan(plan) {
-      let cardsAdded = 0, depsAdded = 0, scheduleAdded = 0, projectsCreated = 0, projectsUpdated = 0, childrenUpserted = 0;
+      let cardsAdded = 0, depsAdded = 0, scheduleAdded = 0, timelineAdvanced = 0, projectsCreated = 0, projectsUpdated = 0, childrenUpserted = 0;
       const squadsByName = new Map(sortedSquadsList().map(s => [normalizeImportHeader(s.name), s]));
       const historyItems = [];
 
@@ -12816,20 +12904,33 @@ Recomendação PMO: ${d.recommendation}`;
         return changed;
       }
       function applyDerived(project, rec) {
-        const derived = { cards: 0, deps: 0, schedule: 0 };
+        const derived = { cards: 0, deps: 0, schedule: 0, timeline: 0, timelineText: 0, timelineDate: 0 };
         if (rec.dependencias && upsertDependencyText(project, rec.dependencias)) { depsAdded++; derived.deps++; }
         const dueISO = findFirstDateInText(rec.prazos);
         if (rec.nota && upsertActionCardFromNote(project, rec.nota, dueISO)) { cardsAdded++; derived.cards++; }
         if (rec.prazos && dueISO && upsertScheduleFromPrazo(project, rec.prazos, dueISO)) { scheduleAdded++; derived.schedule++; }
+        // Texto primeiro (mais específico, item a item); data por último só cobre o que
+        // sobrar "notstarted" — dá pra auditar depois quanto veio de cada fonte.
+        const byNota = rec.nota ? advanceTimelineFromNota(project, rec.nota) : 0;
+        const byDeps = advanceTimelineFromDependencies(project, rec);
+        const byDate = advanceTimelineFromDates(project);
+        const timelineTotal = byNota + byDeps + byDate;
+        if (timelineTotal) {
+          timelineAdvanced += timelineTotal;
+          derived.timeline = timelineTotal;
+          derived.timelineText = byNota + byDeps;
+          derived.timelineDate = byDate;
+        }
         return derived;
       }
-      // Traduz "o que mudou" em "onde mudou" (cadastro / Ações / Riscos-Dependências / Cronograma).
+      // Traduz "o que mudou" em "onde mudou" (cadastro / Ações / Riscos-Dependências / Cronograma / Timeline).
       function buildWhereList(changed, derived) {
         const where = [];
         if (changed.length) where.push(`Cadastro: ${changed.join(', ')}`);
         if (derived.cards) where.push(`Ações: +${derived.cards}`);
         if (derived.deps) where.push(`Riscos/Dependências: +${derived.deps}`);
         if (derived.schedule) where.push(`Cronograma: +${derived.schedule}`);
+        if (derived.timeline) where.push(`Timeline: +${derived.timeline} etapa(s) (${derived.timelineText} por nota/dependência, ${derived.timelineDate} por data)`);
         return where;
       }
 
@@ -12890,7 +12991,7 @@ Recomendação PMO: ${d.recommendation}`;
         historyItems.push({ kind: isNewChild ? 'filha nova' : 'filha atualizada', number: child.initiativeNumber, name: child.name, squad: child.squad, where });
       });
 
-      const result = { projectsCreated, projectsUpdated, childrenUpserted, cardsAdded, depsAdded, scheduleAdded, skipped: plan.skipped.length, items: historyItems };
+      const result = { projectsCreated, projectsUpdated, childrenUpserted, cardsAdded, depsAdded, scheduleAdded, timelineAdvanced, skipped: plan.skipped.length, items: historyItems };
       recordImportHistory(result);
       saveData(true);
       return result;
@@ -12910,6 +13011,7 @@ Recomendação PMO: ${d.recommendation}`;
         cardsAdded: result.cardsAdded,
         depsAdded: result.depsAdded,
         scheduleAdded: result.scheduleAdded,
+        timelineAdvanced: result.timelineAdvanced,
         skipped: result.skipped,
         items: (result.items || []).slice(0, 25)
       });
@@ -12939,7 +13041,7 @@ Recomendação PMO: ${d.recommendation}`;
           </div>`;
         }).join('') || '<div class="ux-v6-attention-empty">Sem iniciativas afetadas (só ignoradas).</div>';
         return `<div class="ux-v6-hist-entry">
-          <div class="ux-v6-hist-head"><strong>${escapeHtml(formatBRDateTime(h.at))}</strong><span>${h.projectsCreated} nova(s) · ${h.projectsUpdated} atualizada(s) · ${h.childrenUpserted} filha(s) · ${h.cardsAdded} ação(ões) · ${h.depsAdded} dependência(s)${h.skipped ? ` · ${h.skipped} ignorada(s)` : ''}</span></div>
+          <div class="ux-v6-hist-head"><strong>${escapeHtml(formatBRDateTime(h.at))}</strong><span>${h.projectsCreated} nova(s) · ${h.projectsUpdated} atualizada(s) · ${h.childrenUpserted} filha(s) · ${h.cardsAdded} ação(ões) · ${h.depsAdded} dependência(s) · ${h.timelineAdvanced || 0} etapa(s) de timeline${h.skipped ? ` · ${h.skipped} ignorada(s)` : ''}</span></div>
           <div class="ux-v6-hist-items">${itemsHtml}</div>
         </div>`;
       }).join('') : `<div class="ux-v6-attention-empty">Nenhuma importação de planilha registrada ainda.</div>`;
