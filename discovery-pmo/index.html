@@ -12319,19 +12319,17 @@ Recomendação PMO: ${d.recommendation}`;
       if (counts.backlog) chips.push(`<span class="ux-v6-report-chip grey">${counts.backlog} a fazer</span>`);
       return `<div class="ux-v6-report-chip-row">${chips.join('')}</div>`;
     }
+    // Versão pro Excel exportado: descrição de cada ação (não só a contagem por status),
+    // uma por linha dentro da própria célula.
     function actionsSummaryTextForReport(project) {
       const cards = project.cards || [];
       if (!cards.length) return 'Nenhuma ação cadastrada';
-      const counts = { backlog: 0, doing: 0, validation: 0, done: 0 };
-      let overdue = 0;
-      cards.forEach(c => { counts[c.status] = (counts[c.status] || 0) + 1; if (isCardOverdue(c)) overdue++; });
-      const parts = [];
-      if (overdue) parts.push(`${overdue} atrasada(s)`);
-      if (counts.doing) parts.push(`${counts.doing} em andamento`);
-      if (counts.validation) parts.push(`${counts.validation} em validação`);
-      if (counts.done) parts.push(`${counts.done} concluída(s)`);
-      if (counts.backlog) parts.push(`${counts.backlog} a fazer`);
-      return parts.join(' · ');
+      const statusLabel = { backlog: 'A fazer', doing: 'Em andamento', validation: 'Aguardando validação', done: 'Concluída' };
+      return cards.map(c => {
+        const label = statusLabel[c.status] || c.status || 'Sem status';
+        const overdueTag = isCardOverdue(c) ? ' · atrasada' : '';
+        return `${c.title || 'Ação sem título'} (${label}${overdueTag})`;
+      }).join('\n');
     }
 
     // Timeline: se nenhum dos 16 itens saiu de "Não iniciada", informa isso direto, sem
@@ -12375,10 +12373,8 @@ Recomendação PMO: ${d.recommendation}`;
     function risksSummaryTextForReport(project) {
       const open = allRaidRows(project).filter(r => !r.done);
       if (!open.length) return 'Nenhum risco ou dependência em aberto';
-      const labelMap = { risks: 'risco(s)', issues: 'issue(s)', dependencies: 'dependência(s)', assumptions: 'premissa(s)' };
-      const byGroup = { risks: 0, issues: 0, dependencies: 0, assumptions: 0 };
-      open.forEach(r => { byGroup[r.group] = (byGroup[r.group] || 0) + 1; });
-      return Object.entries(byGroup).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${labelMap[k]}`).join(' · ');
+      const labelMap = { risks: 'Risco', issues: 'Issue', dependencies: 'Dependência', assumptions: 'Premissa' };
+      return open.map(r => `${labelMap[r.group] || r.group}: ${r.text || 'Sem descrição'}`).join('\n');
     }
 
     function setReportsTab(tab) {
@@ -12507,11 +12503,10 @@ Recomendação PMO: ${d.recommendation}`;
       return `${letters}${rowIdx}`;
     }
 
-    function buildXlsxBytes(sheetName, headers, rows) {
-      const encoder = new TextEncoder();
-      const safeSheetName = String(sheetName || 'Relatório').slice(0, 31).replace(/[\\/?*[\]:]/g, ' ');
+    // Monta o XML de UMA aba (planilha) — reaproveitado pra cada sheet do workbook.
+    function buildXlsxSheetXml(headers, rows) {
       const colWidths = headers.map((h, i) => {
-        const maxLen = Math.max(String(h).length, ...rows.map(r => String(r[i] ?? '').length), 8);
+        const maxLen = Math.max(String(h).length, ...rows.map(r => Math.max(...String(r[i] ?? '').split('\n').map(l => l.length))), 8);
         return Math.min(60, maxLen + 2);
       });
       const colsXml = `<cols>${colWidths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>`;
@@ -12524,29 +12519,52 @@ Recomendação PMO: ${d.recommendation}`;
         const r = rIdx + 2;
         const cells = row.map((val, cIdx) => {
           const ref = xlsxCellRef(cIdx, r);
-          return typeof val === 'number' ? numberCell(ref, val, 0) : textCell(ref, val, 0);
+          return typeof val === 'number' ? numberCell(ref, val, 0) : textCell(ref, val, 2);
         }).join('');
         return `<row r="${r}">${cells}</row>`;
       }).join('');
 
       const dimensionEnd = xlsxCellRef(Math.max(headers.length - 1, 0), rows.length + 1);
-      const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${dimensionEnd}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="16"/>${colsXml}<sheetData>${headerRowXml}${bodyRowsXml}</sheetData></worksheet>`;
+    }
+
+    // Um único workbook .xlsx com várias abas (sheets = [{ name, headers, rows }, ...]),
+    // igual às abas de verdade que aparecem embaixo no Excel/Google Sheets.
+    function buildXlsxBytes(sheets) {
+      const encoder = new TextEncoder();
+      const used = new Set();
+      const sheetDefs = sheets.map((sheet, idx) => {
+        let name = String(sheet.name || `Sheet${idx + 1}`).slice(0, 31).replace(/[\\/?*[\]:]/g, ' ').trim() || `Sheet${idx + 1}`;
+        let candidate = name, n = 2;
+        while (used.has(candidate)) candidate = `${name.slice(0, 28)} ${n++}`;
+        used.add(candidate);
+        return { ...sheet, safeName: candidate, num: idx + 1 };
+      });
+
+      const worksheetFiles = sheetDefs.map(s => ({
+        name: `xl/worksheets/sheet${s.num}.xml`,
+        data: encoder.encode(buildXlsxSheetXml(s.headers, s.rows))
+      }));
 
       const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC8102E"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC8102E"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs></styleSheet>`;
 
+      const sheetsTagXml = sheetDefs.map(s => `<sheet name="${xmlEscape(s.safeName)}" sheetId="${s.num}" r:id="rId${s.num}"/>`).join('');
       const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEscape(safeSheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetsTagXml}</sheets></workbook>`;
 
+      const stylesRelId = sheetDefs.length + 1;
+      const sheetRelsXml = sheetDefs.map(s => `<Relationship Id="rId${s.num}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${s.num}.xml"/>`).join('');
       const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheetRelsXml}<Relationship Id="rId${stylesRelId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
 
       const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
 
+      const sheetOverridesXml = sheetDefs.map(s => `<Override PartName="/xl/worksheets/sheet${s.num}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('');
       const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${sheetOverridesXml}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
 
       return buildZipStore([
         { name: '[Content_Types].xml', data: encoder.encode(contentTypesXml) },
@@ -12554,12 +12572,12 @@ Recomendação PMO: ${d.recommendation}`;
         { name: 'xl/workbook.xml', data: encoder.encode(workbookXml) },
         { name: 'xl/_rels/workbook.xml.rels', data: encoder.encode(workbookRelsXml) },
         { name: 'xl/styles.xml', data: encoder.encode(stylesXml) },
-        { name: 'xl/worksheets/sheet1.xml', data: encoder.encode(sheetXml) }
+        ...worksheetFiles
       ]);
     }
 
-    function downloadXlsx(filename, sheetName, headers, rows) {
-      const bytes = buildXlsxBytes(sheetName, headers, rows);
+    function downloadXlsx(filename, sheets) {
+      const bytes = buildXlsxBytes(sheets);
       const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -12571,34 +12589,36 @@ Recomendação PMO: ${d.recommendation}`;
       setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
 
+    // Um relatório só, com as duas abas dentro (Squad e Iniciativa) — não depende de
+    // qual aba está aberta na tela no momento do clique.
     function exportReportsToXlsx() {
       data = enhanceSquadData(data);
       const allProjects = data.projects || [];
-      if (reportsActiveTab === 'iniciativa') {
-        const headers = ['Nº', 'Iniciativa', 'Squad', 'Status', 'Ações', 'Timeline', 'Riscos e Dependências'];
-        const rows = allProjects.map(project => {
-          const squad = squadForProject(project);
-          return [
-            initiativeNumber(project) || '—',
-            displayProjectTitle(project),
-            squad?.name || project.squad || 'A validar',
-            project.status || 'Sem status',
-            actionsSummaryTextForReport(project) || 'Nenhuma ação cadastrada',
-            timelineSummaryTextForReport(project),
-            risksSummaryTextForReport(project) || 'Nenhum risco ou dependência em aberto'
-          ];
-        });
-        downloadXlsx('relatorio-por-iniciativa.xlsx', 'Relatório por Iniciativa', headers, rows);
-      } else {
-        const squads = sortedSquadsList();
-        const headers = ['Squad', 'Iniciativas', 'Filhas', 'Horas 2026', 'Saúde'];
-        const rows = squads.map(squad => {
-          const health = squadHealthInfo(squad);
-          return [squad.name, squadProjects(squad.id).length, childCountForSquad(squad.id), Number(hoursForSquad(squad.id) || 0), health.label];
-        });
-        downloadXlsx('relatorio-por-squad.xlsx', 'Relatório por Squad', headers, rows);
-      }
-      toast('✅ Relatório exportado em .xlsx');
+      const squads = sortedSquadsList();
+
+      const squadRows = squads.map(squad => {
+        const health = squadHealthInfo(squad);
+        return [squad.name, squadProjects(squad.id).length, childCountForSquad(squad.id), Number(hoursForSquad(squad.id) || 0), health.label];
+      });
+
+      const initiativeRows = allProjects.map(project => {
+        const squad = squadForProject(project);
+        return [
+          initiativeNumber(project) || '—',
+          displayProjectTitle(project),
+          squad?.name || project.squad || 'A validar',
+          project.status || 'Sem status',
+          actionsSummaryTextForReport(project),
+          timelineSummaryTextForReport(project),
+          risksSummaryTextForReport(project)
+        ];
+      });
+
+      downloadXlsx('relatorio-executivo.xlsx', [
+        { name: 'Relatório por Squad', headers: ['Squad', 'Iniciativas', 'Filhas', 'Horas 2026', 'Saúde'], rows: squadRows },
+        { name: 'Relatório por Iniciativa', headers: ['Nº', 'Iniciativa', 'Squad', 'Status', 'Ações', 'Timeline', 'Riscos e Dependências'], rows: initiativeRows }
+      ]);
+      toast('✅ Relatório exportado em .xlsx (2 abas)');
     }
 
     function renderReportsPanel() {
