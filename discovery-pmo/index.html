@@ -4739,6 +4739,115 @@
       margin-top: 7px;
     }
 
+    .jira-epics-card { background: linear-gradient(135deg, #fff, #faf9ff); }
+
+    .jira-epic-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 12px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .jira-epic-item {
+      border: 1px solid #ece9fb;
+      border-radius: 12px;
+      background: #fdfcff;
+      overflow: hidden;
+    }
+
+    .jira-epic-item + .jira-epic-item { margin-top: 0; }
+
+    .jira-epic-item[open] { background: #fbfaff; }
+
+    .jira-epic-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .jira-epic-summary::-webkit-details-marker { display: none; }
+
+    .jira-epic-summary::before {
+      content: '▸';
+      color: var(--purple);
+      font-size: 10px;
+      margin-right: 6px;
+      transition: transform .15s ease;
+    }
+
+    .jira-epic-item[open] > .jira-epic-summary::before { transform: rotate(90deg); }
+
+    .jira-epic-link {
+      color: var(--purple);
+      font-weight: 760;
+      font-size: 12px;
+      text-decoration: none;
+      flex: 1;
+    }
+
+    .jira-epic-link:hover { text-decoration: underline; }
+    .jira-epic-link.no-link { color: var(--muted); font-weight: 620; }
+
+    .jira-epic-count {
+      font-size: 10.5px;
+      font-weight: 650;
+      color: var(--muted);
+      background: #f2f0fc;
+      border-radius: 999px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .jira-story-list {
+      display: grid;
+      gap: 3px;
+      padding: 2px 8px 8px 26px;
+    }
+
+    .jira-story-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 7px;
+      border-radius: 9px;
+      text-decoration: none;
+      font-size: 11.3px;
+      color: #344054;
+      transition: background .12s ease;
+    }
+
+    .jira-story-item:hover { background: #f4f2fd; }
+
+    .jira-story-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      flex-shrink: 0;
+      background: var(--blue);
+    }
+
+    .jira-story-status-dot[data-status="done"] { background: var(--green); }
+    .jira-story-status-dot[data-status="progress"] { background: var(--amber); }
+    .jira-story-status-dot[data-status="cancelled"] { background: #c3cad6; }
+
+    .jira-story-key {
+      color: var(--muted);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .jira-story-title {
+      color: #344054;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     @media (max-width: 1120px) {
       .exec-hero-indicators.pmo-people-grid,
       .project-intelligence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -6505,6 +6614,7 @@
         <button type="button" class="ghost-btn" onclick="openReportsPanel()" title="Abrir relatórios executivos">▤ Relatórios</button>
         <button type="button" class="ghost-btn" onclick="openProjectModal()">+ Iniciativa</button>
         <button type="button" class="ghost-btn" onclick="duplicateCurrentProject()">Duplicar</button>
+        <label class="ghost-btn btn-compact-import" title="Importar épicos e histórias do Jira (.csv) e vincular pelo nº da iniciativa (rótulo #Nº)">⇪ Importar Jira<input type="file" accept=".csv" style="display:none" onchange="handleJiraImportFileSelected(event)"></label>
         <button type="button" class="ux-v6-nav-bell" id="importHistoryBell" onclick="openImportHistoryModal()" title="Histórico de importações de planilha">🔔<span id="importHistoryBadge" class="ux-v6-bell-badge hidden"></span></button>
         <span class="ux-v6-nav-avatar" title="Usuário">PMO</span>
       </div>
@@ -9420,6 +9530,7 @@
         }));
         project.raids = normalizeRaids(project.raids);
         project.attachments = Array.isArray(project.attachments) ? project.attachments.map(normalizeAttachment) : [];
+        project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
         project.cards = (project.cards || []).map(card => ({
           ...card,
           stageReason: card.stageReason || defaultStageReason(card.status),
@@ -13456,6 +13567,230 @@ Recomendação PMO: ${d.recommendation}`;
       toast('Duplicação automática desativada: use apenas Nº oficial da planilha.');
     }
 
+    // ── Motor de importação Jira (Épicos/Histórias) ─────────────────────────────
+    // Lê o export .csv do Jira (Ops4Ops) e vincula cada história à iniciativa pelo
+    // rótulo "#<Nº da iniciativa>" (ex.: #113345), que já é usado hoje pelo time para
+    // marcar de qual iniciativa cada épico/história faz parte. Sem servidor: tudo roda
+    // no navegador e o resultado entra em project.jiraStories, sincronizado como o resto
+    // da base (ver saveData/scheduleDiscGasSave).
+    const JIRA_BASE_URL = 'https://jira.bradesco.com.br:8443/browse/';
+    function jiraUrl(key) {
+      return JIRA_BASE_URL + encodeURIComponent(String(key || '').trim());
+    }
+
+    function jiraStatusClass(status) {
+      const s = stripAccentsLower(status || '');
+      if (/cancelad/.test(s)) return 'cancelled';
+      if (/conclu|done|entreg|liberad|finalizad/.test(s)) return 'done';
+      if (/andamento|progress|homolog|desenvolv|revisa/.test(s)) return 'progress';
+      return 'backlog';
+    }
+
+    function truncateText(text, max) {
+      const s = String(text || '').trim();
+      return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
+    }
+
+    // Parser de .csv simples (RFC4180): aspas duplas escapam vírgula/quebra de linha
+    // dentro do campo, e "" dentro de um campo entre aspas vira um único ".
+    function parseCsvText(text) {
+      const rows = [];
+      let row = [], field = '', inQuotes = false;
+      const clean = String(text || '').replace(/^﻿/, '');
+      for (let i = 0; i < clean.length; i++) {
+        const ch = clean[i];
+        if (inQuotes) {
+          if (ch === '"') {
+            if (clean[i + 1] === '"') { field += '"'; i++; }
+            else inQuotes = false;
+          } else field += ch;
+        } else if (ch === '"') inQuotes = true;
+        else if (ch === ',') { row.push(field); field = ''; }
+        else if (ch === '\r') { /* ignora, \n cuida da quebra */ }
+        else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+        else field += ch;
+      }
+      if (field.length || row.length) { row.push(field); rows.push(row); }
+      return rows;
+    }
+
+    const JIRA_IMPORT_HEADER_MAP = {
+      'tipo de item': 'tipo',
+      'campo personalizado (epic link)': 'epicKey',
+      'chave do item': 'key',
+      'situacao': 'status',
+      'criado': 'created',
+      'atualizado': 'updated',
+      'resumo': 'summary',
+      'campo personalizado (team)': 'team'
+    };
+
+    function buildJiraImportRecords(rows) {
+      const headerRowIdx = rows.findIndex(r => (r || []).some(cell => normalizeImportHeader(cell) === 'chave do item'));
+      if (headerRowIdx === -1) throw new Error('Não encontrei a coluna "Chave do item". Confirme se é o export do Jira (Ops4Ops).');
+      const headerRow = rows[headerRowIdx];
+      const colIndex = {};
+      const labelColIndexes = [];
+      headerRow.forEach((h, i) => {
+        const norm = normalizeImportHeader(h);
+        const key = JIRA_IMPORT_HEADER_MAP[norm];
+        if (key) colIndex[key] = i;
+        else if (norm === 'rotulos') labelColIndexes.push(i);
+      });
+      const records = [];
+      for (let i = headerRowIdx + 1; i < rows.length; i++) {
+        const row = rows[i] || [];
+        const get = key => { const idx = colIndex[key]; return idx === undefined ? '' : String(row[idx] ?? '').trim(); };
+        const key = get('key');
+        if (!key) continue;
+        const labels = labelColIndexes.map(idx => String(row[idx] ?? '').trim()).filter(Boolean);
+        const tagMatch = labels.map(l => l.match(/^#(\d+)$/)).find(Boolean);
+        records.push({
+          tipo: get('tipo'), epicKey: get('epicKey'), key, status: get('status'),
+          created: get('created'), updated: get('updated'), summary: get('summary'),
+          team: get('team'), labels, tag: tagMatch ? tagMatch[1] : ''
+        });
+      }
+      return records;
+    }
+
+    function planJiraImportChanges(records) {
+      const groups = new Map();
+      const unmatchedTags = new Set();
+      let untagged = 0;
+      records.forEach(rec => {
+        if (!rec.tag) { untagged++; return; }
+        const project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, rec.tag));
+        if (!project) { unmatchedTags.add(rec.tag); return; }
+        if (!groups.has(project.id)) groups.set(project.id, { project, records: [] });
+        groups.get(project.id).records.push(rec);
+      });
+      return { groups, untagged, unmatchedTags: Array.from(unmatchedTags) };
+    }
+
+    function applyJiraImportPlan(plan) {
+      let epicsTotal = 0, storiesTotal = 0, storiesAddedTotal = 0, storiesUpdatedTotal = 0;
+      const historyItems = [];
+      plan.groups.forEach(({ project, records }) => {
+        project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
+        let added = 0, updated = 0;
+        records.forEach(rec => {
+          const existing = project.jiraStories.find(s => s.key === rec.key);
+          const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, created: rec.created, updated: rec.updated };
+          if (existing) { Object.assign(existing, fields); updated++; }
+          else { project.jiraStories.push(fields); added++; }
+        });
+        const epicKeys = new Set(project.jiraStories.map(s => s.epicKey).filter(Boolean));
+        epicsTotal += epicKeys.size;
+        storiesTotal += project.jiraStories.length;
+        storiesAddedTotal += added;
+        storiesUpdatedTotal += updated;
+        historyItems.push({
+          kind: 'jira', number: project.initiativeNumber, name: project.name, squad: project.squad,
+          where: [`Épicos vinculados: ${epicKeys.size}`, `Histórias: ${project.jiraStories.length} (${added} nova(s), ${updated} atualizada(s))`]
+        });
+      });
+      recordImportHistory({
+        projectsCreated: 0, projectsUpdated: plan.groups.size, childrenUpserted: 0,
+        cardsAdded: 0, depsAdded: 0, scheduleAdded: 0, timelineAdvanced: 0,
+        skipped: plan.untagged + plan.unmatchedTags.length, items: historyItems
+      });
+      saveData(true);
+      return { epicsTotal, storiesTotal, storiesAddedTotal, storiesUpdatedTotal, projectsTouched: plan.groups.size };
+    }
+
+    let _pendingJiraImportPlan = null;
+
+    function handleJiraImportFileSelected(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      toast('Lendo planilha do Jira…');
+      file.text().then(text => {
+        try {
+          const rows = parseCsvText(text);
+          const records = buildJiraImportRecords(rows);
+          if (!records.length) { toast('Nenhuma história reconhecida nesse arquivo.'); return; }
+          _pendingJiraImportPlan = planJiraImportChanges(records);
+          openJiraImportPreviewModal(_pendingJiraImportPlan);
+        } catch (e) {
+          console.error('Discovery PMO Tracker: falha ao importar Jira.', e);
+          toast('⚠️ Não consegui ler esse arquivo: ' + (e.message || 'formato inesperado'));
+        }
+      });
+    }
+
+    function openJiraImportPreviewModal(plan) {
+      let stories = 0;
+      const epicKeys = new Set();
+      plan.groups.forEach(({ records }) => records.forEach(rec => { stories++; if (rec.epicKey) epicKeys.add(rec.epicKey); }));
+      const rows = [
+        ['Iniciativas que serão atualizadas', plan.groups.size],
+        ['Épicos identificados', epicKeys.size],
+        ['Histórias identificadas', stories],
+        ['Linhas sem rótulo de iniciativa (ignoradas)', plan.untagged]
+      ];
+      const unmatchedNote = plan.unmatchedTags.length
+        ? `<p style="margin-top:10px;font-size:12px;color:#a15c00">Rótulos sem iniciativa correspondente (confira o Nº oficial): ${plan.unmatchedTags.map(t => '#' + escapeHtml(t)).join(', ')}</p>`
+        : '';
+      const body = `
+        <div class="ux-v6-alert-list">${rows.map(([label, value]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('')}</div>
+        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">O vínculo usa o rótulo "#Nº da iniciativa" de cada história no Jira. Histórias já importadas antes são atualizadas (status, resumo etc.), sem duplicar.</p>
+        ${unmatchedNote}
+      `;
+      openModal('Confirmar importação do Jira', 'Revise antes de aplicar. Isso atualiza a base para todos os usuários.', body, [
+        `<button type="button" class="btn" onclick="_pendingJiraImportPlan=null;closeModal()">Cancelar</button>`,
+        `<button type="button" class="btn primary" onclick="confirmJiraImportPlan()">Aplicar importação</button>`
+      ]);
+    }
+
+    function confirmJiraImportPlan() {
+      if (!_pendingJiraImportPlan) { closeModal(); return; }
+      const result = applyJiraImportPlan(_pendingJiraImportPlan);
+      _pendingJiraImportPlan = null;
+      closeModal();
+      toast(`✅ Jira importado: ${result.epicsTotal} épico(s) · ${result.storiesTotal} história(s) em ${result.projectsTouched} iniciativa(s)`);
+    }
+
+    function groupJiraStoriesByEpic(project) {
+      const stories = Array.isArray(project?.jiraStories) ? project.jiraStories : [];
+      const byEpic = new Map();
+      stories.forEach(story => {
+        const epicKey = story.epicKey || 'Sem épico';
+        if (!byEpic.has(epicKey)) byEpic.set(epicKey, []);
+        byEpic.get(epicKey).push(story);
+      });
+      return Array.from(byEpic.entries()).map(([epicKey, epicStories]) => ({ epicKey, stories: epicStories }));
+    }
+
+    function renderJiraEpicsCard(project) {
+      const epics = groupJiraStoriesByEpic(project);
+      const storyCount = (project.jiraStories || []).length;
+      const bodyHtml = epics.length ? `<div class="jira-epic-list">${epics.map(epic => `
+          <details class="jira-epic-item">
+            <summary class="jira-epic-summary">
+              ${epic.epicKey !== 'Sem épico'
+                ? `<a href="${jiraUrl(epic.epicKey)}" target="_blank" rel="noopener" class="jira-epic-link" onclick="event.stopPropagation()" title="Abrir épico ${escapeAttr(epic.epicKey)} no Jira">${escapeHtml(epic.epicKey)}</a>`
+                : `<span class="jira-epic-link no-link">${escapeHtml(epic.epicKey)}</span>`}
+              <span class="jira-epic-count">${epic.stories.length} história${epic.stories.length === 1 ? '' : 's'}</span>
+            </summary>
+            <div class="jira-story-list">${epic.stories.map(story => `
+              <a href="${jiraUrl(story.key)}" target="_blank" rel="noopener" class="jira-story-item" title="Abrir ${escapeAttr(story.key)} no Jira">
+                <span class="jira-story-status-dot" data-status="${jiraStatusClass(story.status)}"></span>
+                <span class="jira-story-key">${escapeHtml(story.key)}</span>
+                <span class="jira-story-title">${escapeHtml(truncateText(story.summary, 58))}</span>
+              </a>`).join('')}
+            </div>
+          </details>`).join('')}</div>`
+        : `<div class="exec-note">Nenhum épico/história do Jira importado ainda para esta iniciativa. Use "⇪ Importar Jira" no menu lateral.</div>`;
+      return `<div class="exec-card action jira-epics-card" style="--exec-color:var(--purple)">
+          <div class="exec-label">Épicos &amp; Histórias (Jira)</div>
+          <div class="exec-value">${epics.length} épico(s) · ${storyCount} história(s)</div>
+          <div class="exec-note">Clique no épico ou na história para abrir no Jira.</div>
+          ${bodyHtml}
+        </div>`;
+    }
+
     function insertSquadAutomationControls() {
       const actions = document.querySelector('.side-actions');
       if (!actions) return;
@@ -13737,7 +14072,8 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="exec-label">Recomendação PMO</div>
           <div class="exec-value">${escapeHtml(d.recommendation)}</div>
           <div class="exec-note">Leitura executiva para comitê, status report ou decisão de avanço para delivery.</div>
-        </div>`
+        </div>`,
+        renderJiraEpicsCard(project)
       ].join('');
       document.getElementById('executiveRows').innerHTML = html;
     }
