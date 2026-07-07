@@ -5700,11 +5700,16 @@
     .ux-v6-hist-head strong { font-size: 12.5px; color: #111827; }
     .ux-v6-hist-head span { font-size: 11.5px; color: #6b7788; }
     .ux-v6-hist-items { display: grid; gap: 4px; max-height: 160px; overflow-y: auto; }
-    .ux-v6-hist-item { display: flex; gap: 8px; font-size: 11.5px; color: #334155; align-items: baseline; }
+    .ux-v6-hist-item { display: flex; gap: 8px; font-size: 11.5px; color: #334155; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed #edf0f5; }
+    .ux-v6-hist-item:last-child { border-bottom: 0; padding-bottom: 0; }
     .ux-v6-hist-kind {
       flex: 0 0 auto; text-transform: uppercase; font-size: 9px; font-weight: 800;
-      color: #b5122b; background: #fff0f3; padding: 1px 6px; border-radius: 999px;
+      color: #b5122b; background: #fff0f3; padding: 3px 6px; border-radius: 999px; margin-top: 1px;
     }
+    .ux-v6-hist-item-body { display: grid; gap: 2px; min-width: 0; }
+    .ux-v6-hist-item-body strong { font-size: 12px; color: #111827; }
+    .ux-v6-hist-item-body span { font-size: 11px; color: #6b7788; }
+    .ux-v6-hist-item-body .ux-v6-hist-squad { color: #3730a3; font-weight: 650; }
 
     .ux-v6-nav-avatar {
       display: inline-flex;
@@ -12937,34 +12942,54 @@ Recomendação PMO: ${d.recommendation}`;
       const squadsByName = new Map(sortedSquadsList().map(s => [normalizeImportHeader(s.name), s]));
       const historyItems = [];
 
+      // Cada campo só entra na lista "changed" quando REALMENTE muda de valor — é isso
+      // que aparece depois no histórico do sino como "o que mudou" de cada iniciativa.
       function applyCoreFields(project, rec) {
-        if (rec.nome) project.name = rec.nome;
-        if (rec.squad) { const sq = squadsByName.get(normalizeImportHeader(rec.squad)); if (sq) { project.squadId = sq.id; project.squad = sq.name; } }
-        if (rec.tema) { project.theme = rec.tema; if (!project.business || project.business === 'Não informado') project.business = rec.tema; }
-        if (rec.frontLeader) project.frontLeader = rec.frontLeader;
-        if (rec.initiativeOwner) project.initiativeOwner = rec.initiativeOwner;
-        if (rec.po) project.po = rec.po;
-        if (rec.focalPoint) project.focalPoint = rec.focalPoint;
-        if (rec.techLead) project.techLead = rec.techLead;
-        if (rec.dataArea) project.dataArea = rec.dataArea;
-        if (rec.aiRpa) project.aiRpa = rec.aiRpa;
-        if (rec.processName) project.processName = rec.processName;
+        const changed = [];
+        if (rec.nome && project.name !== rec.nome) { project.name = rec.nome; changed.push('Nome'); }
+        if (rec.squad) {
+          const sq = squadsByName.get(normalizeImportHeader(rec.squad));
+          if (sq && project.squadId !== sq.id) { project.squadId = sq.id; project.squad = sq.name; changed.push('Squad'); }
+        }
+        if (rec.tema && project.theme !== rec.tema) { project.theme = rec.tema; if (!project.business || project.business === 'Não informado') project.business = rec.tema; changed.push('Tema'); }
+        if (rec.frontLeader && project.frontLeader !== rec.frontLeader) { project.frontLeader = rec.frontLeader; changed.push('Líder da frente'); }
+        if (rec.initiativeOwner && project.initiativeOwner !== rec.initiativeOwner) { project.initiativeOwner = rec.initiativeOwner; changed.push('Dono da iniciativa'); }
+        if (rec.po && project.po !== rec.po) { project.po = rec.po; changed.push('PO'); }
+        if (rec.focalPoint && project.focalPoint !== rec.focalPoint) { project.focalPoint = rec.focalPoint; changed.push('Ponto focal'); }
+        if (rec.techLead && project.techLead !== rec.techLead) { project.techLead = rec.techLead; changed.push('Tech Lead'); }
+        if (rec.dataArea && project.dataArea !== rec.dataArea) { project.dataArea = rec.dataArea; changed.push('Dados'); }
+        if (rec.aiRpa && project.aiRpa !== rec.aiRpa) { project.aiRpa = rec.aiRpa; changed.push('IA/RPA'); }
+        if (rec.processName && project.processName !== rec.processName) { project.processName = rec.processName; changed.push('Processo'); }
         const hrs = Number(String(rec.hours2026).replace(',', '.'));
-        if (Number.isFinite(hrs) && hrs > 0) project.hours2026 = hrs;
-        const disc = parseFlexibleDate(rec.discoveryDate); if (disc) project.discoveryDate = disc;
-        const sd = parseFlexibleDate(rec.startDev); if (sd) project.startDev = sd;
-        const ed = parseFlexibleDate(rec.endDev); if (ed) project.endDev = ed;
+        if (Number.isFinite(hrs) && hrs > 0 && project.hours2026 !== hrs) { project.hours2026 = hrs; changed.push('Horas 2026'); }
+        const disc = parseFlexibleDate(rec.discoveryDate); if (disc && project.discoveryDate !== disc) { project.discoveryDate = disc; changed.push('Discovery'); }
+        const sd = parseFlexibleDate(rec.startDev); if (sd && project.startDev !== sd) { project.startDev = sd; changed.push('Início Dev'); }
+        const ed = parseFlexibleDate(rec.endDev); if (ed && project.endDev !== ed) { project.endDev = ed; changed.push('Término Dev'); }
+        return changed;
       }
       function applyDerived(project, rec) {
-        if (rec.dependencias && upsertDependencyText(project, rec.dependencias)) depsAdded++;
+        const derived = { cards: 0, deps: 0, schedule: 0 };
+        if (rec.dependencias && upsertDependencyText(project, rec.dependencias)) { depsAdded++; derived.deps++; }
         const dueISO = findFirstDateInText(rec.prazos);
-        if (rec.nota && upsertActionCardFromNote(project, rec.nota, dueISO)) cardsAdded++;
-        if (rec.prazos && dueISO && upsertScheduleFromPrazo(project, rec.prazos, dueISO)) scheduleAdded++;
+        if (rec.nota && upsertActionCardFromNote(project, rec.nota, dueISO)) { cardsAdded++; derived.cards++; }
+        if (rec.prazos && dueISO && upsertScheduleFromPrazo(project, rec.prazos, dueISO)) { scheduleAdded++; derived.schedule++; }
+        return derived;
+      }
+      // Traduz "o que mudou" em "onde mudou" (cadastro / Ações / Riscos-Dependências / Cronograma).
+      function buildWhereList(changed, derived) {
+        const where = [];
+        if (changed.length) where.push(`Cadastro: ${changed.join(', ')}`);
+        if (derived.cards) where.push(`Ações: +${derived.cards}`);
+        if (derived.deps) where.push(`Riscos/Dependências: +${derived.deps}`);
+        if (derived.schedule) where.push(`Cronograma: +${derived.schedule}`);
+        return where;
       }
 
       plan.updates.forEach(({ rec, project }) => {
-        applyCoreFields(project, rec); applyDerived(project, rec); projectsUpdated++;
-        historyItems.push({ kind: 'atualizada', number: project.initiativeNumber, name: project.name });
+        const changed = applyCoreFields(project, rec);
+        const derived = applyDerived(project, rec);
+        projectsUpdated++;
+        historyItems.push({ kind: 'atualizada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(changed, derived) });
       });
 
       plan.creates.forEach(({ rec }) => {
@@ -12983,11 +13008,11 @@ Recomendação PMO: ${d.recommendation}`;
           checklist: checklistTemplate.map(c => ({ ...c, done: false })),
           cards: [], schedule: [], raids: { risks: [], assumptions: [], issues: [], dependencies: [] }, attachments: []
         };
-        applyCoreFields(project, rec);
-        applyDerived(project, rec);
+        const changed = applyCoreFields(project, rec);
+        const derived = applyDerived(project, rec);
         data.projects.push(project);
         projectsCreated++;
-        historyItems.push({ kind: 'criada', number: project.initiativeNumber, name: project.name });
+        historyItems.push({ kind: 'criada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(changed, derived) });
       });
 
       plan.childUpserts.forEach(({ rec }) => {
@@ -12996,22 +13021,25 @@ Recomendação PMO: ${d.recommendation}`;
         mother.subInitiatives = Array.isArray(mother.subInitiatives) ? mother.subInitiatives : [];
         let child = mother.subInitiatives.find(c => matchesInitiativeNumber(c.initiativeNumber, rec.childNumber));
         const isNewChild = !child;
+        const changed = [];
         if (isNewChild) {
           child = { id: 'child-' + slugify(rec.motherNumber + '-' + rec.childNumber) + '-' + Date.now().toString(36), squad: asdSquad()?.name || 'Ainda Sem Definição' };
           mother.subInitiatives.push(child);
           childrenUpserted++;
+          changed.push('Nova filha');
         }
         child.initiativeNumber = rec.childNumber;
         child.motherNumber = rec.motherNumber;
-        if (rec.nome) child.name = rec.nome;
-        if (rec.squad) child.squad = rec.squad;
+        if (rec.nome && child.name !== rec.nome) { child.name = rec.nome; changed.push('Nome'); }
+        if (rec.squad && child.squad !== rec.squad) { child.squad = rec.squad; changed.push('Squad'); }
         child.sourceSquad = child.sourceSquad || mother.squad;
-        if (rec.tema) child.theme = rec.tema;
-        if (rec.frontLeader) child.frontLeader = rec.frontLeader;
+        if (rec.tema && child.theme !== rec.tema) { child.theme = rec.tema; changed.push('Tema'); }
+        if (rec.frontLeader && child.frontLeader !== rec.frontLeader) { child.frontLeader = rec.frontLeader; changed.push('Líder da frente'); }
         child.rawName = child.rawName || rec.nome;
         child.duplicateNumber = false;
-        if (rec.dependencias && upsertDependencyText(mother, rec.dependencias)) depsAdded++;
-        historyItems.push({ kind: isNewChild ? 'filha nova' : 'filha atualizada', number: child.initiativeNumber, name: child.name });
+        const where = changed.filter(c => c !== 'Nova filha').length ? [`Cadastro (dentro da Mãe ${rec.motherNumber}): ${changed.filter(c => c !== 'Nova filha').join(', ')}`] : [];
+        if (rec.dependencias && upsertDependencyText(mother, rec.dependencias)) { depsAdded++; where.push(`Riscos/Dependências da Mãe: +1`); }
+        historyItems.push({ kind: isNewChild ? 'filha nova' : 'filha atualizada', number: child.initiativeNumber, name: child.name, squad: child.squad, where });
       });
 
       const result = { projectsCreated, projectsUpdated, childrenUpserted, cardsAdded, depsAdded, scheduleAdded, skipped: plan.skipped.length, items: historyItems };
@@ -13051,13 +13079,23 @@ Recomendação PMO: ${d.recommendation}`;
     function openImportHistoryModal() {
       const history = data.importHistory || [];
       const body = history.length ? history.map(h => {
-        const itemsHtml = (h.items || []).map(it => `<div class="ux-v6-hist-item"><span class="ux-v6-hist-kind">${escapeHtml(it.kind)}</span><span>${escapeHtml(it.number || '')} · ${escapeHtml(it.name || '')}</span></div>`).join('') || '<div class="ux-v6-hist-item">Sem iniciativas afetadas (só ignoradas).</div>';
+        const itemsHtml = (h.items || []).map(it => {
+          const detail = (it.where && it.where.length) ? it.where.join(' · ') : 'Sem alteração de campo (já estava igual)';
+          return `<div class="ux-v6-hist-item">
+            <span class="ux-v6-hist-kind">${escapeHtml(it.kind)}</span>
+            <div class="ux-v6-hist-item-body">
+              <strong>${escapeHtml(it.number || '')} · ${escapeHtml(it.name || 'Sem nome')}</strong>
+              <span class="ux-v6-hist-squad">Squad: ${escapeHtml(it.squad || 'Ainda Sem Definição')}</span>
+              <span>${escapeHtml(detail)}</span>
+            </div>
+          </div>`;
+        }).join('') || '<div class="ux-v6-attention-empty">Sem iniciativas afetadas (só ignoradas).</div>';
         return `<div class="ux-v6-hist-entry">
           <div class="ux-v6-hist-head"><strong>${escapeHtml(formatBRDateTime(h.at))}</strong><span>${h.projectsCreated} nova(s) · ${h.projectsUpdated} atualizada(s) · ${h.childrenUpserted} filha(s) · ${h.cardsAdded} ação(ões) · ${h.depsAdded} dependência(s)${h.skipped ? ` · ${h.skipped} ignorada(s)` : ''}</span></div>
           <div class="ux-v6-hist-items">${itemsHtml}</div>
         </div>`;
       }).join('') : `<div class="ux-v6-attention-empty">Nenhuma importação de planilha registrada ainda.</div>`;
-      openModal('Histórico de importações', 'Toda carga de planilha entra aqui, visível para todos os usuários.', body, [
+      openModal('Histórico de importações', 'O que mudou, onde mudou e a Squad de cada iniciativa afetada — visível para todos os usuários.', body, [
         `<button type="button" class="btn" onclick="closeModal()">Fechar</button>`
       ]);
     }
