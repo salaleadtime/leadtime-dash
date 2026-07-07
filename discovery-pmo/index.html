@@ -6348,64 +6348,6 @@
       .ux-v6-drawer { width: 100vw; }
     }
 
-    /* === Painel de Squads (lista + cadastro) === */
-    .squad-list-backdrop {
-      position: fixed; inset: 0; background: rgba(10,14,22,.58); backdrop-filter: blur(3px);
-      z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px;
-    }
-    .squad-list-panel {
-      background: #fff; border-radius: 20px; box-shadow: 0 32px 80px rgba(0,0,0,.2);
-      width: min(660px,100%); max-height: 88vh; display: flex; flex-direction: column;
-    }
-    .squad-list-head {
-      padding: 20px 24px 14px; border-bottom: 1px solid #e5e9f2;
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-    }
-    .squad-list-head h2 { margin: 0; font-size: 17px; font-weight: 800; color: #1c2430; }
-    .squad-list-head p { margin: 4px 0 0; font-size: 12px; color: #687587; }
-    .squad-list-body { overflow-y: auto; padding: 16px 24px; flex: 1; }
-    .squad-list-item {
-      display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-      border-radius: 12px; border: 1.5px solid #e5e9f2; margin-bottom: 8px;
-      cursor: pointer; transition: border-color .15s, background .15s;
-    }
-    .squad-list-item:hover { border-color: #bf1830; background: #fff8f9; }
-    .squad-list-item.selected { border-color: #bf1830; background: #fff0f3; }
-    .squad-list-avatar {
-      width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg,#bf1830,#ff6b81);
-      color: #fff; font-weight: 800; font-size: 12px; display: grid; place-items: center; flex-shrink: 0;
-    }
-    .squad-list-avatar.asd { background: linear-gradient(135deg,#991b1b,#ef4444); }
-    .squad-list-info { flex: 1; min-width: 0; }
-    .squad-list-info strong { display: block; font-size: 13px; font-weight: 700; color: #1c2430; }
-    .squad-list-info span { font-size: 11px; color: #687587; }
-    .squad-list-meta { text-align: right; }
-    .squad-list-meta strong { display: block; font-size: 14px; font-weight: 800; color: #1c2430; }
-    .squad-list-meta span { font-size: 10px; color: #687587; }
-    .squad-list-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; margin-left: 4px; }
-    .squad-list-badge.asd { background: #fee2e2; color: #991b1b; }
-    .squad-add-form {
-      border-top: 1px solid #e5e9f2; padding: 16px 24px; background: #f9fafb;
-      border-radius: 0 0 20px 20px;
-    }
-    .squad-add-title { font-weight: 700; font-size: 13px; color: #1c2430; margin-bottom: 12px; }
-    .squad-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .squad-add-field { display: flex; flex-direction: column; gap: 4px; }
-    .squad-add-field label { font-size: 11px; font-weight: 600; color: #687587; text-transform: uppercase; letter-spacing: .04em; }
-    .squad-add-field input {
-      border: 1.5px solid #e5e9f2; border-radius: 8px; padding: 8px 10px;
-      font-size: 13px; color: #1c2430; background: #fff; outline: none;
-    }
-    .squad-add-field input:focus { border-color: #bf1830; }
-    .squad-add-actions { display: flex; gap: 10px; margin-top: 12px; justify-content: flex-end; }
-    .squad-add-btn {
-      padding: 9px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: none;
-    }
-    .squad-add-btn.primary { background: #bf1830; color: #fff; }
-    .squad-add-btn.primary:hover { background: #8e1125; }
-    .squad-add-btn.ghost { background: #f5f7fb; color: #687587; }
-    .squad-add-btn.ghost:hover { background: #e5e9f2; }
-
     /* === Modal Calendário de Discoveries === */
     .cal-modal-backdrop {
       position: fixed; inset: 0; background: rgba(10,14,22,.62); backdrop-filter: blur(3px);
@@ -6521,7 +6463,6 @@
         <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
         <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
         <button type="button" class="ghost-btn" onclick="openPmoTable()" title="Visão tabela PMO (planilha)">⊞ Visão PMO</button>
-        <button type="button" class="ghost-btn" onclick="openSquadListPanel()" title="Gerenciar e selecionar Squads">👥 Squads</button>
         <button type="button" class="ghost-btn" onclick="openReportsPanel()" title="Abrir relatórios executivos">▤ Relatórios</button>
         <button type="button" class="ghost-btn" onclick="openProjectModal()">+ Iniciativa</button>
         <button type="button" class="ghost-btn" onclick="duplicateCurrentProject()">Duplicar</button>
@@ -9282,8 +9223,6 @@
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth();
     let pmoTableOpen = false;
-    let squadListOpen = false;
-    let squadListSelected = '';
     let squadDrawerOpen = false;
     let squadDrawerSearchTerm = '';
     let reportsOpen = false;
@@ -11220,7 +11159,8 @@ Recomendação PMO: ${d.recommendation}`;
         code,
         business: item.business || item.area || '',
         rteOwner: item.rteOwner || item.rte || '',
-        owner: item.owner || item.pmoOwner || item.pmo || ''
+        owner: item.owner || item.pmoOwner || item.pmo || '',
+        techLead: item.techLead || ''
       };
     }
 
@@ -11325,6 +11265,7 @@ Recomendação PMO: ${d.recommendation}`;
       const businessInput = document.getElementById('project-business');
       const rteInput = document.getElementById('project-rte-owner');
       const ownerInput = document.getElementById('project-owner');
+      const techLeadInput = document.getElementById('project-tech-lead');
       if (iniInput && (forceCode || iniInput.dataset.auto === 'true' || !iniInput.value.trim())) {
         iniInput.value = nextInitiativeNumber(squad.id, modalState.project?.id);
         iniInput.dataset.auto = 'true';
@@ -11332,6 +11273,7 @@ Recomendação PMO: ${d.recommendation}`;
       if (businessInput && (!businessInput.value.trim() || businessInput.value === 'Não informado') && squad.business) businessInput.value = squad.business;
       if (rteInput && (!rteInput.value.trim() || rteInput.value === 'PMO/RTE') && squad.rteOwner) rteInput.value = squad.rteOwner;
       if (ownerInput && (!ownerInput.value.trim() || ownerInput.value === 'PMO/RTE') && squad.owner) ownerInput.value = squad.owner;
+      if (techLeadInput && !techLeadInput.value.trim() && squad.techLead) techLeadInput.value = squad.techLead;
     }
 
     function handleProjectSquadChange() {
@@ -11459,7 +11401,7 @@ Recomendação PMO: ${d.recommendation}`;
         return `<div class="squad-row-card ${s.id === activeId ? 'active' : ''}">
           <div class="squad-row-main"><strong>${escapeHtml(s.name)}</strong><span>${escapeHtml(s.business || 'Área não informada')}</span></div>
           <span class="squad-code-badge">${escapeHtml(s.code)}</span>
-          <span class="squad-row-meta">RTE: ${escapeHtml(s.rteOwner || '—')}<br>PMO: ${escapeHtml(s.owner || '—')}</span>
+          <span class="squad-row-meta">Tech Lead: ${escapeHtml(s.techLead || '—')}<br>RTE: ${escapeHtml(s.rteOwner || '—')}</span>
           <span class="squad-counter">${count} init.</span>
           <div class="squad-row-actions">
             <button type="button" class="mini-text-btn" onclick="openSquadModal('${s.id}')">Editar</button>
@@ -11472,7 +11414,7 @@ Recomendação PMO: ${d.recommendation}`;
     function openSquadModal(squadId = null) {
       data = enhanceSquadData(data);
       const isEdit = Boolean(squadId);
-      const squad = isEdit ? squadById(squadId) : { id: uid('squad'), name: '', code: '', business: '', rteOwner: '', owner: '' };
+      const squad = isEdit ? squadById(squadId) : { id: uid('squad'), name: '', code: '', business: '', rteOwner: '', owner: '', techLead: '' };
       if (!squad) { toast('Squad não encontrada'); return; }
       modalState = { type: 'squad', isEdit, squad: deepClone(squad), originalSquadId: squadId };
       openModal(isEdit ? 'Editar Squad' : 'Cadastro de Squads', 'Cadastre a Squad uma vez e reutilize em várias iniciativas. O número da iniciativa é sequencial e independente da sigla.', `
@@ -11480,10 +11422,8 @@ Recomendação PMO: ${d.recommendation}`;
         ${squadListHtml(squadId || '')}
         <div class="form-grid">
           ${field('Nome da Squad', 'squad-name', squad.name)}
-          ${field('Código da Squad (opcional)', 'squad-code', squad.code)}
-          ${field('Área / negócio padrão', 'squad-business', squad.business)}
+          ${field('Tech Lead padrão', 'squad-tech-lead', squad.techLead || '')}
           ${field('RTE padrão', 'squad-rte-owner', squad.rteOwner)}
-          ${field('PMO padrão', 'squad-owner', squad.owner)}
           <div class="form-field"><label>Próximo Nº previsto</label><input type="text" readonly value="${escapeAttr(nextInitiativeNumber(squad.id))}" /></div>
         </div>
       `, [
@@ -11493,26 +11433,27 @@ Recomendação PMO: ${d.recommendation}`;
       ]);
     }
 
+    // Cadastro de Squad reduzido a Nome + Tech Lead padrão + RTE padrão (pedido explícito).
+    // Código/Área/PMO padrão continuam existindo no registro (gerados ou preservados
+    // automaticamente), só saíram do formulário rápido.
     function saveSquadModal() {
       data = enhanceSquadData(data);
       const name = document.getElementById('squad-name').value.trim() || 'Squad sem nome';
-      let code = document.getElementById('squad-code').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || squadCodeFromName(name);
       const squad = modalState.squad || { id: uid('squad') };
-      code = ensureUniqueSquadCode(code, squad.id);
-      const previous = squadById(squad.id);
+      // squadById cai pra "primeira squad da lista" se o id não existir ainda — não dá
+      // pra usar isso pra detectar squad nova. modalState.isEdit é o sinal confiável.
+      const previous = modalState.isEdit ? squadById(squad.id) : null;
       squad.name = name;
-      squad.code = code;
-      squad.business = document.getElementById('squad-business').value.trim();
+      squad.code = previous?.code || ensureUniqueSquadCode(squadCodeFromName(name), squad.id);
+      squad.techLead = document.getElementById('squad-tech-lead').value.trim();
       squad.rteOwner = document.getElementById('squad-rte-owner').value.trim();
-      squad.owner = document.getElementById('squad-owner').value.trim();
       if (modalState.isEdit && previous) {
         Object.assign(previous, squad);
         data.projects.forEach(p => {
           if (p.squadId === squad.id) {
             p.squad = squad.name;
-            if (!p.business || p.business === 'Não informado') p.business = squad.business || p.business;
             if (!p.rteOwner || p.rteOwner === 'PMO/RTE') p.rteOwner = squad.rteOwner || p.rteOwner;
-            if (!p.owner || p.owner === 'PMO/RTE') p.owner = squad.owner || p.owner;
+            if (!p.techLead) p.techLead = squad.techLead || p.techLead;
           }
         });
       } else {
@@ -12307,99 +12248,6 @@ Recomendação PMO: ${d.recommendation}`;
               </tr></thead>
               <tbody>${rowsHtml}</tbody>
             </table>
-          </div>
-        </div>
-      </div>`;
-    }
-
-    /* === Painel de Squads === */
-    function openSquadListPanel() {
-      squadListOpen = true;
-      squadListSelected = dashboardSquadId || '';
-      _renderSquadListPanel();
-    }
-    function closeSquadListPanel() {
-      squadListOpen = false;
-      const el = document.getElementById('squadListRoot');
-      if (el) el.remove();
-    }
-    function selectSquadFromList(squadId) {
-      squadListSelected = squadId;
-      dashboardSquadId = squadId;
-      persistViewState();
-      _renderSquadListPanel();
-    }
-    function saveNewSquadFromPanel() {
-      const name = (document.getElementById('newSquadName')?.value || '').trim();
-      const business = (document.getElementById('newSquadBusiness')?.value || '').trim();
-      const po = (document.getElementById('newSquadPo')?.value || '').trim();
-      const leader = (document.getElementById('newSquadLeader')?.value || '').trim();
-      if (!name) { alert('Informe o nome da squad.'); return; }
-      data = enhanceSquadData(data);
-      const existing = (data.squads || []).find(s => s.name.toLowerCase() === name.toLowerCase());
-      if (existing) { alert('Já existe uma squad com esse nome.'); return; }
-      const newSquad = normalizeSquadRecord({
-        id: uid('squad'),
-        name,
-        code: ensureUniqueSquadCode(squadCodeFromName(name), ''),
-        business: business || 'Não informado',
-        rteOwner: leader || '',
-        owner: leader || '',
-        defaultLeader: leader || '',
-        defaultPo: po || '',
-        totalHours2026: 0
-      });
-      data.squads.push(newSquad);
-      storageSet(STORAGE_KEY, JSON.stringify(data));
-      squadListSelected = newSquad.id;
-      _renderSquadListPanel();
-    }
-    function _renderSquadListPanel() {
-      let el = document.getElementById('squadListRoot');
-      if (!el) { el = document.createElement('div'); el.id = 'squadListRoot'; document.body.appendChild(el); }
-      data = enhanceSquadData(data);
-      const squads = sortedSquadsList();
-      const rowsHtml = squads.map(sq => {
-        const count = squadProjects(sq.id).length;
-        const hours = hoursForSquad(sq.id);
-        const isAsd = sq.id === 'squad-asd';
-        const isSelected = sq.id === squadListSelected;
-        const initials = squadInitials(sq.name);
-        return `<div class="squad-list-item${isSelected?' selected':''}" onclick="selectSquadFromList('${escapeAttr(sq.id)}')" title="Selecionar ${escapeAttr(sq.name)}">
-          <div class="squad-list-avatar${isAsd?' asd':''}">${escapeHtml(initials)}</div>
-          <div class="squad-list-info">
-            <strong>${escapeHtml(sq.name)}${isAsd?'<span class="squad-list-badge asd">ASD</span>':''}</strong>
-            <span>${escapeHtml(sq.business||'Área não informada')} · PO: ${escapeHtml(sq.defaultPo||sq.owner||'—')}</span>
-          </div>
-          <div class="squad-list-meta">
-            <strong>${count}</strong>
-            <span>iniciativas</span>
-            <div style="font-size:10px;color:#687587;margin-top:2px">${formatHours(hours)}</div>
-          </div>
-        </div>`;
-      }).join('') || '<div style="text-align:center;color:#687587;padding:20px">Nenhuma squad cadastrada.</div>';
-      el.innerHTML = `<div class="squad-list-backdrop" onclick="if(event.target===this)closeSquadListPanel()">
-        <div class="squad-list-panel">
-          <div class="squad-list-head">
-            <div>
-              <h2>👥 Squads · Onda 1 2026</h2>
-              <p>${squads.length} squads cadastradas · clique para selecionar e filtrar · ASD = Ainda Sem Definição</p>
-            </div>
-            <button class="cal-close" onclick="closeSquadListPanel()" title="Fechar">×</button>
-          </div>
-          <div class="squad-list-body">${rowsHtml}</div>
-          <div class="squad-add-form">
-            <div class="squad-add-title">+ Cadastrar nova Squad</div>
-            <div class="squad-add-grid">
-              <div class="squad-add-field"><label>Nome da Squad *</label><input id="newSquadName" placeholder="Ex: Phoenix" /></div>
-              <div class="squad-add-field"><label>Área / Negócio</label><input id="newSquadBusiness" placeholder="Ex: Operações Jurídicas" /></div>
-              <div class="squad-add-field"><label>Líder da Frente</label><input id="newSquadLeader" placeholder="Ex: Marcos Tasca" /></div>
-              <div class="squad-add-field"><label>PO</label><input id="newSquadPo" placeholder="Ex: Amanda Lima" /></div>
-            </div>
-            <div class="squad-add-actions">
-              <button class="squad-add-btn ghost" onclick="closeSquadListPanel()">Cancelar</button>
-              <button class="squad-add-btn primary" onclick="saveNewSquadFromPanel()">Salvar Squad</button>
-            </div>
           </div>
         </div>
       </div>`;
