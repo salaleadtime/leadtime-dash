@@ -283,7 +283,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .tc-hint{font-size:10px;color:#b0bac7}
 .auto-salvo-badge{display:inline-flex;align-items:center;gap:2px;font-size:9.5px;color:#78909c;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:99px;padding:.05rem .45rem;margin-left:.3rem;vertical-align:middle;line-height:1.6}
 .tscr{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:11.5px;min-width:860px}
+table{width:100%;border-collapse:collapse;font-size:11.5px;min-width:1080px}
 th{background:#5e0000;color:#fff;padding:6px 11px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;border-bottom:2px solid #470000}
 td{padding:6px 11px;border-bottom:1px solid #f1f5f9;vertical-align:middle;background:#fff}
 tr:last-child td{border-bottom:none}
@@ -3529,7 +3529,7 @@ function renderTbl(){
       '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
-      '<td style="min-width:195px;max-width:255px">'+
+      '<td style="min-width:320px;max-width:480px">'+
         '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
       '</td>'+
     '</tr>';
