@@ -5406,6 +5406,12 @@
       color: #6b7788;
     }
 
+    .ux-v6-date-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .ux-v6-date-status-pill {
+      font-size: 9.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+      border: 1px solid currentColor; background: #fff; line-height: 1.5;
+    }
+
     .ux-v6-donut-wrap {
       display: flex;
       align-items: center;
@@ -5821,6 +5827,39 @@
       display: grid;
       gap: 18px;
     }
+
+    .ux-v6-report-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 12px 24px 0;
+      border-bottom: 1px solid var(--senior-line);
+    }
+    .ux-v6-report-tab {
+      border: 0;
+      background: transparent;
+      padding: 9px 14px;
+      font-size: 12.5px;
+      font-weight: 650;
+      color: #6c788b;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .ux-v6-report-tab:hover { color: #24324a; background: #f9fafb; }
+    .ux-v6-report-tab.active { color: #c8102e; border-bottom-color: #c8102e; background: #fff5f6; }
+
+    .ux-v6-report-chip-row { display: flex; flex-wrap: wrap; gap: 4px; }
+    .ux-v6-report-chip {
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+      white-space: nowrap; border: 1px solid transparent;
+    }
+    .ux-v6-report-chip.crit { background: #fee2e2; color: #991b1b; }
+    .ux-v6-report-chip.amber { background: #fff4de; color: #8a5a00; }
+    .ux-v6-report-chip.blue { background: #e0e7ff; color: #3730a3; }
+    .ux-v6-report-chip.green { background: #dcfce7; color: #166534; }
+    .ux-v6-report-chip.grey { background: #f1f5f9; color: #475569; }
+    .ux-v6-report-empty-inline { font-size: 11.5px; color: #9aa4b2; font-style: italic; }
 
     .ux-v6-report-section {
       border: 1px solid var(--senior-line);
@@ -9226,6 +9265,7 @@
     let squadDrawerOpen = false;
     let squadDrawerSearchTerm = '';
     let reportsOpen = false;
+    let reportsActiveTab = 'squad';
     let showAllSquads = false;
     let modalState = {};
     let draggedCardId = null;
@@ -11923,9 +11963,12 @@ Recomendação PMO: ${d.recommendation}`;
       return stops.length ? `conic-gradient(${stops.join(', ')})` : '#e2e8f0';
     }
 
+    // Só datas de hoje pra frente — discovery já passado não é "próximo". Pra ver o
+    // histórico completo (passado + futuro) é isso que o calendário (Ver calendário) serve.
     function upcomingDiscoveries(limit = 5) {
+      const today = fmtDate(new Date());
       return (data.projects || [])
-        .filter(p => p.discoveryDate)
+        .filter(p => p.discoveryDate && p.discoveryDate >= today)
         .sort((a, b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)))
         .slice(0, limit);
     }
@@ -12261,6 +12304,88 @@ Recomendação PMO: ${d.recommendation}`;
       return (project.subInitiatives || []).filter(child => child.squad && project.squad && child.squad !== project.squad);
     }
 
+    // Resumos visuais (chips coloridos) usados na coluna "Ações" do Relatório por Iniciativa.
+    function actionsSummaryHtmlForReport(project) {
+      const cards = project.cards || [];
+      if (!cards.length) return `<span class="ux-v6-report-empty-inline">Nenhuma ação cadastrada</span>`;
+      const counts = { backlog: 0, doing: 0, validation: 0, done: 0 };
+      let overdue = 0;
+      cards.forEach(c => { counts[c.status] = (counts[c.status] || 0) + 1; if (isCardOverdue(c)) overdue++; });
+      const chips = [];
+      if (overdue) chips.push(`<span class="ux-v6-report-chip crit">${overdue} atrasada(s)</span>`);
+      if (counts.doing) chips.push(`<span class="ux-v6-report-chip blue">${counts.doing} em andamento</span>`);
+      if (counts.validation) chips.push(`<span class="ux-v6-report-chip amber">${counts.validation} em validação</span>`);
+      if (counts.done) chips.push(`<span class="ux-v6-report-chip green">${counts.done} concluída(s)</span>`);
+      if (counts.backlog) chips.push(`<span class="ux-v6-report-chip grey">${counts.backlog} a fazer</span>`);
+      return `<div class="ux-v6-report-chip-row">${chips.join('')}</div>`;
+    }
+    function actionsSummaryTextForReport(project) {
+      const cards = project.cards || [];
+      if (!cards.length) return 'Nenhuma ação cadastrada';
+      const counts = { backlog: 0, doing: 0, validation: 0, done: 0 };
+      let overdue = 0;
+      cards.forEach(c => { counts[c.status] = (counts[c.status] || 0) + 1; if (isCardOverdue(c)) overdue++; });
+      const parts = [];
+      if (overdue) parts.push(`${overdue} atrasada(s)`);
+      if (counts.doing) parts.push(`${counts.doing} em andamento`);
+      if (counts.validation) parts.push(`${counts.validation} em validação`);
+      if (counts.done) parts.push(`${counts.done} concluída(s)`);
+      if (counts.backlog) parts.push(`${counts.backlog} a fazer`);
+      return parts.join(' · ');
+    }
+
+    // Timeline: se nenhum dos 16 itens saiu de "Não iniciada", informa isso direto, sem
+    // fingir que há progresso.
+    function timelineSummaryHtmlForReport(project) {
+      const items = ensureTimelineItems(project);
+      const touched = items.filter(it => it.status && it.status !== 'notstarted');
+      if (!touched.length) return `<span class="ux-v6-report-empty-inline">Nenhum item foi iniciado</span>`;
+      const doneCount = items.filter(it => it.status === 'done').length;
+      const blockedCount = items.filter(it => it.status === 'blocked').length;
+      const waitingCount = items.filter(it => it.status === 'waiting-arch' || it.status === 'waiting-business').length;
+      const pct = Math.round((doneCount / items.length) * 100);
+      const chips = [`<span class="ux-v6-report-chip ${pct === 100 ? 'green' : 'blue'}">${pct}% concluída</span>`];
+      if (blockedCount) chips.push(`<span class="ux-v6-report-chip crit">${blockedCount} bloqueada(s)</span>`);
+      if (waitingCount) chips.push(`<span class="ux-v6-report-chip amber">${waitingCount} aguardando</span>`);
+      return `<div class="ux-v6-report-chip-row">${chips.join('')}</div>`;
+    }
+    function timelineSummaryTextForReport(project) {
+      const items = ensureTimelineItems(project);
+      const touched = items.filter(it => it.status && it.status !== 'notstarted');
+      if (!touched.length) return 'Nenhum item foi iniciado';
+      const doneCount = items.filter(it => it.status === 'done').length;
+      const blockedCount = items.filter(it => it.status === 'blocked').length;
+      const waitingCount = items.filter(it => it.status === 'waiting-arch' || it.status === 'waiting-business').length;
+      const pct = Math.round((doneCount / items.length) * 100);
+      const parts = [`${pct}% concluída`];
+      if (blockedCount) parts.push(`${blockedCount} bloqueada(s)`);
+      if (waitingCount) parts.push(`${waitingCount} aguardando`);
+      return parts.join(' · ');
+    }
+
+    function risksSummaryHtmlForReport(project) {
+      const open = allRaidRows(project).filter(r => !r.done);
+      if (!open.length) return `<span class="ux-v6-report-empty-inline">Nenhum risco ou dependência em aberto</span>`;
+      const labelMap = { risks: 'risco(s)', issues: 'issue(s)', dependencies: 'dependência(s)', assumptions: 'premissa(s)' };
+      const byGroup = { risks: 0, issues: 0, dependencies: 0, assumptions: 0 };
+      open.forEach(r => { byGroup[r.group] = (byGroup[r.group] || 0) + 1; });
+      const chips = Object.entries(byGroup).filter(([, v]) => v > 0).map(([k, v]) => `<span class="ux-v6-report-chip amber">${v} ${labelMap[k]}</span>`);
+      return `<div class="ux-v6-report-chip-row">${chips.join('')}</div>`;
+    }
+    function risksSummaryTextForReport(project) {
+      const open = allRaidRows(project).filter(r => !r.done);
+      if (!open.length) return 'Nenhum risco ou dependência em aberto';
+      const labelMap = { risks: 'risco(s)', issues: 'issue(s)', dependencies: 'dependência(s)', assumptions: 'premissa(s)' };
+      const byGroup = { risks: 0, issues: 0, dependencies: 0, assumptions: 0 };
+      open.forEach(r => { byGroup[r.group] = (byGroup[r.group] || 0) + 1; });
+      return Object.entries(byGroup).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${labelMap[k]}`).join(' · ');
+    }
+
+    function setReportsTab(tab) {
+      reportsActiveTab = tab;
+      renderReportsPanel();
+    }
+
     function openReportsPanel() {
       reportsOpen = true;
       renderReportsPanel();
@@ -12279,6 +12404,201 @@ Recomendação PMO: ${d.recommendation}`;
       };
       window.addEventListener('afterprint', done);
       setTimeout(() => window.print(), 60);
+    }
+
+    // ── Exportador .xlsx 100% client-side, sem biblioteca externa ───────────────
+    // Mesma ideia do leitor de planilha do motor de importação: monta um zip "stored"
+    // (sem compressão — simples e sempre válido, sem depender de DecompressionStream)
+    // com os XML mínimos que o Excel/Google Sheets exigem, com a linha de cabeçalho em
+    // negrito sobre fundo vermelho da marca.
+    function crc32(bytes) {
+      if (!crc32.table) {
+        const table = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) {
+          let c = n;
+          for (let k = 0; k < 8; k++) c = c & 1 ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+          table[n] = c >>> 0;
+        }
+        crc32.table = table;
+      }
+      let crc = 0 ^ -1;
+      for (let i = 0; i < bytes.length; i++) crc = (crc >>> 8) ^ crc32.table[(crc ^ bytes[i]) & 0xff];
+      return (crc ^ -1) >>> 0;
+    }
+
+    function buildZipStore(files) {
+      const encoder = new TextEncoder();
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+      const dosDate = (1 << 5) | 1; // 01/01 do ano-base do DOS — data não é relevante aqui
+      files.forEach(f => {
+        const nameBytes = encoder.encode(f.name);
+        const data = f.data;
+        const crc = crc32(data);
+        const size = data.length;
+        const local = new Uint8Array(30 + nameBytes.length + size);
+        const dv = new DataView(local.buffer);
+        dv.setUint32(0, 0x04034b50, true);
+        dv.setUint16(4, 20, true);
+        dv.setUint16(6, 0, true);
+        dv.setUint16(8, 0, true);
+        dv.setUint16(10, 0, true);
+        dv.setUint16(12, dosDate, true);
+        dv.setUint32(14, crc, true);
+        dv.setUint32(18, size, true);
+        dv.setUint32(22, size, true);
+        dv.setUint16(26, nameBytes.length, true);
+        dv.setUint16(28, 0, true);
+        local.set(nameBytes, 30);
+        local.set(data, 30 + nameBytes.length);
+        localParts.push(local);
+
+        const central = new Uint8Array(46 + nameBytes.length);
+        const cdv = new DataView(central.buffer);
+        cdv.setUint32(0, 0x02014b50, true);
+        cdv.setUint16(4, 20, true);
+        cdv.setUint16(6, 20, true);
+        cdv.setUint16(8, 0, true);
+        cdv.setUint16(10, 0, true);
+        cdv.setUint16(12, 0, true);
+        cdv.setUint16(14, dosDate, true);
+        cdv.setUint32(16, crc, true);
+        cdv.setUint32(20, size, true);
+        cdv.setUint32(24, size, true);
+        cdv.setUint16(28, nameBytes.length, true);
+        cdv.setUint16(30, 0, true);
+        cdv.setUint16(32, 0, true);
+        cdv.setUint16(34, 0, true);
+        cdv.setUint16(36, 0, true);
+        cdv.setUint32(38, 0, true);
+        cdv.setUint32(42, offset, true);
+        central.set(nameBytes, 46);
+        centralParts.push(central);
+
+        offset += local.length;
+      });
+
+      const centralOffset = offset;
+      const centralSize = centralParts.reduce((acc, p) => acc + p.length, 0);
+      const eocd = new Uint8Array(22);
+      const edv = new DataView(eocd.buffer);
+      edv.setUint32(0, 0x06054b50, true);
+      edv.setUint16(8, files.length, true);
+      edv.setUint16(10, files.length, true);
+      edv.setUint32(12, centralSize, true);
+      edv.setUint32(16, centralOffset, true);
+
+      const total = new Uint8Array(centralOffset + centralSize + eocd.length);
+      let p = 0;
+      localParts.forEach(part => { total.set(part, p); p += part.length; });
+      centralParts.forEach(part => { total.set(part, p); p += part.length; });
+      total.set(eocd, p);
+      return total;
+    }
+
+    function xmlEscape(str) {
+      return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+    }
+
+    function xlsxCellRef(colIdx, rowIdx) {
+      let n = colIdx + 1, letters = '';
+      while (n > 0) { const rem = (n - 1) % 26; letters = String.fromCharCode(65 + rem) + letters; n = Math.floor((n - 1) / 26); }
+      return `${letters}${rowIdx}`;
+    }
+
+    function buildXlsxBytes(sheetName, headers, rows) {
+      const encoder = new TextEncoder();
+      const safeSheetName = String(sheetName || 'Relatório').slice(0, 31).replace(/[\\/?*[\]:]/g, ' ');
+      const colWidths = headers.map((h, i) => {
+        const maxLen = Math.max(String(h).length, ...rows.map(r => String(r[i] ?? '').length), 8);
+        return Math.min(60, maxLen + 2);
+      });
+      const colsXml = `<cols>${colWidths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>`;
+
+      const textCell = (ref, value, styleIdx) => `<c r="${ref}" t="inlineStr"${styleIdx ? ` s="${styleIdx}"` : ''}><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
+      const numberCell = (ref, value, styleIdx) => `<c r="${ref}"${styleIdx ? ` s="${styleIdx}"` : ''}><v>${Number(value) || 0}</v></c>`;
+
+      const headerRowXml = `<row r="1">${headers.map((h, i) => textCell(xlsxCellRef(i, 1), h, 1)).join('')}</row>`;
+      const bodyRowsXml = rows.map((row, rIdx) => {
+        const r = rIdx + 2;
+        const cells = row.map((val, cIdx) => {
+          const ref = xlsxCellRef(cIdx, r);
+          return typeof val === 'number' ? numberCell(ref, val, 0) : textCell(ref, val, 0);
+        }).join('');
+        return `<row r="${r}">${cells}</row>`;
+      }).join('');
+
+      const dimensionEnd = xlsxCellRef(Math.max(headers.length - 1, 0), rows.length + 1);
+      const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${dimensionEnd}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="16"/>${colsXml}<sheetData>${headerRowXml}${bodyRowsXml}</sheetData></worksheet>`;
+
+      const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC8102E"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
+
+      const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEscape(safeSheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+
+      const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+
+      const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+
+      const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+
+      return buildZipStore([
+        { name: '[Content_Types].xml', data: encoder.encode(contentTypesXml) },
+        { name: '_rels/.rels', data: encoder.encode(rootRelsXml) },
+        { name: 'xl/workbook.xml', data: encoder.encode(workbookXml) },
+        { name: 'xl/_rels/workbook.xml.rels', data: encoder.encode(workbookRelsXml) },
+        { name: 'xl/styles.xml', data: encoder.encode(stylesXml) },
+        { name: 'xl/worksheets/sheet1.xml', data: encoder.encode(sheetXml) }
+      ]);
+    }
+
+    function downloadXlsx(filename, sheetName, headers, rows) {
+      const bytes = buildXlsxBytes(sheetName, headers, rows);
+      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    function exportReportsToXlsx() {
+      data = enhanceSquadData(data);
+      const allProjects = data.projects || [];
+      if (reportsActiveTab === 'iniciativa') {
+        const headers = ['Nº', 'Iniciativa', 'Squad', 'Status', 'Ações', 'Timeline', 'Riscos e Dependências'];
+        const rows = allProjects.map(project => {
+          const squad = squadForProject(project);
+          return [
+            initiativeNumber(project) || '—',
+            displayProjectTitle(project),
+            squad?.name || project.squad || 'A validar',
+            project.status || 'Sem status',
+            actionsSummaryTextForReport(project) || 'Nenhuma ação cadastrada',
+            timelineSummaryTextForReport(project),
+            risksSummaryTextForReport(project) || 'Nenhum risco ou dependência em aberto'
+          ];
+        });
+        downloadXlsx('relatorio-por-iniciativa.xlsx', 'Relatório por Iniciativa', headers, rows);
+      } else {
+        const squads = sortedSquadsList();
+        const headers = ['Squad', 'Iniciativas', 'Filhas', 'Horas 2026', 'Saúde'];
+        const rows = squads.map(squad => {
+          const health = squadHealthInfo(squad);
+          return [squad.name, squadProjects(squad.id).length, childCountForSquad(squad.id), Number(hoursForSquad(squad.id) || 0), health.label];
+        });
+        downloadXlsx('relatorio-por-squad.xlsx', 'Relatório por Squad', headers, rows);
+      }
+      toast('✅ Relatório exportado em .xlsx');
     }
 
     function renderReportsPanel() {
@@ -12305,8 +12625,8 @@ Recomendação PMO: ${d.recommendation}`;
 
       const initiativeReportRows = allProjects.map(project => {
         const squad = squadForProject(project);
-        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${escapeHtml(project.status || 'Sem status')}</td><td>${formatHours(project.hours2026)}</td><td>${calculateProgress(project)}%</td></tr>`;
-      }).join('') || `<tr><td colspan="6" class="ux-v6-report-empty">Nenhuma iniciativa cadastrada.</td></tr>`;
+        return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${escapeHtml(project.status || 'Sem status')}</td><td>${actionsSummaryHtmlForReport(project)}</td><td>${timelineSummaryHtmlForReport(project)}</td><td>${risksSummaryHtmlForReport(project)}</td></tr>`;
+      }).join('') || `<tr><td colspan="7" class="ux-v6-report-empty">Nenhuma iniciativa cadastrada.</td></tr>`;
 
       const alertsReportRows = alertProjects.map(project => {
         const squad = squadForProject(project);
@@ -12327,54 +12647,64 @@ Recomendação PMO: ${d.recommendation}`;
         return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.squad || 'A validar')}</td><td>${crossNames}</td></tr>`;
       }).join('') || `<tr><td colspan="4" class="ux-v6-report-empty">Nenhuma iniciativa com filha cross-squad.</td></tr>`;
 
+      const squadTabContent = `
+        <div class="ux-v6-report-section">
+          <h3>Relatório por Squad</h3>
+          <p>${squads.length} squad(s) · ${allProjects.length} iniciativa(s) principais vinculadas.</p>
+          <table class="ux-v6-report-table"><thead><tr><th>Squad</th><th>Iniciativas</th><th>Filhas</th><th>Horas 2026</th><th>Saúde</th></tr></thead><tbody>${squadReportRows}</tbody></table>
+        </div>
+        <div class="ux-v6-report-section">
+          <h3>Relatório de alertas da base</h3>
+          <p>${alertProjects.length} iniciativa(s) com riscos, bloqueios ou PDCA em aberto.</p>
+          <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Alertas</th></tr></thead><tbody>${alertsReportRows}</tbody></table>
+        </div>
+        <div class="ux-v6-report-section">
+          <h3>Ranking por horas 2026</h3>
+          <p>Squads ordenadas pelo consumo total de horas planejadas.</p>
+          <table class="ux-v6-report-table"><thead><tr><th>#</th><th>Squad</th><th>Horas 2026</th></tr></thead><tbody>${rankingReportRows}</tbody></table>
+        </div>
+        <div class="ux-v6-report-section">
+          <h3>Iniciativas sem Squad</h3>
+          <p>${unassignedProjects.length} iniciativa(s) aguardando definição de Squad.</p>
+          <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Tema</th></tr></thead><tbody>${unassignedRows}</tbody></table>
+        </div>
+        <div class="ux-v6-report-section">
+          <h3>Iniciativas com filha duplicada</h3>
+          <p>${duplicateChildProjects.length} iniciativa(s) com número de filha repetido na planilha importada.</p>
+          <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Filha(s) duplicada(s)</th></tr></thead><tbody>${duplicateRows}</tbody></table>
+        </div>
+        <div class="ux-v6-report-section">
+          <h3>Iniciativas cross-squad</h3>
+          <p>${crossSquadProjects.length} iniciativa(s) com filha vinculada a Squad diferente da mãe.</p>
+          <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad da mãe</th><th>Filha(s) cross-squad</th></tr></thead><tbody>${crossSquadRows}</tbody></table>
+        </div>`;
+
+      const initiativeTabContent = `
+        <div class="ux-v6-report-section">
+          <h3>Relatório por Iniciativa</h3>
+          <p>${allProjects.length} iniciativa(s) · Ações, Timeline e Riscos/Dependências de cada uma, num só lugar.</p>
+          <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Ações</th><th>Timeline</th><th>Riscos e Dependências</th></tr></thead><tbody>${initiativeReportRows}</tbody></table>
+        </div>`;
+
       root.innerHTML = `<div id="uxV6ReportsBackdrop" class="ux-v6-report-backdrop active" onclick="closeReportsPanel()"></div>
         <section class="ux-v6-report-modal active" role="dialog" aria-label="Relatórios executivos">
           <div class="ux-v6-report-head">
             <div>
               <h2>Relatórios executivos</h2>
-              <p>Leitura gerencial da Onda 1: squads, iniciativas, alertas e rankings, prontos para exportar em PDF e levar ao comitê.</p>
+              <p>Leitura gerencial da Onda 1: squads, iniciativas, alertas e rankings, prontos para exportar em PDF ou Excel e levar ao comitê.</p>
             </div>
             <div class="ux-v6-report-actions">
-              <button type="button" class="ux-v6-report-btn primary" onclick="printReportsPanel()">⭳ Exportar PDF</button>
+              <button type="button" class="ux-v6-report-btn primary" onclick="exportReportsToXlsx()">⭳ Exportar Excel</button>
+              <button type="button" class="ux-v6-report-btn" onclick="printReportsPanel()">⭳ Exportar PDF</button>
               <button type="button" class="ux-v6-report-btn" onclick="closeReportsPanel()">Fechar</button>
             </div>
           </div>
+          <div class="ux-v6-report-tabs">
+            <button type="button" class="ux-v6-report-tab ${reportsActiveTab === 'squad' ? 'active' : ''}" onclick="setReportsTab('squad')">Relatório por Squad</button>
+            <button type="button" class="ux-v6-report-tab ${reportsActiveTab === 'iniciativa' ? 'active' : ''}" onclick="setReportsTab('iniciativa')">Relatório por Iniciativa</button>
+          </div>
           <div class="ux-v6-report-body">
-            <div class="ux-v6-report-section">
-              <h3>Relatório por Squad</h3>
-              <p>${squads.length} squad(s) · ${allProjects.length} iniciativa(s) principais vinculadas.</p>
-              <table class="ux-v6-report-table"><thead><tr><th>Squad</th><th>Iniciativas</th><th>Filhas</th><th>Horas 2026</th><th>Saúde</th></tr></thead><tbody>${squadReportRows}</tbody></table>
-            </div>
-            <div class="ux-v6-report-section">
-              <h3>Relatório por iniciativa</h3>
-              <p>Todas as iniciativas principais da base importada.</p>
-              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Horas 2026</th><th>Maturidade</th></tr></thead><tbody>${initiativeReportRows}</tbody></table>
-            </div>
-            <div class="ux-v6-report-section">
-              <h3>Relatório de alertas da base</h3>
-              <p>${alertProjects.length} iniciativa(s) com riscos, bloqueios ou PDCA em aberto.</p>
-              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Alertas</th></tr></thead><tbody>${alertsReportRows}</tbody></table>
-            </div>
-            <div class="ux-v6-report-section">
-              <h3>Ranking por horas 2026</h3>
-              <p>Squads ordenadas pelo consumo total de horas planejadas.</p>
-              <table class="ux-v6-report-table"><thead><tr><th>#</th><th>Squad</th><th>Horas 2026</th></tr></thead><tbody>${rankingReportRows}</tbody></table>
-            </div>
-            <div class="ux-v6-report-section">
-              <h3>Iniciativas sem Squad</h3>
-              <p>${unassignedProjects.length} iniciativa(s) aguardando definição de Squad.</p>
-              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Tema</th></tr></thead><tbody>${unassignedRows}</tbody></table>
-            </div>
-            <div class="ux-v6-report-section">
-              <h3>Iniciativas com filha duplicada</h3>
-              <p>${duplicateChildProjects.length} iniciativa(s) com número de filha repetido na planilha importada.</p>
-              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Filha(s) duplicada(s)</th></tr></thead><tbody>${duplicateRows}</tbody></table>
-            </div>
-            <div class="ux-v6-report-section">
-              <h3>Iniciativas cross-squad</h3>
-              <p>${crossSquadProjects.length} iniciativa(s) com filha vinculada a Squad diferente da mãe.</p>
-              <table class="ux-v6-report-table"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad da mãe</th><th>Filha(s) cross-squad</th></tr></thead><tbody>${crossSquadRows}</tbody></table>
-            </div>
+            ${reportsActiveTab === 'iniciativa' ? initiativeTabContent : squadTabContent}
           </div>
         </section>`;
     }
@@ -13571,8 +13901,15 @@ Recomendação PMO: ${d.recommendation}`;
       const nextDiscoveriesHtml = upcomingDiscoveries(5).map(project => {
         const squad = squadForProject(project);
         const dateLabel = formatBR(project.discoveryDate).slice(0, 5);
-        return `<div class="ux-v6-date-row"><span class="ux-v6-date">${escapeHtml(dateLabel)}</span><span>${escapeHtml(squad?.name || project.squad || 'A validar')}<br><span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span></span></div>`;
-      }).join('') || `<div class="ux-v6-empty"><div><strong>Sem datas cadastradas.</strong>Nenhuma iniciativa com Discovery agendado.</div></div>`;
+        const numLabel = initiativeNumber(project) || '—';
+        return `<div class="ux-v6-date-row">
+          <span class="ux-v6-date">${escapeHtml(dateLabel)}</span>
+          <span>
+            <span class="ux-v6-date-title-row"><strong>${escapeHtml(numLabel)}</strong> · ${escapeHtml(squad?.name || project.squad || 'A validar')}<span class="ux-v6-date-status-pill" style="color:${statusColor(project.status)};border-color:${statusColor(project.status)}">${escapeHtml(project.status || 'A iniciar')}</span></span>
+            <span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span>
+          </span>
+        </div>`;
+      }).join('') || `<div class="ux-v6-empty"><div><strong>Nenhum Discovery futuro agendado.</strong>Datas já realizadas ficam só no calendário.</div></div>`;
 
       const donutGradient = buildDonutGradient(healthCounts, squads.length);
       const legendHtml = ['good', 'warn', 'crit'].filter(key => healthCounts[key] > 0).map(key => `<div class="ux-v6-legend-row"><span class="ux-v6-legend-dot" style="background:${healthLegendColors[key]}"></span><span>${healthLabels[key]}</span><strong>${healthCounts[key]}</strong></div>`).join('');
