@@ -5286,6 +5286,80 @@
       font-weight: 750;
     }
 
+    .ux-v6-attention-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid #edf0f5;
+      background: transparent;
+      padding: 0 0 9px;
+      margin: 0 0 9px;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
+    .ux-v6-attention-item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+
+    .ux-v6-attention-item:hover {
+      background: #f9fafb;
+    }
+
+    .ux-v6-attention-main {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .ux-v6-attention-main strong {
+      font-size: 12.5px;
+      color: #111827;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ux-v6-attention-main span {
+      font-size: 11px;
+      color: #6b7788;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ux-v6-attention-badge {
+      flex: 0 0 auto;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .ux-v6-attention-badge.crit {
+      background: #fee2e2;
+      color: #b5122b;
+    }
+
+    .ux-v6-attention-badge.amber {
+      background: #fff4de;
+      color: #8a5a00;
+    }
+
+    .ux-v6-attention-empty {
+      font-size: 12px;
+      color: #6b7788;
+      line-height: 1.5;
+    }
+
     .ux-v6-date-list {
       display: grid;
       gap: 10px;
@@ -6375,6 +6449,7 @@
       <div id="projectList" class="project-list"></div>
 
       <div class="side-actions">
+        <button type="button" class="ghost-btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
         <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
         <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
         <button type="button" class="ghost-btn" onclick="openPmoTable()" title="Visão tabela PMO (planilha)">⊞ Visão PMO</button>
@@ -6461,10 +6536,9 @@
         <div class="section-head">
           <div>
             <h3 class="section-title">Andamento do Discovery</h3>
-            <p class="section-desc">Ações combinadas em reunião, com dono e prazo. Atrasadas aparecem em destaque e entram em Atenções da base.</p>
+            <p class="section-desc">Ações combinadas em reunião, com dono e prazo. Atrasadas ou a vencer em até 4 dias entram automaticamente em Ações Acordadas.</p>
           </div>
           <div style="display:flex;gap:8px">
-            <button type="button" class="btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
             <button type="button" class="btn primary" onclick="openCardModal()">Adicionar andamento</button>
           </div>
         </div>
@@ -9731,6 +9805,82 @@
       return (project.cards || []).filter(isCardOverdue).length;
     }
 
+    // Regra do card "Ações Acordadas": atrasadas entram sempre; as que ainda não
+    // venceram entram quando faltam ATTENTION_DUE_SOON_DAYS dias ou menos para o prazo.
+    const ATTENTION_DUE_SOON_DAYS = 4;
+
+    function cardDueDiffDays(c) {
+      const due = parseISODate(c.due);
+      const today = parseISODate(fmtDate(new Date()));
+      if (!due || !today) return null;
+      return Math.round((due - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function isCardDueSoon(c) {
+      if (!c.due || c.status === 'done') return false;
+      const diff = cardDueDiffDays(c);
+      return diff !== null && diff >= 0 && diff <= ATTENTION_DUE_SOON_DAYS;
+    }
+
+    function collectAttentionActions(allProjects) {
+      const list = [];
+      (allProjects || []).forEach(project => {
+        (project.cards || []).forEach(card => {
+          if (isCardOverdue(card) || isCardDueSoon(card)) {
+            list.push({ project, card, diff: cardDueDiffDays(card) });
+          }
+        });
+      });
+      return list.sort((a, b) => a.diff - b.diff);
+    }
+
+    function attentionActionRowHtml({ project, card, diff }) {
+      const overdue = diff < 0;
+      const badge = overdue ? `${Math.abs(diff)}d atrasada` : (diff === 0 ? 'Vence hoje' : `Vence em ${diff}d`);
+      const initiativeLabel = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ');
+      return `<button type="button" class="ux-v6-attention-item" onclick="goToAttentionAction('${escapeAttr(project.id)}')" title="Abrir ${escapeAttr(displayProjectTitle(project))} na aba Ações">
+        <div class="ux-v6-attention-main">
+          <strong>${escapeHtml(card.title)}</strong>
+          <span>${escapeHtml(initiativeLabel || 'Sem iniciativa')} · ${escapeHtml(card.owner || 'Sem dono')}</span>
+        </div>
+        <span class="ux-v6-attention-badge ${overdue ? 'crit' : 'amber'}">${badge}</span>
+      </button>`;
+    }
+
+    function openAttentionActionsModal() {
+      const allProjects = data.projects || [];
+      const attentionActions = collectAttentionActions(allProjects);
+      const rows = attentionActions.length
+        ? attentionActions.map(item => attentionActionRowHtml(item)).join('')
+        : `<div class="ux-v6-attention-empty">Nenhuma ação acordada atrasada ou a vencer nos próximos ${ATTENTION_DUE_SOON_DAYS} dias.</div>`;
+      openModal(
+        'Ações Acordadas',
+        `Todas as ações combinadas em reunião atrasadas ou a vencer nos próximos ${ATTENTION_DUE_SOON_DAYS} dias. Clique numa ação para abrir a iniciativa na aba Ações.`,
+        `<div class="ux-v6-alert-list">${rows}</div>`,
+        [`<button type="button" class="btn" onclick="closeModal()">Fechar</button>`]
+      );
+    }
+
+    function goToAttentionAction(projectId) {
+      if (!(data.projects || []).some(p => p.id === projectId)) { toast('Iniciativa não encontrada'); return; }
+      closeModal();
+      activeProjectId = projectId;
+      viewMode = 'project';
+      persistViewState();
+      saveData();
+      setTimeout(() => {
+        const kanbanTabBtn = document.querySelector('.tab[data-tab="kanban"]');
+        const kanbanPanel = document.getElementById('tab-kanban');
+        if (kanbanTabBtn && kanbanPanel) {
+          document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          kanbanTabBtn.classList.add('active');
+          kanbanPanel.classList.add('active');
+        }
+        document.getElementById('discoveryWorkspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 60);
+    }
+
     function cardTemplate(c, project) {
       const tone = laneTone(c.status);
       const reason = c.stageReason ? `<span class="stage-reason" title="Motivo da etapa">${escapeHtml(c.stageReason)}</span>` : '';
@@ -11403,7 +11553,9 @@ Recomendação PMO: ${d.recommendation}`;
       dashboardSquadId = squadId;
       viewMode = 'squadProjects';
       squadDrawerOpen = true;
-      squadDrawerSearchTerm = '';
+      // Herda o termo buscado no painel executivo: se a Squad apareceu porque uma
+      // iniciativa buscada bateu, a gaveta já abre filtrada só naquela iniciativa.
+      squadDrawerSearchTerm = dashboardSearchTerm || '';
       persistViewState();
       render();
     }
@@ -12925,15 +13077,10 @@ Recomendação PMO: ${d.recommendation}`;
         </button>`;
       }).join('') : `<div class="ux-v6-squads-empty"><strong>Nenhuma squad encontrada.</strong>Revise o termo buscado ou pesquise por iniciativa, squad, PO, Tech Lead, líder ou tema.</div>`;
 
-      const overdueActionsTotal = allProjects.reduce((acc, p) => acc + overdueActionCount(p), 0);
-      const alertRows = [
-        ['Iniciativas com dados pendentes', pendingDataCount, pendingDataCount > 0 ? 'amber' : ''],
-        ['Iniciativas ASD - Ainda Sem Definição de Squad', unassignedCount, unassignedCount > 0 ? 'amber' : ''],
-        ['Squads com ponto de atenção ou crítico', healthCounts.warn + healthCounts.crit, (healthCounts.warn + healthCounts.crit) > 0 ? 'amber' : ''],
-        ['Ações de reunião atrasadas', overdueActionsTotal, overdueActionsTotal > 0 ? 'amber' : ''],
-        ['Iniciativas com alertas PMO/RTE', allProjects.filter(p => projectAlertCount(p) > 0).length, '']
-      ];
-      const alertsHtml = alertRows.map(([label, value, tone]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span class="ux-v6-bullet ${tone}"></span><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('');
+      const attentionActions = collectAttentionActions(allProjects);
+      const attentionActionsHtml = attentionActions.length
+        ? attentionActions.slice(0, 5).map(item => attentionActionRowHtml(item)).join('')
+        : `<div class="ux-v6-attention-empty">Nenhuma ação acordada atrasada ou a vencer nos próximos ${ATTENTION_DUE_SOON_DAYS} dias.</div>`;
 
       const nextDiscoveriesHtml = upcomingDiscoveries(5).map(project => {
         const squad = squadForProject(project);
@@ -13009,8 +13156,8 @@ Recomendação PMO: ${d.recommendation}`;
           </div>
           <aside class="ux-v6-aside">
             <section class="ux-v6-side-card">
-              <div class="ux-v6-side-title"><strong>Atenções da base</strong><span class="ux-v6-side-link">Ver todas</span></div>
-              <div class="ux-v6-alert-list">${alertsHtml}</div>
+              <div class="ux-v6-side-title"><strong>Ações Acordadas</strong>${attentionActions.length ? `<span class="ux-v6-side-link" onclick="openAttentionActionsModal()" style="cursor:pointer" title="Ver todas as ações acordadas atrasadas ou a vencer">Ver todas (${attentionActions.length})</span>` : ''}</div>
+              <div class="ux-v6-alert-list">${attentionActionsHtml}</div>
             </section>
             <section class="ux-v6-side-card" id="uxV6NextDiscoveriesCard">
               <div class="ux-v6-side-title"><strong>Próximos Discoveries</strong><span class="ux-v6-side-link" onclick="openCalendarModal()" style="cursor:pointer" title="Abrir calendário de Discoveries">📅 Ver calendário</span></div>
