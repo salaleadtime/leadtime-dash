@@ -3434,6 +3434,14 @@
       font-weight: 900;
     }
 
+    .attachment-thumb {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+    }
+
     .attachment-name {
       color: var(--ink);
       font-size: 12.2px;
@@ -3441,6 +3449,48 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .attachment-local-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: #fff0f3;
+      color: #b3182f;
+      border: 1px solid #ffd6de;
+      font-size: 9.5px;
+      font-weight: 800;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .confluence-link-card {
+      margin: 12px 12px 0;
+      padding: 11px 13px;
+      border-radius: 13px;
+      border: 1px solid #d4e4ff;
+      background: #edf4ff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .confluence-link-label {
+      font-size: 11px;
+      font-weight: 850;
+      color: #2458b8;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    .confluence-link-value {
+      margin-top: 2px;
+      font-size: 11.5px;
+      color: #344054;
+      word-break: break-all;
     }
 
     .attachment-meta {
@@ -9607,6 +9657,7 @@
         project.target = project.target || 'A definir';
         project.readinessStage = project.readinessStage || 'Em análise';
         project.discoveryEndDate = project.discoveryEndDate || '';
+        project.confluenceUrl = project.confluenceUrl || '';
         project.summary = project.summary || '';
         project.squad = project.squad || inferSquad(project);
         project.rteOwner = project.rteOwner || project.rte || project.owner || 'PMO/RTE';
@@ -9693,7 +9744,9 @@
         size: Number(item.size || 0),
         type: item.type || item.mimeType || 'Arquivo',
         addedAt: item.addedAt || new Date().toISOString(),
-        note: item.note || item.notes || ''
+        note: item.note || item.notes || '',
+        dataUrl: item.dataUrl || '',
+        localOnly: item.dataUrl ? false : (item.localOnly !== false)
       };
     }
 
@@ -10592,9 +10645,9 @@
       const items = project.attachments || [];
       const list = items.length ? items.map(a => `
         <div class="attachment-row">
-          <div class="attachment-icon">${escapeHtml(attachmentIcon(a.type, a.name))}</div>
+          ${a.dataUrl && attachmentIsImage(a) ? `<img class="attachment-thumb" src="${escapeAttr(a.dataUrl)}" alt="" />` : `<div class="attachment-icon">${escapeHtml(attachmentIcon(a.type, a.name))}</div>`}
           <div>
-            <div class="attachment-name" title="${escapeAttr(a.name)}">${escapeHtml(a.name)}</div>
+            <div class="attachment-name" title="${escapeAttr(a.name)}">${escapeHtml(a.name)} ${a.localOnly ? `<span class="attachment-local-badge" title="Fica salvo só neste navegador — use o link do Confluence acima para compartilhar o material oficial">⚠️ Só aqui</span>` : ''}</div>
             <div class="attachment-meta">${escapeHtml(a.type || 'Arquivo')} · ${formatBytes(a.size)} · incluído em ${formatBR(String(a.addedAt || '').slice(0,10))}</div>
             ${a.note ? `<div class="attachment-note">${escapeHtml(a.note)}</div>` : ''}
           </div>
@@ -10603,20 +10656,46 @@
             <button type="button" class="attachment-mini-btn" onclick="openAttachmentModal('${a.id}')">Editar</button>
             <button type="button" class="attachment-mini-btn" onclick="removeAttachment('${a.id}')">Excluir</button>
           </div>
-        </div>`).join('') : `<div class="attachment-empty">Nenhum anexo cadastrado. Use “+ Anexar arquivos” para incluir BPMN, planilhas, prints, PDFs, documentos ou evidências relevantes do Discovery.</div>`;
+        </div>`).join('') : `<div class="attachment-empty">Nenhum anexo cadastrado. Use “+ Anexar arquivos” para incluir prints e evidências, ou o link do Confluence acima para o material oficial do Discovery.</div>`;
+
+      const confluenceUrl = String(project.confluenceUrl || '').trim();
+      const confluenceBlock = `
+        <div class="confluence-link-card">
+          <div>
+            <div class="confluence-link-label">📘 Documentação no Confluence</div>
+            <div class="confluence-link-value">${confluenceUrl ? escapeHtml(confluenceUrl) : 'Nenhum link cadastrado ainda — edite a iniciativa (✎) para incluir.'}</div>
+          </div>
+          ${confluenceUrl ? `<button type="button" class="btn soft compact-action" onclick="window.open('${escapeAttr(confluenceUrl)}', '_blank', 'noopener')">Abrir material</button>` : ''}
+        </div>`;
 
       document.getElementById('attachments').innerHTML = `
         <div class="attachments-head">
           <div>
             <h4 class="attachments-title">Anexos relevantes do Discovery</h4>
-            <div class="attachments-subtitle">Inclua arquivos de apoio em qualquer formato. Os arquivos ficam salvos neste navegador para consulta e download.</div>
+            <div class="attachments-subtitle">Imagens de até 2MB (prints, evidências) ficam visíveis para todos. Demais arquivos ficam salvos só neste navegador — para compartilhar o material oficial, use o link do Confluence acima.</div>
           </div>
           <label class="attachment-upload-label">+ Anexar arquivos
             <input type="file" multiple onchange="handleAttachmentUpload(event)" />
           </label>
         </div>
+        ${confluenceBlock}
         <div class="attachment-list">${list}</div>
       `;
+    }
+
+    const MAX_INLINE_IMAGE_BYTES = 2 * 1024 * 1024;
+
+    function attachmentIsImage(a) {
+      return String(a.type || '').toLowerCase().includes('image');
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('Erro ao ler arquivo'));
+        reader.readAsDataURL(file);
+      });
     }
 
     async function handleAttachmentUpload(event) {
@@ -10626,18 +10705,31 @@
       const p = getProject();
       p.attachments = Array.isArray(p.attachments) ? p.attachments : [];
       let saved = 0;
+      let localOnlyCount = 0;
       for (const file of files) {
         const id = uid('file');
         try {
           await saveAttachmentBlob(id, file);
-          p.attachments.push({
+          const attachment = {
             id,
             name: file.name,
             size: file.size,
             type: file.type || 'Arquivo',
             addedAt: new Date().toISOString(),
-            note: ''
-          });
+            note: '',
+            dataUrl: '',
+            localOnly: true
+          };
+          // Imagem pequena: embute como base64 nos dados já sincronizados (mesma
+          // planilha/Apps Script de todo o resto do Discovery PMO), então fica
+          // visível para todo mundo sem precisar de nenhum storage externo.
+          if (file.type.startsWith('image/') && file.size <= MAX_INLINE_IMAGE_BYTES) {
+            attachment.dataUrl = await fileToDataUrl(file);
+            attachment.localOnly = false;
+          } else {
+            localOnlyCount++;
+          }
+          p.attachments.push(attachment);
           saved++;
         } catch (e) {
           console.error(e);
@@ -10646,7 +10738,7 @@
       }
       if (saved) {
         saveData(true);
-        toast(`${saved} anexo(s) incluído(s)`);
+        toast(localOnlyCount ? `${saved} anexo(s) incluído(s) — ${localOnlyCount} só neste navegador` : `${saved} anexo(s) incluído(s) para todos`);
         setTimeout(() => openAttachmentsTab(), 80);
       }
     }
@@ -10655,9 +10747,19 @@
       const p = getProject();
       const meta = (p.attachments || []).find(a => a.id === id);
       if (!meta) { toast('Anexo não encontrado'); return; }
+      if (meta.dataUrl) {
+        const a = document.createElement('a');
+        a.href = meta.dataUrl;
+        a.download = meta.name || 'anexo';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        return;
+      }
       try {
         const blob = await getAttachmentBlob(id);
-        if (!blob) { toast('Arquivo não encontrado neste navegador'); return; }
+        if (!blob) { toast('Arquivo não encontrado neste navegador. Peça para quem anexou reenviar, ou use o link do Confluence.'); return; }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -13038,7 +13140,7 @@ Recomendação PMO: ${d.recommendation}`;
         initiativeType: 'Única',
         name: '', business: '', theme: '', squad: selectedDefaultSquad.name, squadId: selectedDefaultSquad.id,
         owner: 'A definir', rteOwner: 'A definir', pmoOwner: 'A definir', frontLeader: '', initiativeOwner: '', po: '', focalPoint: '', techLead: '', dataArea: '', aiRpa: '', processName: '', hours2026: 0,
-        discoveryDate: '', discoveryEndDate: '', startDev: '', endDev: '', startDate: plusDays(0), status: 'A iniciar', criticality: 'A validar', target: '', readinessStage: READINESS_STAGE_DEFAULT, summary: '', subInitiatives: [],
+        discoveryDate: '', discoveryEndDate: '', startDev: '', endDev: '', startDate: plusDays(0), status: 'A iniciar', criticality: 'A validar', target: '', readinessStage: READINESS_STAGE_DEFAULT, summary: '', subInitiatives: [], confluenceUrl: '',
         phases: phaseTemplate.map(p => ({ ...p, status: 'todo' })),
         checklist: checklistTemplate.map(c => ({ ...c, done: false })),
         cards: [], schedule: [], raids: { risks: [], assumptions: [], issues: [], dependencies: [] }, attachments: []
@@ -13083,6 +13185,7 @@ Recomendação PMO: ${d.recommendation}`;
             <select id="project-readiness-stage">${READINESS_STAGE_OPTIONS.map(o => `<option ${((project.readinessStage || READINESS_STAGE_DEFAULT) === o) ? 'selected' : ''}>${o}</option>`).join('')}</select>
           </div>
           <div class="form-field full"><label>Riscos / Dependências</label><textarea id="project-risks-dependencies" placeholder="Ex.: dependência de negócio, tecnologia, dados, arquitetura..."></textarea></div>
+          <div class="form-field full"><label>Documentação (link do Confluence)</label><input id="project-confluence-url" type="url" value="${escapeAttr(project.confluenceUrl || '')}" placeholder="Ex.: https://confluence.bradesco.com.br:8443/display/CPSAP/Controle+de+Issue" /></div>
         </div>
       `, [
         isEdit ? `<button type="button" class="btn" onclick="deleteProject('${project.id}')">Excluir</button>` : '',
@@ -13144,6 +13247,7 @@ Recomendação PMO: ${d.recommendation}`;
       p.focalPoint = document.getElementById('project-focal-point').value.trim();
       p.discoveryDate = document.getElementById('project-discovery-date').value || '';
       p.discoveryEndDate = document.getElementById('project-discovery-end-date').value || '';
+      p.confluenceUrl = document.getElementById('project-confluence-url').value.trim();
       p.readinessStage = document.getElementById('project-readiness-stage').value;
       p.startDate = p.discoveryDate || p.startDate || '';
       if (p.discoveryEndDate) p.target = p.discoveryEndDate;
