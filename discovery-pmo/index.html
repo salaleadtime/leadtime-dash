@@ -13597,24 +13597,26 @@ Recomendação PMO: ${d.recommendation}`;
       return true;
     }
 
-    // A planilha não diz qual dos 16 itens da Timeline foi feito — mas a data de Discovery
-    // e o Início Dev são sinais confiáveis de estágio. Regra: só avança item que ainda está
-    // "Não iniciada" (nunca mexe em algo que um humano já tocou — progresso, bloqueio,
-    // aguardando, concluída — pra não mascarar um bloqueio real nem desfazer trabalho manual).
+    // A planilha não diz qual dos 16 itens da Timeline foi feito. A Data de Discovery
+    // é só um PLANO (pode passar sem o Kickoff nunca ter acontecido de verdade — nesse
+    // caso a iniciativa continua com um card "Aguardando data para iniciar Kickoff" em
+    // aberto, e marcar a Timeline como concluída/em andamento estaria mentindo sobre o
+    // progresso real). Só o Início Dev é sinal confiável de que o Discovery de fato
+    // terminou — ninguém começa a desenvolver sem passar por ele. Regra: só avança
+    // item que ainda está "Não iniciada" (nunca mexe em algo que um humano já tocou).
     function advanceTimelineFromDates(project) {
       const items = ensureTimelineItems(project);
       const today = parseISODate(fmtDate(new Date()));
-      const discoveryDate = parseISODate(project.discoveryDate);
       const startDev = parseISODate(project.startDev);
-      const discoveryHappened = Boolean(discoveryDate && today && discoveryDate <= today);
       const devStarted = Boolean(startDev && today && startDev <= today);
       let advanced = 0;
-      items.forEach(it => {
-        if (it.status && it.status !== 'notstarted') return;
-        if (devStarted) { it.status = 'done'; advanced++; }
-        else if (discoveryHappened && it.stageId === 'entendimento') { it.status = 'done'; advanced++; }
-        else if (discoveryHappened && it.stageId === 'analise') { it.status = 'progress'; advanced++; }
-      });
+      if (devStarted) {
+        items.forEach(it => {
+          if (it.status && it.status !== 'notstarted') return;
+          it.status = 'done';
+          advanced++;
+        });
+      }
       return advanced;
     }
 
