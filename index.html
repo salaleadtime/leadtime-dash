@@ -84,7 +84,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .tabs{
   background:#fff;border-bottom:2px solid #fecaca;
   padding:0 1.6rem;display:flex;
-  position:sticky;top:56px;z-index:90;
+  position:sticky;top:72px;z-index:90;
   box-shadow:0 1px 4px rgba(15,23,42,.06);
 }
 .tabbt{
@@ -1962,16 +1962,16 @@ tr:nth-child(even):hover td,
     <div class="gh-info-box" style="background:#f0fdf4;border-color:#86efac;color:#14532d">
       <strong style="color:#15803d">✅ Como funciona (só você faz isso, uma vez):</strong><br>
       1. Acesse <strong>jsonbin.io</strong> e crie uma conta gratuita<br>
-      2. Vá em <strong>API Keys</strong> e copie sua chave<br>
+      2. Vá em <strong>API Keys</strong> e copie uma chave restrita<br>
       3. Cole abaixo e clique em <strong>Ativar Nuvem</strong><br>
       4. Compartilhe o link do dashboard com o time — pronto!
     </div>
 
     <div class="gh-section">Sua chave de acesso (JSONBin)</div>
     <div class="gh-form-row">
-      <span class="gh-form-label">API Key (Master Key)</span>
+      <span class="gh-form-label">API Key (chave restrita)</span>
       <input class="mi" id="jbKey" type="password" placeholder="$2a$10$xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-      <span class="gh-form-hint">⚠️ Fica salva apenas no <strong>seu</strong> navegador. O time não precisa de chave para visualizar.</span>
+      <span class="gh-form-hint">Use apenas chave restrita e evite Master Key em computadores compartilhados. Para uso com o time, prefira Apps Script/backend controlado.</span>
     </div>
 
     <div id="jbBinRow" style="display:none">
@@ -2276,7 +2276,7 @@ function testJB(){
     if(r.ok||r.status===200){
       showJBResult('ok','✅ Chave válida! Clique em <strong>Ativar Nuvem</strong> para começar.');
     } else if(r.status===401){
-      showJBResult('err','❌ Chave inválida. Verifique se copiou a <strong>Master Key</strong> corretamente.');
+      showJBResult('err','❌ Chave inválida. Use apenas chave restrita e evite Master Key em computadores compartilhados. Para uso com o time, prefira Apps Script/backend controlado.');
     } else {
       showJBResult('warn','⚠️ Código '+r.status+'. Tente clicar em Ativar Nuvem mesmo assim.');
     }
@@ -2355,6 +2355,12 @@ function _jbMergeAndRender(msg){
 // Valida se uma string é uma data válida no formato YYYY-MM-DD
 function isValidDate(d){
   return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
+}
+function isValidIsoDate(value){
+  if(!value) return true;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  var d = new Date(value + 'T00:00:00');
+  return !isNaN(d.getTime()) && d.toISOString().slice(0,10) === value;
 }
 function activeEpics(){
   // Épicos ativos: SEM Data Fim VÁLIDA → aparecem na aba Épicos
@@ -3715,8 +3721,13 @@ function fc(el){
   var targetTab=tabToRestore;
 
   if(f==='ini'||f==='fim'||f==='dataPrevista'){
+    if(!isValidIsoDate(rawVal)){
+      el.value=oldVal||'';
+      toast('⚠️ Data inválida','Use o formato YYYY-MM-DD antes de salvar.','warn');
+      return;
+    }
     var dateVal=rawVal||null;
-    rec[f]=isValidDate(dateVal)?dateVal:null;
+    rec[f]=dateVal;
   } else {
     rec[f]=el.value||'';
   }

@@ -1,4 +1,4 @@
-# ✅ Checklist de Deploy — Apps Script (estórias da aba Qtd Story/Épicos)
+# ✅ Checklist de Deploy — Apps Script (estórias, backlog e Discovery PMO)
 
 > Lembrete: o `index.html` sobe sozinho pelo GitHub Pages a cada push no `main`.
 > O **Apps Script NÃO** — ele precisa ser publicado manualmente. Use esta lista
@@ -8,11 +8,12 @@
 
 1. Abrir o projeto do Apps Script de `BK_GAS_URL` em https://script.google.com
 2. Colar o conteúdo atualizado de [`apps-script-backlog.gs`](./apps-script-backlog.gs)
-3. Rodar `autorizarPlanilhaUmaVez()` uma vez e aceitar as permissões
-4. **Implantar → Gerenciar implantações → ✏️ (editar)**
-5. No campo **Versão**, escolher **"Nova versão"**
+3. Confirmar que a chave `discoveryPmo` está disponível no Apps Script publicado
+4. Rodar `autorizarPlanilhaUmaVez()` uma vez e aceitar as permissões
+5. **Implantar → Gerenciar implantações → ✏️ (editar)**
+6. No campo **Versão**, escolher **"Nova versão"**
    ⚠️ Não reutilizar uma versão antiga — senão o código editado **não** é publicado
-6. **Implantar**
+7. **Implantar**
 
 ## Verificar (abrir no navegador)
 
@@ -23,11 +24,12 @@ https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_
 Resposta esperada (sinais de que deu certo):
 
 ```json
-{ "ok": true, "version": "2026-06-03-backlog-sheet-chunks-v3", "stories": 0, ... }
+{ "ok": true, "version": "2026-07-06-backlog-sheet-chunks-v7", "stories": 0, ... }
 ```
 
-- ✅ `"version"` = `2026-06-03-backlog-sheet-chunks-v3` → versão nova no ar
+- ✅ `"version"` = `2026-07-06-backlog-sheet-chunks-v7` → versão nova no ar
 - ✅ campo `"stories"` presente → ações de estória ativas
+- ✅ chave `discoveryPmo` disponível → Discovery PMO ativo no Apps Script publicado
 
 ## Testar de ponta a ponta
 
