@@ -9473,16 +9473,44 @@
       return Boolean(ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName));
     }
 
+    // Mescla duas listas por id: item ausente de um lado entra (nunca some por causa
+    // do merge), e item presente dos dois lados vence pelo "updatedAt" mais recente.
+    // Isso troca o antigo "última base salva apaga tudo dos outros" por um merge por
+    // registro — a única forma de duas pessoas mexerem em iniciativas diferentes (ou
+    // até na mesma, em campos diferentes) sem uma sobrescrever silenciosamente a outra.
+    function mergeById(localList, remoteList) {
+      const map = new Map();
+      let changed = false;
+      (localList || []).forEach(item => { if (item && item.id) map.set(item.id, item); });
+      (remoteList || []).forEach(item => {
+        if (!item || !item.id) return;
+        const existing = map.get(item.id);
+        if (!existing) { map.set(item.id, item); changed = true; return; }
+        const remoteTime = Date.parse(item.updatedAt || '') || 0;
+        const localTime = Date.parse(existing.updatedAt || '') || 0;
+        if (remoteTime > localTime) { map.set(item.id, item); changed = true; }
+      });
+      return { list: Array.from(map.values()), changed };
+    }
+
     function applyRemoteDiscData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
-      const remoteTime = Date.parse(remote.updatedAt || '') || 0;
-      const localTime = Date.parse(data.updatedAt || '') || 0;
-      if (remoteTime <= localTime) return false;
       if (isUserEditingNow()) return false;
 
       const keepActiveId = activeProjectId;
+      const normalizedRemote = normalizeData(deepClone(remote));
+      const projectsMerge = mergeById(data.projects, normalizedRemote.projects);
+      const squadsMerge = mergeById(data.squads, normalizedRemote.squads);
+      const historyMerge = mergeById(data.importHistory, normalizedRemote.importHistory);
+      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
+
       _discGasApplyingRemote = true;
-      data = normalizeData(deepClone(remote));
+      data.projects = projectsMerge.list;
+      data.squads = squadsMerge.list;
+      data.importHistory = historyMerge.list
+        .sort((a, b) => (Date.parse(b.at || '') || 0) - (Date.parse(a.at || '') || 0))
+        .slice(0, 30);
+      data.updatedAt = new Date(Math.max(Date.parse(data.updatedAt || '') || 0, Date.parse(normalizedRemote.updatedAt || '') || 0)).toISOString();
       activeProjectId = data.projects.some(p => p.id === keepActiveId) ? keepActiveId : (data.activeProjectId || data.projects[0].id);
       data.activeProjectId = activeProjectId;
       storageSet(STORAGE_KEY, JSON.stringify(data));
@@ -9808,6 +9836,13 @@
     }
 
     function saveData(show = false) {
+      // Carimba a iniciativa ativa como "mudou agora" — usado pelo merge por
+      // iniciativa (applyRemoteDiscData) pra decidir quem ganha num conflito entre
+      // usuários, em vez de sobrescrever a base inteira por um único relógio global.
+      if (!_discGasApplyingRemote) {
+        const active = (data.projects || []).find(p => p.id === activeProjectId);
+        if (active) active.updatedAt = new Date().toISOString();
+      }
       data.activeProjectId = activeProjectId;
       data.updatedAt = new Date().toISOString();
       storageSet(STORAGE_KEY, JSON.stringify(data));
@@ -11850,6 +11885,7 @@ Recomendação PMO: ${d.recommendation}`;
       squad.rteOwner = document.getElementById('squad-rte-owner').value.trim();
       if (modalState.isEdit && previous) {
         Object.assign(previous, squad);
+        previous.updatedAt = new Date().toISOString();
         data.projects.forEach(p => {
           if (p.squadId === squad.id) {
             p.squad = squad.name;
@@ -11859,6 +11895,7 @@ Recomendação PMO: ${d.recommendation}`;
         });
       } else {
         squad.id = squad.id || makeSquadId(squad.name, squad.code);
+        squad.updatedAt = new Date().toISOString();
         data.squads.push(squad);
       }
       closeModal();
@@ -13227,6 +13264,7 @@ Recomendação PMO: ${d.recommendation}`;
         child.rawName = name;
         child.duplicateNumber = false;
         if (risksText) upsertDependencyText(mother, risksText);
+        mother.updatedAt = new Date().toISOString();
         closeModal();
         saveData(true);
         return;
@@ -13652,6 +13690,7 @@ Recomendação PMO: ${d.recommendation}`;
       plan.updates.forEach(({ rec, project }) => {
         const changed = applyCoreFields(project, rec);
         const derived = applyDerived(project, rec);
+        project.updatedAt = new Date().toISOString();
         projectsUpdated++;
         historyItems.push({ kind: 'atualizada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(changed, derived) });
       });
@@ -13674,6 +13713,7 @@ Recomendação PMO: ${d.recommendation}`;
         };
         const changed = applyCoreFields(project, rec);
         const derived = applyDerived(project, rec);
+        project.updatedAt = new Date().toISOString();
         data.projects.push(project);
         projectsCreated++;
         historyItems.push({ kind: 'criada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(changed, derived) });
@@ -13682,6 +13722,7 @@ Recomendação PMO: ${d.recommendation}`;
       plan.childUpserts.forEach(({ rec }) => {
         const mother = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, rec.motherNumber));
         if (!mother) { plan.skipped.push(rec.nome); return; }
+        mother.updatedAt = new Date().toISOString();
         mother.subInitiatives = Array.isArray(mother.subInitiatives) ? mother.subInitiatives : [];
         let child = mother.subInitiatives.find(c => matchesInitiativeNumber(c.initiativeNumber, rec.childNumber));
         const isNewChild = !child;
