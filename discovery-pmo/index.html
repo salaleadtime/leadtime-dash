@@ -397,6 +397,79 @@
       transition: width .3s ease;
     }
 
+    .discovery-health-risks {
+      margin-top: 6px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 8px;
+    }
+
+    .health-risks-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .health-risks-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--muted);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .health-risks-link {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .health-risk-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--primary-soft, #fff5f7);
+      border: 1px solid #ffe1e6;
+      font-size: 11.5px;
+    }
+
+    .health-risk-row.late { border-color: #ffb6c0; background: #ffe9ec; }
+
+    .health-risk-text {
+      font-weight: 700;
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .health-risk-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 14px;
+    }
+
+    .health-risk-owner, .health-risk-due { color: var(--muted); font-weight: 700; white-space: nowrap; }
+    .health-risk-owner::before { content: 'Dono: '; color: var(--muted); font-weight: 700; }
+    .health-risk-due::before { content: 'Prazo: '; color: var(--muted); font-weight: 700; }
+    .health-risk-due.late { color: var(--primary-dark, #b3182f); }
+
+    .health-risks-empty {
+      font-size: 11.5px;
+      color: var(--muted);
+      padding: 2px;
+    }
+
     .meta-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -6713,6 +6786,7 @@
             <div class="progress-bar"><span id="mainProgress"></span></div>
             <p class="project-summary" id="scoreText" style="margin-top:10px;"></p>
           </div>
+          <div id="discoveryHealthRisks" class="discovery-health-risks"></div>
         </div>
       </section>
 
@@ -9787,6 +9861,51 @@
       return open[0]?.item || 'Sem pendência crítica';
     }
 
+    function discoveryEndDateNote(project) {
+      const due = parseISODate(project.discoveryEndDate);
+      if (!due) return 'Sem prazo definido';
+      const DAY = 1000 * 60 * 60 * 24;
+      const today = parseISODate(fmtDate(new Date()));
+      const diffDays = Math.round((due - today) / DAY);
+      if (diffDays < 0) return `Atrasado há ${Math.abs(diffDays)} dia(s)`;
+      if (diffDays === 0) return 'Prazo é hoje';
+      return `Faltam ${diffDays} dia(s)`;
+    }
+
+    function renderDiscoveryHealthRisks(project) {
+      const el = document.getElementById('discoveryHealthRisks');
+      if (!el) return;
+      const open = allRaidRows(project).filter(r => !r.done).sort((a, b) => {
+        const da = a.due ? parseISODate(a.due) : null;
+        const db = b.due ? parseISODate(b.due) : null;
+        if (da && db) return da - db;
+        if (da) return -1;
+        if (db) return 1;
+        return 0;
+      });
+      const rowsHtml = open.length ? open.map(row => `
+        <div class="health-risk-row ${raidIsLate(row) ? 'late' : ''}">
+          <div class="health-risk-text" title="${escapeAttr(row.text || 'Item sem descrição')}">${escapeHtml(row.text || 'Item sem descrição')}</div>
+          <div class="health-risk-meta">
+            <span class="health-risk-owner">${escapeHtml(row.owner || 'Sem dono')}</span>
+            <span class="health-risk-due ${raidIsLate(row) ? 'late' : ''}">${row.due ? formatBR(row.due) : 'Sem prazo'}</span>
+          </div>
+        </div>
+      `).join('') : `<div class="health-risks-empty">Nenhum risco ou dependência em aberto.</div>`;
+      el.innerHTML = `
+        <div class="health-risks-head">
+          <span class="health-risks-title">Riscos e dependências em aberto</span>
+          <button type="button" class="health-risks-link" onclick="focusRaidTab()">Ver aba completa</button>
+        </div>
+        ${rowsHtml}
+      `;
+    }
+
+    function focusRaidTab() {
+      document.querySelector('.tab[data-tab="raid"]')?.click();
+      document.getElementById('discoveryWorkspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
 
     function updateViewMode(project) {
       if (viewMode !== 'project') ensureDefaultDashboardSquad();
@@ -9845,6 +9964,7 @@
         renderScheduleSignals(safeProject);
         renderChecklist(safeProject);
         renderRaids(safeProject);
+        renderDiscoveryHealthRisks(safeProject);
         renderAttachments(safeProject);
         renderAttachmentSignals(safeProject);
         renderExecutiveRows(safeProject);
@@ -13944,7 +14064,7 @@ Recomendação PMO: ${d.recommendation}`;
       `;
       const indicators = [
         { label: 'Data Discovery', value: formatBR(project.discoveryDate), note: project.status || 'Status a validar', color: statusColor(project.status) },
-        { label: 'Início Dev', value: formatBR(project.startDev), note: `Término: ${formatBR(project.endDev)}`, color: 'var(--blue)' },
+        { label: 'Término Discovery', value: formatBR(project.discoveryEndDate), note: discoveryEndDateNote(project), color: 'var(--blue)' },
         { label: 'Horas 2026', value: formatHours(project.hours2026), note: 'Consumo importado da planilha', color: 'var(--purple)' },
         { label: 'Filhas vinculadas', value: String(subInitiativeCount(project)), note: 'Não contam no dashboard principal', color: 'var(--amber)' }
       ];
