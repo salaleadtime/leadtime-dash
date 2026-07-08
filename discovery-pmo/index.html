@@ -9474,16 +9474,24 @@
     }
 
     // Mescla duas listas por id: item ausente de um lado entra (nunca some por causa
-    // do merge), e item presente dos dois lados vence pelo "updatedAt" mais recente.
-    // Isso troca o antigo "última base salva apaga tudo dos outros" por um merge por
-    // registro — a única forma de duas pessoas mexerem em iniciativas diferentes (ou
-    // até na mesma, em campos diferentes) sem uma sobrescrever silenciosamente a outra.
-    function mergeById(localList, remoteList) {
+    // do merge — a não ser que exista uma "tumba" de exclusão mais recente, ver
+    // mergeTombstones/deletedIds abaixo), e item presente dos dois lados vence pelo
+    // "updatedAt" mais recente. Isso troca o antigo "última base salva apaga tudo dos
+    // outros" por um merge por registro — resolve duas pessoas mexendo em iniciativas
+    // diferentes sem uma apagar a da outra. Importante: o merge é por REGISTRO
+    // INTEIRO, não por campo — duas pessoas editando campos diferentes da MESMA
+    // iniciativa ao mesmo tempo ainda resolvem por "quem salvou por último" para
+    // aquele registro (não faz merge campo a campo dentro dele).
+    function mergeById(localList, remoteList, deletedIds) {
       const map = new Map();
       let changed = false;
-      (localList || []).forEach(item => { if (item && item.id) map.set(item.id, item); });
-      (remoteList || []).forEach(item => {
+      (localList || []).forEach(item => {
         if (!item || !item.id) return;
+        if (deletedIds && deletedIds.has(item.id)) { changed = true; return; }
+        map.set(item.id, item);
+      });
+      (remoteList || []).forEach(item => {
+        if (!item || !item.id || (deletedIds && deletedIds.has(item.id))) return;
         const existing = map.get(item.id);
         if (!existing) { map.set(item.id, item); changed = true; return; }
         const remoteTime = Date.parse(item.updatedAt || '') || 0;
@@ -9493,23 +9501,53 @@
       return { list: Array.from(map.values()), changed };
     }
 
+    // "Tumbas" de exclusão: sem isso, o merge aditivo acima faria uma iniciativa ou
+    // squad excluída "ressuscitar" assim que outro usuário — com uma cópia local de
+    // antes da exclusão — salvasse de novo (a exclusão nunca "vence" um item que só
+    // existe do outro lado). Guarda id + quando foi excluído; vence quem excluiu por
+    // último, e reaparece só se alguém editar aquele id de novo depois da exclusão.
+    function mergeTombstones(localList, remoteList) {
+      const map = new Map();
+      (localList || []).forEach(t => { if (t && t.id) map.set(t.id, t); });
+      (remoteList || []).forEach(t => {
+        if (!t || !t.id) return;
+        const existing = map.get(t.id);
+        if (!existing || (Date.parse(t.deletedAt || '') || 0) > (Date.parse(existing.deletedAt || '') || 0)) map.set(t.id, t);
+      });
+      return Array.from(map.values());
+    }
+
+    function recordTombstone(id) {
+      data.tombstones = (Array.isArray(data.tombstones) ? data.tombstones : []).filter(t => t.id !== id);
+      data.tombstones.push({ id, deletedAt: new Date().toISOString() });
+    }
+
     function applyRemoteDiscData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
       if (isUserEditingNow()) return false;
 
       const keepActiveId = activeProjectId;
       const normalizedRemote = normalizeData(deepClone(remote));
-      const projectsMerge = mergeById(data.projects, normalizedRemote.projects);
-      const squadsMerge = mergeById(data.squads, normalizedRemote.squads);
+      const tombstones = mergeTombstones(data.tombstones, normalizedRemote.tombstones);
+      const deletedIds = new Set(tombstones.map(t => t.id));
+      const projectsMerge = mergeById(data.projects, normalizedRemote.projects, deletedIds);
+      const squadsMerge = mergeById(data.squads, normalizedRemote.squads, deletedIds);
       const historyMerge = mergeById(data.importHistory, normalizedRemote.importHistory);
       if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
+      if (!projectsMerge.list.length) return false; // nunca fica sem nenhuma iniciativa por causa do merge
 
       _discGasApplyingRemote = true;
+      data.tombstones = tombstones;
       data.projects = projectsMerge.list;
-      data.squads = squadsMerge.list;
+      data.squads = squadsMerge.list.length ? squadsMerge.list : data.squads;
       data.importHistory = historyMerge.list
         .sort((a, b) => (Date.parse(b.at || '') || 0) - (Date.parse(a.at || '') || 0))
         .slice(0, 30);
+      // Flags de migração única (ex.: reset de cards, sync de nomes de squad) também
+      // precisam propagar — sem isso, uma base remota que ainda não tem a flag faria
+      // a migração "de uma vez só" rodar de novo a cada poll sobre o clone normalizado.
+      data.cardsResetV1 = data.cardsResetV1 || normalizedRemote.cardsResetV1;
+      data.squadNamesSyncedV1 = data.squadNamesSyncedV1 || normalizedRemote.squadNamesSyncedV1;
       data.updatedAt = new Date(Math.max(Date.parse(data.updatedAt || '') || 0, Date.parse(normalizedRemote.updatedAt || '') || 0)).toISOString();
       activeProjectId = data.projects.some(p => p.id === keepActiveId) ? keepActiveId : (data.activeProjectId || data.projects[0].id);
       data.activeProjectId = activeProjectId;
@@ -9615,6 +9653,7 @@
       const cloned = payload || deepClone(defaultData);
       if (!Array.isArray(cloned.projects) || !cloned.projects.length) cloned.projects = deepClone(defaultData.projects);
       cloned.importHistory = Array.isArray(cloned.importHistory) ? cloned.importHistory : [];
+      cloned.tombstones = Array.isArray(cloned.tombstones) ? cloned.tombstones : [];
       // Reset único (pedido explícito): zera os cards de "Ações" de todas as iniciativas,
       // para todos os usuários, na primeira carga após esta versão. Roda uma única vez —
       // o flag abaixo impede que isso aconteça de novo em cargas futuras.
@@ -9623,12 +9662,19 @@
         if (Array.isArray(cloned.projects)) cloned.projects.forEach(p => { p.cards = []; });
         _cardsJustReset = true;
       }
-      // Migração: sincroniza nome/code das squads com o defaultData (resolve renames como ASD → Ainda Sem Definição)
       if (Array.isArray(cloned.squads)) {
-        defaultData.squads.forEach(defSq => {
-          const existing = cloned.squads.find(s => s.id === defSq.id);
-          if (existing) { existing.name = defSq.name; existing.code = defSq.code; }
-        });
+        // Migração ÚNICA (resolve renames antigos como ASD → Ainda Sem Definição).
+        // Roda só uma vez — o flag abaixo impede que rode nas cargas seguintes. Sem
+        // isso, TODAS as squads atuais (Contact, Expresso, Inception etc. têm o
+        // mesmo id de uma squad "padrão" do defaultData) tinham qualquer renomeação
+        // revertida de volta ao nome original a cada sincronização/reload.
+        if (!cloned.squadNamesSyncedV1) {
+          cloned.squadNamesSyncedV1 = true;
+          defaultData.squads.forEach(defSq => {
+            const existing = cloned.squads.find(s => s.id === defSq.id);
+            if (existing) { existing.name = defSq.name; existing.code = defSq.code; }
+          });
+        }
         // Remove squad-a-validar legado e squads com nome inválido
         cloned.squads = cloned.squads.filter(s => {
           const n = String(s.name || '').trim();
@@ -10744,7 +10790,6 @@
       for (const file of files) {
         const id = uid('file');
         try {
-          await saveAttachmentBlob(id, file);
           const attachment = {
             id,
             name: file.name,
@@ -10757,11 +10802,14 @@
           };
           // Imagem pequena: embute como base64 nos dados já sincronizados (mesma
           // planilha/Apps Script de todo o resto do Discovery PMO), então fica
-          // visível para todo mundo sem precisar de nenhum storage externo.
+          // visível para todo mundo sem precisar de nenhum storage externo — nem do
+          // IndexedDB local, que só entra como fallback para o que não pode ser
+          // embutido (não é imagem, ou passou de 2MB).
           if (file.type.startsWith('image/') && file.size <= MAX_INLINE_IMAGE_BYTES) {
             attachment.dataUrl = await fileToDataUrl(file);
             attachment.localOnly = false;
           } else {
+            await saveAttachmentBlob(id, file);
             localOnlyCount++;
           }
           p.attachments.push(attachment);
@@ -11172,6 +11220,7 @@
     function deleteProject(id) {
       if (data.projects.length <= 1) { toast('Mantenha pelo menos um projeto'); return; }
       data.projects = data.projects.filter(p => p.id !== id);
+      recordTombstone(id);
       activeProjectId = data.projects[0].id;
       closeModal();
       saveData(true);
@@ -11427,6 +11476,14 @@
       return `<div class="form-field"><label>${label}</label><input id="${id}" type="${type}" value="${escapeAttr(value ?? '')}" /></div>`;
     }
 
+    // Sem esquema, "Abrir material" resolveria como caminho relativo ao próprio
+    // dashboard em vez de abrir o site externo — completa com https:// por padrão.
+    function normalizeExternalUrl(raw) {
+      const value = String(raw || '').trim();
+      if (!value) return '';
+      return /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`;
+    }
+
     function badgeClass(priority) {
       return { 'Crítica': 'red', 'Alta': 'amber', 'Média': 'blue', 'Baixa': 'green' }[priority] || '';
     }
@@ -11596,7 +11653,12 @@ Recomendação PMO: ${d.recommendation}`;
         business: item.business || item.area || '',
         rteOwner: item.rteOwner || item.rte || '',
         owner: item.owner || item.pmoOwner || item.pmo || '',
-        techLead: item.techLead || ''
+        techLead: item.techLead || '',
+        // enhanceSquadData (chamada em quase todo render) reconstrói a squad inteira
+        // a partir daqui — sem preservar updatedAt, o merge por registro (mergeById)
+        // nunca enxergava uma squad como "mudou", porque o timestamp era descartado
+        // segundos depois de ser gravado, a cada nova renderização.
+        updatedAt: item.updatedAt || ''
       };
     }
 
@@ -11891,6 +11953,11 @@ Recomendação PMO: ${d.recommendation}`;
             p.squad = squad.name;
             if (!p.rteOwner || p.rteOwner === 'PMO/RTE') p.rteOwner = squad.rteOwner || p.rteOwner;
             if (!p.techLead) p.techLead = squad.techLead || p.techLead;
+            // Sem isto, a mudança em cascata do nome/RTE/Tech Lead da squad não teria
+            // um "updatedAt" novo nessas iniciativas — e o merge por registro (ver
+            // mergeById) descartaria essa mudança em qualquer outro navegador que já
+            // tivesse uma cópia local (mais antiga) dessas mesmas iniciativas.
+            p.updatedAt = new Date().toISOString();
           }
         });
       } else {
@@ -11914,6 +11981,7 @@ Recomendação PMO: ${d.recommendation}`;
         return;
       }
       data.squads = data.squads.filter(s => s.id !== squadId);
+      recordTombstone(squadId);
       closeModal();
       saveData(true);
     }
@@ -13285,7 +13353,7 @@ Recomendação PMO: ${d.recommendation}`;
       p.focalPoint = document.getElementById('project-focal-point').value.trim();
       p.discoveryDate = document.getElementById('project-discovery-date').value || '';
       p.discoveryEndDate = document.getElementById('project-discovery-end-date').value || '';
-      p.confluenceUrl = document.getElementById('project-confluence-url').value.trim();
+      p.confluenceUrl = normalizeExternalUrl(document.getElementById('project-confluence-url').value);
       p.readinessStage = document.getElementById('project-readiness-stage').value;
       p.startDate = p.discoveryDate || p.startDate || '';
       if (p.discoveryEndDate) p.target = p.discoveryEndDate;
@@ -13705,7 +13773,7 @@ Recomendação PMO: ${d.recommendation}`;
           squad: sq?.name || 'Ainda Sem Definição', squadId: sq?.id || '',
           owner: 'A definir', rteOwner: 'A definir', pmoOwner: 'A definir',
           frontLeader: '', initiativeOwner: '', po: '', focalPoint: '', techLead: '', dataArea: '', aiRpa: '', processName: '', hours2026: 0,
-          discoveryDate: '', discoveryEndDate: '', startDev: '', endDev: '', startDate: '', status: 'A iniciar', criticality: 'A validar', target: '',
+          discoveryDate: '', discoveryEndDate: '', startDev: '', endDev: '', startDate: '', status: 'A iniciar', criticality: 'A validar', target: '', confluenceUrl: '',
           readinessStage: READINESS_STAGE_DEFAULT, summary: '', subInitiatives: [],
           phases: phaseTemplate.map(ph => ({ ...ph, status: 'todo' })),
           checklist: checklistTemplate.map(c => ({ ...c, done: false })),
