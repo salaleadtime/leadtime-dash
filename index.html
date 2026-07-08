@@ -5565,6 +5565,7 @@ function loadXlsx(file){
 
       var merged=[], seenIds={};
       var stats={newCount:0,updatedCount:0,preservedIni:0,preservedFim:0,preservedPrev:0,preservedChg:0,preservedImp:0,skipped:0};
+      var skippedRows=[]; // {id, motivo} — linhas de ÉPICO descartadas por ID inválido (não conta o filtro normal de "não é épico")
 
       for(var x=det.hrow+1;x<rows.length;x++){
         var r=rows[x]; if(!r) continue;
@@ -5578,7 +5579,13 @@ function loadXlsx(file){
         var id=rawId.toString().trim();
         if(!id) continue;
         // Aceita IDs no formato SLOPC-XXXXX ou similar (rejeita legendas/notas)
-        if(!isValidEpicId(id)){ stats.skipped++; continue; }
+        if(!isValidEpicId(id)){
+          stats.skipped++;
+          // Linha de épico real (Tipo de Item = Épico) descartada pela validação de ID —
+          // isso costumava sumir silenciosamente; agora é reportado ao usuário no toast.
+          skippedRows.push({id:id, motivo:'ID em formato inesperado'});
+          continue;
+        }
 
         var old=existing[id];
 
@@ -5679,6 +5686,16 @@ function loadXlsx(file){
         '✓ '+merged.length+' épicos no sistema ('+fmtLbl+')',
         line1 + (line2?'<br>'+line2:'')
       );
+      // Avisa explicitamente quando uma linha de épico foi descartada por ID inválido —
+      // antes isso só aparecia no console (F12), fazendo o total parecer "menor que a planilha"
+      // sem nenhum sinal visível para quem importou.
+      if(skippedRows.length){
+        toast(
+          '⚠ '+skippedRows.length+' linha'+(skippedRows.length!==1?'s':'')+' do arquivo não '+(skippedRows.length!==1?'entraram':'entrou')+' no sistema',
+          skippedRows.map(function(sr){return esc(sr.id||'(sem ID)')+' — '+esc(sr.motivo);}).join('<br>'),
+          'warn'
+        );
+      }
       renderAll();
       saveLocal();
 
