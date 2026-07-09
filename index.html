@@ -1260,7 +1260,13 @@ body{min-height:100vh}
 /* ── Responsividade 1366px: ajusta grids para telas HD comuns (1181–1440px) ── */
 @media(min-width:1181px) and (max-width:1440px){
   .ep,.db,.cal-wrap{padding:1.6rem 1.8rem!important}
-  .premium-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .premium-kpis{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px!important}
+  .premium-kpi{padding:14px 16px!important;border-radius:14px!important}
+  .premium-kpi-l{font-size:10px!important}
+  .premium-kpi-v{font-size:26px!important;margin-top:7px!important}
+  .premium-kpi-s{font-size:11px!important}
+  .premium-ep-strip{gap:14px!important;margin-top:14px!important}
+  .premium-ep-card{padding:15px 18px!important;border-radius:14px!important}
   .kgrid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
   .pd-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }
