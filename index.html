@@ -674,22 +674,23 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .bk-spark-bar{width:6px;border-radius:2px 2px 0 0;flex-shrink:0;transition:height .3s}
 .bk-spark-lbl{font-size:9px;color:#94a3b8;margin-left:4px;align-self:center}
 
-/* ── Qtd Story/Épicos — Tabela Executiva ── */
-.sv-tbl-wrap{background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(15,23,42,.05)}
+/* ── Qtd Story/Épicos — tabela discreta ── */
+.sv-tbl-wrap{background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(15,23,42,.04)}
 .sv-tbl{width:100%;border-collapse:collapse}
-.sv-tbl thead tr{background:#7a0000}
-.sv-tbl thead th{padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;color:#fff!important;background:#7a0000!important;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+.sv-tbl thead tr{background:#f8fafc}
+.sv-tbl thead th{padding:11px 14px;text-align:left;font-size:10.5px;font-weight:800;color:#64748b!important;background:#f8fafc!important;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;border-bottom:1px solid #e5e7eb}
 .sv-tbl thead th.tc{text-align:center}
 .sv-tbl tbody tr{border-bottom:1px solid #f1f5f9;transition:background .1s}
-.sv-tbl tbody tr:nth-child(even){background:#fafbfc}
-.sv-tbl tbody tr:hover{background:#f0f9ff;cursor:pointer}
-.sv-tbl tbody tr.sv-tbl-open{background:#fafafa}
-.sv-tbl td{padding:9px 14px;font-size:12px;vertical-align:middle}
-.sv-tbl tfoot td{background:#f8fafc;font-size:11px;color:#64748b;font-weight:600;padding:8px 14px;border-top:2px solid #e2e8f0}
-.sv-epic-id{font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.5px;font-family:ui-monospace,monospace}
+.sv-tbl tbody tr:nth-child(even){background:#fff}
+.sv-tbl tbody tr:hover{background:#f8fafc;cursor:pointer}
+.sv-tbl tbody tr.sv-tbl-open{background:#f8fafc}
+.sv-tbl td{padding:10px 14px;font-size:12px;vertical-align:middle}
+.sv-tbl tfoot td{background:#f8fafc;font-size:11px;color:#64748b;font-weight:600;padding:9px 14px;border-top:1px solid #e5e7eb}
+.sv-tbl-section td{padding:7px 14px!important;font-size:9.5px!important;color:#94a3b8!important;font-weight:800!important;text-transform:uppercase;letter-spacing:.55px;background:#f8fafc!important;border-top:1px solid #e5e7eb!important}
+.sv-epic-id{font-size:10px;font-weight:800;color:#e11d48;letter-spacing:.4px;font-family:ui-monospace,monospace}
 .sv-epic-name{font-size:12px;font-weight:600;color:#0f172a;margin-top:1px;max-width:260px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.sv-squad-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap}
-.sv-squad-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);flex-shrink:0}
+.sv-squad-pill{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;white-space:nowrap}
+.sv-squad-dot{width:6px;height:6px;border-radius:50%;background:var(--sv-accent,#94a3b8);box-shadow:0 0 0 2px rgba(148,163,184,.14);flex-shrink:0}
 .sv-lt-cell{font-size:13px;font-weight:700;text-align:center;white-space:nowrap}
 .sv-stories-num{font-size:18px;font-weight:800;text-align:center;color:#0f172a;line-height:1}
 .sv-mini-bar-wrap{display:flex;flex-direction:column;gap:3px;min-width:160px}
@@ -698,14 +699,14 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sv-mini-legend{display:flex;gap:5px 8px;font-size:9px;color:#94a3b8;flex-wrap:wrap}
 .sv-mini-leg{display:flex;align-items:center;gap:2px}
 .sv-mini-dot{width:5px;height:5px;border-radius:1px;flex-shrink:0}
-.sv-status-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;text-align:center;white-space:nowrap}
+.sv-status-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;text-align:center;white-space:nowrap}
 .sv-status-ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
 .sv-status-warn{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
 .sv-status-crit{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
 .sv-status-near{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}
 .sv-tbl-body-row{display:none;border-bottom:1px solid #e8edf5!important}
 .sv-tbl-body-row.open{display:table-row}
-.sv-tbl-body-row td{padding:.4rem 1rem .6rem 1.6rem;background:#fafafa}
+.sv-tbl-body-row td{padding:.4rem 1rem .6rem 1.6rem;background:#f8fafc}
 .sv-kpi-hd{display:flex;gap:8px;background:transparent;border:none;overflow:visible;margin-bottom:.8rem}
 .sv-kpi-hd-item{flex:1;padding:.75rem 1rem .65rem;border:1px solid #e8edf5;border-radius:10px;border-left:3px solid var(--kpi-accent,#e2e8f0);background:#fff;box-shadow:0 1px 4px rgba(15,23,42,.05);position:relative;transition:box-shadow .2s}
 .sv-kpi-hd-item:hover{box-shadow:0 3px 12px rgba(15,23,42,.09)}
@@ -1777,6 +1778,49 @@ tr:nth-child(even):hover td,
 .cal-month{
   background:#fff!important;
   border:1px solid var(--line-soft)!important;
+}
+
+/* Qtd Story/Épicos: tabela neutra e previsível para squads/épicos novos */
+#pane-sv .sv-tbl-wrap{
+  border-radius:12px!important;
+  box-shadow:0 1px 4px rgba(15,23,42,.05)!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+}
+#pane-sv .sv-tbl{
+  min-width:820px!important;
+}
+#pane-sv .sv-tbl thead th{
+  background:#f8fafc!important;
+  color:#64748b!important;
+  border-bottom:1px solid #e5e7eb!important;
+  padding:11px 14px!important;
+}
+#pane-sv .sv-tbl td{
+  padding:10px 14px!important;
+}
+#pane-sv .sv-tbl tbody td,
+#pane-sv .sv-tbl tbody tr:nth-child(even) td{
+  background:#fff!important;
+}
+#pane-sv .sv-tbl tbody tr:hover td,
+#pane-sv .sv-tbl tbody tr:nth-child(even):hover td{
+  background:#f8fafc!important;
+}
+#pane-sv .sv-tbl-section td{
+  background:#f8fafc!important;
+  color:#94a3b8!important;
+  border-top:1px solid #e5e7eb!important;
+  padding:7px 14px!important;
+}
+#pane-sv .sv-squad-pill{
+  background:#f8fafc!important;
+  color:#475569!important;
+  border:1px solid #e2e8f0!important;
+  box-shadow:none!important;
+}
+#pane-sv .sv-squad-dot{
+  background:var(--sv-accent,#94a3b8)!important;
 }
 
 /* Responsivo */
@@ -4066,7 +4110,10 @@ function updateTabCounts(){
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
   var svEl=$id('tabCtSv');
-  if(svEl) svEl.textContent=allStories.length||'';
+  if(svEl){
+    var visibleStoryCount=allStories.filter(function(s){return isStoryEpicVisible(s.epic);}).length;
+    svEl.textContent=visibleStoryCount||'';
+  }
   var bkEl=$id('tabCtBk');
   if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?snapStoryCount(bkCurSnap):0; bkEl.textContent=bkCur||''; }
 }
@@ -4991,13 +5038,28 @@ function isNearDelivery(stories){
   return blocking===0&&near>0;
 }
 
+function isStoryEpicVisible(epicId){
+  var rec=allData.find(function(r){return r.id===epicId;});
+  if(!rec) return true;
+  if(isValidDate(rec.fim)) return false;
+  var status=stripAcc(normalizeStatus(rec.status)).toLowerCase();
+  return status.indexOf('concluid')<0;
+}
+
 // ─── Renderiza aba Estórias por Épico ──────────────────────
 function renderStoryView(){
   var svSq=$id('svSqF');
   var sqFilter=svSq?svSq.value:'all';
+  var activeStoryEpics=allData.filter(function(r){return isStoryEpicVisible(r.id);});
+  var activeStoryEpicIds=activeStoryEpics.map(function(r){return r.id;});
+  var visibleStories=allStories.filter(function(s){return isStoryEpicVisible(s.epic);});
 
-  // Populate squad dropdown from stories
-  var allSquads=Array.from(new Set(allStories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  // Populate squad dropdown from active epics/stories only.
+  var allSquads=Array.from(new Set(
+    visibleStories.map(function(s){return s.squad;})
+      .concat(activeStoryEpics.map(function(r){return r.squad;}))
+      .filter(Boolean)
+  )).sort();
   if(svSq){
     svSq.innerHTML='<option value="all">Todas</option>'+allSquads.map(function(sq){
       return '<option value="'+esc(sq)+'"'+(sq===sqFilter?' selected':'')+'>'+esc(sq)+'</option>';
@@ -5005,12 +5067,12 @@ function renderStoryView(){
     svSq.onchange=function(){renderStoryView();};
   }
 
-  // KPIs globais (não filtrados)
-  var totalSt=allStories.length;
-  var epicsWithSt=Object.keys(allStories.reduce(function(a,s){a[s.epic]=1;return a;},{})).length;
+  // KPIs da aba respeitam a regra: concluídos ficam fora de Qtd Story/Épicos.
+  var totalSt=visibleStories.length;
+  var epicsWithSt=Object.keys(visibleStories.reduce(function(a,s){a[s.epic]=1;return a;},{})).length;
   var nearCnt=0; var fullCnt=0;
 
-  if(!totalSt){
+  if(!allStories.length){
     $id('svKpi').innerHTML='';
     $id('svCardList').innerHTML='<div class="empty" style="padding:3rem">📋 Nenhuma estória carregada.<br>Importe o export do Jira (Issue Type = Story) acima.</div>';
     $id('svTotal').textContent='';
@@ -5019,14 +5081,14 @@ function renderStoryView(){
 
   // Group stories by epic
   var epicMap={};
-  allStories.forEach(function(s){
+  visibleStories.forEach(function(s){
     if(!epicMap[s.epic]) epicMap[s.epic]=[];
     epicMap[s.epic].push(s);
   });
 
-  // Collect all epics: with stories first, then epics from allData with no stories
+  // Collect active epics: with stories first, then epics from allData with no stories.
   var epicIds=Object.keys(epicMap);
-  var allEpicIds=Array.from(new Set(allData.map(function(r){return r.id;}).concat(epicIds)));
+  var allEpicIds=Array.from(new Set(activeStoryEpicIds.concat(epicIds)));
 
   // Count alerts
   epicIds.forEach(function(ep){
@@ -5089,7 +5151,7 @@ function renderStoryView(){
           '<th class="tc">Status</th>'+
         '</tr></thead>'+
         '<tbody>'+rows+(noStRows?
-          '<tr><td colspan="6" style="padding:6px 14px;font-size:9.5px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-top:2px solid #e2e8f0">Épicos sem estórias vinculadas</td></tr>'+noStRows
+          '<tr class="sv-tbl-section"><td colspan="6">Épicos sem estórias vinculadas</td></tr>'+noStRows
         :'')+
         '</tbody>'+
         '<tfoot><tr>'+
@@ -5172,7 +5234,7 @@ function svEpicRow(ep,stories){
       '<div class="sv-epic-name" title="'+esc(resumo)+'">'+esc(resumo||'—')+'</div>'+
     '</td>'+
     '<td>'+
-      (sq?'<span class="sv-squad-pill" style="background:'+accent+'"><span class="sv-squad-dot"></span>'+esc(sq)+'</span>':'<span style="color:#94a3b8;font-size:10px">—</span>')+
+      (sq?'<span class="sv-squad-pill" style="--sv-accent:'+accent+'"><span class="sv-squad-dot"></span>'+esc(sq)+'</span>':'<span style="color:#94a3b8;font-size:10px">—</span>')+
     '</td>'+
     '<td style="text-align:center">'+ltHtml+'</td>'+
     '<td style="text-align:center"><span class="sv-stories-num">'+(isEmpty?'—':total)+'</span></td>'+
