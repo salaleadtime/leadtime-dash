@@ -759,6 +759,65 @@
       align-items: start;
     }
 
+    .tl-overview {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(135deg, #fff, #fbfcfe);
+      padding: 14px 16px;
+      box-shadow: 0 12px 28px rgba(17, 24, 39, .045);
+    }
+
+    .tl-overview-title {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .tl-overview-title strong {
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+
+    .tl-overview-title span {
+      color: var(--muted);
+      font-size: 11.7px;
+      line-height: 1.35;
+    }
+
+    .tl-overview-stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 7px;
+    }
+
+    .tl-stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid #e5eaf2;
+      background: #fff;
+      color: #526176;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .tl-stat-pill strong {
+      color: var(--ink);
+      font-weight: 800;
+    }
+
     .tl-stage {
       background: #fff;
       border: 1px solid var(--line);
@@ -766,6 +825,8 @@
       padding: 18px 16px 16px;
       box-shadow: 0 14px 32px rgba(17, 24, 39, .05);
       transition: .16s ease;
+      display: grid;
+      gap: 12px;
     }
 
     .tl-stage.drag-over {
@@ -787,12 +848,46 @@
     }
 
     .tl-title {
-      margin: 0 0 12px;
+      margin: 0;
       font-size: 14.5px;
       font-weight: 850;
       line-height: 1.25;
       letter-spacing: -.01em;
       color: var(--ink);
+    }
+
+    .tl-stage-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tl-stage-score {
+      color: var(--blue);
+      background: #eaf1ff;
+      border: 1px solid #d7e4ff;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .tl-stage-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tl-stage-meta span {
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #f7f9fc;
+      color: #5f6f84;
+      font-size: 10.5px;
+      font-weight: 700;
+      white-space: nowrap;
     }
 
     .tl-items {
@@ -801,9 +896,10 @@
     }
 
     .tl-item {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(132px, auto);
+      align-items: center;
+      gap: 9px;
       padding: 10px 0;
       border-bottom: 1px solid var(--line);
       cursor: grab;
@@ -847,9 +943,9 @@
       appearance: none;
       -webkit-appearance: none;
       border: 1px solid transparent;
-      border-radius: 9px;
-      padding: 7px 26px 7px 10px;
-      font-size: 11px;
+      border-radius: 999px;
+      padding: 6px 25px 6px 10px;
+      font-size: 10.6px;
       font-weight: 750;
       font-family: inherit;
       cursor: pointer;
@@ -5293,6 +5389,31 @@
       margin-top: 3px;
     }
 
+    .ux-v6-kpi-button {
+      appearance: none;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+
+    .ux-v6-kpi-button:hover {
+      transform: translateY(-2px);
+      border-color: #f2bdc7;
+      box-shadow: 0 16px 36px rgba(16, 24, 40, .1);
+    }
+
+    .ux-v6-kpi-button:focus-visible {
+      outline: 3px solid rgba(200, 16, 46, .18);
+      outline-offset: 2px;
+    }
+
+    .ux-v6-kpi-button .ux-v6-kpi-note {
+      color: #7d899b;
+    }
+
     .ux-v6-left {
       border: 1px solid var(--senior-line);
       border-radius: 20px;
@@ -5642,6 +5763,209 @@
       font-size: 12px;
       color: #6b7788;
       line-height: 1.5;
+    }
+
+    .modal:has(.ux-v6-raid-modal) {
+      width: min(940px, 96vw);
+    }
+
+    .ux-v6-raid-modal {
+      display: grid;
+      gap: 14px;
+    }
+
+    .ux-v6-raid-modal-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .ux-v6-raid-summary-card {
+      border: 1px solid #e7edf5;
+      border-radius: 12px;
+      background: #fbfcfe;
+      padding: 12px 13px;
+    }
+
+    .ux-v6-raid-summary-card span {
+      display: block;
+      color: #6b7788;
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .ux-v6-raid-summary-card strong {
+      color: #111827;
+      font-size: 20px;
+      line-height: 1;
+      font-weight: 780;
+    }
+
+    .ux-v6-raid-modal-list {
+      display: grid;
+      gap: 12px;
+      max-height: min(60vh, 560px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .ux-v6-raid-squad-block {
+      border: 1px solid #e4eaf3;
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .ux-v6-raid-squad-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 13px;
+      background: linear-gradient(180deg, #fff, #fbfcfe);
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .ux-v6-raid-squad-head strong {
+      display: block;
+      color: #111827;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .ux-v6-raid-squad-head span {
+      display: block;
+      color: #6b7788;
+      font-size: 11.2px;
+      margin-top: 2px;
+    }
+
+    .ux-v6-raid-open-squad {
+      border: 1px solid #ffd0d9;
+      border-radius: 999px;
+      background: #fff7f9;
+      color: #b5122b;
+      padding: 7px 10px;
+      font-size: 11px;
+      font-weight: 730;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .ux-v6-raid-open-squad:hover {
+      background: #b5122b;
+      color: #fff;
+      border-color: #b5122b;
+    }
+
+    .ux-v6-raid-items {
+      display: grid;
+    }
+
+    .ux-v6-raid-item {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      border: 0;
+      border-bottom: 1px solid #edf0f5;
+      background: #fff;
+      padding: 11px 13px;
+      color: #334155;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .ux-v6-raid-item:last-child {
+      border-bottom: 0;
+    }
+
+    .ux-v6-raid-item:hover {
+      background: #fbfcfe;
+    }
+
+    .ux-v6-raid-item.late {
+      background: #fff7f8;
+    }
+
+    .ux-v6-raid-item-main {
+      min-width: 0;
+      display: grid;
+      gap: 5px;
+    }
+
+    .ux-v6-raid-item-main strong {
+      color: #111827;
+      font-size: 12.7px;
+      font-weight: 700;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ux-v6-raid-item-main span {
+      color: #6b7788;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    .ux-v6-raid-item-meta {
+      display: flex;
+      align-items: flex-end;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 104px;
+    }
+
+    .ux-v6-raid-type,
+    .ux-v6-raid-date {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 10.3px;
+      font-weight: 730;
+      white-space: nowrap;
+    }
+
+    .ux-v6-raid-type.risks {
+      background: #fff1f4;
+      color: #b5122b;
+      border: 1px solid #ffd0d9;
+    }
+
+    .ux-v6-raid-type.dependencies {
+      background: #f1efff;
+      color: #5741d9;
+      border: 1px solid #ddd8ff;
+    }
+
+    .ux-v6-raid-date {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .ux-v6-raid-date.late {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .ux-v6-raid-empty {
+      border: 1px dashed #ccd6e4;
+      border-radius: 14px;
+      padding: 28px 18px;
+      background: #fbfcfe;
+      color: #6b7788;
+      text-align: center;
+      font-size: 12.5px;
+    }
+
+    .ux-v6-raid-empty strong {
+      display: block;
+      color: #111827;
+      font-size: 15px;
+      margin-bottom: 5px;
     }
 
     .ux-v6-date-list {
@@ -6640,6 +6964,11 @@
       .main { padding: 14px 12px 28px !important; }
       .ux-v6-kpis, .ux-v6-squad-grid { grid-template-columns: 1fr; }
       .ux-v6-source, .ux-v6-section-head, .ux-v6-panel-head { flex-direction: column; align-items: flex-start; }
+      .ux-v6-raid-modal-summary, .tl-overview { grid-template-columns: 1fr; }
+      .tl-overview-stats { justify-content: flex-start; }
+      .tl-item { grid-template-columns: 1fr; }
+      .ux-v6-raid-item { grid-template-columns: 1fr; }
+      .ux-v6-raid-item-meta { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
       .ux-v6-project-item { grid-template-columns: 1fr; }
       .ux-v6-project-open { justify-self: start; }
       .ux-v6-search { width: 100%; }
@@ -9956,6 +10285,46 @@
       );
     }
 
+    const OPEN_RAID_DASHBOARD_GROUPS = ['risks', 'dependencies'];
+
+    function collectOpenRaidItems(allProjects = data.projects || []) {
+      const items = [];
+      (allProjects || []).forEach(project => {
+        const squad = squadForProject(project) || squadById(project.squadId) || { id: project.squadId || '', name: project.squad || 'Squad não informada' };
+        allRaidRows(project)
+          .filter(row => OPEN_RAID_DASHBOARD_GROUPS.includes(row.group) && !row.done)
+          .forEach(row => {
+            items.push({
+              project,
+              row,
+              squad,
+              squadId: squad?.id || project.squadId || '',
+              squadName: squad?.name || project.squad || 'Squad não informada',
+              late: raidIsLate(row)
+            });
+          });
+      });
+      return items.sort((a, b) => {
+        if (a.late !== b.late) return a.late ? -1 : 1;
+        const da = a.row.due ? parseISODate(a.row.due) : null;
+        const db = b.row.due ? parseISODate(b.row.due) : null;
+        if (da && db && da - db) return da - db;
+        if (da && !db) return -1;
+        if (!da && db) return 1;
+        return String(a.squadName).localeCompare(String(b.squadName), 'pt-BR') || String(displayProjectTitle(a.project)).localeCompare(String(displayProjectTitle(b.project)), 'pt-BR');
+      });
+    }
+
+    function groupOpenRaidItemsBySquad(items) {
+      const groups = new Map();
+      (items || []).forEach(item => {
+        const key = item.squadId || item.squadName;
+        if (!groups.has(key)) groups.set(key, { squad: item.squad, squadId: item.squadId, name: item.squadName, items: [] });
+        groups.get(key).items.push(item);
+      });
+      return [...groups.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR'));
+    }
+
     function raidIsLate(item) {
       if (!item?.due || item.done) return false;
       const due = parseISODate(item.due);
@@ -10405,6 +10774,74 @@
       }, 60);
     }
 
+    function openOpenRaidsOverviewModal() {
+      const openItems = collectOpenRaidItems(data.projects || []);
+      const riskTotal = openItems.filter(item => item.row.group === 'risks').length;
+      const dependencyTotal = openItems.filter(item => item.row.group === 'dependencies').length;
+      const lateTotal = openItems.filter(item => item.late).length;
+      const groups = groupOpenRaidItemsBySquad(openItems);
+      const body = openItems.length ? `
+        <div class="ux-v6-raid-modal">
+          <div class="ux-v6-raid-modal-summary">
+            <div class="ux-v6-raid-summary-card"><span>Total aberto</span><strong>${openItems.length}</strong></div>
+            <div class="ux-v6-raid-summary-card"><span>Riscos</span><strong>${riskTotal}</strong></div>
+            <div class="ux-v6-raid-summary-card"><span>Dependências</span><strong>${dependencyTotal}</strong></div>
+          </div>
+          <div class="ux-v6-raid-modal-list">
+            ${groups.map(group => {
+              const late = group.items.filter(item => item.late).length;
+              return `<section class="ux-v6-raid-squad-block">
+                <div class="ux-v6-raid-squad-head">
+                  <div><strong>${escapeHtml(group.name)}</strong><span>${group.items.length} item(ns) em aberto${late ? ` · ${late} atrasado(s)` : ''}</span></div>
+                  <button type="button" class="ux-v6-raid-open-squad" onclick="goToRaidSquad('${escapeAttr(group.squadId)}', '${escapeAttr(group.name)}')">Abrir Squad</button>
+                </div>
+                <div class="ux-v6-raid-items">
+                  ${group.items.map(item => {
+                    const row = item.row;
+                    const projectLabel = [initiativeNumber(item.project), displayProjectTitle(item.project)].filter(Boolean).join(' · ');
+                    const dueLabel = row.due ? formatBR(row.due) : 'Sem prazo';
+                    const ownerLabel = row.owner || 'Sem dono';
+                    return `<button type="button" class="ux-v6-raid-item ${item.late ? 'late' : ''}" onclick="goToRaidProject('${escapeAttr(item.project.id)}')" title="Abrir ${escapeAttr(displayProjectTitle(item.project))}">
+                      <span class="ux-v6-raid-item-main">
+                        <strong>${escapeHtml(row.text || 'Item sem descrição')}</strong>
+                        <span>${escapeHtml(projectLabel || 'Iniciativa não informada')} · ${escapeHtml(ownerLabel)}${row.action ? ` · ${escapeHtml(row.action)}` : ''}</span>
+                      </span>
+                      <span class="ux-v6-raid-item-meta">
+                        <span class="ux-v6-raid-type ${escapeAttr(row.group)}">${escapeHtml(raidGroupLabel(row.group))}</span>
+                        <span class="ux-v6-raid-date ${item.late ? 'late' : ''}">${escapeHtml(dueLabel)}</span>
+                      </span>
+                    </button>`;
+                  }).join('')}
+                </div>
+              </section>`;
+            }).join('')}
+          </div>
+        </div>`
+        : `<div class="ux-v6-raid-modal ux-v6-raid-empty"><strong>Nenhum risco ou dependência em aberto.</strong>A base atual não possui itens pendentes em RAID para as Squads cadastradas.</div>`;
+      openModal(
+        'Riscos e Dependências em aberto',
+        `Consolidado por Squad: ${groups.length} squad(s), ${lateTotal} item(ns) atrasado(s).`,
+        body,
+        [`<button type="button" class="btn" onclick="closeModal()">Fechar</button>`]
+      );
+    }
+
+    function goToRaidSquad(squadId, squadName = '') {
+      const squad = squadById(squadId) || sortedSquadsList().find(item => normalizeSearchText(item.name) === normalizeSearchText(squadName));
+      if (!squad) { toast('Squad não encontrada'); return; }
+      closeModal();
+      dashboardSearchTerm = '';
+      squadDrawerSearchTerm = '';
+      openSquadProjects(squad.id);
+    }
+
+    function goToRaidProject(projectId) {
+      if (!(data.projects || []).some(p => p.id === projectId)) { toast('Iniciativa não encontrada'); return; }
+      closeModal();
+      openProjectFromDashboard(projectId);
+      setTimeout(() => focusRaidTab(), 90);
+    }
+
     function cardTemplate(c, project) {
       const tone = laneTone(c.status);
       const reason = c.stageReason ? `<span class="stage-reason" title="Motivo da etapa">${escapeHtml(c.stageReason)}</span>` : '';
@@ -10494,27 +10931,55 @@
     function renderTimeline(project) {
       const wrap = document.getElementById('timeline');
       const allItems = ensureTimelineItems(project);
-      wrap.innerHTML = TIMELINE_STAGES.map((stage, idx) => {
+      const total = allItems.length || 1;
+      const doneTotal = allItems.filter(it => it.status === 'done').length;
+      const progressTotal = allItems.filter(it => ['progress', 'waiting-arch', 'waiting-business', 'blocked'].includes(it.status)).length;
+      const pendingTotal = allItems.filter(it => !it.status || it.status === 'notstarted').length;
+      const overallPct = Math.round((doneTotal / total) * 100);
+      const overviewHtml = `<div class="tl-overview">
+        <div class="tl-overview-title">
+          <strong>Timeline do Discovery</strong>
+          <span>Leitura consolidada por etapa, atualizada por notas, dependências, prazos importados e ajustes manuais.</span>
+        </div>
+        <div class="tl-overview-stats">
+          <span class="tl-stat-pill"><strong>${overallPct}%</strong> maturidade</span>
+          <span class="tl-stat-pill"><strong>${doneTotal}</strong> concluídas</span>
+          <span class="tl-stat-pill"><strong>${progressTotal}</strong> em andamento</span>
+          <span class="tl-stat-pill"><strong>${pendingTotal}</strong> pendentes</span>
+        </div>
+      </div>`;
+      const stagesHtml = TIMELINE_STAGES.map((stage, idx) => {
         const items = allItems.filter(it => it.stageId === stage.id);
         const doneCount = items.filter(it => it.status === 'done').length;
+        const activeCount = items.filter(it => ['progress', 'waiting-arch', 'waiting-business', 'blocked'].includes(it.status)).length;
+        const pendingCount = items.filter(it => !it.status || it.status === 'notstarted').length;
         const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
         return `<div class="tl-stage" data-stage="${stage.id}" ondragover="handleTlDragOver(event)" ondragleave="handleTlDragLeave(event)" ondrop="handleTlDrop(event, '${stage.id}')">
-          <span class="tl-eyebrow">Discovery</span>
+          <div class="tl-stage-head">
+            <span class="tl-eyebrow">Etapa ${idx + 1}</span>
+            <span class="tl-stage-score">${pct}%</span>
+          </div>
           <h4 class="tl-title">${idx + 1}. ${escapeHtml(stage.title)}</h4>
+          <div class="tl-stage-meta">
+            <span>${doneCount} concluída(s)</span>
+            <span>${activeCount} em curso</span>
+            <span>${pendingCount} pendente(s)</span>
+          </div>
+          <div class="tl-progress">
+            <div class="tl-progress-track"><span class="tl-progress-fill" style="width:${pct}%"></span></div>
+          </div>
           <div class="tl-items">
             ${items.map(timelineItemRow).join('') || `<div class="tl-empty">Arraste um item para cá</div>`}
           </div>
-          <div class="tl-progress">
-            <div class="tl-progress-head"><span>Progresso</span><span>${pct}%</span></div>
-            <div class="tl-progress-track"><span class="tl-progress-fill" style="width:${pct}%"></span></div>
-          </div>
         </div>`;
       }).join('');
+      wrap.innerHTML = overviewHtml + stagesHtml;
     }
 
     function timelineItemRow(it) {
       const tpl = timelineItemTemplate.find(t => t.id === it.id) || {};
-      const tone = (TIMELINE_STATUSES.find(s => s.id === it.status) || TIMELINE_STATUSES[0]).tone;
+      const status = TIMELINE_STATUSES.find(s => s.id === it.status) || TIMELINE_STATUSES[0];
+      const tone = status.tone;
       const options = TIMELINE_STATUSES.map(s => `<option value="${s.id}" ${s.id === it.status ? 'selected' : ''}>${escapeHtml(s.label)}</option>`).join('');
       return `<div class="tl-item ${it.status === 'done' ? 'done' : ''}" draggable="true" data-item="${it.id}"
           ondragstart="handleTlItemDragStart(event, '${it.id}')" ondragend="handleTlItemDragEnd(event)">
@@ -10522,7 +10987,7 @@
           <span class="tl-item-icon">${TIMELINE_ICONS[tpl.icon] || ''}</span>
           <span class="tl-item-label">${escapeHtml(tpl.label || it.id)}</span>
         </div>
-        <select class="tl-status-bar tone-${tone}" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" onchange="updateTimelineItemStatus(event, '${it.id}', this.value)">${options}</select>
+        <select class="tl-status-bar tone-${tone}" aria-label="Status de ${escapeAttr(tpl.label || it.id)}" title="${escapeAttr(status.label)}" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" onchange="updateTimelineItemStatus(event, '${it.id}', this.value)">${options}</select>
       </div>`;
     }
 
@@ -14809,6 +15274,9 @@ Recomendação PMO: ${d.recommendation}`;
       const totalHours = allProjects.reduce((acc, project) => acc + Number(project.hours2026 || 0), 0);
       const activeDiscoveries = allProjects.filter(p => ['Em Discovery', 'A iniciar', 'Atenção', 'Crítico', 'No prazo'].includes(p.status)).length;
       const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
+      const openRaidItems = collectOpenRaidItems(allProjects);
+      const openRaidSquadCount = groupOpenRaidItemsBySquad(openRaidItems).length;
+      const lateOpenRaidCount = openRaidItems.filter(item => item.late).length;
       const pendingDataCount = allProjects.reduce((acc, p) => acc + (missingDataCount(p) > 0 ? 1 : 0), 0);
       const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
       const searchTerm = dashboardSearchTerm || '';
@@ -14907,7 +15375,9 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="ux-v6-kpi"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">▧</div><div><span>Total de iniciativas</span><strong>${totalProjects + totalChildren}</strong><span class="ux-v6-kpi-note">${totalProjects} principais | ${totalChildren} filhas</span></div></div></div>
           <div class="ux-v6-kpi"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">◷</div><div><span>Total de horas 2026</span><strong>${formatHours(totalHours)}</strong><span class="ux-v6-kpi-note">planejadas</span></div></div></div>
           <div class="ux-v6-kpi warn"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon amber">▣</div><div><span>ASD / Sem Squad</span><strong>${unassignedCount}</strong><span class="ux-v6-kpi-note">${(totalProjects ? (unassignedCount / totalProjects) * 100 : 0).toFixed(1).replace('.', ',')}% do total</span></div></div></div>
-          <div class="ux-v6-kpi"><div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">⚠</div><div><span>Alertas de qualidade</span><strong>${totalAlerts}</strong><span class="ux-v6-kpi-note">dados a revisar</span></div></div></div>
+          <button type="button" class="ux-v6-kpi ux-v6-kpi-button" onclick="openOpenRaidsOverviewModal()" title="Ver riscos e dependências em aberto">
+            <div class="ux-v6-kpi-row"><div class="ux-v6-kpi-icon">⚠</div><div><span>Riscos e dependências</span><strong>${openRaidItems.length}</strong><span class="ux-v6-kpi-note">${openRaidSquadCount} squad(s) · ${lateOpenRaidCount} atrasado(s)</span></div></div>
+          </button>
         </section>
         <section class="ux-v6-main-grid" aria-label="Dashboard clicável por Squad">
           <div class="ux-v6-content-col">
