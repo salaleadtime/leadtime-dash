@@ -9500,6 +9500,71 @@
       return { list: Array.from(map.values()), changed };
     }
 
+    function nestedItemKey(item) {
+      return String(item?.id || item?.sourceKey || item?.initiativeNumber || item?.key || '').trim();
+    }
+
+    function itemChangedAt(item) {
+      return Date.parse(item?.updatedAt || item?.movedAt || item?.addedAt || '') || 0;
+    }
+
+    function mergeNestedById(localList, remoteList, deletedIds) {
+      const map = new Map();
+      (localList || []).forEach(item => {
+        const id = nestedItemKey(item);
+        if (!id || (deletedIds && deletedIds.has(id))) return;
+        map.set(id, item);
+      });
+      (remoteList || []).forEach(item => {
+        const id = nestedItemKey(item);
+        if (!id || (deletedIds && deletedIds.has(id))) return;
+        const existing = map.get(id);
+        if (!existing) { map.set(id, item); return; }
+        if (itemChangedAt(item) > itemChangedAt(existing)) map.set(id, item);
+      });
+      return Array.from(map.values());
+    }
+
+    function mergeRaidGroups(localRaids, remoteRaids, deletedIds) {
+      const local = normalizeRaids(localRaids);
+      const remote = normalizeRaids(remoteRaids);
+      return ['risks', 'assumptions', 'issues', 'dependencies'].reduce((acc, group) => {
+        acc[group] = mergeNestedById(local[group], remote[group], deletedIds);
+        return acc;
+      }, { risks: [], assumptions: [], issues: [], dependencies: [] });
+    }
+
+    function mergeProjectRecord(localProject, remoteProject, deletedIds) {
+      const remoteTime = Date.parse(remoteProject?.updatedAt || '') || 0;
+      const localTime = Date.parse(localProject?.updatedAt || '') || 0;
+      const base = deepClone(remoteTime > localTime ? remoteProject : localProject);
+      base.cards = mergeNestedById(localProject?.cards, remoteProject?.cards, deletedIds);
+      base.schedule = mergeNestedById(localProject?.schedule, remoteProject?.schedule, deletedIds);
+      base.raids = mergeRaidGroups(localProject?.raids, remoteProject?.raids, deletedIds);
+      base.subInitiatives = mergeNestedById(localProject?.subInitiatives, remoteProject?.subInitiatives, deletedIds);
+      base.attachments = mergeNestedById(localProject?.attachments, remoteProject?.attachments, deletedIds);
+      base.timelineItems = mergeNestedById(localProject?.timelineItems, remoteProject?.timelineItems, deletedIds);
+      return base;
+    }
+
+    function mergeProjectsById(localList, remoteList, deletedIds) {
+      const map = new Map();
+      let changed = false;
+      (localList || []).forEach(item => {
+        if (!item || !item.id) return;
+        if (deletedIds && deletedIds.has(item.id)) { changed = true; return; }
+        map.set(item.id, item);
+      });
+      (remoteList || []).forEach(item => {
+        if (!item || !item.id || (deletedIds && deletedIds.has(item.id))) return;
+        const existing = map.get(item.id);
+        if (!existing) { map.set(item.id, item); changed = true; return; }
+        const merged = mergeProjectRecord(existing, item, deletedIds);
+        if (JSON.stringify(merged) !== JSON.stringify(existing)) { map.set(item.id, merged); changed = true; }
+      });
+      return { list: Array.from(map.values()), changed };
+    }
+
     // "Tumbas" de exclusão: sem isso, o merge aditivo acima faria uma iniciativa ou
     // squad excluída "ressuscitar" assim que outro usuário — com uma cópia local de
     // antes da exclusão — salvasse de novo (a exclusão nunca "vence" um item que só
@@ -9529,7 +9594,7 @@
       const normalizedRemote = normalizeData(deepClone(remote));
       const tombstones = mergeTombstones(data.tombstones, normalizedRemote.tombstones);
       const deletedIds = new Set(tombstones.map(t => t.id));
-      const projectsMerge = mergeById(data.projects, normalizedRemote.projects, deletedIds);
+      const projectsMerge = mergeProjectsById(data.projects, normalizedRemote.projects, deletedIds);
       const squadsMerge = mergeById(data.squads, normalizedRemote.squads, deletedIds);
       const historyMerge = mergeById(data.importHistory, normalizedRemote.importHistory);
       if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
@@ -9738,6 +9803,11 @@
         project.startDate = project.startDate || project.dtInicio || '';
         project.phases = Array.isArray(project.phases) && project.phases.length ? project.phases : phaseTemplate.map(p => ({ ...p, status: 'todo' }));
         project.checklist = Array.isArray(project.checklist) && project.checklist.length ? project.checklist : checklistTemplate.map(c => ({ ...c, done: false }));
+        project.subInitiatives = Array.isArray(project.subInitiatives) ? project.subInitiatives.map(child => ({
+          ...child,
+          updatedAt: child.updatedAt || '',
+          importSource: normalizeImportSource(child.importSource)
+        })) : [];
         // Preenche itens canônicos ausentes (bases antigas tinham ids divergentes, ex.
         // "tech"/"estimate" em vez de "dependencies"/"estimates", e sem "risks"/"gono"),
         // sem remover nenhum item já existente.
@@ -9752,16 +9822,19 @@
           // Conclusão só acontece quando o usuário marca explicitamente o marco como concluído.
           done: item.done === true || item.completed === true,
           observations: item.observations ?? item.notes ?? '',
-          pdcaAction: item.pdcaAction ?? ''
+          pdcaAction: item.pdcaAction ?? '',
+          updatedAt: item.updatedAt || ''
         }));
         project.raids = normalizeRaids(project.raids);
         project.attachments = Array.isArray(project.attachments) ? project.attachments.map(normalizeAttachment) : [];
         project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
+        project.importSource = normalizeImportSource(project.importSource);
         project.cards = (project.cards || []).map(card => ({
           ...card,
           stageReason: card.stageReason || defaultStageReason(card.status),
           movedAt: card.movedAt || '',
-          movementHistory: card.movementHistory || []
+          movementHistory: card.movementHistory || [],
+          updatedAt: card.updatedAt || card.movedAt || ''
         }));
         project.phases = (project.phases || []).map(phase => ({
           ...phase,
@@ -9805,8 +9878,17 @@
         status: done ? 'Concluído' : (item.status || 'Aberto'),
         action: item.action || item.nextAction || defaultRaidAction(group),
         done,
-        note: item.note || item.notes || ''
+        note: item.note || item.notes || '',
+        updatedAt: item.updatedAt || ''
       };
+    }
+
+    function normalizeImportSource(source) {
+      const src = source && typeof source === 'object' ? source : {};
+      src.ops4ops = src.ops4ops && typeof src.ops4ops === 'object' ? src.ops4ops : {};
+      src.ops4ops.fields = src.ops4ops.fields && typeof src.ops4ops.fields === 'object' ? src.ops4ops.fields : {};
+      src.ops4ops.updatedAt = src.ops4ops.updatedAt || '';
+      return src;
     }
 
 
@@ -9817,6 +9899,7 @@
         size: Number(item.size || 0),
         type: item.type || item.mimeType || 'Arquivo',
         addedAt: item.addedAt || new Date().toISOString(),
+        updatedAt: item.updatedAt || item.addedAt || '',
         note: item.note || item.notes || '',
         dataUrl: item.dataUrl || '',
         localOnly: item.dataUrl ? false : (item.localOnly !== false)
@@ -10398,10 +10481,11 @@
       // sem apagar o que já estava marcado como concluído.
       project.timelineItems.forEach(it => {
         if (!it.status) it.status = it.done ? 'done' : 'notstarted';
+        it.updatedAt = it.updatedAt || '';
       });
       timelineItemTemplate.forEach(tpl => {
         if (!project.timelineItems.some(it => it.id === tpl.id)) {
-          project.timelineItems.push({ id: tpl.id, stageId: tpl.stageId, status: 'notstarted' });
+          project.timelineItems.push({ id: tpl.id, stageId: tpl.stageId, status: 'notstarted', updatedAt: '' });
         }
       });
       return project.timelineItems;
@@ -10449,6 +10533,7 @@
       const item = p.timelineItems.find(x => x.id === id);
       if (!item) return;
       item.status = value;
+      item.updatedAt = new Date().toISOString();
       saveData(true);
     }
 
@@ -10488,6 +10573,7 @@
       const item = p.timelineItems.find(x => x.id === id);
       if (!item || item.stageId === stageId) return;
       item.stageId = stageId;
+      item.updatedAt = new Date().toISOString();
       saveData(true);
       toast('Item movido');
     }
@@ -10539,6 +10625,7 @@
       card.status = laneId;
       card.stageReason = defaultStageReason(laneId);
       card.movedAt = new Date().toISOString();
+      card.updatedAt = card.movedAt;
       card.movementHistory = card.movementHistory || [];
       card.movementHistory.push({ from: previous, to: laneId, at: card.movedAt, source });
       if (card.movementHistory.length > 12) card.movementHistory = card.movementHistory.slice(-12);
@@ -10881,6 +10968,7 @@
       if (!attachment) { toast('Anexo não encontrado'); return; }
       attachment.name = document.getElementById('attachment-name').value.trim() || attachment.name || 'Arquivo sem nome';
       attachment.note = document.getElementById('attachment-note').value.trim();
+      attachment.updatedAt = new Date().toISOString();
       closeModal();
       saveData(true);
       openAttachmentsTab();
@@ -10891,6 +10979,7 @@
       const attachment = (p.attachments || []).find(a => a.id === id);
       if (!attachment) return;
       p.attachments = (p.attachments || []).filter(a => a.id !== id);
+      recordTombstone(id);
       try { await deleteAttachmentBlob(id); } catch(e) { console.warn(e); }
       saveData(true);
       toast('Anexo removido');
@@ -11145,12 +11234,14 @@
       const item = p.schedule.find(x => x.id === id);
       if (!item) return;
       item[field] = field === 'progress' ? clamp(value, 0, 100) : value;
+      item.updatedAt = new Date().toISOString();
       saveData(true);
     }
 
     function deleteSchedule(id) {
       const p = getProject();
       p.schedule = p.schedule.filter(x => x.id !== id);
+      recordTombstone(id);
       saveData(true);
     }
 
@@ -11289,6 +11380,7 @@
         c.movementHistory = c.movementHistory || [];
         c.movementHistory.push({ from: previousStatus, to: c.status, at: c.movedAt, source: 'modal' });
       }
+      c.updatedAt = new Date().toISOString();
       if (!modalState.isEdit) p.cards.push(c);
       closeModal();
       saveData(true);
@@ -11297,6 +11389,7 @@
     function deleteCard(id) {
       const p = getProject();
       p.cards = p.cards.filter(c => c.id !== id);
+      recordTombstone(id);
       closeModal();
       saveData(true);
     }
@@ -11351,6 +11444,7 @@
       item.observations = document.getElementById('sch-observations').value.trim();
       item.pdcaAction = document.getElementById('sch-pdca-action').value.trim();
       item.progress = scheduleCompleted(item) ? 100 : null;
+      item.updatedAt = new Date().toISOString();
       if (!modalState.isEdit) p.schedule.push(item);
       closeModal();
       saveData(true);
@@ -11420,6 +11514,7 @@
       item.action = document.getElementById('raid-action').value.trim() || defaultRaidAction(newGroup);
       item.note = document.getElementById('raid-note').value.trim();
       item.done = status === 'Concluído';
+      item.updatedAt = new Date().toISOString();
       if (!item.text) { toast('Informe uma descrição'); return; }
 
       if (originalIndex !== null && originalIndex !== undefined) {
@@ -11441,6 +11536,8 @@
       p.raids = normalizeRaids(p.raids);
       const { group, index } = modalState;
       if (index === null || index === undefined) return;
+      const item = p.raids[group][index];
+      if (item?.id) recordTombstone(item.id);
       p.raids[group].splice(index, 1);
       closeModal();
       saveData(true);
@@ -13330,6 +13427,7 @@ Recomendação PMO: ${d.recommendation}`;
         child.theme = tema;
         child.rawName = name;
         child.duplicateNumber = false;
+        child.updatedAt = new Date().toISOString();
         if (risksText) upsertDependencyText(mother, risksText);
         mother.updatedAt = new Date().toISOString();
         closeModal();
@@ -13383,7 +13481,7 @@ Recomendação PMO: ${d.recommendation}`;
       project.raids = normalizeRaids(project.raids);
       const already = project.raids.dependencies.some(d => String(d.text || '').trim() === clean);
       if (already) return false;
-      project.raids.dependencies.push(normalizeRaidItem({ text: clean, note: 'Cadastrado via formulário' }, 'dependencies'));
+      project.raids.dependencies.push(normalizeRaidItem({ text: clean, note: 'Cadastrado via formulário', updatedAt: new Date().toISOString() }, 'dependencies'));
       return true;
     }
 
@@ -13487,6 +13585,10 @@ Recomendação PMO: ${d.recommendation}`;
       return String(h || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
     }
 
+    function importTextKey(prefix, text) {
+      return `${prefix}:${stripAccentsLower(text).replace(/\s+/g, ' ').trim()}`;
+    }
+
     const IMPORT_HEADER_MAP = {
       '# mae': 'motherNumber', 'tipo': 'tipo', '# filha': 'childNumber',
       'nome da iniciativa': 'nome', 'squad': 'squad', 'tema': 'tema',
@@ -13572,8 +13674,14 @@ Recomendação PMO: ${d.recommendation}`;
       const clean = String(noteText || '').trim();
       if (!clean) return false;
       project.cards = Array.isArray(project.cards) ? project.cards : [];
-      const match = project.cards.find(c => (c.description || '') === clean);
-      if (match) { if (dueISO && !match.due) match.due = dueISO; return false; }
+      const sourceKey = importTextKey('nota', clean);
+      const match = project.cards.find(c => c.sourceKey === sourceKey || (c.description || '') === clean);
+      if (match) {
+        match.source = match.source || 'ops4ops';
+        match.sourceKey = match.sourceKey || sourceKey;
+        if (dueISO && !match.due) { match.due = dueISO; match.updatedAt = new Date().toISOString(); }
+        return false;
+      }
       const lower = clean.toLowerCase();
       let status = 'backlog';
       if (/conclu[ií]d/.test(lower)) status = 'done';
@@ -13583,7 +13691,8 @@ Recomendação PMO: ${d.recommendation}`;
       project.cards.push({
         id: uid('card'), title: title || 'Ação importada', description: clean, status, priority: 'Média', owner: '',
         due: dueISO || plusDays(14), notes: 'Importado da planilha Ops4Ops', type: 'Entendimento',
-        stageReason: defaultStageReason(status), movedAt: '', movementHistory: []
+        stageReason: defaultStageReason(status), movedAt: '', movementHistory: [],
+        source: 'ops4ops', sourceKey, updatedAt: new Date().toISOString()
       });
       return true;
     }
@@ -13592,8 +13701,15 @@ Recomendação PMO: ${d.recommendation}`;
       const clean = String(prazoText || '').trim();
       if (!clean || !dueISO) return false;
       project.schedule = Array.isArray(project.schedule) ? project.schedule : [];
-      if (project.schedule.some(s => (s.item || '') === clean)) return false;
-      project.schedule.push({ id: uid('sch'), item: clean, owner: '', start: fmtDate(new Date()), end: dueISO, done: false, observations: 'Importado da planilha Ops4Ops', pdcaAction: '' });
+      const sourceKey = importTextKey('prazo', clean);
+      const match = project.schedule.find(s => s.sourceKey === sourceKey || (s.item || '') === clean);
+      if (match) {
+        match.source = match.source || 'ops4ops';
+        match.sourceKey = match.sourceKey || sourceKey;
+        if (dueISO && !match.end) { match.end = dueISO; match.updatedAt = new Date().toISOString(); }
+        return false;
+      }
+      project.schedule.push({ id: uid('sch'), item: clean, owner: '', start: fmtDate(new Date()), end: dueISO, done: false, observations: 'Importado da planilha Ops4Ops', pdcaAction: '', source: 'ops4ops', sourceKey, updatedAt: new Date().toISOString() });
       return true;
     }
 
@@ -13614,6 +13730,7 @@ Recomendação PMO: ${d.recommendation}`;
         items.forEach(it => {
           if (it.status && it.status !== 'notstarted') return;
           it.status = 'done';
+          it.updatedAt = new Date().toISOString();
           advanced++;
         });
       }
@@ -13657,9 +13774,9 @@ Recomendação PMO: ${d.recommendation}`;
         for (const line of lines) {
           if (!rule.topics.some(t => line.includes(t))) continue;
           const doneMatch = rule.doneWords.find(w => line.includes(w) && !hasNearbyNegation(line, line.indexOf(w)));
-          if (doneMatch) { item.status = 'done'; advanced++; break; }
+          if (doneMatch) { item.status = 'done'; item.updatedAt = new Date().toISOString(); advanced++; break; }
           const progressMatch = rule.progressWords.find(w => line.includes(w));
-          if (progressMatch) { item.status = 'progress'; advanced++; break; }
+          if (progressMatch) { item.status = 'progress'; item.updatedAt = new Date().toISOString(); advanced++; break; }
         }
       });
       return advanced;
@@ -13675,7 +13792,7 @@ Recomendação PMO: ${d.recommendation}`;
       let advanced = 0;
       const setIfNotStarted = (id, status) => {
         const item = items.find(it => it.id === id);
-        if (item && (!item.status || item.status === 'notstarted')) { item.status = status; advanced++; }
+        if (item && (!item.status || item.status === 'notstarted')) { item.status = status; item.updatedAt = new Date().toISOString(); advanced++; }
       };
       if (/arquitet/.test(text)) {
         ['ti-riscosdeps', 'ti-solucao', 'ti-viabilidade'].forEach(id => setIfNotStarted(id, 'waiting-arch'));
@@ -13695,8 +13812,39 @@ Recomendação PMO: ${d.recommendation}`;
         || sortedSquadsList()[0] || null;
     }
 
+    function importBlankish(value) {
+      const s = stripAccentsLower(value).trim();
+      return !s || ['0', 'nao informado', 'a validar', 'a definir', 'ainda sem definicao', 'asd', 'squad-asd', 'projeto sem nome'].includes(s);
+    }
+
+    function sameImportValue(a, b) {
+      return String(a ?? '').trim() === String(b ?? '').trim();
+    }
+
+    function applyImportedField(project, spec, nextValue, changed, preserved) {
+      if (nextValue === undefined || nextValue === null || nextValue === '') return;
+      project.importSource = normalizeImportSource(project.importSource);
+      const fields = project.importSource.ops4ops.fields;
+      const currentValue = spec.current ? spec.current(project) : project[spec.key];
+      const previousImported = fields[spec.key];
+      if (sameImportValue(currentValue, nextValue)) {
+        fields[spec.key] = nextValue;
+        return;
+      }
+      const hadImportedValue = previousImported !== undefined && previousImported !== null && previousImported !== '';
+      const canApply = importBlankish(currentValue) || (hadImportedValue && sameImportValue(currentValue, previousImported));
+      if (canApply) {
+        if (spec.apply) spec.apply(project, nextValue);
+        else project[spec.key] = nextValue;
+        fields[spec.key] = nextValue;
+        changed.push(spec.label);
+        return;
+      }
+      preserved.push(spec.label);
+    }
+
     function applyImportPlan(plan) {
-      let cardsAdded = 0, depsAdded = 0, scheduleAdded = 0, timelineAdvanced = 0, projectsCreated = 0, projectsUpdated = 0, childrenUpserted = 0;
+      let cardsAdded = 0, depsAdded = 0, scheduleAdded = 0, timelineAdvanced = 0, projectsCreated = 0, projectsUpdated = 0, childrenUpserted = 0, fieldsPreserved = 0;
       const squadsByName = new Map(sortedSquadsList().map(s => [normalizeImportHeader(s.name), s]));
       const historyItems = [];
 
@@ -13704,26 +13852,40 @@ Recomendação PMO: ${d.recommendation}`;
       // que aparece depois no histórico do sino como "o que mudou" de cada iniciativa.
       function applyCoreFields(project, rec) {
         const changed = [];
-        if (rec.nome && project.name !== rec.nome) { project.name = rec.nome; changed.push('Nome'); }
+        const preserved = [];
+        applyImportedField(project, { key: 'name', label: 'Nome' }, rec.nome, changed, preserved);
         if (rec.squad) {
           const sq = squadsByName.get(normalizeImportHeader(rec.squad));
-          if (sq && project.squadId !== sq.id) { project.squadId = sq.id; project.squad = sq.name; changed.push('Squad'); }
+          if (sq) applyImportedField(project, {
+            key: 'squadId',
+            label: 'Squad',
+            current: p => p.squadId || p.squad,
+            apply: p => { p.squadId = sq.id; p.squad = sq.name; }
+          }, sq.id, changed, preserved);
         }
-        if (rec.tema && project.theme !== rec.tema) { project.theme = rec.tema; if (!project.business || project.business === 'Não informado') project.business = rec.tema; changed.push('Tema'); }
-        if (rec.frontLeader && project.frontLeader !== rec.frontLeader) { project.frontLeader = rec.frontLeader; changed.push('Líder da frente'); }
-        if (rec.initiativeOwner && project.initiativeOwner !== rec.initiativeOwner) { project.initiativeOwner = rec.initiativeOwner; changed.push('Dono da iniciativa'); }
-        if (rec.po && project.po !== rec.po) { project.po = rec.po; changed.push('PO'); }
-        if (rec.focalPoint && project.focalPoint !== rec.focalPoint) { project.focalPoint = rec.focalPoint; changed.push('Ponto focal'); }
-        if (rec.techLead && project.techLead !== rec.techLead) { project.techLead = rec.techLead; changed.push('Tech Lead'); }
-        if (rec.dataArea && project.dataArea !== rec.dataArea) { project.dataArea = rec.dataArea; changed.push('Dados'); }
-        if (rec.aiRpa && project.aiRpa !== rec.aiRpa) { project.aiRpa = rec.aiRpa; changed.push('IA/RPA'); }
-        if (rec.processName && project.processName !== rec.processName) { project.processName = rec.processName; changed.push('Processo'); }
+        applyImportedField(project, {
+          key: 'theme',
+          label: 'Tema',
+          apply: (p, value) => { p.theme = value; if (importBlankish(p.business)) p.business = value; }
+        }, rec.tema, changed, preserved);
+        [
+          ['frontLeader', 'Líder da frente', rec.frontLeader],
+          ['initiativeOwner', 'Dono da iniciativa', rec.initiativeOwner],
+          ['po', 'PO', rec.po],
+          ['focalPoint', 'Ponto focal', rec.focalPoint],
+          ['techLead', 'Tech Lead', rec.techLead],
+          ['dataArea', 'Dados', rec.dataArea],
+          ['aiRpa', 'IA/RPA', rec.aiRpa],
+          ['processName', 'Processo', rec.processName]
+        ].forEach(([key, label, value]) => applyImportedField(project, { key, label }, value, changed, preserved));
         const hrs = Number(String(rec.hours2026).replace(',', '.'));
-        if (Number.isFinite(hrs) && hrs > 0 && project.hours2026 !== hrs) { project.hours2026 = hrs; changed.push('Horas 2026'); }
-        const disc = parseFlexibleDate(rec.discoveryDate); if (disc && project.discoveryDate !== disc) { project.discoveryDate = disc; changed.push('Discovery'); }
-        const sd = parseFlexibleDate(rec.startDev); if (sd && project.startDev !== sd) { project.startDev = sd; changed.push('Início Dev'); }
-        const ed = parseFlexibleDate(rec.endDev); if (ed && project.endDev !== ed) { project.endDev = ed; changed.push('Término Dev'); }
-        return changed;
+        if (Number.isFinite(hrs) && hrs > 0) applyImportedField(project, { key: 'hours2026', label: 'Horas 2026' }, hrs, changed, preserved);
+        applyImportedField(project, { key: 'discoveryDate', label: 'Discovery' }, parseFlexibleDate(rec.discoveryDate), changed, preserved);
+        applyImportedField(project, { key: 'startDev', label: 'Início Dev' }, parseFlexibleDate(rec.startDev), changed, preserved);
+        applyImportedField(project, { key: 'endDev', label: 'Término Dev' }, parseFlexibleDate(rec.endDev), changed, preserved);
+        if (changed.length || preserved.length) project.importSource.ops4ops.updatedAt = new Date().toISOString();
+        fieldsPreserved += preserved.length;
+        return { changed, preserved };
       }
       function applyDerived(project, rec) {
         const derived = { cards: 0, deps: 0, schedule: 0, timeline: 0, timelineText: 0, timelineDate: 0 };
@@ -13746,9 +13908,10 @@ Recomendação PMO: ${d.recommendation}`;
         return derived;
       }
       // Traduz "o que mudou" em "onde mudou" (cadastro / Ações / Riscos-Dependências / Cronograma / Timeline).
-      function buildWhereList(changed, derived) {
+      function buildWhereList(changed, derived, preserved = []) {
         const where = [];
         if (changed.length) where.push(`Cadastro: ${changed.join(', ')}`);
+        if (preserved.length) where.push(`Manual preservado: ${preserved.join(', ')}`);
         if (derived.cards) where.push(`Ações: +${derived.cards}`);
         if (derived.deps) where.push(`Riscos/Dependências: +${derived.deps}`);
         if (derived.schedule) where.push(`Cronograma: +${derived.schedule}`);
@@ -13757,11 +13920,11 @@ Recomendação PMO: ${d.recommendation}`;
       }
 
       plan.updates.forEach(({ rec, project }) => {
-        const changed = applyCoreFields(project, rec);
+        const core = applyCoreFields(project, rec);
         const derived = applyDerived(project, rec);
         project.updatedAt = new Date().toISOString();
         projectsUpdated++;
-        historyItems.push({ kind: 'atualizada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(changed, derived) });
+        historyItems.push({ kind: 'atualizada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(core.changed, derived, core.preserved) });
       });
 
       plan.creates.forEach(({ rec }) => {
@@ -13780,12 +13943,12 @@ Recomendação PMO: ${d.recommendation}`;
           checklist: checklistTemplate.map(c => ({ ...c, done: false })),
           cards: [], schedule: [], raids: { risks: [], assumptions: [], issues: [], dependencies: [] }, attachments: []
         };
-        const changed = applyCoreFields(project, rec);
+        const core = applyCoreFields(project, rec);
         const derived = applyDerived(project, rec);
         project.updatedAt = new Date().toISOString();
         data.projects.push(project);
         projectsCreated++;
-        historyItems.push({ kind: 'criada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(changed, derived) });
+        historyItems.push({ kind: 'criada', number: project.initiativeNumber, name: project.name, squad: project.squad, where: buildWhereList(core.changed, derived, core.preserved) });
       });
 
       plan.childUpserts.forEach(({ rec }) => {
@@ -13802,21 +13965,25 @@ Recomendação PMO: ${d.recommendation}`;
           childrenUpserted++;
           changed.push('Nova filha');
         }
+        child.importSource = normalizeImportSource(child.importSource);
         child.initiativeNumber = rec.childNumber;
         child.motherNumber = rec.motherNumber;
-        if (rec.nome && child.name !== rec.nome) { child.name = rec.nome; changed.push('Nome'); }
-        if (rec.squad && child.squad !== rec.squad) { child.squad = rec.squad; changed.push('Squad'); }
+        const preserved = [];
+        applyImportedField(child, { key: 'name', label: 'Nome' }, rec.nome, changed, preserved);
+        applyImportedField(child, { key: 'squad', label: 'Squad' }, rec.squad, changed, preserved);
         child.sourceSquad = child.sourceSquad || mother.squad;
-        if (rec.tema && child.theme !== rec.tema) { child.theme = rec.tema; changed.push('Tema'); }
-        if (rec.frontLeader && child.frontLeader !== rec.frontLeader) { child.frontLeader = rec.frontLeader; changed.push('Líder da frente'); }
+        applyImportedField(child, { key: 'theme', label: 'Tema' }, rec.tema, changed, preserved);
+        applyImportedField(child, { key: 'frontLeader', label: 'Líder da frente' }, rec.frontLeader, changed, preserved);
         child.rawName = child.rawName || rec.nome;
         child.duplicateNumber = false;
+        child.updatedAt = new Date().toISOString();
         const where = changed.filter(c => c !== 'Nova filha').length ? [`Cadastro (dentro da Mãe ${rec.motherNumber}): ${changed.filter(c => c !== 'Nova filha').join(', ')}`] : [];
+        if (preserved.length) { fieldsPreserved += preserved.length; where.push(`Manual preservado: ${preserved.join(', ')}`); }
         if (rec.dependencias && upsertDependencyText(mother, rec.dependencias)) { depsAdded++; where.push(`Riscos/Dependências da Mãe: +1`); }
         historyItems.push({ kind: isNewChild ? 'filha nova' : 'filha atualizada', number: child.initiativeNumber, name: child.name, squad: child.squad, where });
       });
 
-      const result = { projectsCreated, projectsUpdated, childrenUpserted, cardsAdded, depsAdded, scheduleAdded, timelineAdvanced, skipped: plan.skipped.length, items: historyItems };
+      const result = { projectsCreated, projectsUpdated, childrenUpserted, cardsAdded, depsAdded, scheduleAdded, timelineAdvanced, fieldsPreserved, skipped: plan.skipped.length, items: historyItems };
       recordImportHistory(result);
       saveData(true);
       return result;
@@ -13837,6 +14004,7 @@ Recomendação PMO: ${d.recommendation}`;
         depsAdded: result.depsAdded,
         scheduleAdded: result.scheduleAdded,
         timelineAdvanced: result.timelineAdvanced,
+        fieldsPreserved: result.fieldsPreserved || 0,
         skipped: result.skipped,
         items: (result.items || []).slice(0, 25)
       });
@@ -13866,7 +14034,7 @@ Recomendação PMO: ${d.recommendation}`;
           </div>`;
         }).join('') || '<div class="ux-v6-attention-empty">Sem iniciativas afetadas (só ignoradas).</div>';
         return `<div class="ux-v6-hist-entry">
-          <div class="ux-v6-hist-head"><strong>${escapeHtml(formatBRDateTime(h.at))}</strong><span>${h.projectsCreated} nova(s) · ${h.projectsUpdated} atualizada(s) · ${h.childrenUpserted} filha(s) · ${h.cardsAdded} ação(ões) · ${h.depsAdded} dependência(s) · ${h.timelineAdvanced || 0} etapa(s) de timeline${h.skipped ? ` · ${h.skipped} ignorada(s)` : ''}</span></div>
+          <div class="ux-v6-hist-head"><strong>${escapeHtml(formatBRDateTime(h.at))}</strong><span>${h.projectsCreated} nova(s) · ${h.projectsUpdated} atualizada(s) · ${h.childrenUpserted} filha(s) · ${h.cardsAdded} ação(ões) · ${h.depsAdded} dependência(s) · ${h.timelineAdvanced || 0} etapa(s) de timeline${h.fieldsPreserved ? ` · ${h.fieldsPreserved} campo(s) manual(is) preservado(s)` : ''}${h.skipped ? ` · ${h.skipped} ignorada(s)` : ''}</span></div>
           <div class="ux-v6-hist-items">${itemsHtml}</div>
         </div>`;
       }).join('') : `<div class="ux-v6-attention-empty">Nenhuma importação de planilha registrada ainda.</div>`;
@@ -13909,7 +14077,7 @@ Recomendação PMO: ${d.recommendation}`;
       ];
       const body = `
         <div class="ux-v6-alert-list">${rows.map(([label, value]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('')}</div>
-        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">Ações (aba Ações), riscos/dependências e cronograma são criados automaticamente a partir das colunas Nota, Dependências e Prazos — sem duplicar o que já existe numa nova importação.</p>
+        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">Modo seguro: a planilha atualiza campos vazios ou ainda iguais ao último valor importado. Se alguém editou manualmente um campo, a importação preserva o manual e registra no histórico. Ações, riscos/dependências e cronograma são criados a partir de Nota, Dependências e Prazos sem duplicar o que já existe.</p>
       `;
       openModal('Confirmar importação da planilha', 'Revise antes de aplicar. Isso atualiza a base para todos os usuários.', body, [
         `<button type="button" class="btn" onclick="_pendingImportPlan=null;closeModal()">Cancelar</button>`,
