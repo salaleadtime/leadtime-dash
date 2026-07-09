@@ -5387,6 +5387,13 @@ function normalizeStatus(s){
   if(lc.indexOf('cancelad')>=0) return 'Cancelado';
   return t; // preserva o valor se não reconhecer
 }
+function importSaysActiveStatus(status){
+  var ns=normalizeStatus(status);
+  if(!ns) return false;
+  var lc=stripAcc(ns).toLowerCase();
+  if(lc.indexOf('concluid')>=0||lc.indexOf('executad')>=0||lc==='done'||lc==='resolved') return false;
+  return true;
+}
 function normalizeSquad(raw, fallback){
   if(!raw) return fallback||'';
   var norm=raw.toString().trim();
@@ -5575,7 +5582,7 @@ function loadXlsx(file){
       allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
 
       var merged=[], seenIds={};
-      var stats={newCount:0,updatedCount:0,preservedIni:0,preservedFim:0,preservedPrev:0,preservedChg:0,preservedImp:0,skipped:0};
+      var stats={newCount:0,updatedCount:0,preservedIni:0,preservedFim:0,preservedPrev:0,preservedChg:0,preservedImp:0,skipped:0,reactivatedCount:0};
       var skippedRows=[]; // {id, motivo} — linhas de ÉPICO descartadas por ID inválido (não conta o filtro normal de "não é épico")
 
       for(var x=det.hrow+1;x<rows.length;x++){
@@ -5608,24 +5615,33 @@ function loadXlsx(file){
         var impFim    = m.fim>=0 ? parseD(r[m.fim]) : null;
         var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
         var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
+        var impStatusNorm = normalizeStatus(impStatus);
+        var shouldReactivate = !!(old && isValidDate(old.fim) && !impFim && m.status>=0 && importSaysActiveStatus(impStatus));
 
         // MERGE — regra: import só SOBRESCREVE se trouxer valor não-vazio.
         // Se import veio vazio e já existia dado local, PRESERVA.
         // CHG é campo 100% manual: a importação nunca escreve nele, somente
         // preserva o que já existe localmente (evita reintroduzir CHG indevido
         // vindo de qualquer arquivo/fonte externa).
+        // Se o Jira manda o épico como ativo sem Data Fim, a Data Fim antiga
+        // vira histórico para o card voltar à aba Épicos.
         var rec={
           id: id,
           squad: normalizeSquad(impSquad, old?old.squad:'') || (old?old.squad:'') || '',
           resumo: impResumo || (old?old.resumo:'') || '',
-          status: normalizeStatus(impStatus) || (old?old.status:'') || '',
+          status: impStatusNorm || (old?old.status:'') || '',
           ini: (old&&old.ini) ? old.ini : (impIni || null),
-          fim: impFim || (old?old.fim:null) || null,
+          fim: shouldReactivate ? null : (impFim || (old?old.fim:null) || null),
+          fimAntes: shouldReactivate ? old.fim : ((old&&old.fimAntes) || null),
           dataPrevista: impPrev || (old?old.dataPrevista:null) || null,
           chg: old ? (old.chg||'') : '',
           impedimento: (impImp.trim() ? impImp : '') || (jimp[id]||'') || (old?old.impedimento:'') || ''
         };
         rec.lt = calcLT(rec.ini, rec.fim);
+        if(shouldReactivate){
+          stats.reactivatedCount++;
+          logFimChange(id, old.fim, '', 'REVERTIDO_IMPORT');
+        }
 
         merged.push(rec);
         seenIds[id]=true;
@@ -5633,7 +5649,7 @@ function loadXlsx(file){
         if(old){
           stats.updatedCount++;
           if(!impIni && old.ini) stats.preservedIni++;
-          if(!impFim && old.fim) stats.preservedFim++;
+          if(!shouldReactivate && !impFim && old.fim) stats.preservedFim++;
           if(!impPrev && old.dataPrevista) stats.preservedPrev++;
           if(old.chg) stats.preservedChg++;
           if(!impImp.trim() && old.impedimento) stats.preservedImp++;
@@ -5681,6 +5697,7 @@ function loadXlsx(file){
       var parts=[];
       if(stats.newCount) parts.push('<strong>'+stats.newCount+'</strong> novo'+(stats.newCount!==1?'s':''));
       if(stats.updatedCount) parts.push('<strong>'+stats.updatedCount+'</strong> atualizado'+(stats.updatedCount!==1?'s':''));
+      if(stats.reactivatedCount) parts.push('<strong>'+stats.reactivatedCount+'</strong> reaberto'+(stats.reactivatedCount!==1?'s':'')+' em Épicos');
       if(keptFromExisting) parts.push('<strong>'+keptFromExisting+'</strong> mantido'+(keptFromExisting!==1?'s':'')+' (não estava no arquivo)');
       var line1=parts.join(' · ');
 
@@ -6102,7 +6119,7 @@ function loadGS(){
     allData.forEach(function(r){ if(r&&r.id) existing[r.id]=r; });
 
     var merged=[], seenIds={};
-    var stats={newCount:0,updatedCount:0,preservedIni:0,preservedFim:0,preservedPrev:0,preservedChg:0,preservedImp:0};
+    var stats={newCount:0,updatedCount:0,preservedIni:0,preservedFim:0,preservedPrev:0,preservedChg:0,preservedImp:0,reactivatedCount:0};
 
     for(var x=det.hrow+1;x<rows.length;x++){
       var r=rows[x]; if(!r) continue;
@@ -6120,6 +6137,8 @@ function loadGS(){
       var impFim    = m.fim>=0 ? parseD(r[m.fim]) : null;
       var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
       var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
+      var impStatusNorm = normalizeStatus(impStatus);
+      var shouldReactivate = !!(old && isValidDate(old.fim) && !impFim && m.status>=0 && importSaysActiveStatus(impStatus));
 
       // CHG é campo 100% manual: a importação nunca escreve nele, somente
       // preserva o que já existe localmente.
@@ -6127,21 +6146,26 @@ function loadGS(){
         id: id,
         squad: normalizeSquad(impSquad, old?old.squad:'') || (old?old.squad:'') || '',
         resumo: impResumo || (old?old.resumo:'') || '',
-        status: normalizeStatus(impStatus) || (old?old.status:'') || '',
+        status: impStatusNorm || (old?old.status:'') || '',
         ini: impIni || (old?old.ini:null) || null,
-        fim: impFim || (old?old.fim:null) || null,
+        fim: shouldReactivate ? null : (impFim || (old?old.fim:null) || null),
+        fimAntes: shouldReactivate ? old.fim : ((old&&old.fimAntes) || null),
         dataPrevista: impPrev || (old?old.dataPrevista:null) || null,
         chg: old ? (old.chg||'') : '',
         impedimento: (impImp.trim()?impImp:'') || (old?old.impedimento:'') || ''
       };
       rec.lt=calcLT(rec.ini, rec.fim);
+      if(shouldReactivate){
+        stats.reactivatedCount++;
+        logFimChange(id, old.fim, '', 'REVERTIDO_IMPORT');
+      }
 
       merged.push(rec); seenIds[id]=true;
 
       if(old){
         stats.updatedCount++;
         if(!impIni && old.ini) stats.preservedIni++;
-        if(!impFim && old.fim) stats.preservedFim++;
+        if(!shouldReactivate && !impFim && old.fim) stats.preservedFim++;
         if(!impPrev && old.dataPrevista) stats.preservedPrev++;
         if(old.chg) stats.preservedChg++;
         if(!impImp.trim() && old.impedimento) stats.preservedImp++;
@@ -6168,6 +6192,7 @@ function loadGS(){
     var parts=[];
     if(stats.newCount) parts.push('<strong>'+stats.newCount+'</strong> novo'+(stats.newCount!==1?'s':''));
     if(stats.updatedCount) parts.push('<strong>'+stats.updatedCount+'</strong> atualizado'+(stats.updatedCount!==1?'s':''));
+    if(stats.reactivatedCount) parts.push('<strong>'+stats.reactivatedCount+'</strong> reaberto'+(stats.reactivatedCount!==1?'s':'')+' em Épicos');
     if(keptFromExisting) parts.push('<strong>'+keptFromExisting+'</strong> mantido'+(keptFromExisting!==1?'s':''));
     var preserved=[];
     if(stats.preservedIni) preserved.push(stats.preservedIni+' Data Início');
