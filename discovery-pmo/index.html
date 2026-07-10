@@ -13710,7 +13710,7 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function xlsxCellStyle(style) {
-      return ({ header: 1, wrap: 2, date: 3, percent: 4, days: 5, phase1: 6, phase2: 7, phase3: 8, phase4: 9, done: 10, late: 11, muted: 12, metric: 13 })[style] || 0;
+      return ({ header: 1, wrap: 2, date: 3, percent: 4, days: 5, phase1: 6, phase2: 7, phase3: 8, phase4: 9, done: 10, late: 11, muted: 12, metric: 13, title: 14, subtitle: 15, section: 16, kpiLabel: 17, kpiTotal: 18, kpiReady: 19, kpiRisk: 20, kpiLead: 21, bar: 22, bodyAlt: 23, center: 24, legend: 25 })[style] || 0;
     }
 
     function excelDateSerial(isoDate) {
@@ -13724,6 +13724,7 @@ Recomendação PMO: ${d.recommendation}`;
       const styleIdx = descriptor.style ? xlsxCellStyle(descriptor.style) : defaultStyle;
       const styleAttr = styleIdx ? ` s="${styleIdx}"` : '';
       if (descriptor.formula) {
+        if (typeof descriptor.value === 'string') return `<c r="${ref}" t="str"${styleAttr}><f>${xmlEscape(descriptor.formula)}</f><v>${xmlEscape(descriptor.value)}</v></c>`;
         return `<c r="${ref}"${styleAttr}><f>${xmlEscape(descriptor.formula)}</f><v>${Number(descriptor.value) || 0}</v></c>`;
       }
       const value = descriptor.value;
@@ -13732,13 +13733,15 @@ Recomendação PMO: ${d.recommendation}`;
       return `<c r="${ref}" t="inlineStr"${styleAttr}><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
     }
 
-    // Monta o XML de UMA aba. As células aceitam texto/número ou descritores como
-    // { value, style } e { formula, value, style }, permitindo datas, fórmulas e Gantt.
+    // Monta o XML de UMA aba. options.matrix permite dashboards com títulos, seções,
+    // células mescladas e múltiplas linhas de cabeçalho sem perder o gerador client-side.
     function buildXlsxSheetXml(headers, rows, options = {}) {
-      const colWidths = headers.map((h, i) => {
-        const headerText = h && typeof h === 'object' ? h.value : h;
-        const maxLen = Math.max(String(headerText ?? '').length, ...rows.map(r => {
-          const raw = r[i];
+      const matrix = Array.isArray(options.matrix) ? options.matrix : [headers, ...rows];
+      const maxCols = Math.max(1, ...matrix.map(row => row.length));
+      const headerRows = new Set(options.headerRows || (options.matrix ? [] : [1]));
+      const colWidths = Array.from({ length: maxCols }, (_, i) => {
+        const maxLen = Math.max(...matrix.map(row => {
+          const raw = row[i];
           const value = raw && typeof raw === 'object' ? raw.value : raw;
           return Math.max(...String(value ?? '').split('\n').map(l => l.length));
         }), 6);
@@ -13746,17 +13749,27 @@ Recomendação PMO: ${d.recommendation}`;
       });
       (options.columnWidths || []).forEach((width, index) => { if (width) colWidths[index] = width; });
       const colsXml = `<cols>${colWidths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>`;
-      const headerRowXml = `<row r="1" ht="28" customHeight="1">${headers.map((h, i) => buildXlsxCellXml(xlsxCellRef(i, 1), h && typeof h === 'object' ? h : { value: h, style: 'header' }, 1)).join('')}</row>`;
-      const bodyRowsXml = rows.map((row, rIdx) => {
-        const r = rIdx + 2;
-        const cells = row.map((value, cIdx) => buildXlsxCellXml(xlsxCellRef(cIdx, r), value, 2)).join('');
-        return `<row r="${r}" ht="${options.rowHeight || 22}" customHeight="1">${cells}</row>`;
+      const sheetRowsXml = matrix.map((row, rIdx) => {
+        const r = rIdx + 1;
+        const isHeader = headerRows.has(r);
+        const cells = row.map((value, cIdx) => {
+          const styled = isHeader && !(value && typeof value === 'object') ? { value, style: options.headerStyle || 'header' } : value;
+          return buildXlsxCellXml(xlsxCellRef(cIdx, r), styled, isHeader ? 1 : xlsxCellStyle(options.defaultStyle || 'wrap'));
+        }).join('');
+        const height = options.rowHeights?.[r] || (isHeader ? 28 : options.rowHeight || 22);
+        return `<row r="${r}" ht="${height}" customHeight="1">${cells}</row>`;
       }).join('');
 
-      const dimensionEnd = xlsxCellRef(Math.max(headers.length - 1, 0), rows.length + 1);
-      const filterXml = options.autoFilter ? `<autoFilter ref="A1:${dimensionEnd}"/>` : '';
+      const dimensionEnd = xlsxCellRef(maxCols - 1, matrix.length);
+      const filterRef = options.autoFilterRef || (options.autoFilter ? `A1:${dimensionEnd}` : '');
+      const filterXml = filterRef ? `<autoFilter ref="${filterRef}"/>` : '';
+      const merges = options.merges || [];
+      const mergesXml = merges.length ? `<mergeCells count="${merges.length}">${merges.map(ref => `<mergeCell ref="${ref}"/>`).join('')}</mergeCells>` : '';
+      const freezeRows = Math.max(0, Number(options.freezeRows ?? 1));
+      const freezeXml = freezeRows ? `<pane ySplit="${freezeRows}" topLeftCell="A${freezeRows + 1}" activePane="bottomLeft" state="frozen"/>` : '';
+      const conditionalXml = options.conditionalFormatting || '';
       return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${dimensionEnd}"/><sheetViews><sheetView showGridLines="0" workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="16"/>${colsXml}<sheetData>${headerRowXml}${bodyRowsXml}</sheetData>${filterXml}</worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${dimensionEnd}"/><sheetViews><sheetView showGridLines="0" workbookViewId="0">${freezeXml}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="16"/>${colsXml}<sheetData>${sheetRowsXml}</sheetData>${filterXml}${mergesXml}${conditionalXml}</worksheet>`;
     }
 
     // Um único workbook .xlsx com várias abas (sheets = [{ name, headers, rows }, ...]),
@@ -13780,6 +13793,9 @@ Recomendação PMO: ${d.recommendation}`;
       const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="3"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="0%"/><numFmt numFmtId="166" formatCode="0 &quot;dias&quot;"/></numFmts><fonts count="3"><font><sz val="10"/><name val="Aptos"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font><font><b/><sz val="15"/><color rgb="FF102A56"/><name val="Aptos Display"/></font></fonts><fills count="13"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF111318"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F5F7"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF123A73"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2E6CCB"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF73A9EC"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFBAD7F5"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF29965A"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE23A45"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EDF3"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFBEAEC"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD8DDE5"/></left><right style="thin"><color rgb="FFD8DDE5"/></right><top style="thin"><color rgb="FFD8DDE5"/></top><bottom style="thin"><color rgb="FFD8DDE5"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="14"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="11" borderId="1" xfId="0" applyAlignment="1" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="165" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="166" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="7" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="10" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="2" fillId="12" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
+      const executiveStylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="4"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="0%"/><numFmt numFmtId="166" formatCode="0 &quot;dias&quot;"/><numFmt numFmtId="167" formatCode=";;;"/></numFmts><fonts count="10"><font><sz val="10"/><name val="Aptos"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font><font><b/><sz val="18"/><color rgb="FFFFFFFF"/><name val="Aptos Display"/></font><font><i/><sz val="9"/><color rgb="FF526273"/><name val="Aptos"/></font><font><b/><sz val="9"/><color rgb="FF102A56"/><name val="Aptos"/></font><font><b/><sz val="18"/><color rgb="FF102A56"/><name val="Aptos Display"/></font><font><b/><sz val="18"/><color rgb="FF0A9344"/><name val="Aptos Display"/></font><font><b/><sz val="18"/><color rgb="FFD98200"/><name val="Aptos Display"/></font><font><b/><sz val="18"/><color rgb="FF0F2F63"/><name val="Aptos Display"/></font><font><b/><sz val="14"/><color rgb="FF1D6A87"/><name val="Aptos"/></font></fonts><fills count="18"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF111318"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F5F7"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF123A73"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2E6CCB"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF73A9EC"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFBAD7F5"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF29965A"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE23A45"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EDF3"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFBEAEC"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF102A56"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD8EEF7"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1D6A87"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEEF1F5"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF4B400"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD4DCE6"/></left><right style="thin"><color rgb="FFD4DCE6"/></right><top style="thin"><color rgb="FFD4DCE6"/></top><bottom style="thin"><color rgb="FFD4DCE6"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="26"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="11" borderId="1" xfId="0" applyAlignment="1" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="165" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="166" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="right"/></xf><xf numFmtId="167" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/><xf numFmtId="167" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/><xf numFmtId="167" fontId="0" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/><xf numFmtId="167" fontId="0" fillId="7" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/><xf numFmtId="167" fontId="1" fillId="8" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="167" fontId="1" fillId="9" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="10" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="5" fillId="12" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="16" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="13" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="4" fillId="16" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="5" fillId="11" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="6" fillId="11" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="7" fillId="11" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="166" fontId="8" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="9" fillId="11" borderId="0" xfId="0" applyFont="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="14" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="11" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="4" fillId="11" borderId="0" xfId="0" applyFont="1"><alignment vertical="center"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="4"><dxf><fill><patternFill patternType="solid"><fgColor rgb="FF123A73"/><bgColor indexed="64"/></patternFill></fill></dxf><dxf><fill><patternFill patternType="solid"><fgColor rgb="FF2E6CCB"/><bgColor indexed="64"/></patternFill></fill></dxf><dxf><fill><patternFill patternType="solid"><fgColor rgb="FF73A9EC"/><bgColor indexed="64"/></patternFill></fill></dxf><dxf><fill><patternFill patternType="solid"><fgColor rgb="FFBAD7F5"/><bgColor indexed="64"/></patternFill></fill></dxf></dxfs></styleSheet>`;
+
       const sheetsTagXml = sheetDefs.map(s => `<sheet name="${xmlEscape(s.safeName)}" sheetId="${s.num}" r:id="rId${s.num}"/>`).join('');
       const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetsTagXml}</sheets><calcPr calcId="191029" fullCalcOnLoad="1" forceFullCalc="1"/></workbook>`;
@@ -13801,7 +13817,7 @@ Recomendação PMO: ${d.recommendation}`;
         { name: '_rels/.rels', data: encoder.encode(rootRelsXml) },
         { name: 'xl/workbook.xml', data: encoder.encode(workbookXml) },
         { name: 'xl/_rels/workbook.xml.rels', data: encoder.encode(workbookRelsXml) },
-        { name: 'xl/styles.xml', data: encoder.encode(stylesXml) },
+        { name: 'xl/styles.xml', data: encoder.encode(executiveStylesXml) },
         ...worksheetFiles
       ]);
     }
@@ -13835,6 +13851,23 @@ Recomendação PMO: ${d.recommendation}`;
       return ({ good: 'Saudável', warn: 'Atenção', crit: 'Crítico', start: 'A iniciar' })[bucket] || 'A validar';
     }
 
+    function reportStatusGroup(project) {
+      const value = normalizeSearchText(project.status || '');
+      if (/bloque|imped/.test(value)) return 'Bloqueado';
+      if (/pronto|delivery|conclu|done/.test(value)) return 'Pronto';
+      if (/risco|crit|atras/.test(value) || reportHealth(project) === 'Crítico') return 'Em risco';
+      return 'Em andamento';
+    }
+
+    function reportDayMetrics(project) {
+      const start = parseISODate(project.discoveryDate);
+      const end = parseISODate(project.discoveryEndDate);
+      const today = new Date();
+      const current = start ? Math.max(0, Math.floor((today - start) / 86400000)) : null;
+      const planned = start && end ? Math.max(0, Math.floor((end - start) / 86400000)) : null;
+      return { current, planned };
+    }
+
     function mondayOf(date) {
       const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const offset = (d.getDay() + 6) % 7;
@@ -13864,76 +13897,181 @@ Recomendação PMO: ${d.recommendation}`;
       for (let cursor = new Date(start); cursor <= end && weeks.length < maxWeeks; cursor = addCalendarDays(cursor, 7)) weeks.push(new Date(cursor));
       if (!weeks.length) weeks.push(mondayOf(today));
 
-      const headers = ['Nº', 'Iniciativa', 'Squad', 'Início', 'Data Target', 'Progresso', ...weeks.map(week => `${String(week.getDate()).padStart(2, '0')}/${String(week.getMonth() + 1).padStart(2, '0')}`)];
-      const rows = allProjects.map(project => {
+      const columns = 5 + weeks.length;
+      const lastColumn = xlsxCellRef(columns - 1, 1).replace(/\d+$/, '');
+      const matrix = [
+        [{ value: 'Discovery PMO Tracker | Gantt por Iniciativa', style: 'title' }, ...Array(columns - 1).fill('')],
+        [{ value: 'Cronograma semanal automatizado a partir da Base Discoveries', style: 'subtitle' }, ...Array(columns - 1).fill('')],
+        [{ value: '■ Descoberta   ■ Validação   ■ Síntese   ■ Recomendação', style: 'legend' }, ...Array(columns - 1).fill('')],
+        Array(columns).fill(''),
+        ['Iniciativa', 'Squad', 'Dt. Inicial', 'Data Target', 'Progresso', ...weeks.map(week => String(week.getDate()).padStart(2, '0'))]
+      ];
+      const merges = [`A1:${lastColumn}1`, `A2:${lastColumn}2`, `A3:${lastColumn}3`];
+      let monthStart = 0;
+      while (monthStart < weeks.length) {
+        let monthEnd = monthStart;
+        while (monthEnd + 1 < weeks.length && weeks[monthEnd + 1].getMonth() === weeks[monthStart].getMonth() && weeks[monthEnd + 1].getFullYear() === weeks[monthStart].getFullYear()) monthEnd++;
+        const startCol = xlsxCellRef(5 + monthStart, 4).replace(/\d+$/, '');
+        const endCol = xlsxCellRef(5 + monthEnd, 4).replace(/\d+$/, '');
+        const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' }).format(weeks[monthStart]).replace('.', '');
+        matrix[3][5 + monthStart] = { value: monthName.charAt(0).toUpperCase() + monthName.slice(1), style: 'kpiLabel' };
+        if (startCol !== endCol) merges.push(`${startCol}4:${endCol}4`);
+        monthStart = monthEnd + 1;
+      }
+
+      allProjects.forEach((project, index) => {
         const squad = squadForProject(project);
         const startDate = parseISODate(project.discoveryDate);
         const endDate = parseISODate(project.discoveryEndDate);
         const progress = calculateProgress(project) / 100;
+        const baseRow = index + 5;
+        const ganttRow = index + 6;
         const timelineCells = weeks.map(week => {
-          if (!startDate || !endDate || week < mondayOf(startDate) || week > mondayOf(endDate)) return '';
+          const weekSerial = excelDateSerial(localISO(week));
+          const formula = `IF(OR(${weekSerial}<$C${ganttRow},${weekSerial}>$D${ganttRow}),\"\",IF(${weekSerial}<$C${ganttRow}+($D${ganttRow}-$C${ganttRow})*0.25,1,IF(${weekSerial}<$C${ganttRow}+($D${ganttRow}-$C${ganttRow})*0.5,2,IF(${weekSerial}<$C${ganttRow}+($D${ganttRow}-$C${ganttRow})*0.75,3,4))))`;
+          if (!startDate || !endDate || week < mondayOf(startDate) || week > mondayOf(endDate)) return { formula, value: 0, style: 'center' };
           const total = Math.max(1, endDate - startDate);
           const ratio = Math.max(0, Math.min(1, (week - startDate) / total));
+          const phase = ratio < .25 ? 1 : ratio < .5 ? 2 : ratio < .75 ? 3 : 4;
           let style = ratio < .25 ? 'phase1' : ratio < .5 ? 'phase2' : ratio < .75 ? 'phase3' : 'phase4';
           const isLastWeek = localISO(week) === localISO(mondayOf(endDate));
           if (isLastWeek && progress >= 1) style = 'done';
           if (isLastWeek && endDate < today && progress < 1) style = 'late';
-          return { value: '■', style };
+          return { formula, value: phase, style };
         });
-        return [initiativeNumber(project) || '—', displayProjectTitle(project), squad?.name || project.squad || 'A validar', { value: excelDateSerial(project.discoveryDate), style: 'date' }, { value: excelDateSerial(project.discoveryEndDate), style: 'date' }, { value: progress, style: 'percent' }, ...timelineCells];
+        matrix.push([
+          { formula: `'Base Discoveries'!B${baseRow}`, value: displayProjectTitle(project) },
+          { formula: `'Base Discoveries'!C${baseRow}`, value: squad?.name || project.squad || 'A validar' },
+          { formula: `IF('Base Discoveries'!L${baseRow}="","",'Base Discoveries'!L${baseRow})`, value: excelDateSerial(project.discoveryDate) ?? '', style: 'date' },
+          { formula: `IF('Base Discoveries'!M${baseRow}="","",'Base Discoveries'!M${baseRow})`, value: excelDateSerial(project.discoveryEndDate) ?? '', style: 'date' },
+          { formula: `'Base Discoveries'!Q${baseRow}`, value: progress, style: 'percent' },
+          ...timelineCells
+        ]);
       });
-      return { name: 'Gantt por Iniciativa', headers, rows, options: { columnWidths: [13, 30, 16, 13, 13, 11, ...weeks.map(() => 6)], rowHeight: 24, maxColumnWidth: 32 } };
+      const lastDataRow = Math.max(6, matrix.length);
+      const cfRange = `F6:${lastColumn}${lastDataRow}`;
+      const conditionalFormatting = `<conditionalFormatting sqref="${cfRange}"><cfRule type="cellIs" dxfId="0" priority="1" operator="equal"><formula>1</formula></cfRule><cfRule type="cellIs" dxfId="1" priority="2" operator="equal"><formula>2</formula></cfRule><cfRule type="cellIs" dxfId="2" priority="3" operator="equal"><formula>3</formula></cfRule><cfRule type="cellIs" dxfId="3" priority="4" operator="equal"><formula>4</formula></cfRule></conditionalFormatting><conditionalFormatting sqref="E6:E${lastDataRow}"><cfRule type="dataBar" priority="5"><dataBar><cfvo type="num" val="0"/><cfvo type="num" val="1"/><color rgb="FF1D6A87"/></dataBar></cfRule></conditionalFormatting>`;
+      return { name: 'Gantt por Iniciativa', headers: [], rows: [], options: { matrix, headerRows: [5], merges, freezeRows: 5, conditionalFormatting, columnWidths: [31, 17, 13, 13, 12, ...weeks.map(() => 6)], rowHeights: { 1: 34, 2: 22, 3: 22, 4: 20, 5: 30 }, rowHeight: 25, maxColumnWidth: 34 } };
     }
 
-    // Exportação executiva enxuta: Resumo, Base única e Gantt.
+    // Exportação executiva automatizada: dashboard, base auditável e Gantt ligado à base.
     function exportReportsToXlsx() {
       data = enhanceSquadData(data);
       const allProjects = data.projects || [];
       const squads = sortedSquadsList();
-      const lastBaseRow = Math.max(2, allProjects.length + 1);
-      const criticalCount = allProjects.filter(project => reportHealth(project) === 'Crítico').length;
-      const readyCount = allProjects.filter(project => /pronto|delivery|conclu/i.test(String(project.status || ''))).length;
-      const summaryRows = [
-        [{ value: 'Total de Discoveries', style: 'metric' }, { formula: `COUNTA('Base Discoveries'!A2:A${lastBaseRow})`, value: allProjects.length }, 'Iniciativas principais cadastradas'],
-        [{ value: 'Prontos para Delivery', style: 'metric' }, readyCount, 'Conforme o status atual da iniciativa'],
-        [{ value: 'Em risco / bloqueados', style: 'metric' }, criticalCount, 'Leitura consolidada de status, criticidade e alertas'],
-        [{ value: 'Média de dias no Discovery', style: 'metric' }, { formula: `IFERROR(AVERAGE('Base Discoveries'!N2:N${lastBaseRow}),0)`, value: 0, style: 'days' }, 'Calculada automaticamente pela data inicial'],
-        ['', '', ''],
-        [{ value: 'Squad', style: 'header' }, { value: 'Iniciativas', style: 'header' }, { value: 'Saúde', style: 'header' }],
-        ...squads.map(squad => [squad.name, squadProjects(squad.id).length, squadHealthInfo(squad).label])
-      ];
+      const firstBaseRow = 5;
+      const lastBaseRow = Math.max(firstBaseRow, allProjects.length + 4);
+      const statusLabels = ['Em andamento', 'Pronto', 'Em risco', 'Bloqueado'];
+      const statusCounts = Object.fromEntries(statusLabels.map(label => [label, allProjects.filter(project => reportStatusGroup(project) === label).length]));
+      const readyCount = statusCounts.Pronto;
+      const criticalCount = statusCounts['Em risco'] + statusCounts.Bloqueado;
+      const leadValues = allProjects.map(project => reportDayMetrics(project).current).filter(Number.isFinite);
+      const averageLead = leadValues.length ? Math.round(leadValues.reduce((sum, value) => sum + value, 0) / leadValues.length) : null;
+      const updateLabel = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
-      const baseRows = allProjects.map((project, index) => {
+      const baseHeader = ['Nº Iniciativa', 'Iniciativa / Projeto', 'Squad', 'RTE Resp.', 'Líder', 'Tech Lead', 'PO', 'Área de Dados', 'Fase do Discovery', 'Status', 'Health', 'Dt. Inicial', 'Data Target', 'Dias manual (opcional)', 'Dias no Discovery', 'Prazo planejado (dias)', 'Progresso', 'Próximo Passo', 'Risco / Dependência'];
+      const baseMatrix = [
+        [{ value: 'Discovery PMO Tracker | Base completa para análise', style: 'title' }, ...Array(baseHeader.length - 1).fill('')],
+        [{ value: `Atualização: ${updateLabel} • preencha “Dias manual (opcional)” somente quando quiser substituir o cálculo automático`, style: 'subtitle' }, ...Array(baseHeader.length - 1).fill('')],
+        Array(baseHeader.length).fill(''),
+        baseHeader
+      ];
+      allProjects.forEach((project, index) => {
         const squad = squadForProject(project);
-        const excelRow = index + 2;
-        return [
-          initiativeNumber(project) || '—',
-          displayProjectTitle(project),
-          squad?.name || project.squad || 'A validar',
-          project.rteOwner || squad?.rteOwner || project.owner || 'A definir',
-          project.frontLeader || project.initiativeOwner || 'A definir',
-          project.techLead || squad?.techLead || 'A definir',
-          project.po || 'A definir',
-          project.dataArea || 'A definir',
-          reportPhase(project),
-          project.status || 'Sem status',
-          reportHealth(project),
+        const excelRow = index + firstBaseRow;
+        const metrics = reportDayMetrics(project);
+        const textStyle = index % 2 === 0 ? 'bodyAlt' : 'wrap';
+        const textCell = value => ({ value, style: textStyle });
+        baseMatrix.push([
+          textCell(initiativeNumber(project) || '—'),
+          textCell(displayProjectTitle(project)),
+          textCell(squad?.name || project.squad || 'A validar'),
+          textCell(project.rteOwner || squad?.rteOwner || project.owner || 'A definir'),
+          textCell(project.frontLeader || project.initiativeOwner || 'A definir'),
+          textCell(project.techLead || squad?.techLead || 'A definir'),
+          textCell(project.po || 'A definir'),
+          textCell(project.dataArea || 'A definir'),
+          textCell(reportPhase(project)),
+          textCell(reportStatusGroup(project)),
+          textCell(reportHealth(project)),
           { value: excelDateSerial(project.discoveryDate), style: 'date' },
           { value: excelDateSerial(project.discoveryEndDate), style: 'date' },
-          { formula: `IF(L${excelRow}="","",MAX(0,TODAY()-L${excelRow}))`, value: 0, style: 'days' },
-          { formula: `IF(OR(L${excelRow}="",M${excelRow}=""),"",MAX(0,M${excelRow}-L${excelRow}))`, value: 0, style: 'days' },
+          { value: '', style: 'days' },
+          { formula: `IF(N${excelRow}<>"",N${excelRow},IF(L${excelRow}="","",MAX(0,TODAY()-L${excelRow})))`, value: metrics.current ?? '', style: 'days' },
+          { formula: `IF(OR(L${excelRow}="",M${excelRow}=""),"",MAX(0,M${excelRow}-L${excelRow}))`, value: metrics.planned ?? '', style: 'days' },
           { value: calculateProgress(project) / 100, style: 'percent' },
-          reportNextStep(project),
-          risksSummaryTextForReport(project)
-        ];
+          textCell(reportNextStep(project)),
+          textCell(risksSummaryTextForReport(project))
+        ]);
       });
 
+      const summaryRowCount = Math.max(25, 21 + squads.length);
+      const summaryMatrix = Array.from({ length: summaryRowCount }, () => Array(12).fill(''));
+      summaryMatrix[0][0] = { value: 'Discovery PMO Tracker | Relatório Executivo', style: 'title' };
+      summaryMatrix[1][0] = { value: `Atualização: ${updateLabel} • indicadores calculados automaticamente pela Base Discoveries`, style: 'subtitle' };
+      [['TOTAL DE DISCOVERIES', 0], ['PRONTOS PARA DELIVERY', 3], ['EM RISCO / BLOQUEADOS', 6], ['MÉDIA DE DIAS POR INICIATIVA', 9]].forEach(([label, col]) => { summaryMatrix[3][col] = { value: label, style: 'kpiLabel' }; });
+      summaryMatrix[4][0] = { formula: `COUNTA('Base Discoveries'!A${firstBaseRow}:A${lastBaseRow})`, value: allProjects.length, style: 'kpiTotal' };
+      summaryMatrix[4][3] = { formula: `COUNTIF('Base Discoveries'!J${firstBaseRow}:J${lastBaseRow},"Pronto")`, value: readyCount, style: 'kpiReady' };
+      summaryMatrix[4][6] = { formula: `COUNTIF('Base Discoveries'!J${firstBaseRow}:J${lastBaseRow},"Em risco")+COUNTIF('Base Discoveries'!J${firstBaseRow}:J${lastBaseRow},"Bloqueado")`, value: criticalCount, style: 'kpiRisk' };
+      summaryMatrix[4][9] = { formula: `IFERROR(AVERAGE('Base Discoveries'!O${firstBaseRow}:O${lastBaseRow}),"")`, value: averageLead ?? '', style: 'kpiLead' };
+      summaryMatrix[7][0] = { value: 'Distribuição por Status', style: 'section' };
+      summaryMatrix[7][8] = { value: 'Atenções da Gestão', style: 'section' };
+      summaryMatrix[8][0] = { value: 'Status', style: 'header' };
+      summaryMatrix[8][1] = { value: 'Quantidade', style: 'header' };
+      summaryMatrix[8][3] = { value: 'Volume relativo', style: 'header' };
+      ['Prioridade', 'Iniciativa', 'Atenção', 'Data Target'].forEach((label, index) => { summaryMatrix[8][8 + index] = { value: label, style: 'header' }; });
+      statusLabels.forEach((label, index) => {
+        const row = 9 + index;
+        const excelRow = row + 1;
+        const count = statusCounts[label];
+        summaryMatrix[row][0] = label;
+        summaryMatrix[row][1] = { formula: `COUNTIF('Base Discoveries'!J${firstBaseRow}:J${lastBaseRow},A${excelRow})`, value: count, style: 'center' };
+        summaryMatrix[row][3] = { value: count ? '■'.repeat(Math.max(1, Math.min(16, count))) : '—', style: 'bar' };
+      });
+
+      const attentionProjects = allProjects.filter(project => {
+        const risk = risksSummaryTextForReport(project);
+        return ['Crítico', 'Atenção'].includes(reportHealth(project)) || ['Em risco', 'Bloqueado'].includes(reportStatusGroup(project)) || (risk && !/^sem (risco|depend)/i.test(risk));
+      }).sort((a, b) => {
+        const weight = project => reportStatusGroup(project) === 'Bloqueado' ? 0 : reportHealth(project) === 'Crítico' ? 1 : reportStatusGroup(project) === 'Em risco' ? 2 : 3;
+        return weight(a) - weight(b) || String(a.discoveryEndDate || '').localeCompare(String(b.discoveryEndDate || ''));
+      }).slice(0, 4);
+      attentionProjects.forEach((project, index) => {
+        const row = 9 + index;
+        const priority = reportStatusGroup(project) === 'Bloqueado' ? 'Crítica' : reportHealth(project) === 'Crítico' ? 'Alta' : reportStatusGroup(project) === 'Em risco' ? 'Alta' : 'Média';
+        summaryMatrix[row][8] = priority;
+        summaryMatrix[row][9] = initiativeNumber(project) || '—';
+        summaryMatrix[row][10] = risksSummaryTextForReport(project) || reportNextStep(project);
+        summaryMatrix[row][11] = { value: excelDateSerial(project.discoveryEndDate), style: 'date' };
+      });
+
+      summaryMatrix[19][0] = { value: 'Portfólio por Squad', style: 'section' };
+      ['Squad', 'Total', 'Prontos', 'Críticos', 'Média de dias', '% Prontos'].forEach((label, index) => { summaryMatrix[20][index] = { value: label, style: 'header' }; });
+      squads.forEach((squad, index) => {
+        const row = 21 + index;
+        const excelRow = row + 1;
+        const projects = squadProjects(squad.id);
+        const total = projects.length;
+        const ready = projects.filter(project => reportStatusGroup(project) === 'Pronto').length;
+        const critical = projects.filter(project => ['Em risco', 'Bloqueado'].includes(reportStatusGroup(project))).length;
+        const leads = projects.map(project => reportDayMetrics(project).current).filter(Number.isFinite);
+        const avg = leads.length ? Math.round(leads.reduce((sum, value) => sum + value, 0) / leads.length) : null;
+        summaryMatrix[row][0] = squad.name;
+        summaryMatrix[row][1] = { formula: `COUNTIF('Base Discoveries'!C${firstBaseRow}:C${lastBaseRow},A${excelRow})`, value: total };
+        summaryMatrix[row][2] = { formula: `COUNTIFS('Base Discoveries'!C${firstBaseRow}:C${lastBaseRow},A${excelRow},'Base Discoveries'!J${firstBaseRow}:J${lastBaseRow},"Pronto")`, value: ready };
+        summaryMatrix[row][3] = { formula: `COUNTIFS('Base Discoveries'!C${firstBaseRow}:C${lastBaseRow},A${excelRow},'Base Discoveries'!K${firstBaseRow}:K${lastBaseRow},"Crítico")`, value: critical };
+        summaryMatrix[row][4] = { formula: `IFERROR(AVERAGEIF('Base Discoveries'!C${firstBaseRow}:C${lastBaseRow},A${excelRow},'Base Discoveries'!O${firstBaseRow}:O${lastBaseRow}),"")`, value: avg ?? '', style: 'days' };
+        summaryMatrix[row][5] = { formula: `IFERROR(C${excelRow}/B${excelRow},0)`, value: total ? ready / total : 0, style: 'percent' };
+      });
+
+      const summaryMerges = ['A1:L1', 'A2:L2', 'A4:C4', 'D4:F4', 'G4:I4', 'J4:L4', 'A5:C5', 'D5:F5', 'G5:I5', 'J5:L5', 'A8:F8', 'I8:L8', 'D9:H9', 'A20:F20', ...statusLabels.map((_, index) => `D${10 + index}:H${10 + index}`)];
+
       downloadXlsx('Discovery_PMO_Tracker_Relatorio.xlsx', [
-        { name: 'Resumo Executivo', headers: ['Indicador', 'Valor', 'Leitura gerencial'], rows: summaryRows, options: { columnWidths: [31, 18, 48], rowHeight: 25 } },
-        { name: 'Base Discoveries', headers: ['Nº Iniciativa', 'Iniciativa / Projeto', 'Squad', 'RTE Resp.', 'Líder', 'Tech Lead', 'PO', 'Área de Dados', 'Fase do Discovery', 'Status', 'Health', 'Dt. Inicial', 'Data Target', 'Dias no Discovery', 'Prazo planejado (dias)', 'Progresso', 'Próximo Passo', 'Risco / Dependência'], rows: baseRows, options: { autoFilter: true, columnWidths: [15, 31, 17, 18, 18, 18, 18, 18, 23, 16, 14, 13, 13, 17, 20, 12, 32, 44], rowHeight: 31, maxColumnWidth: 48 } },
+        { name: 'Resumo Executivo', headers: [], rows: [], options: { matrix: summaryMatrix, merges: summaryMerges, freezeRows: 2, columnWidths: [18, 13, 4, 16, 13, 4, 16, 13, 14, 18, 31, 15], rowHeights: { 1: 36, 2: 22, 4: 24, 5: 34, 8: 24, 9: 25, 20: 24, 21: 28 }, rowHeight: 22, maxColumnWidth: 34 } },
+        { name: 'Base Discoveries', headers: [], rows: [], options: { matrix: baseMatrix, headerRows: [4], merges: ['A1:S1', 'A2:S2'], freezeRows: 4, autoFilterRef: `A4:S${lastBaseRow}`, columnWidths: [15, 31, 17, 18, 18, 18, 18, 18, 23, 16, 14, 13, 13, 18, 17, 20, 12, 32, 44], rowHeights: { 1: 36, 2: 22, 4: 32 }, rowHeight: 30, maxColumnWidth: 48 } },
         buildGanttSheet(allProjects)
       ]);
-      toast('✅ Excel exportado com Resumo Executivo, Base Discoveries e Gantt');
+      toast('✅ Excel executivo exportado com KPIs, base automatizada e Gantt');
     }
 
     function renderReportsPanel() {
