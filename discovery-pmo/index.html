@@ -13709,30 +13709,54 @@ Recomendação PMO: ${d.recommendation}`;
       return `${letters}${rowIdx}`;
     }
 
-    // Monta o XML de UMA aba (planilha) — reaproveitado pra cada sheet do workbook.
-    function buildXlsxSheetXml(headers, rows) {
+    function xlsxCellStyle(style) {
+      return ({ header: 1, wrap: 2, date: 3, percent: 4, days: 5, phase1: 6, phase2: 7, phase3: 8, phase4: 9, done: 10, late: 11, muted: 12, metric: 13 })[style] || 0;
+    }
+
+    function excelDateSerial(isoDate) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(isoDate || ''))) return null;
+      const [year, month, day] = String(isoDate).split('-').map(Number);
+      return Math.floor((Date.UTC(year, month - 1, day) - Date.UTC(1899, 11, 30)) / 86400000);
+    }
+
+    function buildXlsxCellXml(ref, rawValue, defaultStyle = 0) {
+      const descriptor = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue) ? rawValue : { value: rawValue };
+      const styleIdx = descriptor.style ? xlsxCellStyle(descriptor.style) : defaultStyle;
+      const styleAttr = styleIdx ? ` s="${styleIdx}"` : '';
+      if (descriptor.formula) {
+        return `<c r="${ref}"${styleAttr}><f>${xmlEscape(descriptor.formula)}</f><v>${Number(descriptor.value) || 0}</v></c>`;
+      }
+      const value = descriptor.value;
+      if (value === null || value === undefined || value === '') return `<c r="${ref}"${styleAttr}/>`;
+      if (typeof value === 'number') return `<c r="${ref}"${styleAttr}><v>${value}</v></c>`;
+      return `<c r="${ref}" t="inlineStr"${styleAttr}><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
+    }
+
+    // Monta o XML de UMA aba. As células aceitam texto/número ou descritores como
+    // { value, style } e { formula, value, style }, permitindo datas, fórmulas e Gantt.
+    function buildXlsxSheetXml(headers, rows, options = {}) {
       const colWidths = headers.map((h, i) => {
-        const maxLen = Math.max(String(h).length, ...rows.map(r => Math.max(...String(r[i] ?? '').split('\n').map(l => l.length))), 8);
-        return Math.min(60, maxLen + 2);
+        const headerText = h && typeof h === 'object' ? h.value : h;
+        const maxLen = Math.max(String(headerText ?? '').length, ...rows.map(r => {
+          const raw = r[i];
+          const value = raw && typeof raw === 'object' ? raw.value : raw;
+          return Math.max(...String(value ?? '').split('\n').map(l => l.length));
+        }), 6);
+        return Math.min(options.maxColumnWidth || 44, maxLen + 2);
       });
+      (options.columnWidths || []).forEach((width, index) => { if (width) colWidths[index] = width; });
       const colsXml = `<cols>${colWidths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>`;
-
-      const textCell = (ref, value, styleIdx) => `<c r="${ref}" t="inlineStr"${styleIdx ? ` s="${styleIdx}"` : ''}><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
-      const numberCell = (ref, value, styleIdx) => `<c r="${ref}"${styleIdx ? ` s="${styleIdx}"` : ''}><v>${Number(value) || 0}</v></c>`;
-
-      const headerRowXml = `<row r="1">${headers.map((h, i) => textCell(xlsxCellRef(i, 1), h, 1)).join('')}</row>`;
+      const headerRowXml = `<row r="1" ht="28" customHeight="1">${headers.map((h, i) => buildXlsxCellXml(xlsxCellRef(i, 1), h && typeof h === 'object' ? h : { value: h, style: 'header' }, 1)).join('')}</row>`;
       const bodyRowsXml = rows.map((row, rIdx) => {
         const r = rIdx + 2;
-        const cells = row.map((val, cIdx) => {
-          const ref = xlsxCellRef(cIdx, r);
-          return typeof val === 'number' ? numberCell(ref, val, 0) : textCell(ref, val, 2);
-        }).join('');
-        return `<row r="${r}">${cells}</row>`;
+        const cells = row.map((value, cIdx) => buildXlsxCellXml(xlsxCellRef(cIdx, r), value, 2)).join('');
+        return `<row r="${r}" ht="${options.rowHeight || 22}" customHeight="1">${cells}</row>`;
       }).join('');
 
       const dimensionEnd = xlsxCellRef(Math.max(headers.length - 1, 0), rows.length + 1);
+      const filterXml = options.autoFilter ? `<autoFilter ref="A1:${dimensionEnd}"/>` : '';
       return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${dimensionEnd}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="16"/>${colsXml}<sheetData>${headerRowXml}${bodyRowsXml}</sheetData></worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${dimensionEnd}"/><sheetViews><sheetView showGridLines="0" workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="16"/>${colsXml}<sheetData>${headerRowXml}${bodyRowsXml}</sheetData>${filterXml}</worksheet>`;
     }
 
     // Um único workbook .xlsx com várias abas (sheets = [{ name, headers, rows }, ...]),
@@ -13750,15 +13774,15 @@ Recomendação PMO: ${d.recommendation}`;
 
       const worksheetFiles = sheetDefs.map(s => ({
         name: `xl/worksheets/sheet${s.num}.xml`,
-        data: encoder.encode(buildXlsxSheetXml(s.headers, s.rows))
+        data: encoder.encode(buildXlsxSheetXml(s.headers, s.rows, s.options || {}))
       }));
 
       const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC8102E"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs></styleSheet>`;
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="3"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="0%"/><numFmt numFmtId="166" formatCode="0 &quot;dias&quot;"/></numFmts><fonts count="3"><font><sz val="10"/><name val="Aptos"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Aptos"/></font><font><b/><sz val="15"/><color rgb="FF102A56"/><name val="Aptos Display"/></font></fonts><fills count="13"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF111318"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F5F7"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF123A73"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2E6CCB"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF73A9EC"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFBAD7F5"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF29965A"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE23A45"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EDF3"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFBEAEC"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD8DDE5"/></left><right style="thin"><color rgb="FFD8DDE5"/></right><top style="thin"><color rgb="FFD8DDE5"/></top><bottom style="thin"><color rgb="FFD8DDE5"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="14"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="11" borderId="1" xfId="0" applyAlignment="1" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="165" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="166" fontId="0" fillId="11" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center"/></xf><xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="7" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="10" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="2" fillId="12" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
       const sheetsTagXml = sheetDefs.map(s => `<sheet name="${xmlEscape(s.safeName)}" sheetId="${s.num}" r:id="rId${s.num}"/>`).join('');
       const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetsTagXml}</sheets></workbook>`;
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheetsTagXml}</sheets><calcPr calcId="191029" fullCalcOnLoad="1" forceFullCalc="1"/></workbook>`;
 
       const stylesRelId = sheetDefs.length + 1;
       const sheetRelsXml = sheetDefs.map(s => `<Relationship Id="rId${s.num}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${s.num}.xml"/>`).join('');
@@ -13795,38 +13819,121 @@ Recomendação PMO: ${d.recommendation}`;
       setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
 
-    // Um relatório só, com as duas abas dentro (Squad e Iniciativa) — não depende de
-    // qual aba está aberta na tela no momento do clique.
+    function reportNextStep(project) {
+      const card = (project.cards || []).find(item => item.status !== 'done');
+      return card?.title || nextMilestone(project) || 'Sem próximo passo informado';
+    }
+
+    function reportPhase(project) {
+      const active = (project.phases || []).find(phase => ['progress', 'blocked'].includes(phase.status));
+      const next = (project.phases || []).find(phase => phase.status !== 'done');
+      return active?.name || active?.title || next?.name || next?.title || project.readinessStage || 'A validar';
+    }
+
+    function reportHealth(project) {
+      const bucket = projectStatusBucket(project);
+      return ({ good: 'Saudável', warn: 'Atenção', crit: 'Crítico', start: 'A iniciar' })[bucket] || 'A validar';
+    }
+
+    function mondayOf(date) {
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const offset = (d.getDay() + 6) % 7;
+      d.setDate(d.getDate() - offset);
+      return d;
+    }
+
+    function localISO(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    function addCalendarDays(date, days) {
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      d.setDate(d.getDate() + days);
+      return d;
+    }
+
+    function buildGanttSheet(allProjects) {
+      const validDates = allProjects.flatMap(project => [project.discoveryDate, project.discoveryEndDate]).filter(value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))).map(value => parseISODate(value));
+      const today = new Date();
+      let start = validDates.length ? new Date(Math.min(...validDates)) : addCalendarDays(today, -28);
+      let end = validDates.length ? new Date(Math.max(...validDates)) : addCalendarDays(today, 70);
+      start = mondayOf(addCalendarDays(start, -7));
+      end = mondayOf(addCalendarDays(end, 7));
+      const maxWeeks = 20;
+      const weeks = [];
+      for (let cursor = new Date(start); cursor <= end && weeks.length < maxWeeks; cursor = addCalendarDays(cursor, 7)) weeks.push(new Date(cursor));
+      if (!weeks.length) weeks.push(mondayOf(today));
+
+      const headers = ['Nº', 'Iniciativa', 'Squad', 'Início', 'Data Target', 'Progresso', ...weeks.map(week => `${String(week.getDate()).padStart(2, '0')}/${String(week.getMonth() + 1).padStart(2, '0')}`)];
+      const rows = allProjects.map(project => {
+        const squad = squadForProject(project);
+        const startDate = parseISODate(project.discoveryDate);
+        const endDate = parseISODate(project.discoveryEndDate);
+        const progress = calculateProgress(project) / 100;
+        const timelineCells = weeks.map(week => {
+          if (!startDate || !endDate || week < mondayOf(startDate) || week > mondayOf(endDate)) return '';
+          const total = Math.max(1, endDate - startDate);
+          const ratio = Math.max(0, Math.min(1, (week - startDate) / total));
+          let style = ratio < .25 ? 'phase1' : ratio < .5 ? 'phase2' : ratio < .75 ? 'phase3' : 'phase4';
+          const isLastWeek = localISO(week) === localISO(mondayOf(endDate));
+          if (isLastWeek && progress >= 1) style = 'done';
+          if (isLastWeek && endDate < today && progress < 1) style = 'late';
+          return { value: '■', style };
+        });
+        return [initiativeNumber(project) || '—', displayProjectTitle(project), squad?.name || project.squad || 'A validar', { value: excelDateSerial(project.discoveryDate), style: 'date' }, { value: excelDateSerial(project.discoveryEndDate), style: 'date' }, { value: progress, style: 'percent' }, ...timelineCells];
+      });
+      return { name: 'Gantt por Iniciativa', headers, rows, options: { columnWidths: [13, 30, 16, 13, 13, 11, ...weeks.map(() => 6)], rowHeight: 24, maxColumnWidth: 32 } };
+    }
+
+    // Exportação executiva enxuta: Resumo, Base única e Gantt.
     function exportReportsToXlsx() {
       data = enhanceSquadData(data);
       const allProjects = data.projects || [];
       const squads = sortedSquadsList();
+      const lastBaseRow = Math.max(2, allProjects.length + 1);
+      const criticalCount = allProjects.filter(project => reportHealth(project) === 'Crítico').length;
+      const readyCount = allProjects.filter(project => /pronto|delivery|conclu/i.test(String(project.status || ''))).length;
+      const summaryRows = [
+        [{ value: 'Total de Discoveries', style: 'metric' }, { formula: `COUNTA('Base Discoveries'!A2:A${lastBaseRow})`, value: allProjects.length }, 'Iniciativas principais cadastradas'],
+        [{ value: 'Prontos para Delivery', style: 'metric' }, readyCount, 'Conforme o status atual da iniciativa'],
+        [{ value: 'Em risco / bloqueados', style: 'metric' }, criticalCount, 'Leitura consolidada de status, criticidade e alertas'],
+        [{ value: 'Média de dias no Discovery', style: 'metric' }, { formula: `IFERROR(AVERAGE('Base Discoveries'!N2:N${lastBaseRow}),0)`, value: 0, style: 'days' }, 'Calculada automaticamente pela data inicial'],
+        ['', '', ''],
+        [{ value: 'Squad', style: 'header' }, { value: 'Iniciativas', style: 'header' }, { value: 'Saúde', style: 'header' }],
+        ...squads.map(squad => [squad.name, squadProjects(squad.id).length, squadHealthInfo(squad).label])
+      ];
 
-      const squadRows = squads.map(squad => {
-        const health = squadHealthInfo(squad);
-        return [squad.name, squadProjects(squad.id).length, childCountForSquad(squad.id), Number(hoursForSquad(squad.id) || 0), health.label];
-      });
-
-      const initiativeRows = allProjects.map(project => {
+      const baseRows = allProjects.map((project, index) => {
         const squad = squadForProject(project);
+        const excelRow = index + 2;
         return [
           initiativeNumber(project) || '—',
           displayProjectTitle(project),
           squad?.name || project.squad || 'A validar',
+          project.rteOwner || squad?.rteOwner || project.owner || 'A definir',
+          project.frontLeader || project.initiativeOwner || 'A definir',
+          project.techLead || squad?.techLead || 'A definir',
+          project.po || 'A definir',
+          project.dataArea || 'A definir',
+          reportPhase(project),
           project.status || 'Sem status',
-          formatBR(project.discoveryDate),
-          formatBR(project.discoveryEndDate),
-          actionsSummaryTextForReport(project),
-          timelineSummaryTextForReport(project),
+          reportHealth(project),
+          { value: excelDateSerial(project.discoveryDate), style: 'date' },
+          { value: excelDateSerial(project.discoveryEndDate), style: 'date' },
+          { formula: `IF(L${excelRow}="","",MAX(0,TODAY()-L${excelRow}))`, value: 0, style: 'days' },
+          { formula: `IF(OR(L${excelRow}="",M${excelRow}=""),"",MAX(0,M${excelRow}-L${excelRow}))`, value: 0, style: 'days' },
+          { value: calculateProgress(project) / 100, style: 'percent' },
+          reportNextStep(project),
           risksSummaryTextForReport(project)
         ];
       });
 
-      downloadXlsx('relatorio-executivo.xlsx', [
-        { name: 'Relatório por Squad', headers: ['Squad', 'Iniciativas', 'Filhas', 'Horas 2026', 'Saúde'], rows: squadRows },
-        { name: 'Relatório por Iniciativa', headers: ['Nº', 'Iniciativa', 'Squad', 'Status', 'Início Discovery', 'Término Discovery', 'Ações', 'Timeline', 'Riscos e Dependências'], rows: initiativeRows }
+      downloadXlsx('Discovery_PMO_Tracker_Relatorio.xlsx', [
+        { name: 'Resumo Executivo', headers: ['Indicador', 'Valor', 'Leitura gerencial'], rows: summaryRows, options: { columnWidths: [31, 18, 48], rowHeight: 25 } },
+        { name: 'Base Discoveries', headers: ['Nº Iniciativa', 'Iniciativa / Projeto', 'Squad', 'RTE Resp.', 'Líder', 'Tech Lead', 'PO', 'Área de Dados', 'Fase do Discovery', 'Status', 'Health', 'Dt. Inicial', 'Data Target', 'Dias no Discovery', 'Prazo planejado (dias)', 'Progresso', 'Próximo Passo', 'Risco / Dependência'], rows: baseRows, options: { autoFilter: true, columnWidths: [15, 31, 17, 18, 18, 18, 18, 18, 23, 16, 14, 13, 13, 17, 20, 12, 32, 44], rowHeight: 31, maxColumnWidth: 48 } },
+        buildGanttSheet(allProjects)
       ]);
-      toast('✅ Relatório exportado em .xlsx (2 abas)');
+      toast('✅ Excel exportado com Resumo Executivo, Base Discoveries e Gantt');
     }
 
     function renderReportsPanel() {
