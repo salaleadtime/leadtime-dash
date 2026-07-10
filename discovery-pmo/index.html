@@ -13163,12 +13163,18 @@ Recomendação PMO: ${d.recommendation}`;
       return stops.length ? `conic-gradient(${stops.join(', ')})` : '#e2e8f0';
     }
 
-    // Só datas de hoje pra frente — discovery já passado não é "próximo". Pra ver o
-    // histórico completo (passado + futuro) é isso que o calendário (Ver calendário) serve.
-    function upcomingDiscoveries(limit = 5) {
-      const today = fmtDate(new Date());
+    // O card lateral mostra o mês vigente inteiro, não apenas datas futuras.
+    function currentMonthDiscoveries(limit = 5, referenceDate = new Date()) {
+      const toLocalISO = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
+      const monthStart = toLocalISO(new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1));
+      const monthEnd = toLocalISO(new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0));
       return (data.projects || [])
-        .filter(p => p.discoveryDate && p.discoveryDate >= today)
+        .filter(p => p.discoveryDate && p.discoveryDate >= monthStart && p.discoveryDate <= monthEnd)
         .sort((a, b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)))
         .slice(0, limit);
     }
@@ -15508,7 +15514,7 @@ Recomendação PMO: ${d.recommendation}`;
         : `<div class="ux-v6-attention-empty">Nenhuma ação acordada atrasada ou a vencer nos próximos ${ATTENTION_DUE_SOON_DAYS} dias.</div>`;
 
       const currentDiscoveryMonthLabel = formatMonthYearPT(new Date());
-      const nextDiscoveriesHtml = upcomingDiscoveries(5).map(project => {
+      const nextDiscoveriesHtml = currentMonthDiscoveries(5).map(project => {
         const squad = squadForProject(project);
         const dateLabel = formatBR(project.discoveryDate).slice(0, 5);
         const numLabel = initiativeNumber(project) || '—';
@@ -15519,7 +15525,7 @@ Recomendação PMO: ${d.recommendation}`;
             <span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span>
           </span>
         </div>`;
-      }).join('') || `<div class="ux-v6-empty"><div><strong>Nenhum Discovery futuro agendado.</strong>Datas já realizadas ficam só no calendário.</div></div>`;
+      }).join('') || `<div class="ux-v6-empty"><div><strong>Nenhum Discovery em ${escapeHtml(currentDiscoveryMonthLabel)}.</strong>Consulte o calendário para ver outros meses.</div></div>`;
 
       const donutGradient = buildDonutGradient(healthCounts, squads.length);
       const legendHtml = ['good', 'warn', 'crit'].filter(key => healthCounts[key] > 0).map(key => `<div class="ux-v6-legend-row"><span class="ux-v6-legend-dot" style="background:${healthLegendColors[key]}"></span><span>${healthLabels[key]}</span><strong>${healthCounts[key]}</strong></div>`).join('');
