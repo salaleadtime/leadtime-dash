@@ -6220,6 +6220,112 @@
       background: linear-gradient(90deg, rgba(var(--sq-accent, 148, 163, 184), .88), rgba(var(--sq-accent, 148, 163, 184), .48));
     }
 
+    .ux-v6-status-block {
+      margin: 6px 0 12px;
+      padding: 10px 0 0;
+      border-top: 1px solid rgba(226, 232, 240, .78);
+    }
+
+    .ux-v6-status-label {
+      display: block;
+      color: #637083;
+      font-size: 10.4px;
+      font-weight: 680;
+      margin-bottom: 7px;
+    }
+
+    .ux-v6-status-chips {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .ux-v6-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 22px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(226, 232, 240, .9);
+      background: #fff;
+      color: #475569;
+      font-size: 10.2px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .ux-v6-status-chip::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: .88;
+    }
+
+    .ux-v6-status-chip.crit { color: #c8102e; background: #fff5f7; border-color: #ffd2dc; }
+    .ux-v6-status-chip.start { color: #475569; background: #f8fafc; border-color: #dbe3ee; }
+    .ux-v6-status-chip.warn { color: #b77900; background: #fff8e1; border-color: #ffe3a3; }
+    .ux-v6-status-chip.good { color: #1f8f55; background: #effaf4; border-color: #ccefdc; }
+
+    .ux-v6-next-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-top: 1px solid rgba(226, 232, 240, .78);
+      color: #667387;
+      font-size: 10.6px;
+    }
+
+    .ux-v6-next-row strong {
+      color: var(--sq-accent-solid, #24324a);
+      font-size: 12px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .ux-v6-card-footer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(64px, .7fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding-top: 9px;
+      border-top: 1px solid rgba(226, 232, 240, .78);
+    }
+
+    .ux-v6-card-fact {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .ux-v6-card-fact small {
+      color: #748096;
+      font-size: 9.8px;
+      font-weight: 620;
+    }
+
+    .ux-v6-card-fact strong {
+      color: #17233a;
+      font-size: 13px;
+      font-weight: 760;
+      line-height: 1.1;
+    }
+
+    .ux-v6-card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #17233a;
+      font-size: 10.6px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
     @media (max-width: 1180px) {
       .ux-v6-main-grid { grid-template-columns: 1fr; }
       .ux-v6-rank-grid { grid-template-columns: 1fr; }
@@ -6623,17 +6729,15 @@
 
     .ux-v6-squad-card {
       position: relative;
-      min-height: 154px;
+      min-height: 194px;
       display: grid;
-      grid-template-rows: auto auto 1fr;
+      grid-template-rows: auto auto auto 1fr;
       text-align: left;
       width: 100%;
-      padding: 13px 14px 12px;
-      border-radius: 20px;
-      border: 1px solid rgba(226, 232, 240, .96);
-      background:
-        radial-gradient(circle at 10% 6%, rgba(var(--sq-accent, 47, 111, 221), .115), transparent 34%),
-        linear-gradient(135deg, rgba(255,255,255,.98) 0%, rgba(251,253,255,.97) 58%, rgba(var(--sq-accent, 47, 111, 221), .045) 100%);
+      padding: 15px 16px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(214, 222, 235, .98);
+      background: linear-gradient(180deg, rgba(255,255,255,.99) 0%, rgba(249,251,254,.98) 100%);
       color: #111827;
       overflow: hidden;
       isolation: isolate;
@@ -6643,10 +6747,9 @@
     .ux-v6-squad-card::before {
       content: "";
       position: absolute;
-      inset: 0;
-      width: 4px;
-      border-radius: 20px 0 0 20px;
-      background: linear-gradient(90deg, rgba(var(--sq-accent, 47, 111, 221), .72), rgba(var(--sq-accent, 47, 111, 221), 0));
+      inset: 0 0 auto;
+      height: 3px;
+      background: rgba(var(--sq-accent, 47, 111, 221), .86);
       opacity: .9;
       pointer-events: none;
     }
@@ -6654,13 +6757,7 @@
     .ux-v6-squad-card::after {
       content: "";
       position: absolute;
-      right: -44px;
-      top: -54px;
-      width: 132px;
-      height: 132px;
-      border-radius: 50%;
-      background: rgba(var(--sq-accent, 47, 111, 221), .07);
-      z-index: -1;
+      display: none;
     }
 
     .ux-v6-squad-card:hover {
@@ -6675,8 +6772,8 @@
     }
 
     .ux-v6-squad-card.active::before {
-      width: 5px;
-      background: linear-gradient(180deg, rgba(var(--sq-accent, 47, 111, 221), .95), rgba(var(--sq-accent, 47, 111, 221), .55));
+      height: 4px;
+      background: rgba(var(--sq-accent, 47, 111, 221), .95);
     }
 
     .ux-v6-card-top {
@@ -6721,7 +6818,7 @@
       max-width: 150px;
     }
 
-    .ux-v6-card-title span {
+    .ux-v6-card-title-text span {
       display: block;
       margin-top: 2px;
       color: var(--senior-muted);
@@ -6731,6 +6828,22 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .ux-v6-squad-count-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(226, 232, 240, .9);
+      background: rgba(248, 250, 252, .92);
+      color: #334155;
+      font-size: 10.4px;
+      font-weight: 720;
+      white-space: nowrap;
+      flex: 0 0 auto;
     }
 
     .ux-v6-squad-arrow {
@@ -12968,8 +13081,50 @@ Recomendação PMO: ${d.recommendation}`;
       return { cls: 'good', label: 'Saudável' };
     }
 
-    const SQ_HEALTH_ACCENT = { good: '46, 159, 95', warn: '242, 169, 0', crit: '200, 16, 46' };
-    const SQ_HEALTH_ACCENT_SOLID = { good: '#2e9f5f', warn: '#f2a900', crit: '#c8102e' };
+    function squadDisplayName(squad) {
+      const name = String(squad?.name || '').trim();
+      const code = String(squad?.code || '').trim().toUpperCase();
+      const normalized = normalizeSearchText(name);
+      if (squad?.id === 'squad-asd' || code === 'ASD' || normalized === normalizeSearchText('Ainda Sem Definição')) return 'ASD';
+      return name || 'Squad sem nome';
+    }
+
+    function projectStatusBucket(project) {
+      const text = normalizeSearchText([project?.status, project?.criticality, project?.riskLevel].filter(Boolean).join(' '));
+      if (/(crit|bloque|atras|imped)/.test(text) || projectHasDuplicateChild(project)) return 'crit';
+      if (/(a iniciar|nao inici|planejad|backlog|a validar|sem status)/.test(text)) return 'start';
+      if (/(aten|alta|risco|em discovery|pendente)/.test(text)) return 'warn';
+      return 'good';
+    }
+
+    function squadInitiativeStatusSummary(squad) {
+      const summary = { crit: 0, start: 0, warn: 0, good: 0 };
+      squadProjects(squad.id).forEach(project => {
+        summary[projectStatusBucket(project)] += 1;
+      });
+      summary.total = summary.crit + summary.start + summary.warn + summary.good;
+      return summary;
+    }
+
+    function squadStatusAccent(summary, fallback) {
+      if (summary.crit > 0) return 'crit';
+      if (summary.warn > 0) return 'warn';
+      if (summary.start > 0) return 'start';
+      return fallback?.cls || 'good';
+    }
+
+    function squadInitiativeStatusHtml(summary) {
+      const items = [
+        ['crit', 'Crítico'],
+        ['start', 'A iniciar'],
+        ['warn', 'Atenção'],
+        ['good', 'Saudável']
+      ];
+      return items.map(([key, label]) => `<span class="ux-v6-status-chip ${key}">${summary[key] || 0} ${label}</span>`).join('');
+    }
+
+    const SQ_HEALTH_ACCENT = { good: '46, 159, 95', warn: '242, 169, 0', crit: '200, 16, 46', start: '100, 116, 139' };
+    const SQ_HEALTH_ACCENT_SOLID = { good: '#2e9f5f', warn: '#f2a900', crit: '#c8102e', start: '#64748b' };
 
     function unassignedProjectsCount() {
       return (data.projects || []).filter(p => p.squadId === 'squad-asd' || normalizeSearchText(p.squad || '') === normalizeSearchText('Ainda Sem Definição') || !p.squadId).length;
@@ -15296,32 +15451,36 @@ Recomendação PMO: ${d.recommendation}`;
       const squadCardsHtml = visibleSquads.length ? visibleSquads.map((squad) => {
         const projects = squadProjects(squad.id);
         const count = projects.length;
-        const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
         const hours = hoursForSquad(squad.id);
         const nextDisc = nextDiscoveryForSquad(squad.id);
         const health = squadHealthInfo(squad);
+        const statusSummary = squadInitiativeStatusSummary(squad);
+        const accent = squadStatusAccent(statusSummary, health);
+        const displayName = squadDisplayName(squad);
         const active = squadDrawerOpen && selectedSquad?.id === squad.id ? 'active' : '';
-        return `<button type="button" class="ux-v6-squad-card ${active}" style="--sq-accent:${SQ_HEALTH_ACCENT[health.cls]};--sq-accent-solid:${SQ_HEALTH_ACCENT_SOLID[health.cls]}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
+        return `<button type="button" class="ux-v6-squad-card ${active}" style="--sq-accent:${SQ_HEALTH_ACCENT[accent]};--sq-accent-solid:${SQ_HEALTH_ACCENT_SOLID[accent]}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver iniciativas da Squad ${escapeAttr(displayName)}">
           <div class="ux-v6-card-top">
             <div class="ux-v6-card-title">
-              <span class="ux-v6-squad-avatar">${escapeHtml(squadInitials(squad.name))}</span>
-              <div>
-                <strong>${escapeHtml(squad.name || 'Squad sem nome')}</strong>
-                <span>${escapeHtml(squad.business || 'Área não informada')}</span>
+              <span class="ux-v6-squad-avatar">${escapeHtml(squadInitials(displayName))}</span>
+              <div class="ux-v6-card-title-text">
+                <strong>${escapeHtml(displayName)}</strong>
               </div>
             </div>
-            <span class="ux-v6-squad-arrow">›</span>
+            <span class="ux-v6-squad-count-pill">${count} ${count === 1 ? 'iniciativa' : 'iniciativas'}</span>
           </div>
-          <div class="ux-v6-card-stats">
-            <div><strong>${count}</strong><span>Iniciativas</span></div>
-            <div><strong>${childCountForSquad(squad.id)}</strong><span>Filhas</span></div>
-            <div><strong>${formatHours(hours)}</strong><span>Horas 2026</span></div>
+          <div class="ux-v6-status-block">
+            <span class="ux-v6-status-label">Status das iniciativas</span>
+            <div class="ux-v6-status-chips">${squadInitiativeStatusHtml(statusSummary)}</div>
           </div>
-          <div class="ux-v6-card-bottom">
-            <span>▣ Próximo discovery<strong>${escapeHtml(formatBR(nextDisc))}</strong></span>
-            <span class="ux-v6-health-badge ${health.cls}"><span class="ux-v6-dot"></span>${health.label}</span>
+          <div class="ux-v6-next-row">
+            <span>Próximo discovery</span>
+            <strong>${escapeHtml(formatBR(nextDisc))}</strong>
           </div>
-          <div class="ux-v6-card-progress ${health.cls}"><span style="width:${average}%"></span></div>
+          <div class="ux-v6-card-footer">
+            <span class="ux-v6-card-fact"><small>Horas 2026</small><strong>${formatHours(hours)}</strong></span>
+            <span class="ux-v6-card-fact"><small>Filhas</small><strong>${childCountForSquad(squad.id)}</strong></span>
+            <span class="ux-v6-card-link">Ver iniciativas →</span>
+          </div>
         </button>`;
       }).join('') : `<div class="ux-v6-squads-empty"><strong>Nenhuma squad encontrada.</strong>Revise o termo buscado ou pesquise por iniciativa, squad, PO, Tech Lead, líder ou tema.</div>`;
 
@@ -15397,7 +15556,7 @@ Recomendação PMO: ${d.recommendation}`;
               ${!searchTerm && filteredSquads.length > SQUAD_INITIAL_LIMIT ? `
               <button type="button" class="ux-v6-show-all-btn" onclick="toggleShowAllSquads()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${showAllSquads ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'}"/></svg>
-                ${showAllSquads ? `Ver menos squads` : `Ver todos os squads (${filteredSquads.length - SQUAD_INITIAL_LIMIT} ocultos)`}
+                ${showAllSquads ? `Ver menos squads` : `Ver mais squads (${filteredSquads.length - SQUAD_INITIAL_LIMIT} ocultos)`}
               </button>` : ''}
             </section>
             <section class="ux-v6-rank-grid" aria-label="Rankings executivos">
