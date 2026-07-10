@@ -5637,6 +5637,17 @@
       font-weight: 700;
     }
 
+    .ux-v6-side-title-label {
+      display: grid;
+      gap: 2px;
+    }
+
+    .ux-v6-side-month {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
     .ux-v6-side-link {
       color: #b5122b;
       font-size: 11px;
@@ -7200,8 +7211,8 @@
       <div id="projectList" class="project-list"></div>
 
       <div class="side-actions">
-        <button type="button" class="ghost-btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
         <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
+        <button type="button" class="ghost-btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
         <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
         <button type="button" class="ghost-btn" onclick="openReportsPanel()" title="Abrir relatórios executivos">▤ Relatórios</button>
         <button type="button" class="ghost-btn" onclick="openProjectModal()">+ Iniciativa</button>
@@ -12170,6 +12181,13 @@
       return `${d}/${m}/${y}`;
     }
 
+    function formatMonthYearPT(date) {
+      const parsed = date instanceof Date ? date : new Date(date);
+      if (!parsed || Number.isNaN(parsed.getTime())) return '';
+      const month = parsed.toLocaleDateString('pt-BR', { month: 'long' });
+      return `${month.charAt(0).toUpperCase()}${month.slice(1)} ${parsed.getFullYear()}`;
+    }
+
     function formatBRDateTime(isoDate) {
       const parsed = isoDate ? new Date(isoDate) : null;
       if (!parsed || Number.isNaN(parsed.getTime())) return 'Não informado';
@@ -15489,6 +15507,7 @@ Recomendação PMO: ${d.recommendation}`;
         ? attentionActions.slice(0, 5).map(item => attentionActionRowHtml(item)).join('')
         : `<div class="ux-v6-attention-empty">Nenhuma ação acordada atrasada ou a vencer nos próximos ${ATTENTION_DUE_SOON_DAYS} dias.</div>`;
 
+      const currentDiscoveryMonthLabel = formatMonthYearPT(new Date());
       const nextDiscoveriesHtml = upcomingDiscoveries(5).map(project => {
         const squad = squadForProject(project);
         const dateLabel = formatBR(project.discoveryDate).slice(0, 5);
@@ -15546,7 +15565,6 @@ Recomendação PMO: ${d.recommendation}`;
                 <span class="ux-v6-panel-pill">${activeDiscoveries} em acompanhamento</span>
               </div>
               <div class="ux-v6-search-row">
-                <span class="ux-v6-panel-pill">${searchTerm ? `${filteredSquads.length} squad(s) encontrada(s)` : 'Busca por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema'}</span>
                 <label class="ux-v6-search" for="dashboardSearchInput" aria-label="Buscar no painel executivo da Onda 1">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
                   <input id="dashboardSearchInput" type="search" autocomplete="off" placeholder="Buscar por iniciativa, squad, PO, Tech Lead, líder, responsável ou tema..." value="${escapeAttr(searchTerm)}" oninput="handleDashboardSearchInput(this.value)" />
@@ -15576,7 +15594,7 @@ Recomendação PMO: ${d.recommendation}`;
               <div class="ux-v6-alert-list">${attentionActionsHtml}</div>
             </section>
             <section class="ux-v6-side-card" id="uxV6NextDiscoveriesCard">
-              <div class="ux-v6-side-title"><strong>Próximos Discoveries</strong><span class="ux-v6-side-link" onclick="openCalendarModal()" style="cursor:pointer" title="Abrir calendário de Discoveries">📅 Ver calendário</span></div>
+              <div class="ux-v6-side-title"><div class="ux-v6-side-title-label"><strong>Próximos Discoveries</strong><span class="ux-v6-side-month">Mês atual: ${escapeHtml(currentDiscoveryMonthLabel)}</span></div><span class="ux-v6-side-link" onclick="openCalendarModal()" style="cursor:pointer" title="Abrir calendário de Discoveries">📅 Ver calendário</span></div>
               <div class="ux-v6-date-list">${nextDiscoveriesHtml}</div>
             </section>
             <section class="ux-v6-side-card">
