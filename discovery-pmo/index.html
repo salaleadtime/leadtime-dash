@@ -11923,7 +11923,7 @@
     function openCardModal(cardId = null, presetStatus = 'backlog') {
       const p = getProject();
       const isEdit = Boolean(cardId);
-      const card = isEdit ? p.cards.find(c => c.id === cardId) : { id: uid(), title: '', description: '', status: presetStatus, priority: 'Média', owner: '', due: plusDays(7), notes: '', type: 'Entendimento' };
+      const card = isEdit ? p.cards.find(c => c.id === cardId) : { id: uid(), title: '', description: '', status: presetStatus, priority: 'Média', owner: '', due: '', notes: '', type: 'Entendimento' };
       modalState = { type: 'card', isEdit, card };
       openModal(isEdit ? 'Editar card de andamento' : 'Novo card de andamento', 'Clique em salvar para atualizar automaticamente a visão do Discovery.', `
         <div class="form-grid">
@@ -11960,7 +11960,7 @@
       c.priority = document.getElementById('card-priority').value;
       c.type = document.getElementById('card-type').value.trim() || 'Geral';
       c.owner = document.getElementById('card-owner').value.trim();
-      c.due = document.getElementById('card-due').value || plusDays(7);
+      c.due = document.getElementById('card-due').value || '';
       c.description = document.getElementById('card-description').value.trim();
       c.stageReason = document.getElementById('card-stage-reason').value || defaultStageReason(c.status);
       c.notes = document.getElementById('card-notes').value.trim();
