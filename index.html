@@ -5130,8 +5130,8 @@ function renderStoryView(){
 
   // Sort: critical LT first, then near-delivery, then by story count desc
   filteredEpicIds.sort(function(a,b){
-    var ra=allData.find(function(r){return r.id===a;}),rb=allData.find(function(r){return r.id===b;});
-    var ltA=ra&&ra.lt?ra.lt:0, ltB=rb&&rb.lt?rb.lt:0;
+    var ltInfoA=resolveEpicLT(a,epicMap[a]),ltInfoB=resolveEpicLT(b,epicMap[b]);
+    var ltA=ltInfoA?ltInfoA.val:0, ltB=ltInfoB?ltInfoB.val:0;
     var critA=ltA>=META?2:ltA>=40?1:0, critB=ltB>=META?2:ltB>=40?1:0;
     if(critB!==critA) return critB-critA;
     var na=isNearDelivery(epicMap[a])?1:0, nb=isNearDelivery(epicMap[b])?1:0;
@@ -5205,6 +5205,16 @@ function epicStoriesLT(stories){
   return minIso?calcLT(minIso,null):0;
 }
 
+// Lead time "conhecido" de um épico — oficial (allData.ini) ou estimado a
+// partir das estórias. Usado tanto na célula quanto na ordenação da tabela,
+// pra badge e sort nunca divergirem sobre qual épico é crítico.
+function resolveEpicLT(ep,stories){
+  var epicRec=allData.find(function(r){return r.id===ep;});
+  if(epicRec&&epicRec.ini) return {val:calcLT(epicRec.ini,epicRec.fim),isEstimate:false};
+  var est=epicStoriesLT(stories||[]);
+  return est>0?{val:est,isEstimate:true}:null;
+}
+
 function svEpicRow(ep,stories){
   var epicRec=allData.find(function(r){return r.id===ep;});
   var sq=(epicRec&&epicRec.squad)||((stories[0]&&stories[0].squad)||'');
@@ -5218,29 +5228,23 @@ function svEpicRow(ep,stories){
   var near=!isEmpty&&isNearDelivery(stories);
   var rowId='sv_'+ep.replace(/[^a-z0-9]/gi,'_');
 
-  // Lead time cell — recalcula a partir de ini/fim (evita depender do campo .lt
-  // armazenado, que pode estar desatualizado e trata 0 dias como "sem dado").
-  // Quando não há registro manual, estima a partir da estória mais antiga do épico.
+  // Lead time cell — usa o mesmo resolveEpicLT() do sort acima, pra badge e
+  // ordenação nunca divergirem sobre qual épico é crítico.
   var ltHtml='<span style="color:#94a3b8;font-size:11px">—</span>';
-  var ltVal=(epicRec&&epicRec.ini)?calcLT(epicRec.ini,epicRec.fim):null;
-  var ltIsEstimate=false;
-  if(ltVal==null&&!isEmpty){
-    var estLT=epicStoriesLT(stories);
-    if(estLT>0){ ltVal=estLT; ltIsEstimate=true; }
-  }
-  if(ltVal!=null){
-    var ltCol=ltVal>=META?'#dc2626':ltVal>=40?'#d97706':'#16a34a';
-    var ltTitle=ltIsEstimate?'Estimado a partir da estória mais antiga (sem Data Início cadastrada)':'Lead time oficial';
-    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700" title="'+ltTitle+'">'+ltVal+'d'+(ltIsEstimate?' <span style="font-size:9px;font-weight:600;color:#94a3b8">(est.)</span>':'')+'</span>';
+  var ltInfo=resolveEpicLT(ep,stories);
+  if(ltInfo){
+    var ltCol=ltInfo.val>=META?'#dc2626':ltInfo.val>=40?'#d97706':'#16a34a';
+    var ltTitle=ltInfo.isEstimate?'Estimado a partir da estória mais antiga (sem Data Início cadastrada)':'Lead time oficial';
+    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700" title="'+ltTitle+'">'+ltInfo.val+'d'+(ltInfo.isEstimate?' <span style="font-size:9px;font-weight:600;color:#94a3b8">(est.)</span>':'')+'</span>';
   }
 
   // Status badge
   var stBadge;
   if(isEmpty) stBadge='<span class="sv-status-badge" style="background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0">Sem stories</span>';
-  else if(ltVal!=null&&ltVal>=META) stBadge='<span class="sv-status-badge sv-status-crit">Crítico</span>';
+  else if(ltInfo&&ltInfo.val>=META) stBadge='<span class="sv-status-badge sv-status-crit">Crítico</span>';
   else if(near) stBadge='<span class="sv-status-badge sv-status-near">🚀 Entrega</span>';
   else if(isFull) stBadge='<span class="sv-status-badge sv-status-crit">Lotado</span>';
-  else if(ltVal!=null&&ltVal>=40) stBadge='<span class="sv-status-badge sv-status-warn">Atenção</span>';
+  else if(ltInfo&&ltInfo.val>=40) stBadge='<span class="sv-status-badge sv-status-warn">Atenção</span>';
   else stBadge='<span class="sv-status-badge sv-status-ok">No prazo</span>';
 
   // Mini distribution bar
