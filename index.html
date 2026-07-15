@@ -4362,7 +4362,12 @@ function loadStoriesXlsx(file){
         var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
         var status=m.status>=0?(row[m.status]||'').toString().trim():'';
         var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
-        stories.push({id:id,epic:epic,epicName:epicName,resumo:resumo,status:status,squad:squad});
+        var criado=m.criado>=0?parseD(row[m.criado]):null;
+        stories.push({id:id,epic:epic,epicName:epicName,resumo:resumo,status:status,squad:squad,criado:criado});
+      }
+      if(m.status<0){
+        toast('⚠️ Coluna de status não encontrada',
+          'Nenhuma coluna "Situação"/"Status"/"Estado" foi identificada no arquivo — a Distribuição de Fase pode ficar incorreta.','warn');
       }
       if(!stories.length){
         // Defesa extra: se as linhas lidas são Épicos (Tipo de Item = "Épico"
@@ -5190,6 +5195,16 @@ function svKpiItem(color,val,lbl,sub,extra){
     '<span class="sv-kpi-sub">'+sub+'</span></div>';
 }
 
+// Lead time estimado a partir da estória mais antiga do épico — fallback usado
+// quando não há registro manual (allData) com Data Início cadastrada.
+function epicStoriesLT(stories){
+  var minIso=null;
+  stories.forEach(function(s){
+    if(s&&s.criado&&(!minIso||s.criado<minIso)) minIso=s.criado;
+  });
+  return minIso?calcLT(minIso,null):0;
+}
+
 function svEpicRow(ep,stories){
   var epicRec=allData.find(function(r){return r.id===ep;});
   var sq=(epicRec&&epicRec.squad)||((stories[0]&&stories[0].squad)||'');
@@ -5203,20 +5218,29 @@ function svEpicRow(ep,stories){
   var near=!isEmpty&&isNearDelivery(stories);
   var rowId='sv_'+ep.replace(/[^a-z0-9]/gi,'_');
 
-  // Lead time cell
+  // Lead time cell — recalcula a partir de ini/fim (evita depender do campo .lt
+  // armazenado, que pode estar desatualizado e trata 0 dias como "sem dado").
+  // Quando não há registro manual, estima a partir da estória mais antiga do épico.
   var ltHtml='<span style="color:#94a3b8;font-size:11px">—</span>';
-  if(epicRec&&epicRec.lt){
-    var ltCol=epicRec.lt>=META?'#dc2626':epicRec.lt>=40?'#d97706':'#16a34a';
-    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700">'+epicRec.lt+'d</span>';
+  var ltVal=(epicRec&&epicRec.ini)?calcLT(epicRec.ini,epicRec.fim):null;
+  var ltIsEstimate=false;
+  if(ltVal==null&&!isEmpty){
+    var estLT=epicStoriesLT(stories);
+    if(estLT>0){ ltVal=estLT; ltIsEstimate=true; }
+  }
+  if(ltVal!=null){
+    var ltCol=ltVal>=META?'#dc2626':ltVal>=40?'#d97706':'#16a34a';
+    var ltTitle=ltIsEstimate?'Estimado a partir da estória mais antiga (sem Data Início cadastrada)':'Lead time oficial';
+    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700" title="'+ltTitle+'">'+ltVal+'d'+(ltIsEstimate?' <span style="font-size:9px;font-weight:600;color:#94a3b8">(est.)</span>':'')+'</span>';
   }
 
   // Status badge
   var stBadge;
   if(isEmpty) stBadge='<span class="sv-status-badge" style="background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0">Sem stories</span>';
-  else if(epicRec&&epicRec.lt>=META) stBadge='<span class="sv-status-badge sv-status-crit">Crítico</span>';
+  else if(ltVal!=null&&ltVal>=META) stBadge='<span class="sv-status-badge sv-status-crit">Crítico</span>';
   else if(near) stBadge='<span class="sv-status-badge sv-status-near">🚀 Entrega</span>';
   else if(isFull) stBadge='<span class="sv-status-badge sv-status-crit">Lotado</span>';
-  else if(epicRec&&epicRec.lt>=40) stBadge='<span class="sv-status-badge sv-status-warn">Atenção</span>';
+  else if(ltVal!=null&&ltVal>=40) stBadge='<span class="sv-status-badge sv-status-warn">Atenção</span>';
   else stBadge='<span class="sv-status-badge sv-status-ok">No prazo</span>';
 
   // Mini distribution bar
@@ -6867,7 +6891,9 @@ function calSeedExample(){
     var ok=act.filter(function(r){ return r.lt<40; }).length;
     var noDate=act.filter(function(r){ return !r.dataPrevista; }).length;
     var deliveries=deliverList();
-    var next=deliveries[0];
+    var n0=now0();
+    var overdue=deliveries.filter(function(r){ return parseLocalDate(r.dataPrevista)<n0; });
+    var next=deliveries.find(function(r){ return parseLocalDate(r.dataPrevista)>=n0; });
     var byLt=act.slice().sort(function(a,b){ return b.lt-a.lt; })[0];
     var squads=Array.from(new Set(act.map(function(r){ return r.squad; }).filter(Boolean))).length;
     var cards = [
@@ -6879,7 +6905,8 @@ function calSeedExample(){
     ].map(function(k){
       return '<div class="premium-kpi" style="--pcol:'+k.c+'"><div class="premium-kpi-l">'+esc(k.l)+'</div><div class="premium-kpi-v">'+esc(k.v)+'</div><div class="premium-kpi-s">'+esc(k.s)+'</div></div>';
     }).join('');
-    var nextHtml = next ? '<div class="premium-ep-card"><div><strong>🚀 Próxima entrega</strong><br><span>'+esc(shortId(next.id))+' · '+esc(next.resumo||'—')+'</span></div>'+pill(fmtD(next.dataPrevista),'blue')+'</div>' : '<div class="premium-ep-card"><div><strong>🚀 Próxima entrega</strong><br><span>Nenhuma data prevista preenchida</span></div>'+pill('—','blue')+'</div>';
+    var overdueBadge = overdue.length ? pill(overdue.length+' atrasada'+(overdue.length!==1?'s':''),'red') : '';
+    var nextHtml = next ? '<div class="premium-ep-card"><div><strong>🚀 Próxima entrega</strong><br><span>'+esc(shortId(next.id))+' · '+esc(next.resumo||'—')+'</span></div>'+pill(fmtD(next.dataPrevista),'blue')+overdueBadge+'</div>' : (overdue.length ? '<div class="premium-ep-card"><div><strong>🚀 Próxima entrega</strong><br><span>Nenhuma entrega futura — tudo atrasado</span></div>'+overdueBadge+'</div>' : '<div class="premium-ep-card"><div><strong>🚀 Próxima entrega</strong><br><span>Nenhuma data prevista preenchida</span></div>'+pill('—','blue')+'</div>');
     var riskHtml = byLt ? '<div class="premium-ep-card"><div><strong>⚠ Maior Lead Time</strong><br><span>'+esc(shortId(byLt.id))+' · '+esc(byLt.squad||'—')+'</span></div>'+pill(byLt.lt+'d',byLt.lt>=META?'red':byLt.lt>=40?'amber':'green')+'</div>' : '';
     el.innerHTML =
       '<div class="premium-page-title"><div class="premium-title">Épicos</div><div class="premium-subtitle">Visão executiva dos épicos ativos, mantendo filtros, edição inline e regras originais do sistema.</div></div>'+
