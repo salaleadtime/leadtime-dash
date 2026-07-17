@@ -1414,6 +1414,8 @@
     .homologation-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
     .homologation-actions{display:flex;gap:7px;align-items:center;justify-content:flex-end;}
     .homologation-actions .mini-action{font-size:11px;}
+    .homologation-date-input{width:138px;border:1px solid #DDE3EE;border-radius:7px;padding:6px 7px;background:#fff;color:var(--text);font:inherit;font-size:11px;}
+    .homologation-date-input:focus{outline:2px solid #F6C5D0;border-color:#CC092F;}
     @media(max-width:900px){
       .homologation-list-head{display:none;}
       .homologation-row{grid-template-columns:1fr;gap:8px;}
@@ -5586,7 +5588,7 @@
         <div class="section-head">
           <div>
             <h2>Itens críticos em homologação</h2>
-            <p class="sub">Lista da carga de Homologação, com controle de SLA, cópia da chave e acesso ao Jira.</p>
+            <p class="sub">Lista da carga de Homologação, com controle de SLA, cópia da chave e alteração manual da data.</p>
           </div>
           <div class="homologation-tools">
             <label class="file-label-mini" title="Exporte no Jira as histórias com status Em homologação">
@@ -6753,7 +6755,7 @@
         const key = storyKey(row);
         const sla = homologationSlaInfo(row);
         const rowClass = sla.overdue ? 'sla-overdue' : sla.dueToday ? 'sla-today' : '';
-        const entry = row.homologacaoData || 'Data não informada';
+        const dateInputValue = homologationDateInputValue(row.homologacaoData);
         return `<div class="homologation-row ${rowClass}">
           <a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" title="Abrir ${escapeAttr(key)} no Jira">${escapeHtml(key || 'Sem chave')}</a>
           <div class="homologation-summary">${escapeHtml(row.resumo || 'Sem resumo')}</div>
@@ -6761,15 +6763,39 @@
             <span class="badge blue">${escapeHtml(row.squad || 'Squad não informada')}</span>
             ${row.epic ? `<span class="badge gray">Épico ${escapeHtml(extractJiraKey(row.epic) || row.epic)}</span>` : ''}
           </div>
-          <span>${escapeHtml(entry)}</span>
+          <input class="homologation-date-input" type="datetime-local" value="${escapeAttr(dateInputValue)}" onchange="updateHomologationDate('${escapeJs(key)}', this.value)" title="Altere manualmente a data de entrada em homologação" aria-label="Data de entrada em homologação de ${escapeAttr(key)}" />
           <span class="badge ${sla.overdue ? 'red' : sla.dueToday ? 'amber' : sla.missing ? 'gray' : 'green'}">${escapeHtml(sla.label || 'Em homologação')}</span>
           <div class="homologation-actions">
             <button type="button" class="mini-action" onclick="copyJiraKey('${escapeJs(key)}', event)">Copiar chave</button>
-            <button type="button" class="mini-action" onclick="openJiraIssue('${escapeJs(key)}', event)">Abrir no Jira ↗</button>
           </div>
         </div>`;
       }).join('');
       container.innerHTML = head + list;
+    }
+
+    function homologationDateInputValue(value){
+      const date = parseFlexibleDate(value);
+      if(!date) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function formatHomologationDate(value){
+      const date = parseFlexibleDate(value);
+      if(!date) return '';
+      return date.toLocaleString('pt-BR', {day:'2-digit', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit'}).replace('.', '');
+    }
+
+    function updateHomologationDate(key, value){
+      const item = homologationRows.find(row => sameText(storyKey(row), key));
+      if(!item) return;
+      item.homologacaoData = value ? formatHomologationDate(value) : '';
+      localStorage.setItem(IMPORTED_HOMOLOGATION_KEY, JSON.stringify({
+        rows: homologationRows,
+        sourceName: homologationSourceName,
+        importedAt: new Date().toISOString()
+      }));
+      renderAll();
     }
 
     /* ─ Type helpers ─ */
@@ -7987,6 +8013,22 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       }
       const br = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
       if(br) return new Date(Number(br[3]), Number(br[2]) - 1, Number(br[1]));
+      // Exportação Jira em português: "20/mai/26 1:21 PM".
+      const jiraPt = v.match(/^(\d{1,2})\/([a-zçã]+)\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([AP]M))?)?$/i);
+      if(jiraPt){
+        const months = {jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11};
+        const month = months[lower(jiraPt[2]).slice(0,3)];
+        if(month !== undefined){
+          let year = Number(jiraPt[3]);
+          if(year < 100) year += 2000;
+          let hour = Number(jiraPt[4] || 0);
+          const minute = Number(jiraPt[5] || 0);
+          const meridiem = (jiraPt[6] || '').toUpperCase();
+          if(meridiem === 'PM' && hour < 12) hour += 12;
+          if(meridiem === 'AM' && hour === 12) hour = 0;
+          return new Date(year, month, Number(jiraPt[1]), hour, minute);
+        }
+      }
       const dt = new Date(v);
       return Number.isNaN(dt.getTime()) ? null : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
     }
