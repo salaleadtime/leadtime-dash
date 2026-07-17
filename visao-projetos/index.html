@@ -1403,15 +1403,22 @@
     .homologation-section{margin-top:18px;}
     .homologation-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .homologation-source{font-size:11px;color:var(--muted);}
-    .homologation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;}
-    .homologation-card{border:1px solid #DDE7E4;border-left:4px solid #16A34A;border-radius:12px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 14px rgba(20,83,45,.06);}
-    .homologation-card.sla-overdue{border-left-color:#CC092F;background:#FFF9FA;}
-    .homologation-card.sla-today{border-left-color:#D97706;background:#FFFCF5;}
-    .homologation-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
-    .homologation-card h3{font-size:13px;line-height:1.35;margin:0;color:var(--text);}
-    .homologation-card-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
-    .homologation-card-actions{display:flex;gap:8px;align-items:center;margin-top:auto;}
-    .homologation-card-actions .mini-action{font-size:11px;}
+    .homologation-list{border:1px solid #E4E9F1;border-radius:12px;overflow:hidden;background:#fff;}
+    .homologation-list-head,.homologation-row{display:grid;grid-template-columns:118px minmax(280px,2.1fr) minmax(150px,1fr) 145px 115px 190px;gap:12px;align-items:center;}
+    .homologation-list-head{padding:10px 14px;background:#F7F9FC;color:#667085;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
+    .homologation-row{padding:12px 14px;border-top:1px solid #EDF0F5;font-size:12px;transition:background .15s ease;}
+    .homologation-row:hover{background:#FAFBFE;}
+    .homologation-row.sla-overdue{border-left:3px solid #CC092F;padding-left:11px;}
+    .homologation-row.sla-today{border-left:3px solid #D97706;padding-left:11px;}
+    .homologation-summary{font-weight:700;line-height:1.35;color:var(--text);}
+    .homologation-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+    .homologation-actions{display:flex;gap:7px;align-items:center;justify-content:flex-end;}
+    .homologation-actions .mini-action{font-size:11px;}
+    @media(max-width:900px){
+      .homologation-list-head{display:none;}
+      .homologation-row{grid-template-columns:1fr;gap:8px;}
+      .homologation-actions{justify-content:flex-start;}
+    }
     .story-card-head{
       display:flex;
       align-items:flex-start;
@@ -5579,7 +5586,7 @@
         <div class="section-head">
           <div>
             <h2>Itens críticos em homologação</h2>
-            <p class="sub">Cards da carga de Homologação, com controle de SLA, cópia da chave e acesso ao Jira.</p>
+            <p class="sub">Lista da carga de Homologação, com controle de SLA, cópia da chave e acesso ao Jira.</p>
           </div>
           <div class="homologation-tools">
             <label class="file-label-mini" title="Exporte no Jira as histórias com status Em homologação">
@@ -5589,7 +5596,7 @@
             <span class="homologation-source" id="homologationSource">Nenhuma carga específica.</span>
           </div>
         </div>
-        <div class="homologation-grid" id="homologationCards"></div>
+        <div class="homologation-list" id="homologationCards"></div>
       </section>
 
       <!-- Gráficos estratégicos (2 painéis) -->
@@ -6724,7 +6731,7 @@
       _refreshImportPill();
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
-      try { renderHomologationCards(); } catch(error) { console.error('Erro ao renderizar cards de Homologação:', error); }
+      try { renderHomologationCards(); } catch(error) { console.error('Erro ao renderizar lista de Homologação:', error); }
       try { renderOperational(); } catch(error) { console.error('Erro ao renderizar Operacional:', error); }
       try { renderSprintCurrent(); } catch(error) { console.error('Erro ao renderizar Sprint Atual:', error); }
       try { renderDeliveryStoryPicker(); } catch(error) { console.error('Erro ao renderizar histórias da entrega:', error); }
@@ -6736,35 +6743,33 @@
       if(!container || !source) return;
       source.textContent = homologationSourceName
         ? `${homologationRows.length} itens carregados de ${homologationSourceName}`
-        : 'Carregue a exportação do Jira para exibir os cards.';
+        : 'Carregue a exportação do Jira para exibir a lista.';
       if(!homologationRows.length){
         container.innerHTML = '<div class="empty">Nenhum item da carga de Homologação. Use “Carregar Homologação” e selecione a exportação do Jira.</div>';
         return;
       }
-      container.innerHTML = homologationRows.map(row => {
+      const head = `<div class="homologation-list-head"><span>Chave</span><span>História</span><span>Squad / Épico</span><span>Entrada em homologação</span><span>SLA</span><span>Ações</span></div>`;
+      const list = homologationRows.map(row => {
         const key = storyKey(row);
         const sla = homologationSlaInfo(row);
-        const cardClass = sla.overdue ? 'sla-overdue' : sla.dueToday ? 'sla-today' : '';
+        const rowClass = sla.overdue ? 'sla-overdue' : sla.dueToday ? 'sla-today' : '';
         const entry = row.homologacaoData || 'Data não informada';
-        return `<article class="homologation-card ${cardClass}">
-          <div class="homologation-card-head">
-            <div>
-              <a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" title="Abrir ${escapeAttr(key)} no Jira">${escapeHtml(key || 'Sem chave')}</a>
-              <h3>${escapeHtml(row.resumo || 'Sem resumo')}</h3>
-            </div>
-            <span class="badge ${sla.overdue ? 'red' : sla.dueToday ? 'amber' : sla.missing ? 'gray' : 'green'}">${escapeHtml(sla.label || 'Em homologação')}</span>
-          </div>
-          <div class="homologation-card-meta">
+        return `<div class="homologation-row ${rowClass}">
+          <a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" title="Abrir ${escapeAttr(key)} no Jira">${escapeHtml(key || 'Sem chave')}</a>
+          <div class="homologation-summary">${escapeHtml(row.resumo || 'Sem resumo')}</div>
+          <div class="homologation-meta">
             <span class="badge blue">${escapeHtml(row.squad || 'Squad não informada')}</span>
             ${row.epic ? `<span class="badge gray">Épico ${escapeHtml(extractJiraKey(row.epic) || row.epic)}</span>` : ''}
-            <span class="badge gray">Entrada: ${escapeHtml(entry)}</span>
           </div>
-          <div class="homologation-card-actions">
+          <span>${escapeHtml(entry)}</span>
+          <span class="badge ${sla.overdue ? 'red' : sla.dueToday ? 'amber' : sla.missing ? 'gray' : 'green'}">${escapeHtml(sla.label || 'Em homologação')}</span>
+          <div class="homologation-actions">
             <button type="button" class="mini-action" onclick="copyJiraKey('${escapeJs(key)}', event)">Copiar chave</button>
             <button type="button" class="mini-action" onclick="openJiraIssue('${escapeJs(key)}', event)">Abrir no Jira ↗</button>
           </div>
-        </article>`;
+        </div>`;
       }).join('');
+      container.innerHTML = head + list;
     }
 
     /* ─ Type helpers ─ */
