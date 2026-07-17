@@ -1400,6 +1400,18 @@
       border-color:#F0B7C3;
       transform:translateY(-1px);
     }
+    .homologation-section{margin-top:18px;}
+    .homologation-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .homologation-source{font-size:11px;color:var(--muted);}
+    .homologation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;}
+    .homologation-card{border:1px solid #DDE7E4;border-left:4px solid #16A34A;border-radius:12px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 14px rgba(20,83,45,.06);}
+    .homologation-card.sla-overdue{border-left-color:#CC092F;background:#FFF9FA;}
+    .homologation-card.sla-today{border-left-color:#D97706;background:#FFFCF5;}
+    .homologation-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+    .homologation-card h3{font-size:13px;line-height:1.35;margin:0;color:var(--text);}
+    .homologation-card-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+    .homologation-card-actions{display:flex;gap:8px;align-items:center;margin-top:auto;}
+    .homologation-card-actions .mini-action{font-size:11px;}
     .story-card-head{
       display:flex;
       align-items:flex-start;
@@ -5563,6 +5575,23 @@
         </article>
       </div>
 
+      <section class="section homologation-section">
+        <div class="section-head">
+          <div>
+            <h2>Itens críticos em homologação</h2>
+            <p class="sub">Cards da carga de Homologação, com controle de SLA, cópia da chave e acesso ao Jira.</p>
+          </div>
+          <div class="homologation-tools">
+            <label class="file-label-mini" title="Exporte no Jira as histórias com status Em homologação">
+              Carregar Homologação
+              <input id="homologationFileInput" type="file" accept=".xlsx,.xls,.csv" />
+            </label>
+            <span class="homologation-source" id="homologationSource">Nenhuma carga específica.</span>
+          </div>
+        </div>
+        <div class="homologation-grid" id="homologationCards"></div>
+      </section>
+
       <!-- Gráficos estratégicos (2 painéis) -->
       <section class="section">
         <div class="section-head">
@@ -6281,6 +6310,23 @@
       window.open(getJiraUrl(issueKey), '_blank', 'noopener,noreferrer');
     }
 
+    async function copyJiraKey(key, event){
+      if(event) event.stopPropagation();
+      const issueKey = normalize(key).toUpperCase();
+      if(!issueKey) return;
+      try{
+        await navigator.clipboard.writeText(issueKey);
+        const button = event?.currentTarget;
+        if(button){
+          const original = button.textContent;
+          button.textContent = 'Copiado';
+          setTimeout(()=> button.textContent = original, 1200);
+        }
+      }catch(error){
+        window.prompt('Copie a chave do Jira:', issueKey);
+      }
+    }
+
     function hasRefinadaLabel(row){
       return (row.rotulos || []).some(label => lower(label).includes('refinada'));
     }
@@ -6352,12 +6398,15 @@
     const initialSprintData = initialSprintDataRaw.map(row => applyRefinementRule({...row, sprintAtual:true}));
     rows = structuredClone(initialData);
     sprintRows = structuredClone(initialSprintData);
+    let homologationRows = [];
+    let homologationSourceName = '';
 
     // Bases importadas persistem no navegador. Antes, recarregar a página
     // voltava silenciosamente para a base de exemplo embutida (ati.xlsx),
     // mantendo a data de importação salva — números errados com cara de atualizados.
     const IMPORTED_GENERAL_KEY = 'vpBaseGeralImportada';
     const IMPORTED_SPRINT_KEY = 'vpBaseSprintImportada';
+    const IMPORTED_HOMOLOGATION_KEY = 'vpBaseHomologacaoImportada';
     function persistImportedBases(){
       try{
         const importedAt = new Date().toISOString();
@@ -6381,6 +6430,11 @@
       if(sprint && Array.isArray(sprint.rows) && sprint.rows.length){
         sprintRows = sprint.rows.map(row => applyRefinementRule({...row, sprintAtual:true}));
         if(sprint.sourceName) sprintSourceName = sprint.sourceName;
+      }
+      const homologation = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
+      if(homologation && Array.isArray(homologation.rows)){
+        homologationRows = homologation.rows.map(applyRefinementRule).filter(isHomologation);
+        homologationSourceName = homologation.sourceName || '';
       }
     })();
 
@@ -6670,9 +6724,47 @@
       _refreshImportPill();
 
       try { renderManagement(); } catch(error) { console.error('Erro ao renderizar Gestão:', error); }
+      try { renderHomologationCards(); } catch(error) { console.error('Erro ao renderizar cards de Homologação:', error); }
       try { renderOperational(); } catch(error) { console.error('Erro ao renderizar Operacional:', error); }
       try { renderSprintCurrent(); } catch(error) { console.error('Erro ao renderizar Sprint Atual:', error); }
       try { renderDeliveryStoryPicker(); } catch(error) { console.error('Erro ao renderizar histórias da entrega:', error); }
+    }
+
+    function renderHomologationCards(){
+      const container = $('homologationCards');
+      const source = $('homologationSource');
+      if(!container || !source) return;
+      source.textContent = homologationSourceName
+        ? `${homologationRows.length} itens carregados de ${homologationSourceName}`
+        : 'Carregue a exportação do Jira para exibir os cards.';
+      if(!homologationRows.length){
+        container.innerHTML = '<div class="empty">Nenhum item da carga de Homologação. Use “Carregar Homologação” e selecione a exportação do Jira.</div>';
+        return;
+      }
+      container.innerHTML = homologationRows.map(row => {
+        const key = storyKey(row);
+        const sla = homologationSlaInfo(row);
+        const cardClass = sla.overdue ? 'sla-overdue' : sla.dueToday ? 'sla-today' : '';
+        const entry = row.homologacaoData || 'Data não informada';
+        return `<article class="homologation-card ${cardClass}">
+          <div class="homologation-card-head">
+            <div>
+              <a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" title="Abrir ${escapeAttr(key)} no Jira">${escapeHtml(key || 'Sem chave')}</a>
+              <h3>${escapeHtml(row.resumo || 'Sem resumo')}</h3>
+            </div>
+            <span class="badge ${sla.overdue ? 'red' : sla.dueToday ? 'amber' : sla.missing ? 'gray' : 'green'}">${escapeHtml(sla.label || 'Em homologação')}</span>
+          </div>
+          <div class="homologation-card-meta">
+            <span class="badge blue">${escapeHtml(row.squad || 'Squad não informada')}</span>
+            ${row.epic ? `<span class="badge gray">Épico ${escapeHtml(extractJiraKey(row.epic) || row.epic)}</span>` : ''}
+            <span class="badge gray">Entrada: ${escapeHtml(entry)}</span>
+          </div>
+          <div class="homologation-card-actions">
+            <button type="button" class="mini-action" onclick="copyJiraKey('${escapeJs(key)}', event)">Copiar chave</button>
+            <button type="button" class="mini-action" onclick="openJiraIssue('${escapeJs(key)}', event)">Abrir no Jira ↗</button>
+          </div>
+        </article>`;
+      }).join('');
     }
 
     /* ─ Type helpers ─ */
@@ -8396,6 +8488,9 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       localStorage.removeItem(IMPORT_BASE_KEY);
       localStorage.removeItem(IMPORTED_GENERAL_KEY);
       localStorage.removeItem(IMPORTED_SPRINT_KEY);
+      localStorage.removeItem(IMPORTED_HOMOLOGATION_KEY);
+      homologationRows = [];
+      homologationSourceName = '';
       closeOperationalEditor();
       setupFilters();
       renderAll();
@@ -8468,6 +8563,36 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
           alert('Sprint importada: ' + sprintSourceName);
         } else {
           alert('Nenhum arquivo de Sprint Ativa encontrado. Use o arquivo "Sprint_ativa" do Jira.');
+        }
+      });
+    }
+
+    function bindHomologationImport(){
+      const input = $('homologationFileInput');
+      if(!input || input.dataset.bound) return;
+      input.dataset.bound = 'true';
+      input.addEventListener('change', async (event)=>{
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if(!file) return;
+        showLoadingOverlay();
+        try{
+          const parsed = await readJiraFileToRows(file);
+          if(!parsed) return;
+          homologationRows = parsed.filter(isHomologation);
+          homologationSourceName = file.name;
+          localStorage.setItem(IMPORTED_HOMOLOGATION_KEY, JSON.stringify({
+            rows: homologationRows,
+            sourceName: homologationSourceName,
+            importedAt: new Date().toISOString()
+          }));
+          renderAll();
+          alert(`${homologationRows.length} item(ns) em homologação carregado(s).`);
+        }catch(error){
+          console.error(error);
+          alert('Não foi possível carregar a exportação de Homologação. Verifique o arquivo do Jira.');
+        }finally{
+          hideLoadingOverlay();
         }
       });
     }
@@ -8627,7 +8752,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
         prazo: formatExcelDate(get('Prazo','Data limite','Due date')),
         estimativa: normalize(get('Estimativa','Story Points','Horas estimadas','Original estimate')),
         changeData: formatExcelDate(get('Change','Changer','Data Change','Data da Change','Data de Change','Implantação','Implantacao','Data de Implantação','Data Implantacao','Data da Implantação','Data da Implantacao','Change date','Release date')),
-        homologacaoData: formatExcelDate(get('Entrada Homologação','Entrada Homologacao','Data Entrada Homologação','Data Entrada Homologacao','Data de Entrada em Homologação','Data de Entrada em Homologacao','Data entrada homologação','Data entrada homologacao','Data Homologação','Data Homologacao','Início Homologação','Inicio Homologacao','Início da Homologação','Inicio da Homologacao','Homologação em','Homologacao em')),
+        homologacaoData: formatExcelDate(get('Entrada Homologação','Entrada Homologacao','Data Entrada Homologação','Data Entrada Homologacao','Data de Entrada em Homologação','Data de Entrada em Homologacao','Data entrada homologação','Data entrada homologacao','Data Homologação','Data Homologacao','Início Homologação','Inicio Homologacao','Início da Homologação','Inicio da Homologacao','Homologação em','Homologacao em','Campo personalizado (Data de Início de Homologação (ajuste manual))','Campo personalizado (Data de Inicio de Homologacao (ajuste manual))')),
         refinada,
         product_backlog: productBacklog,
         bloqueio,
@@ -8947,6 +9072,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     restoreSquadFromUrl();
     bindFilterEvents();
     bindSprintImport();
+    bindHomologationImport();
     renderAll();
     updateLastUpdatedBadge();
     syncSquadToUrl();
