@@ -1404,7 +1404,7 @@
     .homologation-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .homologation-source{font-size:11px;color:var(--muted);}
     .homologation-list{border:1px solid #E4E9F1;border-radius:12px;overflow:hidden;background:#fff;}
-    .homologation-list-head,.homologation-row{display:grid;grid-template-columns:118px minmax(280px,2.1fr) minmax(150px,1fr) 145px 115px 190px;gap:12px;align-items:center;}
+    .homologation-list-head,.homologation-row{display:grid;grid-template-columns:130px minmax(280px,2.1fr) minmax(150px,1fr) 145px 115px;gap:12px;align-items:center;}
     .homologation-list-head{padding:10px 14px;background:#F7F9FC;color:#667085;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
     .homologation-row{padding:12px 14px;border-top:1px solid #EDF0F5;font-size:12px;transition:background .15s ease;}
     .homologation-row:hover{background:#FAFBFE;}
@@ -1412,14 +1412,15 @@
     .homologation-row.sla-today{border-left:3px solid #D97706;padding-left:11px;}
     .homologation-summary{font-weight:700;line-height:1.35;color:var(--text);}
     .homologation-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
-    .homologation-actions{display:flex;gap:7px;align-items:center;justify-content:flex-end;}
-    .homologation-actions .mini-action{font-size:11px;}
+    .homologation-key{display:inline-flex;align-items:center;gap:5px;min-width:0;}
+    .homologation-copy{border:0;background:transparent;color:#667085;width:24px;height:24px;padding:0;border-radius:5px;cursor:pointer;font-size:15px;line-height:1;}
+    .homologation-copy:hover{background:#F1F4F8;color:var(--red-dark);}
+    .homologation-squad{border:1px solid var(--squad-border);background:var(--squad-bg);color:var(--squad-color);}
     .homologation-date-input{width:138px;border:1px solid #DDE3EE;border-radius:7px;padding:6px 7px;background:#fff;color:var(--text);font:inherit;font-size:11px;}
     .homologation-date-input:focus{outline:2px solid #F6C5D0;border-color:#CC092F;}
     @media(max-width:900px){
       .homologation-list-head{display:none;}
       .homologation-row{grid-template-columns:1fr;gap:8px;}
-      .homologation-actions{justify-content:flex-start;}
     }
     .story-card-head{
       display:flex;
@@ -6743,34 +6744,53 @@
       const container = $('homologationCards');
       const source = $('homologationSource');
       if(!container || !source) return;
+      const selectedSquad = getSelectedSquad();
+      const visibleRows = sameSquad(selectedSquad, 'Todas')
+        ? homologationRows
+        : homologationRows.filter(row => sameSquad(row.squad, selectedSquad));
       source.textContent = homologationSourceName
-        ? `${homologationRows.length} itens carregados de ${homologationSourceName}`
+        ? `${homologationRows.length} itens carregados • ${visibleRows.length} exibidos (${sameSquad(selectedSquad, 'Todas') ? 'todas as squads' : selectedSquad})`
         : 'Carregue a exportação do Jira para exibir a lista.';
       if(!homologationRows.length){
         container.innerHTML = '<div class="empty">Nenhum item da carga de Homologação. Use “Carregar Homologação” e selecione a exportação do Jira.</div>';
         return;
       }
-      const head = `<div class="homologation-list-head"><span>Chave</span><span>História</span><span>Squad / Épico</span><span>Entrada em homologação</span><span>SLA</span><span>Ações</span></div>`;
-      const list = homologationRows.map(row => {
+      if(!visibleRows.length){
+        container.innerHTML = `<div class="empty">Nenhum item em homologação para a squad ${escapeHtml(selectedSquad)}.</div>`;
+        return;
+      }
+      const head = `<div class="homologation-list-head"><span>Chave</span><span>História</span><span>Squad / Épico</span><span>Entrada em homologação</span><span>SLA</span></div>`;
+      const list = visibleRows.map(row => {
         const key = storyKey(row);
         const sla = homologationSlaInfo(row);
         const rowClass = sla.overdue ? 'sla-overdue' : sla.dueToday ? 'sla-today' : '';
         const dateInputValue = homologationDateInputValue(row.homologacaoData);
+        const squadTone = homologationSquadTone(row.squad);
         return `<div class="homologation-row ${rowClass}">
-          <a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" title="Abrir ${escapeAttr(key)} no Jira">${escapeHtml(key || 'Sem chave')}</a>
+          <span class="homologation-key"><a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" title="Abrir ${escapeAttr(key)} no Jira">${escapeHtml(key || 'Sem chave')}</a><button type="button" class="homologation-copy" onclick="copyJiraKey('${escapeJs(key)}', event)" title="Copiar chave ${escapeAttr(key)}" aria-label="Copiar chave ${escapeAttr(key)}">⧉</button></span>
           <div class="homologation-summary">${escapeHtml(row.resumo || 'Sem resumo')}</div>
           <div class="homologation-meta">
-            <span class="badge blue">${escapeHtml(row.squad || 'Squad não informada')}</span>
+            <span class="badge homologation-squad" style="--squad-bg:${squadTone.bg};--squad-color:${squadTone.color};--squad-border:${squadTone.border}">${escapeHtml(row.squad || 'Squad não informada')}</span>
             ${row.epic ? `<span class="badge gray">Épico ${escapeHtml(extractJiraKey(row.epic) || row.epic)}</span>` : ''}
           </div>
           <input class="homologation-date-input" type="datetime-local" value="${escapeAttr(dateInputValue)}" onchange="updateHomologationDate('${escapeJs(key)}', this.value)" title="Altere manualmente a data de entrada em homologação" aria-label="Data de entrada em homologação de ${escapeAttr(key)}" />
           <span class="badge ${sla.overdue ? 'red' : sla.dueToday ? 'amber' : sla.missing ? 'gray' : 'green'}">${escapeHtml(sla.label || 'Em homologação')}</span>
-          <div class="homologation-actions">
-            <button type="button" class="mini-action" onclick="copyJiraKey('${escapeJs(key)}', event)">Copiar chave</button>
-          </div>
         </div>`;
       }).join('');
       container.innerHTML = head + list;
+    }
+
+    function homologationSquadTone(squad){
+      const tones = [
+        {bg:'#EEF5FF', color:'#1D4ED8', border:'#D6E6FF'},
+        {bg:'#F4F0FF', color:'#6D28D9', border:'#E4DCFF'},
+        {bg:'#ECFDF5', color:'#047857', border:'#C9F2DD'},
+        {bg:'#FFF7ED', color:'#C2410C', border:'#FDE1C5'},
+        {bg:'#FFF1F2', color:'#BE123C', border:'#FFD5DD'}
+      ];
+      const label = normalize(squad || 'Squad');
+      const index = [...label].reduce((total, char) => total + char.charCodeAt(0), 0) % tones.length;
+      return tones[index];
     }
 
     function homologationDateInputValue(value){
