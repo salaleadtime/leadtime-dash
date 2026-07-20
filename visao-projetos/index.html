@@ -7188,8 +7188,16 @@
 
     function renderRecoveryImpactMatrix(data, selectedSquad){
       const allRows = [...effectiveRows(), ...effectiveSprintRows()];
-      const sprintScope = effectiveSprintRows().filter(r => sameSquad(selectedSquad, 'Todas') || sameSquad(r.squad, selectedSquad));
-      const scope = sprintScope.length ? sprintScope : data;
+      // Antes, se houvesse Sprint Ativa pro squad, os épicos eram calculados sobre
+      // TODA a sprint (sem o filtro de período/squad já aplicado em "data"), gerando
+      // totais de cards incompatíveis com o resumo executivo acima desta seção
+      // (ex.: texto dizia "8 história(s)" e os épicos somavam 23 cards). Agora soma
+      // só o que a sprint tem de NOVO (por chave) e aplica o mesmo filtro de data —
+      // igual ao padrão já usado no KPI combinado (ver renderManagement).
+      const sprintDataForSquad = effectiveSprintRows().filter(r => sameSquad(selectedSquad, 'Todas') || sameSquad(r.squad, selectedSquad));
+      const seenKeys = new Set(data.map(r => r.chave).filter(Boolean));
+      const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
+      const scope = applyDateFilter([...data, ...extraFromSprint]);
       const byEpic = new Map();
 
       scope.forEach(r => {
