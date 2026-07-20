@@ -10507,7 +10507,14 @@
 
     function calculateProgress(project) {
       const checklistScore = project.checklist.length ? (project.checklist.filter(c => c.done).length / project.checklist.length) * 45 : 0;
-      const phaseScore = project.phases.length ? (project.phases.reduce((acc, p) => acc + (p.status === 'done' ? 1 : p.status === 'progress' ? .55 : p.status === 'blocked' ? .15 : 0), 0) / project.phases.length) * 35 : 0;
+      // O peso de 35% ("timeline") precisa vir de timelineItems — os 16 itens que o
+      // RTE realmente marca na aba Timeline. project.phases é a lista antiga de 8
+      // etapas: não tem mais controle na UI (updatePhase() ficou órfão, sem quem
+      // chame), então fica travada no valor do seed e nunca reflete o avanço real,
+      // deixando "Saúde do Discovery" presa abaixo de 65% mesmo com tudo concluído.
+      const timelineItems = ensureTimelineItems(project);
+      const timelineWeight = { done: 1, progress: .55, 'waiting-arch': .55, 'waiting-business': .55, blocked: .15 };
+      const phaseScore = timelineItems.length ? (timelineItems.reduce((acc, it) => acc + (timelineWeight[it.status] || 0), 0) / timelineItems.length) * 35 : 0;
       const cardScore = project.cards.length ? (project.cards.reduce((acc, c) => acc + ({ backlog: .1, doing: .45, validation: .7, done: 1 }[c.status] || 0), 0) / project.cards.length) * 20 : 0;
       return Math.round(checklistScore + phaseScore + cardScore);
     }
@@ -10562,7 +10569,11 @@
     }
 
     function blockedCount(project) {
-      return project.phases.filter(p => p.status === 'blocked').length + project.cards.filter(c => c.priority === 'Crítica' && c.status !== 'done').length;
+      // project.phases nunca fica "blocked" de verdade: o único setter, updatePhase(),
+      // é órfão (sem call site) desde que a Timeline (timelineItems) assumiu o controle
+      // de status real. Sem isso, esta metade sempre somava 0, mascarando bloqueios.
+      const timelineBlocked = ensureTimelineItems(project).filter(it => it.status === 'blocked').length;
+      return timelineBlocked + project.cards.filter(c => c.priority === 'Crítica' && c.status !== 'done').length;
     }
 
     function nextMilestone(project) {
@@ -13863,7 +13874,12 @@ Recomendação PMO: ${d.recommendation}`;
       const start = parseISODate(project.discoveryDate);
       const end = parseISODate(project.discoveryEndDate);
       const today = new Date();
-      const current = start ? Math.max(0, Math.floor((today - start) / 86400000)) : null;
+      // Iniciativa "Pronta" já tem seu ciclo fechado: contar contra "hoje" faria
+      // "Dias no Discovery" crescer para sempre mesmo depois da entrega, inflando
+      // a média executiva. Usa a Data Target como referência fixa nesse caso.
+      const isDone = reportStatusGroup(project) === 'Pronto';
+      const reference = (isDone && end) ? end : today;
+      const current = start ? Math.max(0, Math.floor((reference - start) / 86400000)) : null;
       const planned = start && end ? Math.max(0, Math.floor((end - start) / 86400000)) : null;
       return { current, planned };
     }
@@ -13997,7 +14013,7 @@ Recomendação PMO: ${d.recommendation}`;
           { value: excelDateSerial(project.discoveryDate), style: 'date' },
           { value: excelDateSerial(project.discoveryEndDate), style: 'date' },
           { value: '', style: 'days' },
-          { formula: `IF(N${excelRow}<>"",N${excelRow},IF(L${excelRow}="","",MAX(0,TODAY()-L${excelRow})))`, value: metrics.current ?? '', style: 'days' },
+          { formula: `IF(N${excelRow}<>"",N${excelRow},IF(L${excelRow}="","",IF(J${excelRow}="Pronto",IF(M${excelRow}="","",MAX(0,M${excelRow}-L${excelRow})),MAX(0,TODAY()-L${excelRow}))))`, value: metrics.current ?? '', style: 'days' },
           { formula: `IF(OR(L${excelRow}="",M${excelRow}=""),"",MAX(0,M${excelRow}-L${excelRow}))`, value: metrics.planned ?? '', style: 'days' },
           { value: calculateProgress(project) / 100, style: 'percent' },
           textCell(reportNextStep(project)),

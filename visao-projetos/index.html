@@ -98,6 +98,7 @@
       cursor:pointer;
     }
     .file-label input{display:none}
+    .file-label-global{background:#fff;color:#0891b2}
     .page{
       max-width:1480px;
       margin:-22px auto 42px;
@@ -5525,10 +5526,15 @@
         </div>
       </div>
       <div class="toolbar">
-        <label class="file-label" title="Acomp._Geral_Todas_Squads — ou selecione múltiplos arquivos (Acomp.Geral + Sprint_ativa) para importar tudo de uma vez">
+        <label class="file-label" title="Importar só neste dashboard (Acomp._Geral_Todas_Squads ou Sprint_ativa) — dados ficam aqui">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
           JIRA
           <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple />
+        </label>
+        <label class="file-label file-label-global" title="Importar em TODOS os dashboards: dados ficam aqui E são propagados automaticamente para outras abas/sessões — útil para sincronizar o time">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          JIRA (Todos)
+          <input id="fileInputGlobal" type="file" accept=".xlsx,.xls,.csv" multiple />
         </label>
         <button class="btn btn-white" id="btnExcelVp" onclick="exportVisaoXlsx()" title="Exportar dados filtrados — layout Bradesco com data/hora da exportação">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -6465,6 +6471,10 @@
     const IMPORTED_GENERAL_KEY = 'vpBaseGeralImportada';
     const IMPORTED_SPRINT_KEY = 'vpBaseSprintImportada';
     const IMPORTED_HOMOLOGATION_KEY = 'vpBaseHomologacaoImportada';
+    // Chaves escritas pelo "Importar Tudo" do dashboard SALA para propagação cruzada
+    const CROSS_IMPORT_SPRINT_KEY = 'sala_cross_import_sprint_v1';
+    const CROSS_IMPORT_GENERAL_KEY = 'sala_cross_import_general_v1';
+    const CROSS_IMPORT_HOMOLOGATION_KEY = 'sala_cross_import_homologation_v1';
     function persistImportedBases(){
       try{
         const importedAt = new Date().toISOString();
@@ -7205,7 +7215,8 @@
         }
 
         const days = lead.days !== null ? lead.days : estimatedDays;
-        return {epic, items, lead, days, isEstimated};
+        const isOpen = lead.source === 'base Lead Time em andamento';
+        return {epic, items, lead, days, isEstimated, isOpen};
       }).sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
 
       if(!groups.length){
@@ -7215,13 +7226,17 @@
         </div>`;
       }
 
-      const ltBadge = (days, isEstimated) => {
+      const ltBadge = (days, isEstimated, isOpen) => {
         if(days === null) return `<span class="badge" style="background:#F3F5F8;color:var(--muted)">sem LT</span>`;
-        const label = isEstimated ? `~${days}d` : `${days}d`;
+        // Épico "em andamento" tem base oficial mas ainda sem Data Fim: os dias
+        // seguem contando a cada dia, então não pode ser rotulado igual a um LT
+        // já fechado (senão parece um ciclo concluído e some quando piora).
+        const label = isEstimated ? `~${days}d` : isOpen ? `${days}d+` : `${days}d`;
+        const openTitle = isOpen ? ' title="Em andamento — ainda sem Data Fim, o LT continua subindo"' : '';
         const style = isEstimated ? `background:#F3F5F8;color:var(--muted);border:1px solid #DDE6F1` : '';
-        if(!isEstimated && days >= RECOVERY_GOAL.metaDays) return `<span class="badge red">${label}</span>`;
-        if(!isEstimated && days >= 40) return `<span class="badge amber">${label}</span>`;
-        if(!isEstimated) return `<span class="badge green">${label}</span>`;
+        if(!isEstimated && days >= RECOVERY_GOAL.metaDays) return `<span class="badge red"${openTitle}>${label}</span>`;
+        if(!isEstimated && days >= 40) return `<span class="badge amber"${openTitle}>${label}</span>`;
+        if(!isEstimated) return `<span class="badge green"${openTitle}>${label}</span>`;
         return `<span class="badge" style="${style}" title="Estimado pela data de criação das histórias">${label}</span>`;
       };
 
@@ -7230,7 +7245,7 @@
         return `<div class="epic-lt-row" onclick="openList('${escapeJs(g.epic)}', window.epicLt_${safeKey} || [])">
           <span class="epic-lt-key">${escapeHtml(g.epic)}</span>
           <span class="epic-lt-cards">${g.items.length} card(s)</span>
-          ${ltBadge(g.days, g.isEstimated)}
+          ${ltBadge(g.days, g.isEstimated, g.isOpen)}
         </div>`;
       }).join('');
 
@@ -7241,7 +7256,7 @@
         </div>
         ${rows}
         ${groups.length > 10 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">+${groups.length - 10} épico(s) não exibidos</div>` : ''}
-        <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">~ estimado pela criação das histórias · sem ~ = base oficial</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">~ estimado pela criação das histórias · + = em andamento (ainda contando) · sem marca = LT oficial já fechado</div>
       </div>`;
     }
 
@@ -8903,6 +8918,51 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       }
     });
 
+    // "JIRA (Todos)" — importa localmente e propaga para outras abas/sessões via localStorage
+    $('fileInputGlobal').addEventListener('change', async (ev)=>{
+      const files = Array.from(ev.target.files||[]);
+      if(!files.length) return;
+      ev.target.value = '';
+      showLoadingOverlay();
+      let importedGeneral = false, importedSprint = false, skipped = [];
+      try{
+        for(const file of files){
+          try{
+            const parsed = await readJiraFileToRows(file);
+            if(!parsed || !parsed.length){ skipped.push(file.name + ' (vazio)'); continue; }
+            const type = detectVisaoFileType(file, parsed);
+            if(type === 'epics'){ skipped.push(file.name + ' (épicos — use no SALA)'); continue; }
+            if(type === 'sprint'){
+              sprintRows = parsed.map(r => ({...r, sprintAtual:true}));
+              sprintSourceName = file.name;
+              importedSprint = true;
+              // Propaga para outras abas
+              try{ localStorage.setItem(CROSS_IMPORT_SPRINT_KEY, JSON.stringify({rows: sprintRows, fileName: file.name, savedAt: new Date().toISOString()})); }catch(e){}
+            } else {
+              rows = parsed;
+              sourceName = file.name;
+              importedGeneral = true;
+              // Propaga para outras abas
+              try{ localStorage.setItem(CROSS_IMPORT_GENERAL_KEY, JSON.stringify({rows: rows, fileName: file.name, savedAt: new Date().toISOString()})); }catch(e){}
+            }
+          }catch(err){ skipped.push(file.name + ' (erro: ' + err.message + ')'); }
+        }
+        hideLoadingOverlay();
+        importDateTime = new Date();
+        persistImportedBases();
+        setupFilters(); renderAll(); registrarImportacaoBase(); updateLastUpdatedBadge();
+        let msg = '🌐 ' + files.length + ' arquivo(s) importado(s) e propagado(s).\n';
+        if(importedGeneral) msg += '✅ Acomp. Geral: ' + sourceName + ' (outras abas atualizadas automaticamente)\n';
+        if(importedSprint) msg += '✅ Sprint Ativa: ' + sprintSourceName + ' (outras abas atualizadas automaticamente)\n';
+        if(skipped.length) msg += '⚠️ Ignorados: ' + skipped.join(', ');
+        alert(msg.trim());
+      }catch(err){
+        hideLoadingOverlay();
+        console.error(err);
+        alert('Erro na importação global: ' + err.message);
+      }
+    });
+
     function normalizeMatrix(matrix){
       const cleaned = matrix.filter(row => row && row.some(cell => normalize(cell)));
       if(!cleaned.length) return [];
@@ -8930,6 +8990,45 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
         seen.add(key);
         return true;
       });
+    }
+
+    // Aplica dados propagados pelo "Importar Tudo" do SALA (matrix bruta → normalizeMatrix)
+    // type: 'sprint' | 'general' | 'homologation'
+    // Retorna true se aplicou algo mais recente que a importação atual
+    function applyCrossImportFromSala(type) {
+      const keyMap = {sprint: CROSS_IMPORT_SPRINT_KEY, general: CROSS_IMPORT_GENERAL_KEY, homologation: CROSS_IMPORT_HOMOLOGATION_KEY};
+      const key = keyMap[type];
+      if (!key) return false;
+      const stored = readStoredJSON(key, null);
+      if (!stored || !Array.isArray(stored.matrix) || !stored.matrix.length) return false;
+      if (importDateTime && stored.savedAt) {
+        const storedDate = new Date(stored.savedAt);
+        if (isNaN(storedDate.getTime()) || storedDate <= importDateTime) return false;
+      }
+      try {
+        // Suporta dois formatos: {matrix:[...]} (SALA) e {rows:[...]} (Visão Projetos)
+        const parsed = Array.isArray(stored.matrix)
+          ? normalizeMatrix(stored.matrix)
+          : Array.isArray(stored.rows)
+            ? stored.rows.map(applyRefinementRule)
+            : null;
+        if (!parsed || !parsed.length) return false;
+        if (type === 'sprint') {
+          sprintRows = parsed.map(r => ({...r, sprintAtual: true}));
+          sprintSourceName = stored.fileName || 'Sprint (via SALA)';
+        } else if (type === 'homologation') {
+          homologationRows = parsed.filter(isHomologation);
+          homologationSourceName = stored.fileName || 'Homologação (via SALA)';
+          try { localStorage.setItem(IMPORTED_HOMOLOGATION_KEY, JSON.stringify({rows: homologationRows, sourceName: homologationSourceName, importedAt: stored.savedAt})); } catch(e){}
+        } else {
+          rows = parsed;
+          sourceName = stored.fileName || 'Acomp. Geral (via SALA)';
+        }
+        return true;
+      } catch(e) {
+        console.warn('Cross-import SALA→Visão Projetos falhou:', e);
+        return false;
+      }
     }
 
     function normalizeRecord(raw){
@@ -9290,15 +9389,16 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
     /* Patch importação para mostrar loading overlay */
     (function patchImportWithLoading(){
-      const fileInput = $('fileInput');
-      if(!fileInput) return;
-      const origChange = fileInput.onchange;
-      fileInput.addEventListener('change', function handler(ev){
-        if(ev.target.files && ev.target.files.length){
-          showLoadingOverlay();
-          setTimeout(hideLoadingOverlay, 4000); // fallback
-        }
-      }, true); // capture phase — before the existing listener
+      ['fileInput','fileInputGlobal'].forEach(function(id){
+        const el = $(id);
+        if(!el) return;
+        el.addEventListener('change', function handler(ev){
+          if(ev.target.files && ev.target.files.length){
+            showLoadingOverlay();
+            setTimeout(hideLoadingOverlay, 4000); // fallback
+          }
+        }, true);
+      });
     })();
 
     /* ══════════════════════════════════════════════════════════ */
@@ -9319,6 +9419,43 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
     // Garante que a data da importação aparece ao carregar a página
     _refreshImportPill();
+
+    // ── Propagação cruzada: carrega dados salvos pelo "Importar Tudo" do SALA ──
+    // Roda após o render inicial: se houver dados mais recentes da SALA aplica e re-renderiza
+    (function checkCrossImportOnLoad(){
+      let applied = false;
+      applied = applyCrossImportFromSala('general') || applied;
+      applied = applyCrossImportFromSala('sprint') || applied;
+      applied = applyCrossImportFromSala('homologation') || applied;
+      if (!applied) return;
+      const allCrossKeys = [CROSS_IMPORT_SPRINT_KEY, CROSS_IMPORT_GENERAL_KEY, CROSS_IMPORT_HOMOLOGATION_KEY];
+      const dates = allCrossKeys
+        .map(k => { try { return new Date(readStoredJSON(k,{}).savedAt||'').getTime(); } catch(e){ return 0; } })
+        .filter(t => t > 0);
+      importDateTime = dates.length ? new Date(Math.max(...dates)) : new Date();
+      persistImportedBases();
+      setupFilters(); renderAll(); updateLastUpdatedBadge(); _refreshImportPill();
+    })();
+
+    // Escuta mudanças em tempo real (outra aba importou via SALA enquanto esta está aberta)
+    window.addEventListener('storage', function(e){
+      const crossKeyMap = {
+        [CROSS_IMPORT_SPRINT_KEY]: 'sprint',
+        [CROSS_IMPORT_GENERAL_KEY]: 'general',
+        [CROSS_IMPORT_HOMOLOGATION_KEY]: 'homologation'
+      };
+      const type = crossKeyMap[e.key];
+      if (!type) return;
+      if(!applyCrossImportFromSala(type)) return;
+      importDateTime = new Date();
+      persistImportedBases();
+      setupFilters(); renderAll(); registrarImportacaoBase(); updateLastUpdatedBadge(); _refreshImportPill();
+      const fname = type === 'sprint' ? sprintSourceName : type === 'homologation' ? homologationSourceName : sourceName;
+      const txt = $('lastUpdatedText');
+      if(txt) txt.textContent = '🔄 Atualizado automaticamente via SALA: ' + fname;
+      const badge = $('lastUpdatedBadge');
+      if(badge) badge.style.display = 'flex';
+    });
     // Detecta sprint ativa do calendário e atualiza labels
     applyActiveSprint();
     // Pre-warm do GAS para reduzir o cold-start antes de gasLoadAndApplyVpAll()

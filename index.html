@@ -173,8 +173,11 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .up-btn:hover{opacity:.85}
 .up-btn-all{background:#7c3aed;box-shadow:0 1px 4px rgba(124,58,237,.3)}
 .up-btn-all:hover{background:#6d28d9;opacity:1}
+.up-btn-global{background:#0891b2;box-shadow:0 1px 4px rgba(8,145,178,.3)}
+.up-btn-global:hover{background:#0e7490;opacity:1}
 #fi{display:none}
 #fiAll{display:none}
+#fiAllGlobal{display:none}
 #fiSv{display:none}
 
 /* ── PANES ── */
@@ -1349,8 +1352,10 @@ body{min-height:100vh}
   <span class="up-saved hidden" id="upSaved">💾 <span id="upSavedTxt">Salvo localmente</span></span>
   <input type="file" id="fi" accept=".xlsx,.xls,.csv">
   <input type="file" id="fiAll" accept=".xlsx,.xls,.csv" multiple>
+  <input type="file" id="fiAllGlobal" accept=".xlsx,.xls,.csv" multiple>
   <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
-  <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Selecione os 3 arquivos do dashboard de uma vez: _Epicos + QTD_Epicos_atrelados_a_story + Story_no_Backlog_Refinadas — cada um é detectado automaticamente">📦 Importar Tudo</button>
+  <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Importa só neste dashboard (SALA): _Epicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas. Sprint_ativa e Acomp._Geral são detectados mas não propagados.">📦 Importar Tudo</button>
+  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Importa em TODOS os dashboards: arquivos do SALA ficam aqui · Sprint_ativa, Acomp._Geral e Homologação são propagados automaticamente para Visão de Projetos">🌐 Importar em Todos</button>
 </div>
 
 <!-- ══ ÉPICOS PANE ══ -->
@@ -3495,10 +3500,13 @@ function renderPanorama(){
   var el=$id('panoramaGeral'); if(!el) return;
   var t=allData.length;
   if(!t){el.innerHTML='';return;}
-  var conc=measuredEpics().length;
+  var measured=measuredEpics();
+  var conc=measured.length;
   var exec=activeEpics().length;
-  var avg=Math.round(allData.reduce(function(s,r){return s+r.lt;},0)/t);
-  var naMeta=measuredEpics().filter(function(r){return r.lt<META;}).length;
+  // LT médio histórico deve considerar só épicos entregues: misturar o LT
+  // (ainda em contagem) dos ativos distorce a média de tempo de entrega.
+  var avg=conc?Math.round(measured.reduce(function(s,r){return s+r.lt;},0)/conc):0;
+  var naMeta=measured.filter(function(r){return r.lt<META;}).length;
   var pctMeta=conc?Math.round(naMeta/conc*100):0;
   el.innerHTML=
     '<div class="pg">'+
@@ -5353,13 +5361,15 @@ function detectUnifiedFileType(wb, fileName){
       if(epicCnt>0) return 'epics';
 
       if(historiaCnt>0){
-        // 2. Sprint ativa → Visão de Projetos (Importar Sprint do Jira)
+        // 2. Arquivo de Homologação → Visão de Projetos: aba Homologação
+        if(fn.indexOf('homolog')>=0) return 'homologation_visao';
+        // 3. Sprint ativa → Visão de Projetos (Importar Sprint do Jira)
         if(fn.indexOf('sprint')>=0) return 'sprint_visao';
-        // 3. Acomp. Geral → Visão de Projetos (botão JIRA)
+        // 4. Acomp. Geral → Visão de Projetos (botão JIRA)
         if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
-        // 4. Story no Backlog → Tab Backlog/Refinamento
+        // 5. Story no Backlog → Tab Backlog/Refinamento
         if(fn.indexOf('backlog')>=0) return 'backlog';
-        // 5. QTD Epicos → Tab Qtd Story/Épicos
+        // 6. QTD Epicos → Tab Qtd Story/Épicos
         if(fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
         // Heurística de conteúdo: ≥90% Product Backlog → backlog; senão → stories
         return (pbCnt/historiaCnt>=0.9)?'backlog':'stories';
@@ -5374,38 +5384,73 @@ function detectUnifiedFileType(wb, fileName){
 }
 
 // Processa múltiplos arquivos: detecta e roteia cada um para o handler correto
-function loadMultipleFiles(files){
+// propagate=true → salva sprint/geral/homologação para Visão de Projetos via localStorage
+function loadMultipleFiles(files, propagate){
   if(typeof XLSX==='undefined'){
-    loadLib(XLSX_CDN,function(){loadMultipleFiles(files);});
+    loadLib(XLSX_CDN,function(){loadMultipleFiles(files, propagate);});
     return;
   }
   var fileList=Array.from(files);
   if(!fileList.length) return;
   var pending=fileList.length;
-  var detected={epics:null,stories:null,backlog:[],sprint_visao:[],general_visao:[],unknown:[]};
+  var detected={epics:null,stories:null,backlog:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[]};
+
+  // Salva a base como matrix bruta no localStorage para a Visão de Projetos ler
+  function _saveCrossImport(key, wb, fileName){
+    try{
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      localStorage.setItem(key,JSON.stringify({matrix:matrix,fileName:fileName,savedAt:new Date().toISOString()}));
+      return true;
+    }catch(e){ return false; }
+  }
 
   function processWhenReady(){
     var lines=[];
     if(detected.epics){
-      loadXlsx(detected.epics);
+      loadXlsx(detected.epics.file);
       lines.push('📊 Épicos → Tab Épicos');
     }
     if(detected.stories){
-      loadStoriesXlsx(detected.stories);
+      loadStoriesXlsx(detected.stories.file);
       lines.push('📋 QTD Story/Épicos → Tab Qtd Story/Épicos');
     }
-    detected.backlog.forEach(function(f){
-      loadBacklogXlsx(f);
+    detected.backlog.forEach(function(entry){
+      loadBacklogXlsx(entry.file);
       lines.push('📥 Backlog → Tab Backlog/Refinamento');
     });
     if(detected.sprint_visao.length){
-      lines.push('⚡ Sprint Ativa → abra a Visão de Projetos e use "Importar Sprint do Jira"');
+      if(propagate){
+        var sv=detected.sprint_visao[0];
+        var ok=_saveCrossImport('sala_cross_import_sprint_v1',sv.wb,sv.file.name);
+        lines.push(ok ? '⚡ Sprint Ativa → propagado para Visão de Projetos automaticamente'
+                      : '⚡ Sprint Ativa → abra a Visão de Projetos e use "Importar Sprint do Jira"');
+      } else {
+        lines.push('⚡ Sprint Ativa detectada → use "🌐 Importar em Todos" para propagar, ou abra a Visão de Projetos');
+      }
     }
     if(detected.general_visao.length){
-      lines.push('🌐 Acomp. Geral → abra a Visão de Projetos e use o botão "JIRA"');
+      if(propagate){
+        var gv=detected.general_visao[0];
+        var ok2=_saveCrossImport('sala_cross_import_general_v1',gv.wb,gv.file.name);
+        lines.push(ok2 ? '🌐 Acomp. Geral → propagado para Visão de Projetos automaticamente'
+                       : '🌐 Acomp. Geral → abra a Visão de Projetos e use o botão "JIRA"');
+      } else {
+        lines.push('🌐 Acomp. Geral detectada → use "🌐 Importar em Todos" para propagar, ou abra a Visão de Projetos');
+      }
+    }
+    if(detected.homologation_visao.length){
+      if(propagate){
+        var hv=detected.homologation_visao[0];
+        var ok3=_saveCrossImport('sala_cross_import_homologation_v1',hv.wb,hv.file.name);
+        lines.push(ok3 ? '🧪 Homologação → propagado para Visão de Projetos automaticamente'
+                       : '🧪 Homologação → abra a Visão de Projetos e use "Importar Homologação"');
+      } else {
+        lines.push('🧪 Homologação detectada → use "🌐 Importar em Todos" para propagar, ou abra a Visão de Projetos');
+      }
     }
     if(detected.unknown.length) lines.push('⚠️ Não identificado: '+detected.unknown.join(', '));
-    if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.sprint_visao.length&&!detected.general_visao.length){
+    if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.sprint_visao.length&&!detected.general_visao.length&&!detected.homologation_visao.length){
       toast('Nenhum arquivo reconhecido','Verifique se os arquivos são exports do Jira (.xlsx ou .csv).','err');
     } else {
       toast('📦 Importação Tudo',lines.join(' · '));
@@ -5418,11 +5463,13 @@ function loadMultipleFiles(files){
       try{
         var wb=readWorkbook(e.target.result,file.name);
         var type=detectUnifiedFileType(wb,file.name);
-        if(type==='epics') detected.epics=file;
-        else if(type==='stories') detected.stories=file;
-        else if(type==='backlog') detected.backlog.push(file);
-        else if(type==='sprint_visao') detected.sprint_visao.push(file);
-        else if(type==='general_visao') detected.general_visao.push(file);
+        // Armazena {file, wb} para poder extrair a matrix bruta na propagação
+        if(type==='epics') detected.epics={file:file,wb:wb};
+        else if(type==='stories') detected.stories={file:file,wb:wb};
+        else if(type==='backlog') detected.backlog.push({file:file,wb:wb});
+        else if(type==='sprint_visao') detected.sprint_visao.push({file:file,wb:wb});
+        else if(type==='general_visao') detected.general_visao.push({file:file,wb:wb});
+        else if(type==='homologation_visao') detected.homologation_visao.push({file:file,wb:wb});
         else detected.unknown.push(file.name);
       }catch(err){
         detected.unknown.push(file.name+'(erro)');
@@ -5443,12 +5490,18 @@ ub.addEventListener('dragleave',function(){ub.classList.remove('drag');});
 ub.addEventListener('drop',function(e){
   e.preventDefault();ub.classList.remove('drag');
   var fs=e.dataTransfer.files;
-  if(fs.length>1) loadMultipleFiles(fs);
+  if(fs.length>1) loadMultipleFiles(fs, false);
   else if(fs[0]) loadXlsx(fs[0]);
 });
 // Handler do importador unificado (multi-arquivo)
+// fiAll → só este dashboard (sem propagação)
 $id('fiAll').onchange=function(e){
-  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files);
+  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files, false);
+  this.value='';
+};
+// fiAllGlobal → todos os dashboards (com propagação)
+$id('fiAllGlobal').onchange=function(e){
+  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files, true);
   this.value='';
 };
 
@@ -6959,7 +7012,12 @@ function calSeedExample(){
 
   function renderPremiumSquads(triMeasured,active){
     var META=window.META||62;
-    var base = triMeasured && triMeasured.length ? triMeasured : active;
+    // Sem entregas medidas no TRI ainda (início de trimestre): cai para os épicos
+    // ativos, cujo LT ainda está contando. Precisa avisar — senão o "% de saúde"
+    // parece um score fechado igual aos outros trimestres, quando na verdade é
+    // só a foto do LT em andamento (vai mudar assim que algo for entregue).
+    var usingActive = !(triMeasured && triMeasured.length);
+    var base = usingActive ? active : triMeasured;
     var squads=Array.from(new Set((base||[]).map(function(r){return r.squad;}).filter(Boolean))).sort();
     if(!squads.length) return '<div class="metro-empty">Nenhum dado de squad para exibir.</div>';
     return squads.slice(0,6).map(function(sq){
@@ -6967,7 +7025,8 @@ function calSeedExample(){
       var avg=items.length?Math.round(items.reduce(function(s,r){return s+r.lt;},0)/items.length):0;
       var score=Math.max(5,Math.min(100,100-Math.round(avg/META*45)));
       var kind=avg>=META?'red':avg>=40?'amber':'green';
-      return '<div class="pd-squad-row" style="--pcol:'+pKind(kind)+'"><div class="pd-squad-top"><span class="pd-squad-name">'+esc(sq)+'</span><span class="pd-squad-pct">'+score+'%</span></div><div class="pd-bar"><i style="--w:'+score+'%"></i></div><div class="pd-note">'+items.length+' épico'+(items.length!==1?'s':'')+' · LT médio '+(avg||'—')+(avg?'d':'')+'</div></div>';
+      var note=items.length+' épico'+(items.length!==1?'s':'')+' · LT médio '+(avg||'—')+(avg?'d':'')+(usingActive?' (em andamento · sem entregas no TRI ainda)':'');
+      return '<div class="pd-squad-row" style="--pcol:'+pKind(kind)+'"><div class="pd-squad-top"><span class="pd-squad-name">'+esc(sq)+'</span><span class="pd-squad-pct">'+score+'%</span></div><div class="pd-bar"><i style="--w:'+score+'%"></i></div><div class="pd-note">'+note+'</div></div>';
     }).join('');
   }
 
