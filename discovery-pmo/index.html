@@ -10507,7 +10507,14 @@
 
     function calculateProgress(project) {
       const checklistScore = project.checklist.length ? (project.checklist.filter(c => c.done).length / project.checklist.length) * 45 : 0;
-      const phaseScore = project.phases.length ? (project.phases.reduce((acc, p) => acc + (p.status === 'done' ? 1 : p.status === 'progress' ? .55 : p.status === 'blocked' ? .15 : 0), 0) / project.phases.length) * 35 : 0;
+      // O peso de 35% ("timeline") precisa vir de timelineItems — os 16 itens que o
+      // RTE realmente marca na aba Timeline. project.phases é a lista antiga de 8
+      // etapas: não tem mais controle na UI (updatePhase() ficou órfão, sem quem
+      // chame), então fica travada no valor do seed e nunca reflete o avanço real,
+      // deixando "Saúde do Discovery" presa abaixo de 65% mesmo com tudo concluído.
+      const timelineItems = ensureTimelineItems(project);
+      const timelineWeight = { done: 1, progress: .55, 'waiting-arch': .55, 'waiting-business': .55, blocked: .15 };
+      const phaseScore = timelineItems.length ? (timelineItems.reduce((acc, it) => acc + (timelineWeight[it.status] || 0), 0) / timelineItems.length) * 35 : 0;
       const cardScore = project.cards.length ? (project.cards.reduce((acc, c) => acc + ({ backlog: .1, doing: .45, validation: .7, done: 1 }[c.status] || 0), 0) / project.cards.length) * 20 : 0;
       return Math.round(checklistScore + phaseScore + cardScore);
     }
