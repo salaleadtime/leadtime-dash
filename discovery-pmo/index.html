@@ -15187,6 +15187,34 @@ Recomendação PMO: ${d.recommendation}`;
       toast(`✅ Jira importado: ${result.epicsTotal} épico(s) · ${result.storiesTotal} história(s) em ${result.projectsTouched} iniciativa(s)`);
     }
 
+    // ── Propagação cruzada: aplica o arquivo de Épicos salvo pelo "🌐 Importar em
+    // Todos" do SALA. É o mesmo export Jira (Tipo de Item/Chave do item/Rótulos #Nº)
+    // usado pelo "⇪ Importar Jira" manual, então reaproveita o mesmo motor de import.
+    const CROSS_IMPORT_EPICS_KEY = 'sala_cross_import_epics_v1';
+    const CROSS_IMPORT_EPICS_APPLIED_KEY = 'discovery_pmo_cross_import_epics_applied_at';
+    function applyCrossImportEpicsFromSala() {
+      let stored;
+      try { stored = JSON.parse(storageGet(CROSS_IMPORT_EPICS_KEY) || 'null'); } catch (e) { return false; }
+      if (!stored || !Array.isArray(stored.matrix) || !stored.matrix.length || !stored.savedAt) return false;
+      const savedAt = new Date(stored.savedAt);
+      if (isNaN(savedAt.getTime())) return false;
+      const appliedAt = storageGet(CROSS_IMPORT_EPICS_APPLIED_KEY);
+      if (appliedAt && new Date(appliedAt) >= savedAt) return false;
+      try {
+        const records = buildJiraImportRecords(stored.matrix);
+        if (!records.length) { storageSet(CROSS_IMPORT_EPICS_APPLIED_KEY, stored.savedAt); return false; }
+        const plan = planJiraImportChanges(records);
+        if (!plan.groups.size) { storageSet(CROSS_IMPORT_EPICS_APPLIED_KEY, stored.savedAt); return false; }
+        const result = applyJiraImportPlan(plan);
+        storageSet(CROSS_IMPORT_EPICS_APPLIED_KEY, stored.savedAt);
+        toast(`🌐 Jira propagado do SALA: ${result.epicsTotal} épico(s) · ${result.storiesTotal} história(s) em ${result.projectsTouched} iniciativa(s)`);
+        return true;
+      } catch (e) {
+        console.error('Discovery PMO Tracker: falha no cross-import de Épicos.', e);
+        return false;
+      }
+    }
+
     function groupJiraStoriesByEpic(project) {
       const stories = Array.isArray(project?.jiraStories) ? project.jiraStories : [];
       const byEpic = new Map();
@@ -15894,6 +15922,14 @@ Recomendação PMO: ${d.recommendation}`;
 
     render();
     setTimeout(discGasSyncPull, 300);
+
+    // Aplica épicos propagados pelo "🌐 Importar em Todos" do SALA, se houver
+    // dados mais novos que o último aplicado aqui.
+    setTimeout(applyCrossImportEpicsFromSala, 500);
+    // Escuta em tempo real: outra aba importou via SALA enquanto esta está aberta.
+    window.addEventListener('storage', function(e){
+      if (e.key === CROSS_IMPORT_EPICS_KEY) applyCrossImportEpicsFromSala();
+    });
   </script>
 </body>
 </html>
