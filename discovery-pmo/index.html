@@ -13863,7 +13863,12 @@ Recomendação PMO: ${d.recommendation}`;
       const start = parseISODate(project.discoveryDate);
       const end = parseISODate(project.discoveryEndDate);
       const today = new Date();
-      const current = start ? Math.max(0, Math.floor((today - start) / 86400000)) : null;
+      // Iniciativa "Pronta" já tem seu ciclo fechado: contar contra "hoje" faria
+      // "Dias no Discovery" crescer para sempre mesmo depois da entrega, inflando
+      // a média executiva. Usa a Data Target como referência fixa nesse caso.
+      const isDone = reportStatusGroup(project) === 'Pronto';
+      const reference = (isDone && end) ? end : today;
+      const current = start ? Math.max(0, Math.floor((reference - start) / 86400000)) : null;
       const planned = start && end ? Math.max(0, Math.floor((end - start) / 86400000)) : null;
       return { current, planned };
     }
@@ -13997,7 +14002,7 @@ Recomendação PMO: ${d.recommendation}`;
           { value: excelDateSerial(project.discoveryDate), style: 'date' },
           { value: excelDateSerial(project.discoveryEndDate), style: 'date' },
           { value: '', style: 'days' },
-          { formula: `IF(N${excelRow}<>"",N${excelRow},IF(L${excelRow}="","",MAX(0,TODAY()-L${excelRow})))`, value: metrics.current ?? '', style: 'days' },
+          { formula: `IF(N${excelRow}<>"",N${excelRow},IF(L${excelRow}="","",IF(J${excelRow}="Pronto",IF(M${excelRow}="","",MAX(0,M${excelRow}-L${excelRow})),MAX(0,TODAY()-L${excelRow}))))`, value: metrics.current ?? '', style: 'days' },
           { formula: `IF(OR(L${excelRow}="",M${excelRow}=""),"",MAX(0,M${excelRow}-L${excelRow}))`, value: metrics.planned ?? '', style: 'days' },
           { value: calculateProgress(project) / 100, style: 'percent' },
           textCell(reportNextStep(project)),

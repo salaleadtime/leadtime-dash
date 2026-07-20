@@ -7157,7 +7157,8 @@
         }
 
         const days = lead.days !== null ? lead.days : estimatedDays;
-        return {epic, items, lead, days, isEstimated};
+        const isOpen = lead.source === 'base Lead Time em andamento';
+        return {epic, items, lead, days, isEstimated, isOpen};
       }).sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
 
       if(!groups.length){
@@ -7167,13 +7168,17 @@
         </div>`;
       }
 
-      const ltBadge = (days, isEstimated) => {
+      const ltBadge = (days, isEstimated, isOpen) => {
         if(days === null) return `<span class="badge" style="background:#F3F5F8;color:var(--muted)">sem LT</span>`;
-        const label = isEstimated ? `~${days}d` : `${days}d`;
+        // Épico "em andamento" tem base oficial mas ainda sem Data Fim: os dias
+        // seguem contando a cada dia, então não pode ser rotulado igual a um LT
+        // já fechado (senão parece um ciclo concluído e some quando piora).
+        const label = isEstimated ? `~${days}d` : isOpen ? `${days}d+` : `${days}d`;
+        const openTitle = isOpen ? ' title="Em andamento — ainda sem Data Fim, o LT continua subindo"' : '';
         const style = isEstimated ? `background:#F3F5F8;color:var(--muted);border:1px solid #DDE6F1` : '';
-        if(!isEstimated && days >= RECOVERY_GOAL.metaDays) return `<span class="badge red">${label}</span>`;
-        if(!isEstimated && days >= 40) return `<span class="badge amber">${label}</span>`;
-        if(!isEstimated) return `<span class="badge green">${label}</span>`;
+        if(!isEstimated && days >= RECOVERY_GOAL.metaDays) return `<span class="badge red"${openTitle}>${label}</span>`;
+        if(!isEstimated && days >= 40) return `<span class="badge amber"${openTitle}>${label}</span>`;
+        if(!isEstimated) return `<span class="badge green"${openTitle}>${label}</span>`;
         return `<span class="badge" style="${style}" title="Estimado pela data de criação das histórias">${label}</span>`;
       };
 
@@ -7182,7 +7187,7 @@
         return `<div class="epic-lt-row" onclick="openList('${escapeJs(g.epic)}', window.epicLt_${safeKey} || [])">
           <span class="epic-lt-key">${escapeHtml(g.epic)}</span>
           <span class="epic-lt-cards">${g.items.length} card(s)</span>
-          ${ltBadge(g.days, g.isEstimated)}
+          ${ltBadge(g.days, g.isEstimated, g.isOpen)}
         </div>`;
       }).join('');
 
@@ -7193,7 +7198,7 @@
         </div>
         ${rows}
         ${groups.length > 10 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">+${groups.length - 10} épico(s) não exibidos</div>` : ''}
-        <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">~ estimado pela criação das histórias · sem ~ = base oficial</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">~ estimado pela criação das histórias · + = em andamento (ainda contando) · sem marca = LT oficial já fechado</div>
       </div>`;
     }
 
