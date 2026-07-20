@@ -3495,10 +3495,13 @@ function renderPanorama(){
   var el=$id('panoramaGeral'); if(!el) return;
   var t=allData.length;
   if(!t){el.innerHTML='';return;}
-  var conc=measuredEpics().length;
+  var measured=measuredEpics();
+  var conc=measured.length;
   var exec=activeEpics().length;
-  var avg=Math.round(allData.reduce(function(s,r){return s+r.lt;},0)/t);
-  var naMeta=measuredEpics().filter(function(r){return r.lt<META;}).length;
+  // LT médio histórico deve considerar só épicos entregues: misturar o LT
+  // (ainda em contagem) dos ativos distorce a média de tempo de entrega.
+  var avg=conc?Math.round(measured.reduce(function(s,r){return s+r.lt;},0)/conc):0;
+  var naMeta=measured.filter(function(r){return r.lt<META;}).length;
   var pctMeta=conc?Math.round(naMeta/conc*100):0;
   el.innerHTML=
     '<div class="pg">'+
