@@ -6417,6 +6417,10 @@
     const IMPORTED_GENERAL_KEY = 'vpBaseGeralImportada';
     const IMPORTED_SPRINT_KEY = 'vpBaseSprintImportada';
     const IMPORTED_HOMOLOGATION_KEY = 'vpBaseHomologacaoImportada';
+    // Chaves escritas pelo "Importar Tudo" do dashboard SALA para propagação cruzada
+    const CROSS_IMPORT_SPRINT_KEY = 'sala_cross_import_sprint_v1';
+    const CROSS_IMPORT_GENERAL_KEY = 'sala_cross_import_general_v1';
+    const CROSS_IMPORT_HOMOLOGATION_KEY = 'sala_cross_import_homologation_v1';
     function persistImportedBases(){
       try{
         const importedAt = new Date().toISOString();
@@ -8769,6 +8773,40 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       });
     }
 
+    // Aplica dados propagados pelo "Importar Tudo" do SALA (matrix bruta → normalizeMatrix)
+    // type: 'sprint' | 'general' | 'homologation'
+    // Retorna true se aplicou algo mais recente que a importação atual
+    function applyCrossImportFromSala(type) {
+      const keyMap = {sprint: CROSS_IMPORT_SPRINT_KEY, general: CROSS_IMPORT_GENERAL_KEY, homologation: CROSS_IMPORT_HOMOLOGATION_KEY};
+      const key = keyMap[type];
+      if (!key) return false;
+      const stored = readStoredJSON(key, null);
+      if (!stored || !Array.isArray(stored.matrix) || !stored.matrix.length) return false;
+      if (importDateTime && stored.savedAt) {
+        const storedDate = new Date(stored.savedAt);
+        if (isNaN(storedDate.getTime()) || storedDate <= importDateTime) return false;
+      }
+      try {
+        const parsed = normalizeMatrix(stored.matrix);
+        if (!parsed || !parsed.length) return false;
+        if (type === 'sprint') {
+          sprintRows = parsed.map(r => ({...r, sprintAtual: true}));
+          sprintSourceName = stored.fileName || 'Sprint (via SALA)';
+        } else if (type === 'homologation') {
+          homologationRows = parsed.filter(isHomologation);
+          homologationSourceName = stored.fileName || 'Homologação (via SALA)';
+          try { localStorage.setItem(IMPORTED_HOMOLOGATION_KEY, JSON.stringify({rows: homologationRows, sourceName: homologationSourceName, importedAt: stored.savedAt})); } catch(e){}
+        } else {
+          rows = parsed;
+          sourceName = stored.fileName || 'Acomp. Geral (via SALA)';
+        }
+        return true;
+      } catch(e) {
+        console.warn('Cross-import SALA→Visão Projetos falhou:', e);
+        return false;
+      }
+    }
+
     function normalizeRecord(raw){
       const get = (...names) => {
         const keys = Object.keys(raw);
@@ -9156,6 +9194,43 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
     // Garante que a data da importação aparece ao carregar a página
     _refreshImportPill();
+
+    // ── Propagação cruzada: carrega dados salvos pelo "Importar Tudo" do SALA ──
+    // Roda após o render inicial: se houver dados mais recentes da SALA aplica e re-renderiza
+    (function checkCrossImportOnLoad(){
+      let applied = false;
+      applied = applyCrossImportFromSala('general') || applied;
+      applied = applyCrossImportFromSala('sprint') || applied;
+      applied = applyCrossImportFromSala('homologation') || applied;
+      if (!applied) return;
+      const allCrossKeys = [CROSS_IMPORT_SPRINT_KEY, CROSS_IMPORT_GENERAL_KEY, CROSS_IMPORT_HOMOLOGATION_KEY];
+      const dates = allCrossKeys
+        .map(k => { try { return new Date(readStoredJSON(k,{}).savedAt||'').getTime(); } catch(e){ return 0; } })
+        .filter(t => t > 0);
+      importDateTime = dates.length ? new Date(Math.max(...dates)) : new Date();
+      persistImportedBases();
+      setupFilters(); renderAll(); updateLastUpdatedBadge(); _refreshImportPill();
+    })();
+
+    // Escuta mudanças em tempo real (outra aba importou via SALA enquanto esta está aberta)
+    window.addEventListener('storage', function(e){
+      const crossKeyMap = {
+        [CROSS_IMPORT_SPRINT_KEY]: 'sprint',
+        [CROSS_IMPORT_GENERAL_KEY]: 'general',
+        [CROSS_IMPORT_HOMOLOGATION_KEY]: 'homologation'
+      };
+      const type = crossKeyMap[e.key];
+      if (!type) return;
+      if(!applyCrossImportFromSala(type)) return;
+      importDateTime = new Date();
+      persistImportedBases();
+      setupFilters(); renderAll(); registrarImportacaoBase(); updateLastUpdatedBadge(); _refreshImportPill();
+      const fname = type === 'sprint' ? sprintSourceName : type === 'homologation' ? homologationSourceName : sourceName;
+      const txt = $('lastUpdatedText');
+      if(txt) txt.textContent = '🔄 Atualizado automaticamente via SALA: ' + fname;
+      const badge = $('lastUpdatedBadge');
+      if(badge) badge.style.display = 'flex';
+    });
     // Detecta sprint ativa do calendário e atualiza labels
     applyActiveSprint();
     // Pre-warm do GAS para reduzir o cold-start antes de gasLoadAndApplyVpAll()
