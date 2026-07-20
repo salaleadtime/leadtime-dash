@@ -173,8 +173,11 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 .up-btn:hover{opacity:.85}
 .up-btn-all{background:#7c3aed;box-shadow:0 1px 4px rgba(124,58,237,.3)}
 .up-btn-all:hover{background:#6d28d9;opacity:1}
+.up-btn-global{background:#0891b2;box-shadow:0 1px 4px rgba(8,145,178,.3)}
+.up-btn-global:hover{background:#0e7490;opacity:1}
 #fi{display:none}
 #fiAll{display:none}
+#fiAllGlobal{display:none}
 #fiSv{display:none}
 
 /* ── PANES ── */
@@ -1349,8 +1352,10 @@ body{min-height:100vh}
   <span class="up-saved hidden" id="upSaved">💾 <span id="upSavedTxt">Salvo localmente</span></span>
   <input type="file" id="fi" accept=".xlsx,.xls,.csv">
   <input type="file" id="fiAll" accept=".xlsx,.xls,.csv" multiple>
+  <input type="file" id="fiAllGlobal" accept=".xlsx,.xls,.csv" multiple>
   <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
-  <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Selecione múltiplos arquivos Jira de uma vez: _Epicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas (→ este dashboard) · Sprint_ativa e Acomp._Geral (→ propagados automaticamente para Visão de Projetos)">📦 Importar Tudo</button>
+  <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Importa só neste dashboard (SALA): _Epicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas. Sprint_ativa e Acomp._Geral são detectados mas não propagados.">📦 Importar Tudo</button>
+  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Importa em TODOS os dashboards: arquivos do SALA ficam aqui · Sprint_ativa, Acomp._Geral e Homologação são propagados automaticamente para Visão de Projetos">🌐 Importar em Todos</button>
 </div>
 
 <!-- ══ ÉPICOS PANE ══ -->
@@ -5379,9 +5384,10 @@ function detectUnifiedFileType(wb, fileName){
 }
 
 // Processa múltiplos arquivos: detecta e roteia cada um para o handler correto
-function loadMultipleFiles(files){
+// propagate=true → salva sprint/geral/homologação para Visão de Projetos via localStorage
+function loadMultipleFiles(files, propagate){
   if(typeof XLSX==='undefined'){
-    loadLib(XLSX_CDN,function(){loadMultipleFiles(files);});
+    loadLib(XLSX_CDN,function(){loadMultipleFiles(files, propagate);});
     return;
   }
   var fileList=Array.from(files);
@@ -5414,25 +5420,34 @@ function loadMultipleFiles(files){
       lines.push('📥 Backlog → Tab Backlog/Refinamento');
     });
     if(detected.sprint_visao.length){
-      var sv=detected.sprint_visao[0];
-      var ok=_saveCrossImport('sala_cross_import_sprint_v1',sv.wb,sv.file.name);
-      lines.push(ok
-        ? '⚡ Sprint Ativa → propagado para Visão de Projetos automaticamente'
-        : '⚡ Sprint Ativa → abra a Visão de Projetos e use "Importar Sprint do Jira"');
+      if(propagate){
+        var sv=detected.sprint_visao[0];
+        var ok=_saveCrossImport('sala_cross_import_sprint_v1',sv.wb,sv.file.name);
+        lines.push(ok ? '⚡ Sprint Ativa → propagado para Visão de Projetos automaticamente'
+                      : '⚡ Sprint Ativa → abra a Visão de Projetos e use "Importar Sprint do Jira"');
+      } else {
+        lines.push('⚡ Sprint Ativa detectada → use "🌐 Importar em Todos" para propagar, ou abra a Visão de Projetos');
+      }
     }
     if(detected.general_visao.length){
-      var gv=detected.general_visao[0];
-      var ok2=_saveCrossImport('sala_cross_import_general_v1',gv.wb,gv.file.name);
-      lines.push(ok2
-        ? '🌐 Acomp. Geral → propagado para Visão de Projetos automaticamente'
-        : '🌐 Acomp. Geral → abra a Visão de Projetos e use o botão "JIRA"');
+      if(propagate){
+        var gv=detected.general_visao[0];
+        var ok2=_saveCrossImport('sala_cross_import_general_v1',gv.wb,gv.file.name);
+        lines.push(ok2 ? '🌐 Acomp. Geral → propagado para Visão de Projetos automaticamente'
+                       : '🌐 Acomp. Geral → abra a Visão de Projetos e use o botão "JIRA"');
+      } else {
+        lines.push('🌐 Acomp. Geral detectada → use "🌐 Importar em Todos" para propagar, ou abra a Visão de Projetos');
+      }
     }
     if(detected.homologation_visao.length){
-      var hv=detected.homologation_visao[0];
-      var ok3=_saveCrossImport('sala_cross_import_homologation_v1',hv.wb,hv.file.name);
-      lines.push(ok3
-        ? '🧪 Homologação → propagado para Visão de Projetos automaticamente'
-        : '🧪 Homologação → abra a Visão de Projetos e use "Importar Homologação"');
+      if(propagate){
+        var hv=detected.homologation_visao[0];
+        var ok3=_saveCrossImport('sala_cross_import_homologation_v1',hv.wb,hv.file.name);
+        lines.push(ok3 ? '🧪 Homologação → propagado para Visão de Projetos automaticamente'
+                       : '🧪 Homologação → abra a Visão de Projetos e use "Importar Homologação"');
+      } else {
+        lines.push('🧪 Homologação detectada → use "🌐 Importar em Todos" para propagar, ou abra a Visão de Projetos');
+      }
     }
     if(detected.unknown.length) lines.push('⚠️ Não identificado: '+detected.unknown.join(', '));
     if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.sprint_visao.length&&!detected.general_visao.length&&!detected.homologation_visao.length){
@@ -5475,12 +5490,18 @@ ub.addEventListener('dragleave',function(){ub.classList.remove('drag');});
 ub.addEventListener('drop',function(e){
   e.preventDefault();ub.classList.remove('drag');
   var fs=e.dataTransfer.files;
-  if(fs.length>1) loadMultipleFiles(fs);
+  if(fs.length>1) loadMultipleFiles(fs, false);
   else if(fs[0]) loadXlsx(fs[0]);
 });
 // Handler do importador unificado (multi-arquivo)
+// fiAll → só este dashboard (sem propagação)
 $id('fiAll').onchange=function(e){
-  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files);
+  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files, false);
+  this.value='';
+};
+// fiAllGlobal → todos os dashboards (com propagação)
+$id('fiAllGlobal').onchange=function(e){
+  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files, true);
   this.value='';
 };
 
