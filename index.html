@@ -1355,7 +1355,7 @@ body{min-height:100vh}
   <input type="file" id="fiAllGlobal" accept=".xlsx,.xls,.csv" multiple>
   <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
   <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Importa só neste dashboard (SALA): _Epicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas. Sprint_ativa e Acomp._Geral são detectados mas não propagados.">📦 Importar Tudo</button>
-  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Importa em TODOS os dashboards: arquivos do SALA ficam aqui · Sprint_ativa, Acomp._Geral e Homologação são propagados automaticamente para Visão de Projetos">🌐 Importar em Todos</button>
+  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Importa em TODOS os dashboards: arquivos do SALA ficam aqui · Sprint_ativa, Acomp._Geral e Homologação são propagados para Visão de Projetos · Épicos são propagados para o Discovery PMO Tracker (Jira)">🌐 Importar em Todos</button>
 </div>
 
 <!-- ══ ÉPICOS PANE ══ -->
@@ -5410,6 +5410,12 @@ function loadMultipleFiles(files, propagate){
     if(detected.epics){
       loadXlsx(detected.epics.file);
       lines.push('📊 Épicos → Tab Épicos');
+      if(propagate){
+        // Mesmo arquivo (Tipo de Item/Chave do item/Rótulos #Nº) alimenta o Jira do Discovery PMO
+        var okEp=_saveCrossImport('sala_cross_import_epics_v1',detected.epics.wb,detected.epics.file.name);
+        lines.push(okEp ? '🧭 Épicos → propagado para Discovery PMO Tracker automaticamente'
+                        : '🧭 Épicos → abra o Discovery PMO Tracker e use "⇪ Importar Jira"');
+      }
     }
     if(detected.stories){
       loadStoriesXlsx(detected.stories.file);
