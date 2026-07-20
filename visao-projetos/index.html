@@ -6349,6 +6349,26 @@
     const RECOVERY_GOAL = { metaDays:62, preventiveDays:14, neededDeliveries:9, targetLt:30, deadline:'30/06', daysLeft:21 };
     const LEAD_TIME_EPICS = {"SLOPC-26557":{"id":"SLOPC-26557","squad":"Guardiões","resumo":"GCSB - Migrar os microsserviços vinculados aos centros de custo GCSB da cloud TI-Híbrida para a Microsoft Azure - microsserviços: serviços-operacionais","status":"Executado","ini":"2025-10-23","fim":"","dataPrevista":""},"SLOPC-29139":{"id":"SLOPC-29139","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - FRONT END","status":"Executado","ini":"2025-11-04","fim":"","dataPrevista":""},"SLOPC-18909":{"id":"SLOPC-18909","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - BACKEND","status":"Executado","ini":"2025-11-11","fim":"","dataPrevista":""},"SLOPC-29141":{"id":"SLOPC-29141","squad":"Guardiões","resumo":"SBK - Disponibilizar a consulta das bases históricas de dados e documentos do legado SBK na ServiceNow - SERVICE NOW","status":"Executado","ini":"2025-12-03","fim":"","dataPrevista":""},"SLOPC-33015":{"id":"SLOPC-33015","squad":"Contact","resumo":"Desenvolver processo para refatoração do ServiceNow para o SAT #AtendeBRA","status":"Concluído","ini":"2026-01-08","fim":"2026-03-30","dataPrevista":"2026-04-15"},"SLOPC-33014":{"id":"SLOPC-33014","squad":"Contact","resumo":"Implementar API para validar e consultar token de celular integrado ao ServiceNow #AtendeBRA","status":"Concluído","ini":"2026-01-08","fim":"2026-03-31","dataPrevista":"2026-04-20"},"SLOPC-33834":{"id":"SLOPC-33834","squad":"Guardiões","resumo":"GCSB - Adequar a segmentação dos clientes 049 de VAREJO/DIGITAL/MEI para EMPRESAS E NEGÓCIOS no sistema GCSB","status":"Em Execução","ini":"2026-01-27","fim":"","dataPrevista":"2026-04-30"},"SLOPC-35324":{"id":"SLOPC-35324","squad":"Guardiões","resumo":"Implementar correção dos apontamentos críticos identificados pelo SonarQube na ferramenta GCSB","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":""},"SLOPC-35433":{"id":"SLOPC-35433","squad":"Expresso","resumo":"Desenvolver novos requisitos para Subsídios MVP2 + Melhorias impeditivas para o ConectaJur","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":""},"SLOPC-35319":{"id":"SLOPC-35319","squad":"Contact","resumo":"Implementar digitalização, consulta e atualização de documentos via GCC integrada ao formulário Operação 200k","status":"Em Execução","ini":"2026-03-02","fim":"","dataPrevista":"2026-05-01"},"SLOPC-35104":{"id":"SLOPC-35104","squad":"Guardiões","resumo":"Implementar Correção dos apontamentos \"Blocker\" na ferramenta GCSB identificados pelo SonarQube","status":"Concluído","ini":"2026-02-23","fim":"2026-03-16","dataPrevista":""},"SLOPC-23768":{"id":"SLOPC-23768","squad":"Expresso","resumo":"Desenvolver na ServiceNow fluxo para o processo Obrigações de Fazer - MVP 2 #9197","status":"Em Execução","ini":"2026-03-13","fim":"","dataPrevista":""},"SLOPC-27305":{"id":"SLOPC-27305","squad":"Interestelar","resumo":"Desenvolver na ServiceNow fluxo para o processo de Fiança - novos requisitos (MVP2) #9193","status":"Em Execução","ini":"2026-03-13","fim":"","dataPrevista":"2026-04-25"},"SLOPC-35373":{"id":"SLOPC-35373","squad":"Guardiões","resumo":"Desenvolvimento de RPA para obtenção de dados de contratos pré-fixados de CDC, Crédito Pessoal e Capital de Giro","status":"Em Execução","ini":"2026-03-16","fim":"","dataPrevista":""},"SLOPC-36323":{"id":"SLOPC-36323","squad":"Guardiões","resumo":"Corrigir apontamentos \"critical\" na ferramenta GCSB identificados pelo SonarQube - Fase 2","status":"Em Execução","ini":"2026-03-17","fim":"","dataPrevista":""}};
 
+    // LEAD_TIME_EPICS acima é um snapshot estático, colado uma vez neste arquivo —
+    // sem mecanismo de regeneração, ele fica desatualizado assim que o SALA importa
+    // épicos novos ou fecha uma Data Fim. Como o SALA (index.html) roda na mesma
+    // origem, seus dados de Lead Time por épico já estão em localStorage
+    // ('leadtime_sala_v8_data') e podem ser lidos diretamente daqui — sem precisar
+    // de nenhuma propagação especial. getEpicLeadInfo() prioriza essa base viva e
+    // só cai no snapshot estático para épicos que o navegador nunca viu no SALA.
+    const SALA_EPICS_STORAGE_KEY = 'leadtime_sala_v8_data';
+    function getLiveLeadTimeEpicsFromSala(){
+      try{
+        const raw = localStorage.getItem(SALA_EPICS_STORAGE_KEY);
+        if(!raw) return null;
+        const arr = JSON.parse(raw);
+        if(!Array.isArray(arr)) return null;
+        const map = {};
+        arr.forEach(r => { if(r && r.id) map[r.id] = r; });
+        return map;
+      }catch(e){ return null; }
+    }
+
     function _refreshImportPill(){ /* import pill removido — header badge atualizado por updateLastUpdatedBadge() */ }
 
     function registrarImportacaoBase(){
@@ -7135,7 +7155,10 @@
       const key = extractJiraKey(epicKey);
       if(!key) return {key:'Sem épico', days:null, status:'Sem LT oficial', source:'sem épico', start:null, end:null};
 
-      const seeded = LEAD_TIME_EPICS[key];
+      // Base viva do SALA (localStorage compartilhado) tem prioridade sobre o
+      // snapshot estático embutido, que não acompanha novos épicos importados.
+      const liveEpics = getLiveLeadTimeEpicsFromSala();
+      const seeded = (liveEpics && liveEpics[key]) || LEAD_TIME_EPICS[key];
 
       // Regra corrigida:
       // Lead Time do épico só deve ser calculado quando existir base oficial de Lead Time.
