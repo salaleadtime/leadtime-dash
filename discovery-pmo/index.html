@@ -10569,7 +10569,11 @@
     }
 
     function blockedCount(project) {
-      return project.phases.filter(p => p.status === 'blocked').length + project.cards.filter(c => c.priority === 'Crítica' && c.status !== 'done').length;
+      // project.phases nunca fica "blocked" de verdade: o único setter, updatePhase(),
+      // é órfão (sem call site) desde que a Timeline (timelineItems) assumiu o controle
+      // de status real. Sem isso, esta metade sempre somava 0, mascarando bloqueios.
+      const timelineBlocked = ensureTimelineItems(project).filter(it => it.status === 'blocked').length;
+      return timelineBlocked + project.cards.filter(c => c.priority === 'Crítica' && c.status !== 'done').length;
     }
 
     function nextMilestone(project) {

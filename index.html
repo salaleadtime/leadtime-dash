@@ -6962,7 +6962,12 @@ function calSeedExample(){
 
   function renderPremiumSquads(triMeasured,active){
     var META=window.META||62;
-    var base = triMeasured && triMeasured.length ? triMeasured : active;
+    // Sem entregas medidas no TRI ainda (início de trimestre): cai para os épicos
+    // ativos, cujo LT ainda está contando. Precisa avisar — senão o "% de saúde"
+    // parece um score fechado igual aos outros trimestres, quando na verdade é
+    // só a foto do LT em andamento (vai mudar assim que algo for entregue).
+    var usingActive = !(triMeasured && triMeasured.length);
+    var base = usingActive ? active : triMeasured;
     var squads=Array.from(new Set((base||[]).map(function(r){return r.squad;}).filter(Boolean))).sort();
     if(!squads.length) return '<div class="metro-empty">Nenhum dado de squad para exibir.</div>';
     return squads.slice(0,6).map(function(sq){
@@ -6970,7 +6975,8 @@ function calSeedExample(){
       var avg=items.length?Math.round(items.reduce(function(s,r){return s+r.lt;},0)/items.length):0;
       var score=Math.max(5,Math.min(100,100-Math.round(avg/META*45)));
       var kind=avg>=META?'red':avg>=40?'amber':'green';
-      return '<div class="pd-squad-row" style="--pcol:'+pKind(kind)+'"><div class="pd-squad-top"><span class="pd-squad-name">'+esc(sq)+'</span><span class="pd-squad-pct">'+score+'%</span></div><div class="pd-bar"><i style="--w:'+score+'%"></i></div><div class="pd-note">'+items.length+' épico'+(items.length!==1?'s':'')+' · LT médio '+(avg||'—')+(avg?'d':'')+'</div></div>';
+      var note=items.length+' épico'+(items.length!==1?'s':'')+' · LT médio '+(avg||'—')+(avg?'d':'')+(usingActive?' (em andamento · sem entregas no TRI ainda)':'');
+      return '<div class="pd-squad-row" style="--pcol:'+pKind(kind)+'"><div class="pd-squad-top"><span class="pd-squad-name">'+esc(sq)+'</span><span class="pd-squad-pct">'+score+'%</span></div><div class="pd-bar"><i style="--w:'+score+'%"></i></div><div class="pd-note">'+note+'</div></div>';
     }).join('');
   }
 
