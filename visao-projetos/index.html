@@ -7153,7 +7153,7 @@
 
     function getEpicLeadInfo(epicKey, sourceRows){
       const key = extractJiraKey(epicKey);
-      if(!key) return {key:'Sem épico', days:null, status:'Sem LT oficial', source:'sem épico', start:null, end:null};
+      if(!key) return {key:'Sem épico', days:null, status:'Sem LT oficial', source:'sem épico', start:null, end:null, isConcluded:false};
 
       // Base viva do SALA (localStorage compartilhado) tem prioridade sobre o
       // snapshot estático embutido, que não acompanha novos épicos importados.
@@ -7165,12 +7165,12 @@
       // Não usar a data de criação/atualização das histórias como início do épico,
       // pois isso inflava o LT e gerava falso alto risco.
       if(!seeded || !seeded.ini){
-        return {key, days:null, status:'Sem LT oficial', source:'sem base Lead Time', start:null, end:null};
+        return {key, days:null, status:'Sem LT oficial', source:'sem base Lead Time', start:null, end:null, isConcluded:false};
       }
 
       const start = parseFlexibleDate(seeded.ini);
       if(!start){
-        return {key, days:null, status:'Data inicial inválida', source:'base Lead Time incompleta', start:null, end:null};
+        return {key, days:null, status:'Data inicial inválida', source:'base Lead Time incompleta', start:null, end:null, isConcluded:false};
       }
 
       let end = seeded.fim ? parseFlexibleDate(seeded.fim) : null;
@@ -7180,11 +7180,14 @@
       // Se a base diz que está concluído/executado, mas não trouxe data fim,
       // não calculamos até hoje para evitar falso LT crítico.
       if(!end && isFinished){
-        return {key, days:null, status:'Sem data fim', source:'base Lead Time incompleta', start, end:null};
+        return {key, days:null, status:'Sem data fim', source:'base Lead Time incompleta', start, end:null, isConcluded:true};
       }
 
       const source = end ? 'base Lead Time' : 'base Lead Time em andamento';
       const days = daysBetweenLocalDates(start, end);
+      // Épico concluído/medido (tem Data Fim, ou status já indica conclusão) —
+      // o LT dele já está fechado e não é mais "risco em aberto" a recuperar.
+      const isConcluded = Boolean(end) || isFinished;
 
       let status = 'Sem LT oficial';
       if(days !== null){
@@ -7194,7 +7197,7 @@
         else status = 'Normal';
       }
 
-      return {key, days, status, source, start, end};
+      return {key, days, status, source, start, end, isConcluded};
     }
 
     function impactBubbleStyle(item, idx){
@@ -7230,13 +7233,13 @@
         byEpic.get(epicKey).push(r);
       });
 
-      const groups = [...byEpic.entries()].map(([epic, items]) => {
+      const allGroups = [...byEpic.entries()].map(([epic, items]) => {
         const lead = getEpicLeadInfo(epic, allRows);
         window[`epicLt_${epic.replace(/[^a-z0-9]/gi,'_')}`] = items;
 
         let estimatedDays = null;
         let isEstimated = false;
-        if(lead.days === null){
+        if(lead.days === null && !lead.isConcluded){
           const dates = items.map(r => parseFlexibleDate(r.criado)).filter(Boolean);
           if(dates.length){
             const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
@@ -7248,12 +7251,22 @@
         const days = lead.days !== null ? lead.days : estimatedDays;
         const isOpen = lead.source === 'base Lead Time em andamento';
         return {epic, items, lead, days, isEstimated, isOpen};
-      }).sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
+      });
+
+      // Este card mede risco em aberto (Meta ${RECOVERY_GOAL.metaDays}d pra recuperar
+      // o prazo). Épico já concluído/medido tem o LT fixo e não é mais "risco" — some
+      // da lista assim que a Data Fim (ou status de conclusão) chega no SALA.
+      const groups = allGroups
+        .filter(g => !g.lead.isConcluded)
+        .sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
 
       if(!groups.length){
+        const msg = allGroups.length
+          ? `Todos os ${allGroups.length} épico(s) do recorte já foram concluídos — nada em aberto para acompanhar.`
+          : 'Nenhum épico identificado no recorte atual.';
         return `<div class="epic-lt-list">
           <div class="epic-lt-head"><b>Lead Time dos Épicos</b><span class="badge red">Meta ${RECOVERY_GOAL.metaDays}d</span></div>
-          <div style="font-size:12px;color:var(--muted);padding:8px 0">Nenhum épico identificado no recorte atual.</div>
+          <div style="font-size:12px;color:var(--muted);padding:8px 0">${escapeHtml(msg)}</div>
         </div>`;
       }
 
@@ -7287,7 +7300,7 @@
         </div>
         ${rows}
         ${groups.length > 10 ? `<div style="font-size:11px;color:var(--muted);margin-top:8px">+${groups.length - 10} épico(s) não exibidos</div>` : ''}
-        <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">~ estimado pela criação das histórias · + = em andamento (ainda contando) · sem marca = LT oficial já fechado</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">~ estimado pela criação das histórias · + = em andamento (ainda contando) · épicos já concluídos/medidos saem desta lista automaticamente</div>
       </div>`;
     }
 
