@@ -2842,6 +2842,42 @@
       flex-wrap:wrap;
     }
 
+    .sprint-calendar-alert{
+      display:none;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-top:12px;
+      padding:10px 12px;
+      border:1px solid #F2D59A;
+      border-radius:12px;
+      background:#FFF8E8;
+      color:#7A4A00;
+      font-size:12px;
+      line-height:1.35;
+    }
+
+    .sprint-calendar-alert.is-warning{
+      border-color:#F2D59A;
+      background:#FFF8E8;
+      color:#7A4A00;
+    }
+
+    .sprint-calendar-alert.is-danger{
+      border-color:#F0B7C3;
+      background:#FFF4F6;
+      color:#98001F;
+    }
+
+    .sprint-calendar-alert.is-info{
+      border-color:#B8D4F0;
+      background:#F3F8FE;
+      color:#174A7C;
+    }
+
+    .sprint-calendar-alert strong{font-weight:800}
+    .sprint-calendar-alert .btn{flex:0 0 auto}
+
     .sprint-actions{
       display:flex;
       align-items:center;
@@ -5799,6 +5835,7 @@
               <span class="badge green" id="sprintPeriodBadge">Sprint 08/06 → 19/06</span>
               <span class="sprint-source" id="sprintSourceText">Base sprint: ati.xlsx</span>
             </div>
+            <div class="sprint-calendar-alert" id="sprintCalendarAlert" role="status"></div>
             <div class="sprint-front-filter" id="sprintFrontFilter" style="display:none">
               <span class="sprint-front-title">Frente / Projeto</span>
               <button type="button" class="sprint-front-btn active" data-front="Todas" onclick="setSprintFrenteFilter('Todas')">Todas</button>
@@ -6123,30 +6160,34 @@
     let sprintStartLabel = '08/06/2026';
     let sprintEndLabel   = '19/06/2026';
 
+    function parseIsoDateLocal(value){
+      const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(!match) return null;
+      const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function formatIsoDateBr(value){
+      const date = parseIsoDateLocal(value);
+      return date ? date.toLocaleDateString('pt-BR') : '';
+    }
+
     function detectActiveSprint(){
       try {
         const cal = JSON.parse(localStorage.getItem('leadtime_sala_calendar_v2') || '[]');
         if(!Array.isArray(cal) || !cal.length) return null;
         const today = new Date(); today.setHours(0,0,0,0);
+        const sprints = cal.flatMap(tri => Array.isArray(tri.sprints) ? tri.sprints : [])
+          .map(sp => ({...sp, startDate:parseIsoDateLocal(sp.start), endDate:parseIsoDateLocal(sp.end)}))
+          .filter(sp => sp.startDate && sp.endDate);
+        if(!sprints.length) return null;
         // 1ª passagem: sprint cujo intervalo inclui hoje
-        for(const tri of cal){
-          for(const sp of (tri.sprints || [])){
-            if(!sp.start || !sp.end) continue;
-            const s = new Date(sp.start); s.setHours(0,0,0,0);
-            const e = new Date(sp.end);   e.setHours(23,59,59,999);
-            if(today >= s && today <= e) return sp;
-          }
-        }
-        // 2ª passagem: sprint mais recente já iniciada (sprint acabou mas ainda é a "última ativa")
-        let lastPast = null;
-        for(const tri of cal){
-          for(const sp of (tri.sprints || [])){
-            if(!sp.start) continue;
-            const s = new Date(sp.start); s.setHours(0,0,0,0);
-            if(s <= today) lastPast = sp;
-          }
-        }
-        return lastPast;
+        const active = sprints.find(sp => today >= sp.startDate && today <= sp.endDate);
+        if(active) return active;
+        // Sem sprint em andamento, usa a encerrada mais recente por data — nunca
+        // pela ordem em que o calendário foi gravado no navegador.
+        return sprints.filter(sp => sp.startDate <= today)
+          .sort((a,b) => b.startDate - a.startDate)[0] || null;
       } catch(e){ return null; }
     }
 
@@ -6253,6 +6294,12 @@
         localStorage.setItem('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
         try{ renderAll(); }catch(e){}
       });
+      gasLoadVpData('vpPlanningConfirmations', function(err, serverData){
+        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
+        planningConfirmations = serverData;
+        localStorage.setItem('vpPlanningConfirmations', JSON.stringify(planningConfirmations));
+        try{ renderAll(); }catch(e){}
+      });
       gasLoadVpData('vpDeliveries', function(err, serverData){
         if(err || !Array.isArray(serverData)) return;
         deliveries = serverData;
@@ -6268,6 +6315,7 @@
     let selectedDeliveryStoryKeys = new Set();
     let operationalUpdates = readStoredJSON('jiraDashboardOperationalUpdates', {});
     let executiveQuickNotes = readStoredJSON('jiraDashboardExecutiveQuickNotes', {});
+    let planningConfirmations = readStoredJSON('vpPlanningConfirmations', {});
     let editingOperationalKey = null;
 
     if (!Array.isArray(deliveries)) deliveries = [];
@@ -7930,8 +7978,79 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     /* ─── FIM GEMINI AI ─────────────────────────────────────────────────── */
 
 
+    function planningConfirmationKey(sprint, squad){
+      return `${sprint.start}|${squadKey(squad)}`;
+    }
+
+    function confirmSprintPlanning(){
+      const sprint = detectActiveSprint();
+      const squad = getSelectedSquad();
+      if(!sprint || !sprint.start || sameSquad(squad, 'Todas')) return;
+      planningConfirmations[planningConfirmationKey(sprint, squad)] = {
+        confirmedAt:new Date().toISOString(),
+        squad:normalize(squad),
+        sprintStart:sprint.start,
+        sprintEnd:sprint.end
+      };
+      localStorage.setItem('vpPlanningConfirmations', JSON.stringify(planningConfirmations));
+      gasSaveVpData('vpPlanningConfirmations', planningConfirmations);
+      renderAll();
+    }
+
+    function renderSprintCalendarAlert(){
+      const alert = $('sprintCalendarAlert');
+      if(!alert) return;
+      const sprint = detectActiveSprint();
+      const squad = getSelectedSquad();
+      if(!sprint || !sprint.start || !sprint.end){ alert.style.display = 'none'; return; }
+
+      const start = parseIsoDateLocal(sprint.start);
+      const end = parseIsoDateLocal(sprint.end);
+      const today = new Date(); today.setHours(0,0,0,0);
+      if(!start || !end){ alert.style.display = 'none'; return; }
+
+      const messages = [];
+      let tone = 'is-info';
+      const confirmation = !sameSquad(squad, 'Todas') && planningConfirmations[planningConfirmationKey(sprint, squad)];
+      if(today >= start && today <= end && !sameSquad(squad, 'Todas')){
+        if(confirmation){
+          const confirmedAt = new Date(confirmation.confirmedAt);
+          const dateLabel = Number.isNaN(confirmedAt.getTime()) ? '' : ` em ${confirmedAt.toLocaleDateString('pt-BR')}`;
+          messages.push(`<strong>Planning confirmado${dateLabel}.</strong>`);
+        }else{
+          const nextBusinessDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+          nextBusinessDay.setDate(nextBusinessDay.getDate() + 1);
+          while(!isBusinessDay(nextBusinessDay)) nextBusinessDay.setDate(nextBusinessDay.getDate() + 1);
+          const carryOver = today > start;
+          messages.push(`<strong>${carryOver ? 'Planning ainda pendente' : 'Planning pendente'} para ${escapeHtml(squad)}.</strong> ${carryOver ? 'A confirmação continua disponível no dia útil posterior.' : `Caso não seja concluído hoje, confirme até ${nextBusinessDay.toLocaleDateString('pt-BR')}.`}`);
+          tone = carryOver ? 'is-danger' : 'is-warning';
+        }
+      }
+
+      const lastBusinessDay = lastBusinessDayOnOrBefore(end);
+      if(today >= start && today <= lastBusinessDay){
+        const remaining = businessDaysUntil(lastBusinessDay, today);
+        if(remaining <= 2){
+          const closingMessage = remaining === 0
+            ? `<strong>Sprint encerra hoje (último dia útil).</strong> Data final: ${formatIsoDateBr(sprint.end)}.`
+            : `<strong>Sprint encerra em ${remaining} ${remaining === 1 ? 'dia útil' : 'dias úteis'}.</strong> Data final: ${formatIsoDateBr(sprint.end)}.`;
+          messages.push(closingMessage);
+          if(!messages[0]?.includes('pendente')) tone = 'is-warning';
+        }
+      }
+
+      if(!messages.length){ alert.style.display = 'none'; return; }
+      const action = !confirmation && !sameSquad(squad, 'Todas') && today >= start && today <= end
+        ? '<button type="button" class="btn btn-soft" onclick="confirmSprintPlanning()">Confirmar planning</button>'
+        : '';
+      alert.className = `sprint-calendar-alert ${tone}`;
+      alert.innerHTML = `<span>${messages.join(' ')}</span>${action}`;
+      alert.style.display = 'flex';
+    }
+
     function renderSprintCurrent(){
       applyActiveSprint();
+      renderSprintCalendarAlert();
       const squad = getSelectedSquad();
       let baseSprintData = effectiveSprintRows();
       if(!sameSquad(squad, 'Todas')) baseSprintData = baseSprintData.filter(r => sameSquad(r.squad, squad));
@@ -8055,7 +8174,56 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
     function isBusinessDay(date){
       const day = date.getDay();
-      return day !== 0 && day !== 6;
+      return day !== 0 && day !== 6 && !isNationalHoliday(date);
+    }
+
+    function easterSunday(year){
+      // Algoritmo gregoriano de Meeus/Jones/Butcher.
+      const a = year % 19;
+      const b = Math.floor(year / 100);
+      const c = year % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      return new Date(year, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1);
+    }
+
+    function nationalHolidayKeys(year){
+      const fixed = [
+        [0,1], [3,21], [4,1], [8,7], [9,12], [10,2], [10,15], [10,20], [11,25]
+      ].map(([month,day]) => `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+      const goodFriday = easterSunday(year);
+      goodFriday.setDate(goodFriday.getDate() - 2);
+      fixed.push(`${year}-${String(goodFriday.getMonth() + 1).padStart(2,'0')}-${String(goodFriday.getDate()).padStart(2,'0')}`);
+      return new Set(fixed);
+    }
+
+    function isNationalHoliday(date){
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+      return nationalHolidayKeys(date.getFullYear()).has(key);
+    }
+
+    function lastBusinessDayOnOrBefore(date){
+      const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      while(!isBusinessDay(result)) result.setDate(result.getDate() - 1);
+      return result;
+    }
+
+    function businessDaysUntil(endDate, today){
+      let count = 0;
+      const cursor = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      cursor.setDate(cursor.getDate() + 1);
+      while(cursor <= endDate){
+        if(isBusinessDay(cursor)) count++;
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return count;
     }
 
     function addBusinessDaysInclusive(startDate, businessDays){
