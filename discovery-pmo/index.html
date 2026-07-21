@@ -7260,18 +7260,18 @@
     .mtl-search input { all:unset; font-size:12.5px; color:var(--ink); width:100%; }
 
     .mtl-table { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
-    .mtl-thead { display:grid; grid-template-columns:112px 260px 1fr 108px; gap:14px; align-items:end; padding:11px 16px 9px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:800; }
+    .mtl-thead { display:grid; grid-template-columns:132px 290px 1fr 116px; gap:18px; align-items:end; padding:13px 20px 11px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:800; }
     .mtl-thead .mtl-axis { position:relative; height:14px; }
     .mtl-thead .mtl-month { position:absolute; top:0; transform:translateX(-50%); }
-    .mtl-row { display:grid; grid-template-columns:112px 260px 1fr 108px; gap:14px; align-items:center; padding:12px 16px; border-top:1px solid var(--line); }
+    .mtl-row { display:grid; grid-template-columns:132px 290px 1fr 116px; gap:18px; align-items:center; padding:16px 20px; border-top:1px solid var(--line); }
     .mtl-row:first-child { border-top:none; }
     .mtl-row.hidden { display:none; }
-    .mtl-sq { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; line-height:1.3; }
-    .mtl-iname .n { font-size:12.5px; font-weight:700; color:var(--ink); }
-    .mtl-iname .m { font-size:11px; color:var(--muted); margin-top:2px; }
-    .mtl-track { position:relative; height:16px; }
-    .mtl-track .mtl-rail { position:absolute; left:0; right:0; top:5px; height:6px; border-radius:99px; background:#eef1f6; }
-    .mtl-seg { position:absolute; top:2px; height:12px; border-radius:99px; }
+    .mtl-sq { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; line-height:1.45; }
+    .mtl-iname .n { font-size:13px; font-weight:700; color:var(--ink); line-height:1.4; }
+    .mtl-iname .m { font-size:11px; color:var(--muted); margin-top:4px; }
+    .mtl-track { position:relative; height:20px; }
+    .mtl-track .mtl-rail { position:absolute; left:0; right:0; top:7px; height:6px; border-radius:99px; background:#eef1f6; }
+    .mtl-seg { position:absolute; top:4px; height:12px; border-radius:99px; }
     .mtl-seg.ok { background:var(--green); }
     .mtl-seg.attn { background:var(--amber); }
     .mtl-seg.late { background:var(--red); }
@@ -7279,7 +7279,7 @@
     .mtl-stat { text-align:right; font-size:11.5px; font-weight:700; white-space:nowrap; }
     .mtl-stat.ok { color:var(--green); } .mtl-stat.attn { color:var(--amber); } .mtl-stat.late { color:var(--red); }
     .mtl-stat small { display:block; font-weight:500; color:var(--muted); font-size:10px; margin-top:1px; }
-    .mtl-today { position:absolute; top:34px; bottom:0; width:0; border-left:2px dashed var(--primary); opacity:.45; z-index:1; pointer-events:none; }
+    .mtl-today { position:absolute; top:40px; bottom:0; width:0; border-left:2px dashed var(--primary); opacity:.45; z-index:1; pointer-events:none; }
     .mtl-today-tag { position:absolute; top:0; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); }
     .mtl-empty { padding:34px 16px; text-align:center; color:var(--muted); font-size:12.5px; }
 
@@ -14013,21 +14013,18 @@ Recomendação PMO: ${d.recommendation}`;
       return 'ok';
     }
 
-    function macroTimelineAxis(allProjects) {
+    // Janela FIXA (não deriva de min/max dos dados): uma única iniciativa com marco
+    // muito no passado (data digitada errada) ou muito no futuro (ex.: Refinamento
+    // Técnico de uma iniciativa longa, terminando em 2027) esticava o eixo pra todo
+    // mundo, espremendo "Hoje" e todas as outras iniciativas numa fatia minúscula.
+    // Foco no que é acionável agora: ~1 mês pra trás, ~7 meses pra frente. Marcos fora
+    // dessa janela ficam visualmente recortados na borda (clamp em macroTimelineSegPct),
+    // não quebram o layout.
+    function macroTimelineAxis() {
       const DAY = 1000 * 60 * 60 * 24;
-      let dates = [];
-      allProjects.forEach(p => {
-        ensureBaseSchedule(p).filter(s => !s.jira).forEach(s => {
-          const st = parseISODate(s.start); const en = parseISODate(s.end);
-          if (st) dates.push(st);
-          if (en) dates.push(en);
-        });
-      });
-      const today = parseISODate(fmtDate(new Date()));
-      if (today) dates.push(today);
-      if (!dates.length) dates = [new Date(), new Date(Date.now() + 30 * DAY)];
-      const min = new Date(Math.min(...dates.map(d => d.getTime())));
-      const max = new Date(Math.max(...dates.map(d => d.getTime())));
+      const today = parseISODate(fmtDate(new Date())) || new Date();
+      const min = new Date(today.getTime() - 30 * DAY);
+      const max = new Date(today.getTime() + 210 * DAY);
       const totalDays = Math.max(1, Math.round((max - min) / DAY) + 1);
       return { min, max, totalDays };
     }
@@ -14142,7 +14139,7 @@ Recomendação PMO: ${d.recommendation}`;
 
       const allProjects = data.projects || [];
       allProjects.forEach(ensureBaseSchedule);
-      const axis = macroTimelineAxis(allProjects);
+      const axis = macroTimelineAxis();
       const ticks = macroTimelineMonthTicks(axis);
       const todayPct = macroTimelineTodayPct(axis);
       const lateAll = collectLateScheduleMarcos(allProjects);
@@ -14196,7 +14193,7 @@ Recomendação PMO: ${d.recommendation}`;
         <div class="mtl-picker"><label style="font-size:11.5px;font-weight:700;color:var(--muted)">Iniciativa</label><select onchange="setMacroTimelineSelectedInitiative(this.value)">${initOptions}</select></div>
         ${selectedProject ? macroTimelineInitiativeCardHtml(selectedProject) : `<div class="mtl-empty">Nenhuma iniciativa cadastrada.</div>`}`;
 
-      const lateBody = `<div class="mtl-table"><div class="mtl-thead" style="grid-template-columns:118px 1fr 130px 100px"><div>Squad</div><div>Iniciativa / marco</div><div>Atraso</div><div></div></div>
+      const lateBody = `<div class="mtl-table"><div class="mtl-thead" style="grid-template-columns:132px 1fr 130px 100px"><div>Squad</div><div>Iniciativa / marco</div><div>Atraso</div><div></div></div>
         <div>${lateAll.length ? lateAll.map(lateScheduleRowHtml).join('') : `<div class="mtl-empty">Nenhum marco de Cronograma atrasado.</div>`}</div></div>`;
 
       const bodyMap = { geral: geralBody, init: initBody, late: lateBody };
