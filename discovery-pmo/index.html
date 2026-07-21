@@ -7244,7 +7244,14 @@
     }
     .pmo-squad-chip.asd { background: #fee2e2; color: #991b1b; }
 
-    /* ── Timeline Executiva (reaproveita a mesma chrome do painel de Relatórios) ── */
+    /* ── Timeline Executiva — página cheia, não modal ── */
+    .mtl-page { position:fixed; inset:0; z-index:200; background:var(--bg); overflow-y:auto; }
+    .mtl-page-head { position:sticky; top:0; z-index:5; background:#fff; border-bottom:1px solid var(--line); padding:18px 28px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; box-shadow:0 1px 2px rgba(23,29,42,.04); }
+    .mtl-page-head h2 { margin:0 0 4px; font-size:21px; font-weight:800; letter-spacing:-.02em; color:var(--ink); }
+    .mtl-page-head p { margin:0; color:var(--muted); font-size:12.5px; max-width:64ch; }
+    .mtl-page-body { padding:18px 28px 60px; max-width:1360px; margin:0 auto; }
+    .mtl-tablewrap { position:relative; }
+
     .mtl-toggle { display:inline-flex; padding:3px; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; gap:2px; margin-bottom:14px; }
     .mtl-toggle button { all:unset; cursor:pointer; font-size:12px; font-weight:700; padding:7px 15px; border-radius:8px; color:var(--muted); display:inline-flex; align-items:center; gap:6px; }
     .mtl-toggle button.active { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(23,29,42,.08); }
@@ -7282,9 +7289,8 @@
     .mtl-stat { text-align:right; font-size:11.5px; font-weight:700; white-space:nowrap; }
     .mtl-stat.ok { color:var(--green); } .mtl-stat.attn { color:var(--amber); } .mtl-stat.late { color:var(--red); }
     .mtl-stat small { display:block; font-weight:500; color:var(--muted); font-size:10px; margin-top:1px; }
-    .mtl-today { position:absolute; top:0; bottom:0; width:0; border-left:2px dashed var(--primary); opacity:.5; z-index:2; pointer-events:none; }
-    .mtl-today-tag { position:absolute; top:6px; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; z-index:3; white-space:nowrap; }
-    .mtl-tbody { position:relative; }
+    .mtl-today { position:absolute; top:34px; bottom:0; width:0; border-left:2px dashed var(--primary); opacity:.45; z-index:1; pointer-events:none; }
+    .mtl-today-tag { position:absolute; top:0; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); }
     .mtl-empty { padding:34px 16px; text-align:center; color:var(--muted); font-size:12.5px; }
 
     .mtl-picker { display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:9px 13px; margin-bottom:12px; }
@@ -11491,18 +11497,51 @@
       };
     }
 
+    // Colapsa duplicatas dos itens padrão: a primeira versão desta função usava
+    // uid() (aleatório) para os ids, e o merge entre sessões (mergeNestedById, que
+    // compara por id) tratava cada sessão como se tivesse criado um marco novo —
+    // gerando várias cópias do mesmo baseKey ao longo do tempo. Mantém a versão mais
+    // "completa" (dono/observações/conclusão/replanejamento preenchidos, ou mais
+    // recente) e manda o resto pra tombstone, pra sumir também nas outras sessões.
+    function dedupeBaseSchedule(project) {
+      if (!Array.isArray(project.schedule) || !project.schedule.length) return;
+      const others = [];
+      const byBase = new Map();
+      const dropped = [];
+      const richness = it => (it.owner ? 1 : 0) + (it.observations ? 1 : 0) + (it.done ? 1 : 0) + (it.replanHistory && it.replanHistory.length ? 1 : 0);
+      project.schedule.forEach(item => {
+        if (!item.baseKey) { others.push(item); return; }
+        const existing = byBase.get(item.baseKey);
+        if (!existing) { byBase.set(item.baseKey, item); return; }
+        const itemScore = richness(item), existingScore = richness(existing);
+        const winner = itemScore !== existingScore
+          ? (itemScore > existingScore ? item : existing)
+          : ((Date.parse(item.updatedAt || '') || 0) > (Date.parse(existing.updatedAt || '') || 0) ? item : existing);
+        dropped.push(winner === item ? existing : item);
+        byBase.set(item.baseKey, winner);
+      });
+      if (!dropped.length) return;
+      project.schedule = [...others, ...byBase.values()];
+      dropped.forEach(item => recordTombstone(item.id));
+    }
+
     function ensureBaseSchedule(project) {
       if (!Array.isArray(project.schedule)) project.schedule = [];
+      dedupeBaseSchedule(project);
       const missing = SCHEDULE_BASE_TEMPLATE.filter(tpl => !project.schedule.some(s => s.baseKey === tpl.baseKey));
       if (!missing.length) return project.schedule;
       const dates = estimateBaseScheduleDates(project);
       missing.forEach(tpl => {
+        // id determinístico (não uid()): toda sessão gera o MESMO id pro mesmo
+        // baseKey, então o merge entre navegadores reconhece como o mesmo marco
+        // em vez de criar uma cópia nova a cada sincronização.
+        const baseId = 'sch-base-' + tpl.baseKey;
         if (tpl.jira) {
-          project.schedule.push({ id: uid(), baseKey: tpl.baseKey, item: tpl.item, jira: true, owner: '', start: '', end: '', done: false, observations: '' });
+          project.schedule.push({ id: baseId, baseKey: tpl.baseKey, item: tpl.item, jira: true, owner: '', start: '', end: '', done: false, observations: '' });
           return;
         }
         const d = dates[tpl.baseKey] || {};
-        project.schedule.push({ id: uid(), baseKey: tpl.baseKey, item: tpl.item, owner: '', start: d.start || '', end: d.end || '', done: false, observations: '' });
+        project.schedule.push({ id: baseId, baseKey: tpl.baseKey, item: tpl.item, owner: '', start: d.start || '', end: d.end || '', done: false, observations: '' });
       });
       return project.schedule;
     }
@@ -14040,7 +14079,7 @@ Recomendação PMO: ${d.recommendation}`;
       return clamp(Math.round(((today - axis.min) / DAY) / axis.totalDays * 100), 0, 100);
     }
 
-    function macroTimelineRowHtml(project, axis) {
+    function macroTimelineRowHtml(project, axis, isFirst) {
       const squad = squadForProject(project);
       const squadName = squad?.name || project.squad || 'Ainda Sem Definição';
       const items = ensureBaseSchedule(project).filter(s => !s.jira);
@@ -14055,7 +14094,8 @@ Recomendação PMO: ${d.recommendation}`;
       }).join('');
       const statusLabel = { late: 'Atrasado', attn: 'Atenção', ok: 'No prazo' }[status];
       const name = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ') || 'Sem nome';
-      return `<button type="button" class="mtl-row" style="all:unset;display:grid;width:100%;text-align:left;cursor:pointer" onclick="goToMacroTimelineInitiative('${escapeAttr(project.id)}')">
+      const borderTop = isFirst ? 'none' : '1px solid var(--line)';
+      return `<button type="button" class="mtl-row" style="background:none;border:0;border-top:${borderTop};width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;margin:0" onclick="goToMacroTimelineInitiative('${escapeAttr(project.id)}')">
         <div class="mtl-sq" style="color:${squadColorFor(squadName)}">${escapeHtml(squadName)}</div>
         <div class="mtl-iname"><div class="n">${escapeHtml(name)}</div><div class="m">${items.length} marco(s) padrão · ${jiraCount} histórias no Jira</div></div>
         <div class="mtl-track"><div class="mtl-rail"></div>${segs}</div>
@@ -14135,7 +14175,7 @@ Recomendação PMO: ${d.recommendation}`;
         const searchOk = !macroTimelineSearch || name.includes(macroTimelineSearch.toLowerCase());
         return sqOk && stOk && searchOk;
       });
-      const rowsHtml = filteredProjects.map(p => macroTimelineRowHtml(p, axis)).join('');
+      const rowsHtml = filteredProjects.map((p, i) => macroTimelineRowHtml(p, axis, i === 0)).join('');
 
       const lastUpdate = data.timelineLastScheduleUpdate ? `<div class="mtl-strip"><div>🕒</div><div><strong>Última atualização do Cronograma</strong>${escapeHtml(data.timelineLastScheduleOwner || 'Alguém')} ${data.timelineLastScheduleItem ? `editou "${escapeHtml(data.timelineLastScheduleItem)}"` : 'atualizou um marco'} em ${escapeHtml(formatBRDateTime(data.timelineLastScheduleUpdate))}.</div></div>` : '';
 
@@ -14146,15 +14186,17 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="mtl-search"><input id="mtlSearchInput" placeholder="Buscar iniciativa…" value="${escapeAttr(macroTimelineSearch)}" oninput="setMacroTimelineSearch(this.value)" /></div>
         </div>
         <div class="mtl-table">
-          <div class="mtl-thead">
-            <div>Squad</div><div>Iniciativa</div>
-            <div class="mtl-axis">${ticks.map(t => `<span class="mtl-month" style="left:${t.pct}%">${t.label}</span>`).join('')}</div>
-            <div style="text-align:right">Status</div>
-          </div>
-          <div class="mtl-tbody">
+          <div class="mtl-tablewrap">
             <div class="mtl-today" style="left:${todayPct}%"></div>
             <div class="mtl-today-tag" style="left:${todayPct}%">Hoje</div>
-            ${rowsHtml || `<div class="mtl-empty">Nenhuma iniciativa encontrada com esses filtros.</div>`}
+            <div class="mtl-thead">
+              <div>Squad</div><div>Iniciativa</div>
+              <div class="mtl-axis">${ticks.map(t => `<span class="mtl-month" style="left:${t.pct}%">${t.label}</span>`).join('')}</div>
+              <div style="text-align:right">Status</div>
+            </div>
+            <div class="mtl-tbody">
+              ${rowsHtml || `<div class="mtl-empty">Nenhuma iniciativa encontrada com esses filtros.</div>`}
+            </div>
           </div>
         </div>`;
 
@@ -14171,13 +14213,12 @@ Recomendação PMO: ${d.recommendation}`;
       const bodyMap = { geral: geralBody, init: initBody, late: lateBody };
 
       root.innerHTML = `
-        <div id="uxV6TimelineBackdrop" class="ux-v6-report-backdrop active" onclick="closeMacroTimelinePanel()"></div>
-        <div class="ux-v6-report-modal active" style="width:min(1180px, 96vw)">
-          <div class="ux-v6-report-head">
+        <div class="mtl-page">
+          <div class="mtl-page-head">
             <div><h2>Timeline Executiva</h2><p>Visão macro por Squad e iniciativa, gerada automaticamente a partir dos 6 marcos padrão do Cronograma. Recalculada a cada abertura.</p></div>
-            <div class="ux-v6-report-actions"><button type="button" class="ux-v6-report-btn" onclick="closeMacroTimelinePanel()">Fechar</button></div>
+            <button type="button" class="ux-v6-report-btn" onclick="closeMacroTimelinePanel()">Fechar</button>
           </div>
-          <div class="ux-v6-report-body" style="padding:16px 20px 20px">
+          <div class="mtl-page-body">
             <div class="mtl-toggle">
               <button type="button" class="${macroTimelineViewMode === 'geral' ? 'active' : ''}" onclick="setMacroTimelineView('geral')">Visão geral</button>
               <button type="button" class="${macroTimelineViewMode === 'init' ? 'active' : ''}" onclick="setMacroTimelineView('init')">Por iniciativa</button>
