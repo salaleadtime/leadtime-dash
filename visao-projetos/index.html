@@ -6330,7 +6330,11 @@
         try{ renderAll(); }catch(e){}
       });
       gasLoadVpData('vpDeliveries', function(err, serverData){
-        if(err || !Array.isArray(serverData)) return;
+        if(err || !Array.isArray(serverData) || !serverData.length) return;
+        // Se o usuário já salvou algo localmente (deliveriesEverSaved) e o array local está
+        // vazio, isso significa que ele excluiu todas as entregas intencionalmente —
+        // não sobrescrever com dados antigos do servidor.
+        if(deliveriesEverSaved && deliveries.length === 0) return;
         deliveries = serverData;
         storageSet('jiraDashboardDeliveries', JSON.stringify(deliveries));
         try{ renderAll(); }catch(e){}
@@ -6348,21 +6352,6 @@
     let editingOperationalKey = null;
 
     if (!Array.isArray(deliveries)) deliveries = [];
-    if (!deliveries.length && !deliveriesEverSaved) {
-      deliveries = [
-        {
-          name:'Projeto OBF',
-          squad:'Expresso-1',
-          date:'2026-06-22',
-          owner:'A definir',
-          stories:[],
-          status:'Planejada',
-          changeDate:'',
-          note:'Entrega final cadastrada como exemplo. Vincule as histórias por chave ou ajuste conforme necessidade da gestão.'
-        }
-      ];
-      saveDeliveries();
-    }
 
     const $ = (id) => document.getElementById(id);
     const normalize = (v) => String(v ?? '').trim();
