@@ -5709,14 +5709,33 @@
       box-shadow: 0 12px 28px rgba(15, 23, 42, .05);
       padding: 16px 17px;
     }
-    .ux-v6-risk-banner {
-      display:flex; align-items:center; gap:12px;
-      background:linear-gradient(135deg,#fff5f5,#fff8f5);
-      border:1.5px solid #f3c6c1; border-radius:14px;
-      padding:12px 16px; transition:box-shadow .15s;
-    }
-    .ux-v6-risk-banner:hover { box-shadow:0 4px 16px rgba(191,24,48,.12); }
-    .ux-v6-risk-icon { font-size:18px; flex:none; }
+    /* ── card de riscos do roadmap (tela inicial) ── */
+    .ux-v6-risk-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .ux-v6-risk-card-title { font-size:13px; font-weight:800; color:#bf1830; display:flex; align-items:center; gap:6px; }
+    .ux-v6-risk-mini-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:12px; }
+    .ux-v6-risk-mini-kpi { background:#fff5f5; border:1px solid #f5ddd8; border-radius:10px; padding:8px 6px; text-align:center; }
+    .ux-v6-risk-mini-kpi .v { font-size:18px; font-weight:800; color:#bf1830; line-height:1; display:block; }
+    .ux-v6-risk-mini-kpi .l { font-size:9px; color:var(--muted); display:block; margin-top:3px; }
+    .ux-v6-risk-mini-kpi.ok .v { color:var(--green); background:none; }
+    .ux-v6-risk-mini-kpi.ok { background:#f2fbf6; border-color:#c8ead6; }
+    .ux-v6-risk-mini-kpi.warn .v { color:#b07020; } .ux-v6-risk-mini-kpi.warn { background:#fffaf0; border-color:#f3e0b0; }
+    .ux-v6-risk-init-list { display:flex; flex-direction:column; gap:0; }
+    .ux-v6-risk-init-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--line); font-size:12px; }
+    .ux-v6-risk-init-row:first-child { border-top:none; }
+    .ux-v6-risk-squad-dot { width:8px; height:8px; border-radius:50%; flex:none; }
+    .ux-v6-risk-days { font-size:10px; font-weight:800; padding:2px 7px; border-radius:99px; white-space:nowrap; flex:none; }
+    .ux-v6-risk-days.crit { background:#bf1830; color:#fff; }
+    .ux-v6-risk-days.high { background:#e07030; color:#fff; }
+    .ux-v6-risk-days.med  { background:#d4a030; color:#fff; }
+    .ux-v6-risk-days.miss { background:#888; color:#fff; }
+    .ux-v6-risk-next { margin-top:10px; padding:8px 10px; background:#f7f9ff; border-radius:8px; font-size:11px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+    /* jira kpi color */
+    .mtl-kpi.jira-kpi .v { color:#6bb5e8; }
+    /* jira tab body */
+    .mtl-jira-total { padding:10px 16px; background:var(--panel-2); border-radius:10px; margin-bottom:12px; font-size:12.5px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:8px; }
+    .mtl-jira-total span { font-size:20px; font-weight:800; color:#2a7a96; }
+    .mtl-jira-bar { height:6px; border-radius:99px; background:#2a7a96; display:inline-block; vertical-align:middle; }
+    .ux-v6-risk-banner { display:none; } /* old banner replaced by card */
 
     .ux-v6-side-title {
       display: flex;
@@ -14375,6 +14394,7 @@ Recomendação PMO: ${d.recommendation}`;
       const ticks = macroTimelineMonthTicks(axis);
       const todayPct = macroTimelineTodayPct(axis);
       const lateAll = collectLateScheduleMarcos(allProjects);
+      const totalJiraCount = allProjects.reduce((n, p) => n + (scheduleJiraCount(p) || 0), 0);
 
       const squadsPresent = sortedSquadsList().filter(sq => squadProjects(sq.id).length > 0);
       const squadChips = [`<button type="button" class="mtl-chip ${macroTimelineSquadFilter === 'all' ? 'active' : ''}" onclick="setMacroTimelineSquadFilter('all')">Todas as squads</button>`]
@@ -14469,7 +14489,43 @@ Recomendação PMO: ${d.recommendation}`;
         <div class="mtl-table"><div class="mtl-thead" style="grid-template-columns:132px 1fr 130px 100px"><div>Squad</div><div>Iniciativa / marco</div><div>Atraso</div><div></div></div>
         <div>${lateAll.length ? lateAll.map(lateScheduleRowHtml).join('') : `<div class="mtl-empty">Nenhum marco de Cronograma com prazo vencido.</div>`}</div></div>`;
 
-      const bodyMap = { geral: geralBody, init: initBody, late: lateBody };
+      // ── Histórias Jira view ────────────────────────────────────────────────
+      const jiraSorted = [...allProjects]
+        .map(p => ({ p, count: scheduleJiraCount(p) || 0 }))
+        .sort((a, b) => b.count - a.count);
+      const maxJira = Math.max(...jiraSorted.map(r => r.count), 1);
+      const jiraRows = jiraSorted.map((r, i) => {
+        const sq = squadForProject(r.p);
+        const name = [initiativeNumber(r.p), displayProjectTitle(r.p)].filter(Boolean).join(' · ') || 'Sem nome';
+        const st = macroTimelineProjectStatus(r.p);
+        const stLabel = { late: 'Atrasado', attn: 'Atenção', ok: 'No prazo' }[st] || 'Planejado';
+        const stColor = { late: 'var(--red)', attn: 'var(--amber)', ok: 'var(--green)' }[st] || 'var(--muted)';
+        const barWidth = r.count > 0 ? Math.max(4, Math.round((r.count / maxJira) * 100)) : 0;
+        const borderTop = i === 0 ? 'none' : '1px solid var(--line)';
+        return `<div style="display:grid;grid-template-columns:120px 1fr 120px 90px;gap:12px;align-items:center;padding:10px 16px;border-top:${borderTop};font-size:12.5px">
+          <div style="font-size:11px;color:${squadColorFor(sq?.name||'')};font-weight:700">${escapeHtml(sq?.name||'Sem squad')}</div>
+          <div style="font-weight:600">${escapeHtml(name)}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="mtl-jira-bar" style="width:${barWidth}px;max-width:70px"></span>
+            <strong style="font-size:13px;color:#2a7a96">${r.count}</strong>
+          </div>
+          <div style="font-size:11.5px;font-weight:700;color:${stColor};text-align:right">${stLabel}</div>
+        </div>`;
+      }).join('');
+
+      const jiraBody = `
+        <div class="mtl-jira-total">
+          📋 Total de histórias no Jira: <span>${totalJiraCount}</span>
+          <span style="font-size:12px;color:var(--muted);font-weight:400">em ${allProjects.length} iniciativas · média ${allProjects.length ? Math.round(totalJiraCount / allProjects.length) : 0} por iniciativa</span>
+        </div>
+        <div class="mtl-table">
+          <div class="mtl-thead" style="grid-template-columns:120px 1fr 120px 90px">
+            <div>Squad</div><div>Iniciativa</div><div>Histórias Jira</div><div style="text-align:right">Status</div>
+          </div>
+          <div>${jiraRows || `<div class="mtl-empty">Nenhuma iniciativa cadastrada.</div>`}</div>
+        </div>`;
+
+      const bodyMap = { geral: geralBody, init: initBody, late: lateBody, jira: jiraBody };
 
       root.innerHTML = `
         <div class="mtl-page">
@@ -14487,6 +14543,7 @@ Recomendação PMO: ${d.recommendation}`;
                 <div class="mtl-kpi risk" title="Iniciativas com marco atrasado ou sem data"><span class="v">${riskProjects.length}</span><span class="l">Em risco</span></div>
                 <div class="mtl-kpi late" title="Marcos de cronograma com prazo vencido"><span class="v">${lateAll.length}</span><span class="l">Marcos vencidos</span></div>
                 <div class="mtl-kpi ok-kpi" title="Iniciativas com todos os marcos concluídos"><span class="v">${doneProjects.length}</span><span class="l">Concluídas</span></div>
+                <div class="mtl-kpi jira-kpi" title="Total de histórias no Jira — clique para ver detalhes" onclick="setMacroTimelineView('jira')" style="cursor:pointer"><span class="v">${totalJiraCount}</span><span class="l">Hist. Jira</span></div>
               </div>
               <button type="button" class="mtl-head-close" onclick="closeMacroTimelinePanel()">✕ Fechar</button>
             </div>
@@ -14494,6 +14551,7 @@ Recomendação PMO: ${d.recommendation}`;
               <span>📅 Recalculado a cada abertura</span>
               ${lateAll.length ? `<span style="color:#ff8080">⚠ ${lateAll.length} marco${lateAll.length > 1 ? 's' : ''} vencido${lateAll.length > 1 ? 's' : ''}</span>` : '<span style="color:#6eddb4">✓ Sem atrasos</span>'}
               ${riskProjects.length ? `<span style="color:#ff8080">🔴 ${riskProjects.length} iniciativa${riskProjects.length > 1 ? 's' : ''} em risco</span>` : ''}
+              ${totalJiraCount ? `<span style="color:#6bb5e8">📋 ${totalJiraCount} histórias Jira</span>` : ''}
             </div>
           </div>
           <div class="mtl-page-body">
@@ -14501,6 +14559,7 @@ Recomendação PMO: ${d.recommendation}`;
               <button type="button" class="${macroTimelineViewMode === 'geral' ? 'active' : ''}" onclick="setMacroTimelineView('geral')">Visão geral</button>
               <button type="button" class="${macroTimelineViewMode === 'init' ? 'active' : ''}" onclick="setMacroTimelineView('init')">Por iniciativa</button>
               <button type="button" class="${macroTimelineViewMode === 'late' ? 'active' : ''}" onclick="setMacroTimelineView('late')">Riscos / Atrasos ${(riskProjects.length || lateAll.length) ? `<span class="mtl-badge">${Math.max(riskProjects.length, lateAll.length)}</span>` : ''}</button>
+              <button type="button" class="${macroTimelineViewMode === 'jira' ? 'active' : ''}" onclick="setMacroTimelineView('jira')">Histórias Jira ${totalJiraCount ? `<span class="mtl-badge" style="background:#2a7a96">${totalJiraCount}</span>` : ''}</button>
             </div>
             ${lastUpdate}
             ${bodyMap[macroTimelineViewMode] || ''}
@@ -16765,23 +16824,84 @@ Recomendação PMO: ${d.recommendation}`;
         ? lateScheduleItems.slice(0, 5).map(item => lateScheduleRowHtml(item)).join('')
         : `<div class="ux-v6-attention-empty">Nenhum marco de Cronograma atrasado.</div>`;
 
-      // Iniciativas em risco (marco vencido ou sem data) para evidenciar na tela principal
+      // ── Card de Riscos do Roadmap (tela inicial) ─────────────────────────────
       const _today = parseISODate(fmtDate(new Date()));
-      const riskInitiatives = allProjects.filter(p => {
+      const DAY_MS = 1000 * 60 * 60 * 24;
+
+      // Enrich each at-risk project with maxDaysLate and missedCount
+      const riskInitiatives = allProjects.map(p => {
         const di = ensureBaseSchedule(p).filter(s => !s.jira);
-        return di.some(s => { const e = parseISODate(s.end); return !scheduleCompleted(s) && e && _today && e < _today; })
-            || di.some(s => !s.start && !s.end);
-      });
-      const riskBannerHtml = riskInitiatives.length
-        ? `<div class="ux-v6-risk-banner" onclick="openMacroTimelinePanel();setMacroTimelineView('late')" title="Ver riscos no Roadmap" style="cursor:pointer">
-            <span class="ux-v6-risk-icon">🔴</span>
-            <div>
-              <strong>${riskInitiatives.length} iniciativa${riskInitiatives.length > 1 ? 's' : ''} com risco no Roadmap</strong>
-              <span style="font-size:11px;color:var(--muted);display:block;margin-top:2px">${riskInitiatives.slice(0,3).map(p => escapeHtml([initiativeNumber(p), displayProjectTitle(p)].filter(Boolean).join(' · ') || 'Sem nome')).join(' · ')}</span>
-            </div>
-            <span style="font-size:11px;font-weight:700;color:var(--primary);white-space:nowrap">Ver Roadmap →</span>
-          </div>`
+        const lateItems = di.filter(s => { const e = parseISODate(s.end); return !scheduleCompleted(s) && e && _today && e < _today; });
+        const missingItems = di.filter(s => !s.start && !s.end);
+        const maxDays = lateItems.reduce((m, s) => { const e = parseISODate(s.end); return e ? Math.max(m, Math.round((_today - e) / DAY_MS)) : m; }, 0);
+        const worstMarco = lateItems.sort((a, b) => (parseISODate(a.end) - parseISODate(b.end)))[0];
+        return { p, lateItems, missingItems, maxDays, worstMarco };
+      }).filter(r => r.lateItems.length > 0 || r.missingItems.length > 0)
+        .sort((a, b) => b.maxDays - a.maxDays);
+
+      // Next upcoming deadline at risk (not yet overdue, due in ≤14 days)
+      const upcomingRisk = allProjects.flatMap(p =>
+        ensureBaseSchedule(p).filter(s => !s.jira && !scheduleCompleted(s) && s.end).map(s => {
+          const e = parseISODate(s.end);
+          if (!e || !_today || e < _today) return null;
+          const daysLeft = Math.round((e - _today) / DAY_MS);
+          return daysLeft <= 14 ? { p, s, daysLeft } : null;
+        }).filter(Boolean)
+      ).sort((a, b) => a.daysLeft - b.daysLeft)[0];
+
+      // Health %
+      const totalMarcos = allProjects.reduce((n, p) => n + ensureBaseSchedule(p).filter(s => !s.jira).length, 0);
+      const lateMarcos  = allProjects.reduce((n, p) => {
+        return n + ensureBaseSchedule(p).filter(s => { const e = parseISODate(s.end); return !s.jira && !scheduleCompleted(s) && e && _today && e < _today; }).length;
+      }, 0);
+      const roadmapHealthPct = totalMarcos > 0 ? Math.round(((totalMarcos - lateMarcos) / totalMarcos) * 100) : 100;
+
+      // Total jira stories
+      const totalJiraAll = allProjects.reduce((n, p) => n + (scheduleJiraCount(p) || 0), 0);
+
+      // Day-urgency class helper
+      function daysCls(d) { return d === 0 ? 'miss' : d >= 30 ? 'crit' : d >= 14 ? 'high' : 'med'; }
+
+      const riskInitRows = riskInitiatives.slice(0, 4).map(r => {
+        const sq = squadForProject(r.p);
+        const sqColor = squadColorFor(sq?.name || '');
+        const name = [initiativeNumber(r.p), displayProjectTitle(r.p)].filter(Boolean).join(' · ') || 'Sem nome';
+        const daysBadge = r.maxDays > 0
+          ? `<span class="ux-v6-risk-days ${daysCls(r.maxDays)}">${r.maxDays}d</span>`
+          : `<span class="ux-v6-risk-days miss">Sem data</span>`;
+        const worstName = r.worstMarco?.item ? ` · ${escapeHtml(r.worstMarco.item)}` : '';
+        return `<div class="ux-v6-risk-init-row">
+          <div class="ux-v6-risk-squad-dot" style="background:${sqColor}"></div>
+          <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</div><div style="font-size:10.5px;color:var(--muted)">${escapeHtml(sq?.name || 'Sem squad')}${worstName}</div></div>
+          ${daysBadge}
+          <button type="button" class="mini-text-btn" onclick="openMacroTimelinePanel();goToMacroTimelineInitiative('${escapeAttr(r.p.id)}')">→</button>
+        </div>`;
+      }).join('');
+
+      const upcomingHtml = upcomingRisk
+        ? `<div class="ux-v6-risk-next">⏰ <strong>Próximo prazo:</strong> "${escapeHtml(upcomingRisk.s.item)}" em ${upcomingRisk.daysLeft} dia${upcomingRisk.daysLeft !== 1 ? 's' : ''} — ${escapeHtml(displayProjectTitle(upcomingRisk.p) || 'Sem nome')}</div>`
         : '';
+
+      const riskBannerHtml = `<section class="ux-v6-side-card" style="border-color:#f3c6c1;background:linear-gradient(180deg,#fffbfb,#fff)">
+        <div class="ux-v6-risk-card-header">
+          <div class="ux-v6-risk-card-title">🔴 Riscos do Roadmap</div>
+          <span class="ux-v6-side-link" onclick="openMacroTimelinePanel();setMacroTimelineView('late')" style="cursor:pointer">Ver Roadmap →</span>
+        </div>
+        <div class="ux-v6-risk-mini-kpis">
+          <div class="ux-v6-risk-mini-kpi${riskInitiatives.length === 0 ? ' ok' : ''}">
+            <span class="v">${riskInitiatives.length}</span><span class="l">Em risco</span></div>
+          <div class="ux-v6-risk-mini-kpi${lateMarcos === 0 ? ' ok' : ' warn'}">
+            <span class="v">${lateMarcos}</span><span class="l">Marcos vencidos</span></div>
+          <div class="ux-v6-risk-mini-kpi${roadmapHealthPct >= 80 ? ' ok' : roadmapHealthPct >= 60 ? ' warn' : ''}">
+            <span class="v">${roadmapHealthPct}%</span><span class="l">Saúde</span></div>
+        </div>
+        ${riskInitiatives.length > 0
+          ? `<div class="ux-v6-risk-init-list">${riskInitRows}</div>
+             ${riskInitiatives.length > 4 ? `<div style="text-align:center;padding-top:8px;font-size:11px;color:var(--muted)">+${riskInitiatives.length - 4} iniciativas com risco</div>` : ''}
+             ${upcomingHtml}`
+          : `<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--green)">✓ Nenhuma iniciativa em risco no momento</div>`
+        }
+      </section>`;
 
       const currentDiscoveryMonthLabel = formatMonthYearPT(new Date());
       const nextDiscoveriesHtml = currentMonthDiscoveries(5).map(project => {
