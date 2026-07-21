@@ -80,6 +80,24 @@ function doGet(e) {
   return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, data: [] }, callback);
 }
 
+// LOCK_TIMEOUT_MS: tempo máximo esperando a vez de escrever. writeJsonToSheet_ faz
+// clearContents() + overwrite sem merge (só saveBacklog mescla via mergeSnaps_); sem lock,
+// duas gravações concorrentes (dois usuários salvando ao mesmo tempo) podem se sobrepor e
+// uma apaga silenciosamente o que a outra acabou de salvar. withLock_ serializa essas
+// gravações por planilha, então a segunda espera a primeira terminar em vez de colidir.
+var LOCK_TIMEOUT_MS = 10000;
+
+function withLock_(fn) {
+  var lock = LockService.getScriptLock();
+  var locked = lock.tryLock(LOCK_TIMEOUT_MS);
+  if (!locked) throw new Error('Não foi possível obter lock de escrita (outra gravação em andamento). Tente novamente.');
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doPost(e) {
   try {
     var action = getParam_(e, 'action');
@@ -89,17 +107,20 @@ function doPost(e) {
       var incoming = [];
       try { incoming = JSON.parse(payload || '[]'); } catch (err) { incoming = []; }
       if (!Array.isArray(incoming)) incoming = [];
-      var before = readBacklogStore_();
-      var merged = mergeSnaps_(before, incoming);
-      writeBacklogStore_(merged);
+      var result = withLock_(function() {
+        var before = readBacklogStore_();
+        var merged = mergeSnaps_(before, incoming);
+        writeBacklogStore_(merged);
+        return { before: before, merged: merged };
+      });
       return jsonOut_({
         ok: true,
         version: BACKLOG_SCRIPT_VERSION,
-        beforeSnapshots: before.length,
+        beforeSnapshots: result.before.length,
         incomingSnapshots: incoming.length,
-        savedSnapshots: merged.length,
-        savedMaxStories: maxStoryCount_(merged),
-        currentStories: currentSnap_(merged) ? storyCount_(currentSnap_(merged)) : 0
+        savedSnapshots: result.merged.length,
+        savedMaxStories: maxStoryCount_(result.merged),
+        currentStories: currentSnap_(result.merged) ? storyCount_(currentSnap_(result.merged)) : 0
       });
     }
 
@@ -109,10 +130,10 @@ function doPost(e) {
         var parsedStories = JSON.parse(payloadStories);
         if (!Array.isArray(parsedStories)) parsedStories = [];
         if (parsedStories.length === 0) {
-          var existing = readJsonFromSheet_(STORIES_SHEET, []);
+          var existing = withLock_(function() { return readJsonFromSheet_(STORIES_SHEET, []); });
           return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, skipped: 'payload vazio', savedStories: existing.length });
         }
-        writeJsonToSheet_(STORIES_SHEET, parsedStories);
+        withLock_(function() { writeJsonToSheet_(STORIES_SHEET, parsedStories); });
         return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, savedStories: parsedStories.length });
       } catch (err) {
         return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'payload inválido: ' + String(err && err.message || err) });
@@ -128,7 +149,7 @@ function doPost(e) {
       var vpPayload = getParam_(e, 'payload') || 'null';
       try {
         var vpData = JSON.parse(vpPayload);
-        writeJsonToSheet_(vpSheetName, vpData);
+        withLock_(function() { writeJsonToSheet_(vpSheetName, vpData); });
         return jsonOut_({ ok: true, key: vpKey });
       } catch (vpErr) {
         return jsonOut_({ ok: false, error: 'payload inválido: ' + String(vpErr && vpErr.message || vpErr) });
@@ -185,6 +206,10 @@ function readJsonFromSheet_(sheetName, fallback) {
     if (!json) return fallback;
     return JSON.parse(json);
   } catch (err) {
+    // Payload corrompido cai no fallback silenciosamente do ponto de vista do usuário
+    // (não quebra a resposta), mas fica registrado no Executions do Apps Script em vez
+    // de sumir sem rastro — antes não havia log nenhum aqui.
+    Logger.log('readJsonFromSheet_ falhou para ' + sheetName + ': ' + (err && err.stack || err));
     return fallback;
   }
 }

@@ -11739,22 +11739,26 @@
     // dados no app: continuam preenchidos manualmente pelo RTE. Os demais são calculados
     // a partir do Timeline/RAID, então nunca ficam com informação desatualizada em relação
     // a essas abas (ver .checklistDerivedSource abaixo).
-    const CHECKLIST_MANUAL_IDS = ['stakeholders', 'problem', 'scope'];
+    // 'tobe', 'stories' e 'estimates' entraram aqui porque não têm item equivalente na
+    // Timeline real (project.timelineItems): antes liam project.phases, que é dado morto
+    // (updatePhase() não tem mais call site), então ficavam travados em "Pendente" para
+    // sempre e nem podiam ser corrigidos na UI (renderChecklist marca item derivado como
+    // não editável). 'asis' e 'gono' têm par exato na Timeline (ti-asis, ti-ready) e
+    // continuam automáticos.
+    const CHECKLIST_MANUAL_IDS = ['stakeholders', 'problem', 'scope', 'tobe', 'stories', 'estimates'];
 
     function checklistDerivedSource(id) {
-      return ({ asis: 'Timeline', tobe: 'Timeline', dependencies: 'RAID', risks: 'RAID', stories: 'Timeline', estimates: 'Timeline', gono: 'Timeline' })[id] || null;
+      return ({ asis: 'Timeline', dependencies: 'RAID', risks: 'RAID', gono: 'Timeline' })[id] || null;
     }
 
     function checklistDerivedStatus(project, id) {
       const raids = project.raids || {};
+      const items = ensureTimelineItems(project);
       switch (id) {
-        case 'asis': return phaseStatus(project, 'asis') === 'done';
-        case 'tobe': return phaseStatus(project, 'tobe') === 'done';
+        case 'asis': return items.find(it => it.id === 'ti-asis')?.status === 'done';
         case 'dependencies': return (raids.dependencies || []).length > 0;
         case 'risks': return (raids.risks || []).length + (raids.issues || []).length > 0;
-        case 'stories': return phaseStatus(project, 'stories') === 'done';
-        case 'estimates': return phaseStatus(project, 'estimates') === 'done';
-        case 'gono': return phaseStatus(project, 'go') === 'done';
+        case 'gono': return items.find(it => it.id === 'ti-ready')?.status === 'done';
         default: return false;
       }
     }
@@ -11857,9 +11861,13 @@
     }
 
     function currentDiscoveryPhase(project) {
-      const phases = project.phases || [];
-      const active = phases.find(p => p.status === 'progress') || phases.find(p => p.status === 'blocked') || phases.find(p => p.status === 'todo') || phases[phases.length - 1];
-      return active?.title || 'Não definida';
+      // Deriva da Timeline real (project.timelineItems), não de project.phases: esse
+      // array não recebe mais atualização da UI (updatePhase() ficou órfão), então a
+      // fase "atual" ficava travada na etapa do seed em vez de refletir o progresso real.
+      const items = ensureTimelineItems(project);
+      const stage = TIMELINE_STAGES.find(st => items.some(it => it.stageId === st.id && it.status !== 'done'))
+        || TIMELINE_STAGES[TIMELINE_STAGES.length - 1];
+      return stage.title;
     }
 
     function statusColor(status) {

@@ -2119,11 +2119,23 @@ tr:nth-child(even):hover td,
 
 <script>
 // ═══════════════════════════════════════
+// STORAGE (wrapper seguro)
+// ═══════════════════════════════════════
+// localStorage pode lançar exceção (modo privado, quota cheia, cookies bloqueados).
+// Todas as leituras/escritas do dashboard passam por aqui em vez de chamar
+// localStorage.getItem/setItem/removeItem/clear direto, para nunca quebrar a
+// renderização por causa de storage indisponível — só perde a persistência local.
+function storageGet(key){ try{ return localStorage.getItem(key); }catch(e){ console.warn('storageGet falhou para', key, e); return null; } }
+function storageSet(key, value){ try{ localStorage.setItem(key, value); return true; }catch(e){ console.warn('storageSet falhou para', key, e); return false; } }
+function storageRemove(key){ try{ localStorage.removeItem(key); return true; }catch(e){ console.warn('storageRemove falhou para', key, e); return false; } }
+function storageClear(){ try{ localStorage.clear(); return true; }catch(e){ console.warn('storageClear falhou', e); return false; } }
+
+// ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
 // Meta de LT configurável no painel Admin (sala_meta_dias); padrão 62 dias.
 var META=(function(){
-  try{ var v=parseInt(localStorage.getItem('sala_meta_dias'),10); if(v>=1&&v<=365) return v; }catch(e){}
+  try{ var v=parseInt(storageGet('sala_meta_dias'),10); if(v>=1&&v<=365) return v; }catch(e){}
   return 62;
 })();
 var allData=[], pg=1, PG=12, sortLT=null; // null | 'desc' | 'asc'
@@ -2146,11 +2158,11 @@ var TAB_KEY='leadtime_sala_active_tab';
 
 // Persiste a aba ativa no localStorage
 function saveTab(id){
-  try{ localStorage.setItem(TAB_KEY, id); }catch(e){}
+  try{ storageSet(TAB_KEY, id); }catch(e){}
 }
 // Recupera a aba salva
 function loadTab(){
-  try{ return localStorage.getItem(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
+  try{ return storageGet(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
   return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal') ? id : 'ep';
@@ -2192,7 +2204,7 @@ var _sheetsLastSuccessAt = 0;   // última vez que o Sheets respondeu com dados 
 var _salaImportDateTime = null;
 var IMPORT_SALA_KEY = 'data_ultima_importacao_sala';
 (function(){
-  var salvo = localStorage.getItem(IMPORT_SALA_KEY);
+  var salvo = storageGet(IMPORT_SALA_KEY);
   if(!salvo) return;
   var d = new Date(salvo);
   if(!isNaN(d.getTime())) _salaImportDateTime = d;
@@ -2229,7 +2241,7 @@ var JB_API='https://api.jsonbin.io/v3';
 
 function jbLoadConfig(){
   try{
-    var c=JSON.parse(localStorage.getItem(JB_CONFIG_KEY)||'{}');
+    var c=JSON.parse(storageGet(JB_CONFIG_KEY)||'{}');
     if(c.key)   JB.key=c.key;
     if(c.binId) JB.binId=c.binId;
   }catch(e){}
@@ -2244,7 +2256,7 @@ function jbLoadConfig(){
   }
 }
 function jbSaveConfig(){
-  try{ localStorage.setItem(JB_CONFIG_KEY,JSON.stringify({key:JB.key,binId:JB.binId})); }catch(e){}
+  try{ storageSet(JB_CONFIG_KEY,JSON.stringify({key:JB.key,binId:JB.binId})); }catch(e){}
   // Coloca o bin ID no hash da URL para que quem receber o link já sincronize automaticamente
   if(JB.binId){
     try{ history.replaceState(null,'',location.pathname+'#jb='+encodeURIComponent(JB.binId)); }catch(e){}
@@ -2671,9 +2683,9 @@ function saveLocal(){
     // entrado por versões antigas ou pela nuvem.
     allData=allData.filter(function(r){ return r&&r.id&&isValidEpicId(r.id); });
     normalizeWorkflowAll();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-    localStorage.setItem(STORAGE_META, JSON.stringify({savedAt:new Date().toISOString()}));
-    localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION);
+    storageSet(STORAGE_KEY, JSON.stringify(allData));
+    storageSet(STORAGE_META, JSON.stringify({savedAt:new Date().toISOString()}));
+    storageSet(STORAGE_VERSION_KEY, SEED_VERSION);
     showSavedBadge();
     // Agenda sincronização automática com a nuvem (10s debounce)
     jbAutoSave();
@@ -2687,7 +2699,7 @@ function saveLocal(){
 }
 function loadLocal(){
   try{
-    var raw=localStorage.getItem(STORAGE_KEY);
+    var raw=storageGet(STORAGE_KEY);
     if(!raw) return null;
     var data=JSON.parse(raw);
     if(Array.isArray(data)) data=data.filter(function(r){ return r&&r.id&&isValidEpicId(r.id); });
@@ -2699,8 +2711,8 @@ function loadLocal(){
 function saveResumoCache(rows){
   try{
     var rCache={}, sCache={};
-    try{ rCache=JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){}
-    try{ sCache=JSON.parse(localStorage.getItem(SQUAD_KEY)||'{}'); }catch(e){}
+    try{ rCache=JSON.parse(storageGet(RESUMO_KEY)||'{}'); }catch(e){}
+    try{ sCache=JSON.parse(storageGet(SQUAD_KEY)||'{}'); }catch(e){}
     (rows||[]).forEach(function(r){
       if(r&&r.id){
         // Sempre sobrescreve quando o import traz um valor: o Jira é a fonte correta
@@ -2709,31 +2721,31 @@ function saveResumoCache(rows){
         if(r.squad)  sCache[r.id]=r.squad;
       }
     });
-    localStorage.setItem(RESUMO_KEY, JSON.stringify(rCache));
-    localStorage.setItem(SQUAD_KEY,  JSON.stringify(sCache));
+    storageSet(RESUMO_KEY, JSON.stringify(rCache));
+    storageSet(SQUAD_KEY,  JSON.stringify(sCache));
   }catch(e){
     console.error('saveResumoCache falhou:', e);
   }
 }
 function loadResumoCache(){
-  try{ return JSON.parse(localStorage.getItem(RESUMO_KEY)||'{}'); }catch(e){ return {}; }
+  try{ return JSON.parse(storageGet(RESUMO_KEY)||'{}'); }catch(e){ return {}; }
 }
 function loadSquadCache(){
-  try{ return JSON.parse(localStorage.getItem(SQUAD_KEY)||'{}'); }catch(e){ return {}; }
+  try{ return JSON.parse(storageGet(SQUAD_KEY)||'{}'); }catch(e){ return {}; }
 }
 
 // ── Fila de escritas pendentes (motor de sincronização) ─────────────────────
 function loadPending(){
-  try{ return JSON.parse(localStorage.getItem(PENDING_KEY)||'{}')||{}; }catch(e){ return {}; }
+  try{ return JSON.parse(storageGet(PENDING_KEY)||'{}')||{}; }catch(e){ return {}; }
 }
 function savePending(p){
-  try{ localStorage.setItem(PENDING_KEY, JSON.stringify(p||{})); }catch(e){}
+  try{ storageSet(PENDING_KEY, JSON.stringify(p||{})); }catch(e){}
 }
 function loadDeletedWarned(){
-  try{ return JSON.parse(localStorage.getItem(DELETED_WARN_KEY)||'{}')||{}; }catch(e){ return {}; }
+  try{ return JSON.parse(storageGet(DELETED_WARN_KEY)||'{}')||{}; }catch(e){ return {}; }
 }
 function saveDeletedWarned(m){
-  try{ localStorage.setItem(DELETED_WARN_KEY, JSON.stringify(m||{})); }catch(e){}
+  try{ storageSet(DELETED_WARN_KEY, JSON.stringify(m||{})); }catch(e){}
 }
 // Registra os campos editáveis de um épico como pendentes de confirmação.
 // Chamado em TODA edição local antes de enviar ao Sheets.
@@ -2900,7 +2912,7 @@ function syncMetabar(){
 }
 function registrarImportacaoSala(){
   _salaImportDateTime = new Date();
-  localStorage.setItem(IMPORT_SALA_KEY, _salaImportDateTime.toISOString());
+  storageSet(IMPORT_SALA_KEY, _salaImportDateTime.toISOString());
   updateSyncLblImportacao();
 }
 function updateSyncLblImportacao(){
@@ -3625,11 +3637,11 @@ function renderTbl(){
 // ═══════════════════════════════════════
 function logFimChange(epicId,fimDe,fimPara,origem){
   var log=[];
-  try{ log=JSON.parse(localStorage.getItem(FIM_LOG_KEY)||'[]'); }catch(e){}
+  try{ log=JSON.parse(storageGet(FIM_LOG_KEY)||'[]'); }catch(e){}
   if(!Array.isArray(log)) log=[];
   log.push({ts:new Date().toISOString(),id:epicId,de:fimDe||'',para:fimPara||'',origem:origem});
   if(log.length>300) log=log.slice(-300);
-  try{ localStorage.setItem(FIM_LOG_KEY,JSON.stringify(log)); }catch(e){}
+  try{ storageSet(FIM_LOG_KEY,JSON.stringify(log)); }catch(e){}
   // Atualizar badge do botão de histórico
   var btn=$id('histBtn');
   if(btn&&(origem==='REVERTIDO_UI'||origem==='REVERTIDO_SHEETS'||origem==='DELETADO_SHEETS')){
@@ -3650,7 +3662,7 @@ function closeHistorico(){ $id('histOv').classList.remove('on'); }
 
 function histLimpar(){
   if(!confirm('Apagar o histórico local? Essa ação não pode ser desfeita.')) return;
-  try{ localStorage.removeItem(FIM_LOG_KEY); }catch(e){}
+  try{ storageRemove(FIM_LOG_KEY); }catch(e){}
   renderHistorico();
 }
 
@@ -3703,7 +3715,7 @@ function renderHistorico(){
   var sumEl=$id('histSummary');
   syncHistFiltUI();
   var log=[];
-  try{ log=JSON.parse(localStorage.getItem(FIM_LOG_KEY)||'[]'); }catch(e){}
+  try{ log=JSON.parse(storageGet(FIM_LOG_KEY)||'[]'); }catch(e){}
   if(!Array.isArray(log)) log=[];
   if(!log.length){
     if(sumEl) sumEl.innerHTML='';
@@ -4173,7 +4185,7 @@ document.querySelectorAll('.chip[data-f]').forEach(function(btn){
 function doEmergencyRecover(){
   try{
     // Limpa completamente o localStorage para forçar recarga do Google Sheets
-    localStorage.clear();
+    storageClear();
   }catch(e){}
   setSyncLabel('🔄 Recuperando dados…');
   var btn=$id('recoverBtn'); if(btn) btn.disabled=true;
@@ -4223,7 +4235,7 @@ function renderAll(tabToRestore){
   // Recuperação de emergência: se allData vazio, carrega SEED
   if(!allData.length && SEED && SEED.length){
     allData=SEED.map(makeRow);
-    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    try{ storageRemove(STORAGE_KEY); }catch(e){}
   }
   try{
     normalizeWorkflowAll();
@@ -4416,12 +4428,12 @@ function loadStoriesXlsx(file){
 
 // Salva/carrega estórias no localStorage e na nuvem compartilhada
 function saveStoriesLocal(){
-  try{ localStorage.setItem(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
+  try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
   gasSaveStories();
 }
 function loadStoriesLocal(){
   try{
-    var raw=localStorage.getItem(STORIES_KEY);
+    var raw=storageGet(STORIES_KEY);
     if(raw) allStories=JSON.parse(raw);
   }catch(e){}
 }
@@ -4451,7 +4463,7 @@ function loadEpicMetaFromCloud(cb){
 function saveEpicMetaToCloud(rows){
   if(!BK_GAS_URL || !rows || !rows.length) return;
   var meta = {};
-  try{ meta = JSON.parse(localStorage.getItem(RESUMO_KEY+'_meta')||'{}'); }catch(e){}
+  try{ meta = JSON.parse(storageGet(RESUMO_KEY+'_meta')||'{}'); }catch(e){}
   (rows||[]).forEach(function(r){
     if(r&&r.id){
       if(!meta[r.id]) meta[r.id]={};
@@ -4460,7 +4472,7 @@ function saveEpicMetaToCloud(rows){
     }
   });
   // Persiste localmente também para envio futuro caso a rede falhe
-  try{ localStorage.setItem(RESUMO_KEY+'_meta', JSON.stringify(meta)); }catch(e){}
+  try{ storageSet(RESUMO_KEY+'_meta', JSON.stringify(meta)); }catch(e){}
   fetch(BK_GAS_URL, {
     method:'POST', mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
@@ -4474,13 +4486,13 @@ function saveBacklogSnaps(){
     sortBacklogSnaps();
     backlogSnaps=backlogSnaps.slice(backlogSnaps.length-MAX_BACKLOG_SNAPS);
   }
-  try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+  try{ storageSet(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
   jbAutoSave();
   gasSaveBacklog();
 }
 function loadBacklogSnaps(){
   try{
-    var raw=localStorage.getItem(BACKLOG_KEY);
+    var raw=storageGet(BACKLOG_KEY);
     if(raw) backlogSnaps=JSON.parse(raw)||[];
   }catch(e){ backlogSnaps=[]; }
 }
@@ -4580,7 +4592,7 @@ function gasLoadBacklog(cb, _retries){
       var serverMax=maxBacklogStoryCount(json.backlog);
       mergeBacklog(json.backlog);
       sortBacklogSnaps();
-      try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+      try{ storageSet(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
       renderBacklogView();
       updateTabCounts();
       if(localMax>serverMax && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
@@ -4621,13 +4633,13 @@ function gasSaveBacklog(){
         if(serverMax<localMax){
           toast('⚠️ Servidor desatualizado','Servidor tem '+serverMax+' histórias; local tem '+localMax+'. Tentando reenviar…');
           mergeBacklog(json.backlog||[]);
-          try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+          try{ storageSet(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
           // Reenvia uma vez; _gasBacklogSaving já está false para permitir
           _gasBacklogSaving=false;
           setTimeout(function(){ gasSaveBacklog(); }, 1000);
         } else {
           mergeBacklog(json.backlog||[]);
-          try{ localStorage.setItem(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
+          try{ storageSet(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
           renderBacklogView(); updateTabCounts();
           toast('✅ Backlog salvo','Servidor confirmou '+serverMax+' histórias.');
           _gasBacklogSaving=false;
@@ -4655,7 +4667,7 @@ function gasLoadStories(cb){
         return;
       }
       allStories=json.stories;
-      try{ localStorage.setItem(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
+      try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
       renderStoryView();
       updateTabCounts();
       var upN=$id('svUpName'); if(upN) upN.textContent='Sincronizado';
@@ -4859,7 +4871,7 @@ function renderBacklogView(){
   // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
   var maxKnown=maxBacklogStoryCount(backlogSnaps);
   var curCount=snapStoryCount(cur);
-  var _bkWarnDismissed=(function(){ try{ return localStorage.getItem('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
+  var _bkWarnDismissed=(function(){ try{ return storageGet('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
   var staleWarningHtml='';
   if(maxKnown>curCount && !_bkWarnDismissed){
     staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:.75rem;">'+
@@ -5400,7 +5412,7 @@ function loadMultipleFiles(files, propagate){
     try{
       var ws=wb.Sheets[wb.SheetNames[0]];
       var matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      localStorage.setItem(key,JSON.stringify({matrix:matrix,fileName:fileName,savedAt:new Date().toISOString()}));
+      storageSet(key,JSON.stringify({matrix:matrix,fileName:fileName,savedAt:new Date().toISOString()}));
       return true;
     }catch(e){ return false; }
   }
@@ -6145,7 +6157,7 @@ function doExportHTML(){
 
     // 8) Atualiza o cache local com a nova versão para evitar reset no próximo load
     SEED_VERSION=newVersion;
-    try{ localStorage.setItem(STORAGE_VERSION_KEY,newVersion); }catch(e){}
+    try{ storageSet(STORAGE_VERSION_KEY,newVersion); }catch(e){}
     saveLocal();
 
     toast('✓ HTML salvo',
@@ -6442,7 +6454,7 @@ var SEED=[
   function localOrSeed(){
     var saved=loadLocal();
     var savedVersion=null;
-    try{ savedVersion=localStorage.getItem(STORAGE_VERSION_KEY); }catch(e){}
+    try{ savedVersion=storageGet(STORAGE_VERSION_KEY); }catch(e){}
     var usedCache=false;
     if(saved&&saved.length){
       if(savedVersion && savedVersion!==SEED_VERSION){
@@ -6483,7 +6495,7 @@ var SEED=[
           logFimChange(d.id, d.seedVal, d.userVal, 'PRESERVADO_MERGE_'+d.campo.toUpperCase());
         });
         try{
-          localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION);
+          storageSet(STORAGE_VERSION_KEY, SEED_VERSION);
         }catch(e){}
         saveLocal();
         saveResumoCache(SEED);
@@ -6499,7 +6511,7 @@ var SEED=[
       }else{
         usedCache=true;
         if(!savedVersion){
-          try{ localStorage.setItem(STORAGE_VERSION_KEY, SEED_VERSION); }catch(e){}
+          try{ storageSet(STORAGE_VERSION_KEY, SEED_VERSION); }catch(e){}
         }
         allData=saved.map(makeRow);
         saveResumoCache(SEED);
@@ -6517,7 +6529,7 @@ var SEED=[
     if(!allData.length && SEED && SEED.length){
       allData=SEED.map(makeRow);
       normalizeWorkflowAll();
-      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+      try{ storageRemove(STORAGE_KEY); }catch(e){}
     }
     // Restore stories from localStorage
     loadStoriesLocal();
@@ -6692,7 +6704,7 @@ function calToday(){ var t=new Date(); t.setHours(0,0,0,0); return t; }
 function calLoad(){
   if(Array.isArray(calData) && calData.length) return calData;
   var raw=null;
-  try{ raw=localStorage.getItem(CAL_KEY); }catch(e){}
+  try{ raw=storageGet(CAL_KEY); }catch(e){}
   if(raw!==null){
     try{ calData=JSON.parse(raw); }catch(e){ calData=[]; }
   }
@@ -6702,7 +6714,7 @@ function calLoad(){
   }
   return calData;
 }
-function calSave(){ try{ localStorage.setItem(CAL_KEY, JSON.stringify(calData)); }catch(e){} }
+function calSave(){ try{ storageSet(CAL_KEY, JSON.stringify(calData)); }catch(e){} }
 
 // planejamento padrão — datas exatas dos trimestres apresentados
 function calDefaultData(){
@@ -7371,8 +7383,8 @@ function calSeedExample(){
   var ADMIN_KEY = 'sala_admin_pwd';
   var IMP_KEY   = 'sala_imp_pwd';
 
-  function getAdminPwd(){ return localStorage.getItem(ADMIN_KEY) || 'sala@admin'; }
-  function getImpPwd()  { return localStorage.getItem(IMP_KEY)   || 'sala'; }
+  function getAdminPwd(){ return storageGet(ADMIN_KEY) || 'sala@admin'; }
+  function getImpPwd()  { return storageGet(IMP_KEY)   || 'sala'; }
 
   window.openAdmin = function(){
     var ov = document.getElementById('adminOverlay');
@@ -7426,7 +7438,7 @@ function calSeedExample(){
   }
 
   function admCarregarMeta(){
-    var meta = parseInt(localStorage.getItem('sala_meta_dias') || '62');
+    var meta = parseInt(storageGet('sala_meta_dias') || '62');
     document.getElementById('admMetaDias').value = meta;
     document.getElementById('admMetaAtual').textContent = meta;
   }
@@ -7436,7 +7448,7 @@ function calSeedExample(){
     // Mesma faixa aceita pelo boot (1..365): fora dela o valor seria gravado
     // mas silenciosamente descartado no próximo reload, voltando para 62.
     if(!v || v < 1 || v > 365){ admMsg('admMetaMsg','Valor inválido — use entre 1 e 365 dias','err'); return; }
-    localStorage.setItem('sala_meta_dias', v);
+    storageSet('sala_meta_dias', v);
     document.getElementById('admMetaAtual').textContent = v;
     try{ window.META = v; }catch(e){}
     // Re-renderiza tudo para a nova meta valer imediatamente (o boot também a lê do localStorage)
@@ -7451,7 +7463,7 @@ function calSeedExample(){
     if(!n){ admMsg('admSenhaMsg','Digite a nova senha','err'); return; }
     if(n !== c){ admMsg('admSenhaMsg','As senhas não coincidem','err'); return; }
     if(n.length < 4){ admMsg('admSenhaMsg','Mínimo 4 caracteres','err'); return; }
-    localStorage.setItem(ADMIN_KEY, n);
+    storageSet(ADMIN_KEY, n);
     document.getElementById('admNovaSenha').value = '';
     document.getElementById('admConfSenha').value = '';
     admMsg('admSenhaMsg','✅ Senha admin alterada com sucesso!');
@@ -7461,7 +7473,7 @@ function calSeedExample(){
     var n = document.getElementById('admSenhaImp').value;
     if(!n){ admMsg('admImpMsg','Digite a nova senha','err'); return; }
     if(n.length < 3){ admMsg('admImpMsg','Mínimo 3 caracteres','err'); return; }
-    localStorage.setItem(IMP_KEY, n);
+    storageSet(IMP_KEY, n);
     document.getElementById('admSenhaImp').value = '';
     admMsg('admImpMsg','✅ Senha de impedimentos alterada!');
   };
@@ -7470,7 +7482,7 @@ function calSeedExample(){
     var data = (typeof allData !== 'undefined') ? allData : [];
     var total = data.length;
     var conc = data.filter(function(r){ return r.status==='Concluído'; }).length;
-    var meta = parseInt(localStorage.getItem('sala_meta_dias') || '62');
+    var meta = parseInt(storageGet('sala_meta_dias') || '62');
     var crit = data.filter(function(r){ return (r.lt||0) >= meta; }).length;
     document.getElementById('admStTotal').textContent = total;
     document.getElementById('admStConcluido').textContent = conc;
@@ -7485,9 +7497,9 @@ function calSeedExample(){
   window.admLimparCache = function(){
     if(!confirm('Limpar todo o cache local? Os dados serão recarregados do SEED/Sheets.')) return;
     try{
-      localStorage.removeItem('leadtime_sala_v8_data');
-      localStorage.removeItem('leadtime_sala_v8_meta');
-      localStorage.removeItem('leadtime_sala_v8_seed_version');
+      storageRemove('leadtime_sala_v8_data');
+      storageRemove('leadtime_sala_v8_meta');
+      storageRemove('leadtime_sala_v8_seed_version');
     }catch(e){}
     admMsg('admDadosMsg','✅ Cache limpo! Recarregando...');
     setTimeout(function(){ location.reload(); }, 1200);
@@ -7495,7 +7507,7 @@ function calSeedExample(){
 
   function admCarregarEpicos(){
     var data = (typeof allData !== 'undefined') ? allData : [];
-    var meta = parseInt(localStorage.getItem('sala_meta_dias') || '62');
+    var meta = parseInt(storageGet('sala_meta_dias') || '62');
     document.getElementById('admEpCount').textContent = '— ' + data.length + ' épicos';
     var html = '';
     data.forEach(function(r, i){
@@ -7525,7 +7537,7 @@ function calSeedExample(){
   window.admSalvarEpicos = function(){
     try{
       if(typeof allData !== 'undefined'){
-        localStorage.setItem('leadtime_sala_v8_data', JSON.stringify(allData));
+        storageSet('leadtime_sala_v8_data', JSON.stringify(allData));
       }
       admMsg('admEpMsg','✅ Alterações salvas! Feche o admin para ver o dashboard atualizado.');
     } catch(e){
