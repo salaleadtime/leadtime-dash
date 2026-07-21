@@ -7334,7 +7334,7 @@
     .mtl-today-line { position:absolute; top:-6px; bottom:-6px; width:0; border-left:1.5px dashed var(--primary); opacity:.55; z-index:1; pointer-events:none; }
     .mtl-today-tag { position:absolute; top:-3px; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); }
     .mtl-empty { padding:34px 16px; text-align:center; color:var(--muted); font-size:12.5px; }
-    .mtl-legend { display:flex; flex-wrap:wrap; gap:18px; padding:14px 20px; border-top:1px solid var(--line); background:var(--panel-2); font-size:11.5px; color:var(--muted); }
+    .mtl-legend { display:flex; flex-wrap:wrap; gap:18px; padding:10px 20px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:11.5px; color:var(--muted); }
     .mtl-legend .li { display:flex; align-items:center; gap:7px; }
     .mtl-legend .sw { width:18px; height:9px; border-radius:4px; flex:none; }
     .mtl-legend .sw.ok { background:var(--green); }
@@ -7382,7 +7382,7 @@
 
       <div class="side-actions">
         <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
-        <button type="button" class="ghost-btn" id="macroTimelineBtn" onclick="openMacroTimelinePanel()" title="Ver Timeline Executiva por Squad e iniciativa">🕒 Timeline <span id="macroTimelineBadge" class="tab-badge hidden" style="margin-left:4px">Atualizado</span></button>
+        <button type="button" class="ghost-btn" id="macroTimelineBtn" onclick="openMacroTimelinePanel()" title="Ver Roadmap por Squad e iniciativa">🗓 Roadmap <span id="macroTimelineBadge" class="tab-badge hidden" style="margin-left:4px">Atualizado</span></button>
         <button type="button" class="ghost-btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
         <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
         <button type="button" class="ghost-btn" onclick="openReportsPanel()" title="Abrir relatórios executivos">▤ Relatórios</button>
@@ -14259,6 +14259,13 @@ Recomendação PMO: ${d.recommendation}`;
       const lastUpdate = data.timelineLastScheduleUpdate ? `<div class="mtl-strip"><div>🕒</div><div><strong>Última atualização do Cronograma</strong>${escapeHtml(data.timelineLastScheduleOwner || 'Alguém')} ${data.timelineLastScheduleItem ? `editou "${escapeHtml(data.timelineLastScheduleItem)}"` : 'atualizou um marco'} em ${escapeHtml(formatBRDateTime(data.timelineLastScheduleUpdate))}.</div></div>` : '';
 
       const geralBody = `
+        <div class="mtl-legend">
+          <div class="li"><span class="sw ok"></span>No prazo / concluído</div>
+          <div class="li"><span class="sw attn"></span>Atenção — prazo perto do fim</div>
+          <div class="li"><span class="sw late"></span>Atrasado — sinaliza PDCA</div>
+          <div class="li"><span class="sw planned"></span>Planejado (ainda não iniciado)</div>
+          <div class="li"><span class="sw today"></span>Hoje · ${escapeHtml(formatBR(fmtDate(new Date())))}</div>
+        </div>
         <div class="mtl-filterbar">
           <div class="mtl-fgroup">${squadChips}</div>
           <div class="mtl-fgroup">${statusChips}</div>
@@ -14275,13 +14282,6 @@ Recomendação PMO: ${d.recommendation}`;
             <div class="mtl-tbody">
               ${rowsHtml || `<div class="mtl-empty">Nenhuma iniciativa encontrada com esses filtros.</div>`}
             </div>
-          </div>
-          <div class="mtl-legend">
-            <div class="li"><span class="sw ok"></span>No prazo / concluído</div>
-            <div class="li"><span class="sw attn"></span>Atenção — prazo perto do fim</div>
-            <div class="li"><span class="sw late"></span>Atrasado — sinaliza PDCA</div>
-            <div class="li"><span class="sw planned"></span>Planejado (ainda não iniciado)</div>
-            <div class="li"><span class="sw today"></span>Hoje · ${escapeHtml(formatBR(fmtDate(new Date())))}</div>
           </div>
         </div>`;
 
@@ -14300,7 +14300,7 @@ Recomendação PMO: ${d.recommendation}`;
       root.innerHTML = `
         <div class="mtl-page">
           <div class="mtl-page-head">
-            <div><h2>Timeline Executiva</h2><p>Visão macro por Squad e iniciativa, gerada automaticamente a partir dos 6 marcos padrão do Cronograma. Recalculada a cada abertura.</p></div>
+            <div><h2>Roadmap</h2><p>Cronograma Anual — visão macro por Squad e iniciativa, gerada automaticamente a partir dos 6 marcos padrão do Cronograma. Recalculada a cada abertura.</p></div>
             <button type="button" class="ux-v6-report-btn" onclick="closeMacroTimelinePanel()">Fechar</button>
           </div>
           <div class="mtl-page-body">
