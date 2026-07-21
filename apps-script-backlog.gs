@@ -1,14 +1,14 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
- * v7 — adiciona discoveryPmo para sync do Discovery PMO Tracker entre usuários
- *      (mantém vpEpicMeta e o fix de compareSnaps_ por tempo, da v6)
+ * v8 — preserva dados existentes, valida payloads e torna as gravações concorrentes seguras
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-06-backlog-sheet-chunks-v7';
+var BACKLOG_SCRIPT_VERSION = '2026-07-21-backlog-sheet-chunks-v8';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
 var CHUNK_SIZE = 45000;
+var MAX_PAYLOAD_CHARS = 4000000;
 
 var VP_SHEET_MAP = {
   vpGeral:      '_vp_geral',
@@ -25,15 +25,20 @@ function getVpSheet_(key) {
 }
 
 function autorizarPlanilhaUmaVez() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = getOrCreateSheet_(BACKLOG_SHEET);
-  sheet.getRange('A1').setValue('[]');
-  return 'Planilha autorizada com sucesso.';
+  var lock = LockService.getScriptLock();
+  lock.waitLock(LOCK_TIMEOUT_MS);
+  try {
+    var sheet = getOrCreateSheet_(BACKLOG_SHEET);
+    if (!sheet.getLastRow()) sheet.getRange('A1').setValue('[]');
+    return 'Planilha autorizada com sucesso. Base existente preservada.';
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function doGet(e) {
   var action = getParam_(e, 'action');
-  var callback = getParam_(e, 'callback');
+  var callback = getSafeCallback_(getParam_(e, 'callback'));
 
   if (action === 'health') {
     var data = readBacklogStore_();
@@ -104,9 +109,9 @@ function doPost(e) {
 
     if (action === 'saveBacklog') {
       var payload = getParam_(e, 'payload');
-      var incoming = [];
-      try { incoming = JSON.parse(payload || '[]'); } catch (err) { incoming = []; }
-      if (!Array.isArray(incoming)) incoming = [];
+      var parsedBacklog = parsePayload_(payload, true);
+      if (!parsedBacklog.ok) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: parsedBacklog.error });
+      var incoming = parsedBacklog.data;
       var result = withLock_(function() {
         var before = readBacklogStore_();
         var merged = mergeSnaps_(before, incoming);
@@ -127,8 +132,9 @@ function doPost(e) {
     if (action === 'saveStories') {
       var payloadStories = getParam_(e, 'payload') || '[]';
       try {
-        var parsedStories = JSON.parse(payloadStories);
-        if (!Array.isArray(parsedStories)) parsedStories = [];
+        var parsedStoriesResult = parsePayload_(payloadStories, true);
+        if (!parsedStoriesResult.ok) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: parsedStoriesResult.error });
+        var parsedStories = parsedStoriesResult.data;
         if (parsedStories.length === 0) {
           var existing = withLock_(function() { return readJsonFromSheet_(STORIES_SHEET, []); });
           return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, skipped: 'payload vazio', savedStories: existing.length });
@@ -148,7 +154,11 @@ function doPost(e) {
       }
       var vpPayload = getParam_(e, 'payload') || 'null';
       try {
-        var vpData = JSON.parse(vpPayload);
+        var parsedVp = parsePayload_(vpPayload, false);
+        if (!parsedVp.ok || parsedVp.data === null || typeof parsedVp.data !== 'object') {
+          return jsonOut_({ ok: false, error: parsedVp.ok ? 'payload deve ser objeto ou lista' : parsedVp.error });
+        }
+        var vpData = parsedVp.data;
         withLock_(function() { writeJsonToSheet_(vpSheetName, vpData); });
         return jsonOut_({ ok: true, key: vpKey });
       } catch (vpErr) {
@@ -158,7 +168,21 @@ function doPost(e) {
 
     return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action });
   } catch (err) {
-    return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.stack || err) });
+    Logger.log('doPost falhou: ' + (err && err.stack || err));
+    return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'falha interna ao processar a solicitação' });
+  }
+}
+
+function parsePayload_(payload, requiresArray) {
+  var raw = String(payload == null ? '' : payload);
+  if (!raw) return { ok: false, error: 'payload ausente' };
+  if (raw.length > MAX_PAYLOAD_CHARS) return { ok: false, error: 'payload excede o limite permitido' };
+  try {
+    var data = JSON.parse(raw);
+    if (requiresArray && !Array.isArray(data)) return { ok: false, error: 'payload deve ser uma lista' };
+    return { ok: true, data: data };
+  } catch (err) {
+    return { ok: false, error: 'payload inválido' };
   }
 }
 
@@ -215,7 +239,7 @@ function readJsonFromSheet_(sheetName, fallback) {
 }
 
 function writeJsonToSheet_(sheetName, data) {
-  var json = JSON.stringify(data || []);
+  var json = JSON.stringify(data);
   var sheet = getOrCreateSheet_(sheetName);
   sheet.clearContents();
   var chunks = [];
@@ -275,7 +299,13 @@ function mergeSnaps_(base, incoming) {
   return out;
 }
 
+function getSafeCallback_(callback) {
+  var value = String(callback || '');
+  return /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(value) ? value : '';
+}
+
 function jsonOut_(obj, callback) {
+  callback = getSafeCallback_(callback);
   var out = ContentService.createTextOutput();
   if (callback) {
     out.setContent(callback + '(' + JSON.stringify(obj) + ')');
