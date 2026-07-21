@@ -2076,6 +2076,54 @@
       gap: 6px;
     }
 
+    /* Cronograma compacto: a linha mostra somente o essencial. Dono, observações,
+       PDCA e ações ficam no painel aberto pelo ícone "i". */
+    .executive-gantt { gap: 5px; }
+    .gantt-row { min-height: 54px; padding: 8px 10px; }
+    .gantt-title { gap: 2px; }
+    .gantt-track { height: 24px; }
+    .gantt-bar { top: 4px; height: 14px; }
+    .gantt-actions { position: relative; min-width: 30px; }
+    .schedule-info-btn {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .schedule-info-btn:hover,
+    .schedule-info-btn[aria-expanded="true"] {
+      color: var(--primary);
+      border-color: rgba(191,24,48,.36);
+      background: var(--primary-soft);
+    }
+    .schedule-info-popover {
+      position: absolute;
+      z-index: 30;
+      right: 0;
+      top: 34px;
+      width: min(300px, calc(100vw - 58px));
+      padding: 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 13px;
+      background: #fff;
+      box-shadow: 0 18px 36px rgba(17,24,39,.18);
+      color: var(--ink);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .schedule-info-popover strong { display: block; font-size: 12px; margin-bottom: 7px; }
+    .schedule-info-popover p { margin: 5px 0; color: var(--muted); }
+    .schedule-info-popover p b { color: var(--ink); }
+    .schedule-info-actions { display: flex; gap: 7px; margin-top: 10px; }
+    .schedule-info-actions button { flex: 1; min-height: 29px; padding: 5px 8px; border-radius: 9px; font-size: 10.5px; font-weight: 800; }
+    .schedule-info-actions .delete { color: #b42334; border: 1px solid #ffd4da; background: #fff4f5; }
+
     .mini-text-btn {
       height: 30px;
       border-radius: 10px;
@@ -10099,7 +10147,8 @@
       const localTime = Date.parse(localProject?.updatedAt || '') || 0;
       const base = deepClone(remoteTime > localTime ? remoteProject : localProject);
       base.cards = mergeNestedById(localProject?.cards, remoteProject?.cards, deletedIds);
-      base.schedule = mergeNestedById(localProject?.schedule, remoteProject?.schedule, deletedIds);
+      base.schedule = mergeNestedById(localProject?.schedule, remoteProject?.schedule, deletedIds)
+        .filter(item => !item.baseKey || !deletedIds?.has(baseScheduleTombstoneId(base, item.baseKey)));
       base.raids = mergeRaidGroups(localProject?.raids, remoteProject?.raids, deletedIds);
       base.subInitiatives = mergeNestedById(localProject?.subInitiatives, remoteProject?.subInitiatives, deletedIds);
       base.attachments = mergeNestedById(localProject?.attachments, remoteProject?.attachments, deletedIds);
@@ -10226,6 +10275,7 @@
     let macroTimelineSelectedId = '';
     let showAllSquads = false;
     let modalState = {};
+    let scheduleInfoOpenId = '';
     let draggedCardId = null;
     let isCardDragging = false;
 
@@ -11514,10 +11564,19 @@
       dropped.forEach(item => recordTombstone(item.id));
     }
 
+    function baseScheduleTombstoneId(project, baseKey) {
+      return `schedule-base:${project.id}:${baseKey}`;
+    }
+
+    function baseScheduleWasDeleted(project, baseKey) {
+      const tombstoneId = baseScheduleTombstoneId(project, baseKey);
+      return Array.isArray(data.tombstones) && data.tombstones.some(item => item.id === tombstoneId);
+    }
+
     function ensureBaseSchedule(project) {
       if (!Array.isArray(project.schedule)) project.schedule = [];
       dedupeBaseSchedule(project);
-      const missing = SCHEDULE_BASE_TEMPLATE.filter(tpl => !project.schedule.some(s => s.baseKey === tpl.baseKey));
+      const missing = SCHEDULE_BASE_TEMPLATE.filter(tpl => !project.schedule.some(s => s.baseKey === tpl.baseKey) && !baseScheduleWasDeleted(project, tpl.baseKey));
       if (!missing.length) return project.schedule;
       const dates = estimateBaseScheduleDates(project);
       missing.forEach(tpl => {
@@ -11578,22 +11637,24 @@
         const width = clamp(Math.round((duration / totalDays) * 100), 4, 100 - offset);
         const observations = String(s.observations || s.notes || '').trim();
         const pdcaAction = String(s.pdcaAction || '').trim();
-        const pdcaNeeded = scheduleNeedsPdca(s);
         const daysLate = scheduleDaysLate(s);
-        const pdcaHint = pdcaNeeded && !observations && !pdcaAction
-          ? `<div class="gantt-note pdca-note">Revisar prazo, registrar observação ou ação de replanejamento.</div>`
-          : '';
-        const replanHint = daysLate > 0
-          ? `<div class="gantt-note pdca-note">⚠ Atrasado há ${daysLate} dia(s)${s.replanHistory && s.replanHistory.length ? ` · replanejado ${s.replanHistory.length}x` : ''}. Edite o marco para registrar um novo prazo.</div>`
-          : '';
-        const noteText = [observations, pdcaAction ? `Ação: ${pdcaAction}` : ''].filter(Boolean).join(' · ');
         const baseBadge = s.baseKey ? `<span class="mini-text-btn" style="cursor:default;opacity:.7">Padrão</span>` : '';
+        const infoOpen = scheduleInfoOpenId === s.id;
+        const infoPopover = infoOpen ? `<div class="schedule-info-popover" role="dialog" aria-label="Detalhes de ${escapeAttr(s.item)}">
+            <strong>${escapeHtml(s.item || 'Marco sem nome')}</strong>
+            <p><b>Dono:</b> ${escapeHtml(s.owner || 'Sem dono')}</p>
+            <p><b>Observações:</b> ${escapeHtml(observations || 'Nenhuma observação cadastrada.')}</p>
+            ${pdcaAction ? `<p><b>Ação PDCA:</b> ${escapeHtml(pdcaAction)}</p>` : ''}
+            ${daysLate > 0 ? `<p><b>Prazo:</b> atrasado há ${daysLate} dia(s).</p>` : ''}
+            <div class="schedule-info-actions">
+              <button type="button" class="mini-text-btn" onclick="openScheduleModal('${s.id}')">Editar</button>
+              <button type="button" class="delete" onclick="confirmDeleteSchedule('${s.id}')">Excluir</button>
+            </div>
+          </div>` : '';
         return `<div class="gantt-row" data-status="${st.cls}">
           <div class="gantt-title">
             <strong title="${escapeAttr(s.item)}">${escapeHtml(s.item || 'Marco sem nome')}</strong> ${baseBadge}
             <span>${formatBR(s.start)} até ${formatBR(s.end)}</span>
-            ${noteText ? `<div class="gantt-note">${escapeHtml(noteText)}</div>` : ''}
-            ${replanHint || pdcaHint}
             <div class="gantt-mobile-meta">
               <span>Dono: ${escapeHtml(s.owner || 'Sem dono')}</span>
               <span>${view.label}</span>
@@ -11605,9 +11666,10 @@
           </div>
           <div class="gantt-progress-text ${view.cls}">${view.label}</div>
           <div class="auto-status ${st.cls}">${st.label}</div>
-          <div class="gantt-actions"><button type="button" class="mini-text-btn" onclick="openScheduleModal('${s.id}')">Editar</button></div>
-          <div class="gantt-owner">Dono: <strong>${escapeHtml(s.owner || 'Sem dono')}</strong></div>
-          <div class="gantt-date">${formatBR(s.start)} · ${formatBR(s.end)}</div>
+          <div class="gantt-actions">
+            <button type="button" class="schedule-info-btn" aria-label="Detalhes, editar ou excluir ${escapeAttr(s.item)}" aria-expanded="${infoOpen ? 'true' : 'false'}" onclick="toggleScheduleInfo('${s.id}')">i</button>
+            ${infoPopover}
+          </div>
         </div>`;
       }).join('');
 
@@ -11615,14 +11677,11 @@
           <div class="gantt-title">
             <strong>${escapeHtml(jiraItem.item)}</strong> <span class="mini-text-btn" style="cursor:default;opacity:.7">Automático · Jira</span>
             <span>${scheduleJiraCount(project)} história(s) importada(s)</span>
-            <div class="gantt-note">Atualizado junto com a última importação do Jira · sem data, não entra na Timeline.</div>
           </div>
           <div class="gantt-track"></div>
           <div class="gantt-progress-text">—</div>
           <div class="auto-status">${scheduleJiraCount(project)}</div>
           <div class="gantt-actions"></div>
-          <div class="gantt-owner"></div>
-          <div class="gantt-date"></div>
         </div>` : '';
 
       wrap.innerHTML = header + rows + jiraRow;
@@ -12197,11 +12256,30 @@
     function deleteSchedule(id) {
       const p = getProject();
       const item = p.schedule.find(x => x.id === id);
-      if (item && item.baseKey) { toast('Este marco é padrão e não pode ser excluído — só editado.'); return; }
+      if (!item) return;
       p.schedule = p.schedule.filter(x => x.id !== id);
       recordTombstone(id);
-      if (item) markTimelineScheduleUpdated(item.item, item.owner);
+      if (item.baseKey) recordTombstone(baseScheduleTombstoneId(p, item.baseKey));
+      scheduleInfoOpenId = '';
+      markTimelineScheduleUpdated(item.item, item.owner);
       saveData(true);
+    }
+
+    function confirmDeleteSchedule(id) {
+      const p = getProject();
+      const item = p.schedule.find(x => x.id === id);
+      if (!item) return false;
+      const message = item.baseKey
+        ? `Excluir o marco padrão "${item.item}" desta iniciativa? Ele ficará oculto apenas nesta iniciativa.`
+        : `Excluir o marco "${item.item}"? Esta ação não pode ser desfeita.`;
+      if (!window.confirm(message)) return false;
+      deleteSchedule(id);
+      return true;
+    }
+
+    function toggleScheduleInfo(id) {
+      scheduleInfoOpenId = scheduleInfoOpenId === id ? '' : id;
+      renderSchedule(getProject());
     }
 
     function openProjectModal(projectId = null) {
@@ -12355,6 +12433,7 @@
 
     function openScheduleModal(scheduleId = null) {
       const p = getProject();
+      scheduleInfoOpenId = '';
       const isEdit = Boolean(scheduleId);
       const item = isEdit ? p.schedule.find(x => x.id === scheduleId) : {
         id: uid(),
@@ -12369,7 +12448,7 @@
       if (item.jira) { toast('Este item é automático, calculado pela importação do Jira — não é editável.'); return; }
       const daysLate = isEdit ? scheduleDaysLate(item) : 0;
       modalState = { type: 'schedule', isEdit, item };
-      const baseNote = item.baseKey ? `<div class="schedule-hint">Marco padrão: sempre visível em toda iniciativa. Dono, datas e observações podem ser editados, mas o item não pode ser excluído.</div>` : '';
+      const baseNote = item.baseKey ? `<div class="schedule-hint">Marco padrão da iniciativa. Dono, datas e observações podem ser editados. Ao excluir, ele fica oculto somente nesta iniciativa.</div>` : '';
       const replanBlock = daysLate > 0 ? `
           <div class="form-field full schedule-observations">
             <label>⚠ Atrasado há ${daysLate} dia(s)${item.replanHistory && item.replanHistory.length ? ` · já replanejado ${item.replanHistory.length}x` : ''}</label>
@@ -12393,7 +12472,7 @@
           <div class="form-field full"><label>Ação PDCA / Próximo passo</label><textarea id="sch-pdca-action" placeholder="Ex.: replanejar data com PO, escalar dependência com DBA, validar novo marco com negócio.">${escapeHtml(item.pdcaAction || '')}</textarea></div>
         </div>
       `, [
-        (isEdit && !item.baseKey) ? `<button type="button" class="btn" onclick="deleteScheduleFromModal()">Excluir</button>` : '',
+        isEdit ? `<button type="button" class="btn" onclick="deleteScheduleFromModal()">Excluir</button>` : '',
         `<button type="button" class="btn" onclick="closeModal()">Cancelar</button>`,
         `<button type="button" class="btn primary" onclick="saveScheduleModal()">Salvar</button>`
       ]);
@@ -12431,8 +12510,7 @@
     function deleteScheduleFromModal() {
       const item = modalState.item;
       if (!item) return;
-      deleteSchedule(item.id);
-      closeModal();
+      if (confirmDeleteSchedule(item.id)) closeModal();
     }
 
     function openRaidModal(group = 'risks', index = null) {
