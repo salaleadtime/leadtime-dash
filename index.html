@@ -504,6 +504,75 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .mb{border-radius:var(--rads);padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--card);color:var(--tx2);font-family:inherit}
 .mb.p{background:var(--tx);border-color:var(--tx);color:#fff}
 
+/* ── RISK NOTIFICATION PANEL ── */
+.risk-notif-panel{margin:0;padding:.65rem 1.6rem;background:linear-gradient(135deg,#1a0808 0%,#2d0a0a 50%,#1a1a2e 100%);border-bottom:1px solid rgba(220,38,38,.25);display:flex;align-items:center;gap:14px;min-height:44px;position:relative;overflow:hidden}
+.risk-notif-panel.empty{display:none}
+.risk-notif-panel::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(220,38,38,.04) 60px,rgba(220,38,38,.04) 61px);pointer-events:none}
+.rnp-badge{flex-shrink:0;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(220,38,38,.4);animation:rnp-glow 2s ease-in-out infinite alternate}
+@keyframes rnp-glow{from{box-shadow:0 2px 8px rgba(220,38,38,.4)}to{box-shadow:0 2px 16px rgba(220,38,38,.7)}}
+.rnp-ticker-wrap{flex:1;overflow:hidden;position:relative;height:22px}
+.rnp-ticker{display:flex;align-items:center;gap:0;white-space:nowrap;animation:rnp-scroll 28s linear infinite;will-change:transform}
+.rnp-ticker:hover{animation-play-state:paused}
+@keyframes rnp-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.rnp-item{display:inline-flex;align-items:center;gap:6px;padding:0 20px;font-size:11px;color:rgba(255,255,255,.75);border-right:1px solid rgba(255,255,255,.1)}
+.rnp-item-id{font-family:ui-monospace,monospace;font-size:10px;color:#fca5a5;font-weight:700}
+.rnp-item-lt{font-weight:800;padding:1px 6px;border-radius:4px;font-size:10px}
+.rnp-item-lt.crit{background:rgba(220,38,38,.25);color:#fca5a5;border:1px solid rgba(220,38,38,.35)}
+.rnp-item-lt.warn{background:rgba(217,119,6,.2);color:#fcd34d;border:1px solid rgba(217,119,6,.3)}
+.rnp-sep{color:rgba(255,255,255,.2);padding:0 4px}
+.rnp-stats{flex-shrink:0;display:flex;align-items:center;gap:8px}
+.rnp-stat{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.rnp-stat.crit{background:rgba(220,38,38,.2);color:#fca5a5;border:1px solid rgba(220,38,38,.3)}
+.rnp-stat.warn{background:rgba(217,119,6,.15);color:#fcd34d;border:1px solid rgba(217,119,6,.25)}
+.rnp-stat.ok{background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.25)}
+.rnp-pct{font-size:9px;font-weight:600;color:rgba(255,255,255,.45);margin-left:2px}
+
+/* ── ROADMAP PANE ── */
+.rd-wrap{padding:1.4rem 1.6rem 3rem;max-width:1500px;margin:0 auto}
+.rd-hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.rd-hd-ti{font-size:17px;font-weight:800;color:var(--tx);letter-spacing:-.3px}
+.rd-hd-ti span{color:#cc0000}
+.rd-hd-sub{font-size:11.5px;color:var(--tx3);margin-top:2px}
+.rd-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
+.rd-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+.rd-kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--rdk-col,#cc0000)}
+.rd-kpi-l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:10px}
+.rd-kpi-v{font-size:34px;font-weight:900;letter-spacing:-1.5px;color:#0f172a;line-height:1}
+.rd-kpi-s{font-size:11px;color:#64748b;margin-top:6px}
+.rd-kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:6px}
+.rd-kpi-trend.up{background:#dcfce7;color:#15803d}
+.rd-kpi-trend.down{background:#fee2e2;color:#dc2626}
+.rd-cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.rd-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+.rd-panel-ti{font-size:13px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.rd-panel-ti-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:#fff5f5}
+.rd-squad-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9}
+.rd-squad-row:last-child{border-bottom:none}
+.rd-squad-name{font-size:12px;font-weight:600;color:#334155;min-width:110px}
+.rd-squad-bar{flex:1;height:8px;background:#f1f5f9;border-radius:6px;overflow:hidden}
+.rd-squad-fill{height:100%;border-radius:6px;transition:width .6s ease}
+.rd-squad-val{font-size:12px;font-weight:700;color:#334155;min-width:28px;text-align:right}
+.rd-squad-pct{font-size:10px;color:#94a3b8;min-width:32px;text-align:right}
+.rd-status-item{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9}
+.rd-status-item:last-child{border-bottom:none}
+.rd-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rd-status-lbl{font-size:11.5px;color:#334155;flex:1;margin-left:8px}
+.rd-status-cnt{font-size:12px;font-weight:700;color:#0f172a}
+.rd-status-pct{font-size:10px;color:#94a3b8;margin-left:6px}
+.rd-empty{text-align:center;padding:3rem 2rem;color:#94a3b8}
+.rd-empty .ico{font-size:36px;margin-bottom:.8rem}
+.rd-empty .t{font-size:14px;font-weight:700;color:#475569;margin-bottom:.3rem}
+.rd-empty .s{font-size:12px}
+.rd-jira-card{background:linear-gradient(135deg,#0052cc 0%,#0747a6 100%);border-radius:14px;padding:20px 22px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 4px 16px rgba(0,82,204,.3);margin-bottom:20px}
+.rd-jira-left .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.7);margin-bottom:6px}
+.rd-jira-left .num{font-size:48px;font-weight:900;letter-spacing:-2px;line-height:1}
+.rd-jira-left .sub{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px}
+.rd-jira-right{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.rd-jira-badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 12px;text-align:right}
+.rd-jira-badge .bv{font-size:20px;font-weight:800}
+.rd-jira-badge .bl{font-size:10px;color:rgba(255,255,255,.7);margin-top:1px}
+.rd-jira-logo{font-size:48px;opacity:.15;position:absolute;right:22px;top:50%;transform:translateY(-50%)}
+
 /* toast notification */
 .toast{position:fixed;top:80px;right:20px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--g);border-radius:var(--rad);padding:12px 16px;font-size:12px;color:var(--tx);box-shadow:0 12px 40px rgba(15,23,42,.18);z-index:600;opacity:0;transform:translateX(20px);transition:all .3s;max-width:360px}
 .toast.on{opacity:1;transform:translateX(0)}
@@ -1335,6 +1404,7 @@ body{min-height:100vh}
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
   <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
+  <button class="tabbt" id="tab-rd" onclick="goTab('rd',this)">🗺️ Roadmap <span class="tab-ct" id="tabCtRd" style="background:#0052cc;color:#fff"></span></button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -1356,6 +1426,15 @@ body{min-height:100vh}
   <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
   <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Importa só neste dashboard (SALA): _Epicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas. Sprint_ativa e Acomp._Geral são detectados mas não propagados.">📦 Importar Tudo</button>
   <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Importa em TODOS os dashboards: arquivos do SALA ficam aqui · Sprint_ativa, Acomp._Geral e Homologação são propagados para Visão de Projetos · Épicos são propagados para o Discovery PMO Tracker (Jira)">🌐 Importar em Todos</button>
+</div>
+
+<!-- ══ RISK NOTIFICATION PANEL (tela inicial) ══ -->
+<div class="risk-notif-panel empty" id="riskNotifPanel">
+  <span class="rnp-badge">⚠ Prazos em Risco</span>
+  <div class="rnp-ticker-wrap">
+    <div class="rnp-ticker" id="rnpTicker"></div>
+  </div>
+  <div class="rnp-stats" id="rnpStats"></div>
 </div>
 
 <!-- ══ ÉPICOS PANE ══ -->
@@ -1979,6 +2058,25 @@ tr:nth-child(even):hover td,
   </div>
 </div>
 
+<!-- ══ ROADMAP PANE ══ -->
+<div class="pane" id="pane-rd">
+  <div class="rd-wrap" id="rdContent">
+    <div class="rd-hd">
+      <div>
+        <div class="rd-hd-ti">🗺️ <span>Roadmap</span> · Histórias & Processos</div>
+        <div class="rd-hd-sub">Visão consolidada das histórias do Jira importadas — quantidade por squad, status e evolução do backlog</div>
+      </div>
+    </div>
+    <div id="rdInner">
+      <div class="rd-empty">
+        <div class="ico">📋</div>
+        <div class="t">Nenhuma história importada</div>
+        <div class="s">Importe as histórias do Jira via "📋 Qtd Story/Épicos" ou "Importar Tudo" para visualizar o Roadmap.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ CALENDÁRIO — editor de trimestre ══ -->
 <div class="cal-ov" id="calOv" onclick="if(event.target===this)calCloseEditor()">
   <div class="cal-mdl">
@@ -2165,7 +2263,7 @@ function loadTab(){
   try{ return storageGet(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal'||id==='rd') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -3038,6 +3136,7 @@ function goTab(id,btn){
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
   else if(id==='cal') renderCalendar();
+  else if(id==='rd') renderRoadmapTab();
   updateTabCounts();
 }
 
@@ -3061,6 +3160,7 @@ function activateTab(id){
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
   else if(id==='cal') renderCalendar();
+  else if(id==='rd') renderRoadmapTab();
   updateTabCounts();
 }
 
@@ -3068,7 +3168,7 @@ function activateTab(id){
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal'||id==='rd')?'none':'flex';
 }
 
 
@@ -4240,6 +4340,7 @@ function renderAll(tabToRestore){
   try{
     normalizeWorkflowAll();
     renderDash(); renderMed(); populateSqF(); pg=1; renderTbl(); renderEpicsSummary(); updateTabCounts();
+    renderRiskNotifPanel();
     activateTab(tab);
     runHealthCheck(false);
   }catch(e){
@@ -4254,6 +4355,149 @@ function renderAll(tabToRestore){
 
 
 // ═══════════════════════════════════════
+// RISK NOTIFICATION PANEL
+// ═══════════════════════════════════════
+function renderRiskNotifPanel(){
+  var panel=$id('riskNotifPanel');
+  var ticker=$id('rnpTicker');
+  var stats=$id('rnpStats');
+  if(!panel||!ticker||!stats) return;
+  var act=activeEpics();
+  var META_V=window.META||62;
+  if(!act.length){ panel.classList.add('empty'); return; }
+  var crit=act.filter(function(r){ return r.lt>=META_V; });
+  var warn=act.filter(function(r){ return r.lt>=40 && r.lt<META_V; });
+  var ok=act.filter(function(r){ return r.lt<40; });
+  var hasRisk=crit.length>0||warn.length>0;
+  if(!hasRisk){ panel.classList.add('empty'); return; }
+  panel.classList.remove('empty');
+  // Build ticker items (críticos primeiro, depois atenção, duplicados para loop contínuo)
+  var sorted=crit.concat(warn).slice().sort(function(a,b){return b.lt-a.lt;});
+  var items=sorted.map(function(r){
+    var isCrit=r.lt>=META_V;
+    var rem=META_V-r.lt;
+    var remTxt=rem>=0?('faltam '+rem+'d p/ meta'):(Math.abs(rem)+'d acima da meta');
+    return '<span class="rnp-item">'+
+      '<span class="rnp-item-id">'+esc(r.id.replace('SLOPC-','#'))+'</span>'+
+      '<span class="rnp-sep">·</span>'+
+      '<span style="color:rgba(255,255,255,.7);font-size:10.5px">'+esc(r.resumo?r.resumo.slice(0,38):r.squad||'—')+'</span>'+
+      '<span class="rnp-sep">·</span>'+
+      '<span class="rnp-item-lt '+(isCrit?'crit':'warn')+'">'+r.lt+'d</span>'+
+      '<span class="rnp-sep">—</span>'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.5)">'+remTxt+'</span>'+
+    '</span>';
+  }).join('');
+  // Duplicate for seamless loop
+  ticker.innerHTML=items+items;
+  // Adjust animation speed based on item count
+  var dur=Math.max(16, sorted.length*5);
+  ticker.style.animationDuration=dur+'s';
+  // Stats chips
+  stats.innerHTML=
+    (crit.length?'<span class="rnp-stat crit">🔴 '+crit.length+' Crítico'+(crit.length!==1?'s':'')+'</span>':'')+
+    (warn.length?'<span class="rnp-stat warn">⚠️ '+warn.length+' Atenção</span>':'')+
+    (ok.length?'<span class="rnp-stat ok">✅ '+ok.length+' OK</span>':'');
+}
+
+// ═══════════════════════════════════════
+// ROADMAP TAB — histórias Jira
+// ═══════════════════════════════════════
+function renderRoadmapTab(){
+  var root=$id('rdInner'); if(!root) return;
+  var stories=window.allStories||[];
+  var totalStories=stories.length;
+  // Squad breakdown from stories
+  var squadCnt={};
+  stories.forEach(function(s){ if(s.squad){ squadCnt[s.squad]=(squadCnt[s.squad]||0)+1; } });
+  var squadList=Object.keys(squadCnt).sort(function(a,b){return squadCnt[b]-squadCnt[a];});
+  // Status breakdown
+  var statusCnt={};
+  stories.forEach(function(s){ var st=(s.status||'Sem status').trim(); statusCnt[st]=(statusCnt[st]||0)+1; });
+  var statusList=Object.keys(statusCnt).sort(function(a,b){return statusCnt[b]-statusCnt[a];}).slice(0,8);
+  // Epics count
+  var epicSet={}; stories.forEach(function(s){ if(s.epic) epicSet[s.epic]=true; });
+  var epicCount=Object.keys(epicSet).length;
+  // Active epics from main data
+  var act=activeEpics();
+  var META_V=window.META||62;
+  var avgLt=act.length?Math.round(act.reduce(function(s,r){return s+r.lt;},0)/act.length):0;
+  var pctMeta=act.length?Math.round(act.filter(function(r){return r.lt<META_V;}).length/act.length*100):0;
+  // Colors for squads
+  var SQUAD_COLS=['#0052cc','#cc0000','#16a34a','#7c3aed','#d97706','#0891b2','#db2777','#64748b'];
+  if(!totalStories){
+    root.innerHTML='<div class="rd-empty"><div class="ico">📋</div><div class="t">Nenhuma história importada</div><div class="s">Importe as histórias do Jira via "📋 Qtd Story/Épicos" ou "Importar Tudo" para visualizar o Roadmap.</div></div>';
+    return;
+  }
+  // KPI row
+  var kpis=[
+    {l:'Histórias no Jira',v:totalStories,s:'estórias importadas',c:'#0052cc',rdk:'--rdk-col:#0052cc'},
+    {l:'Épicos vinculados',v:epicCount,s:'épicos com histórias',c:'#7c3aed',rdk:'--rdk-col:#7c3aed'},
+    {l:'Lead Time médio',v:avgLt+'d',s:'épicos ativos em andamento',c:'#cc0000',rdk:'--rdk-col:#cc0000'},
+    {l:'% na meta',v:pctMeta+'%',s:'épicos abaixo de '+META_V+'d',c:'#16a34a',rdk:'--rdk-col:#16a34a'},
+  ];
+  var kpiHtml=kpis.map(function(k){
+    return '<div class="rd-kpi" style="'+k.rdk+'">'+
+      '<div class="rd-kpi-l">'+esc(k.l)+'</div>'+
+      '<div class="rd-kpi-v">'+esc(k.v)+'</div>'+
+      '<div class="rd-kpi-s">'+esc(k.s)+'</div>'+
+    '</div>';
+  }).join('');
+  // Jira stories hero card
+  var jiraCard='<div class="rd-jira-card" style="position:relative;overflow:hidden">'+
+    '<div class="rd-jira-left">'+
+      '<div class="lbl">Histórias do Jira</div>'+
+      '<div class="num">'+totalStories+'</div>'+
+      '<div class="sub">estórias importadas · '+squadList.length+' squad'+(squadList.length!==1?'s':'')+' · '+epicCount+' épico'+(epicCount!==1?'s':'')+' vinculados</div>'+
+    '</div>'+
+    '<div class="rd-jira-right">'+
+      (squadList.slice(0,3).map(function(sq,i){
+        return '<div class="rd-jira-badge"><div class="bv">'+squadCnt[sq]+'</div><div class="bl">'+esc(sq)+'</div></div>';
+      }).join(''))+
+    '</div>'+
+    '<span class="rd-jira-logo">J</span>'+
+  '</div>';
+  // Squad panel
+  var maxSq=squadList.length?squadCnt[squadList[0]]:1;
+  var squadRows=squadList.map(function(sq,i){
+    var cnt=squadCnt[sq];
+    var pct=Math.round(cnt/totalStories*100);
+    var col=SQUAD_COLS[i%SQUAD_COLS.length];
+    return '<div class="rd-squad-row">'+
+      '<div class="rd-squad-name">'+esc(sq)+'</div>'+
+      '<div class="rd-squad-bar"><div class="rd-squad-fill" style="width:'+Math.round(cnt/maxSq*100)+'%;background:'+col+'"></div></div>'+
+      '<div class="rd-squad-val">'+cnt+'</div>'+
+      '<div class="rd-squad-pct">'+pct+'%</div>'+
+    '</div>';
+  }).join('');
+  // Status panel
+  var STATUS_DOTS={'Em Produção':'#16a34a','Em Desenvolvimento':'#2563eb','Em Homologação':'#7c3aed','Backlog':'#94a3b8','Refinamento':'#f59e0b','Impedido':'#dc2626','Concluído':'#16a34a'};
+  var statusRows=statusList.map(function(st){
+    var cnt=statusCnt[st];
+    var pct=Math.round(cnt/totalStories*100);
+    var col=STATUS_DOTS[st]||(st.toLowerCase().indexOf('produc')>=0?'#16a34a':st.toLowerCase().indexOf('bloq')>=0||st.toLowerCase().indexOf('imped')>=0?'#dc2626':'#64748b');
+    return '<div class="rd-status-item">'+
+      '<div class="rd-status-dot" style="background:'+col+'"></div>'+
+      '<div class="rd-status-lbl">'+esc(st)+'</div>'+
+      '<div class="rd-status-cnt">'+cnt+'</div>'+
+      '<div class="rd-status-pct">'+pct+'%</div>'+
+    '</div>';
+  }).join('');
+  root.innerHTML=
+    '<div class="rd-kpi-row">'+kpiHtml+'</div>'+
+    jiraCard+
+    '<div class="rd-cards">'+
+      '<div class="rd-panel">'+
+        '<div class="rd-panel-ti"><span class="rd-panel-ti-ico">👥</span> Histórias por Squad</div>'+
+        (squadRows||'<div class="rd-empty" style="padding:1rem"><div class="s">Sem dados de squad nas histórias</div></div>')+
+      '</div>'+
+      '<div class="rd-panel">'+
+        '<div class="rd-panel-ti"><span class="rd-panel-ti-ico">📊</span> Distribuição por Status</div>'+
+        (statusRows||'<div class="rd-empty" style="padding:1rem"><div class="s">Sem dados de status</div></div>')+
+      '</div>'+
+    '</div>';
+  // Update tab counter
+  var ct=$id('tabCtRd'); if(ct) ct.textContent=totalStories;
+}
 
 // ═══════════════════════════════════════
 // ESTÓRIAS — funções principais
@@ -4417,6 +4661,8 @@ function loadStoriesXlsx(file){
       var upSaved=$id('svUpSaved'); if(upSaved) upSaved.classList.remove('hidden');
       var upSavedTxt=$id('svUpSavedTxt'); if(upSavedTxt) upSavedTxt.textContent='Salvo localmente · '+stories.length+' estórias';
       renderStoryView();
+      renderRoadmapTab();
+      renderRiskNotifPanel();
       updateTabCounts();
       toast('📋 Estórias carregadas',stories.length+' estórias importadas de "'+file.name+'".');
     }catch(err){
