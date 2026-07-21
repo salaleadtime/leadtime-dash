@@ -15515,6 +15515,46 @@ Recomendação PMO: ${d.recommendation}`;
       return records;
     }
 
+    // Robô de qualidade: avalia o arquivo antes de qualquer alteração na base.
+    // Erros críticos bloqueiam a aplicação; alertas só orientam a revisão humana.
+    function validateOps4OpsImport(records) {
+      const errors = [], warnings = [];
+      const seenMain = new Set(), seenChild = new Set();
+      const knownSquads = new Set(sortedSquadsList().map(s => normalizeImportHeader(s.name)));
+      records.forEach((rec, index) => {
+        const line = index + 1;
+        const isChild = /filha/.test(normalizeImportHeader(rec.tipo));
+        if (!rec.motherNumber) errors.push(`Linha ${line}: Nº da iniciativa Mãe ausente.`);
+        if (isChild && !rec.childNumber) errors.push(`Linha ${line}: iniciativa Filha sem Nº da Filha.`);
+        const identity = isChild ? `${rec.motherNumber}/${rec.childNumber}` : rec.motherNumber;
+        const seen = isChild ? seenChild : seenMain;
+        if (identity && seen.has(identity)) errors.push(`Linha ${line}: número de iniciativa duplicado (${identity}).`);
+        if (identity) seen.add(identity);
+        [['Discovery', rec.discoveryDate], ['Início Dev', rec.startDev], ['Término Dev', rec.endDev]].forEach(([label, value]) => {
+          if (String(value || '').trim() && !parseFlexibleDate(value)) errors.push(`Linha ${line}: data inválida em ${label} (${value}).`);
+        });
+        const discovery = parseFlexibleDate(rec.discoveryDate), start = parseFlexibleDate(rec.startDev), end = parseFlexibleDate(rec.endDev);
+        if (start && end && start > end) errors.push(`Linha ${line}: Início Dev é posterior ao Término Dev.`);
+        if (discovery && start && discovery > start) warnings.push(`Linha ${line}: Discovery está posterior ao Início Dev; confira o planejamento.`);
+        if (String(rec.hours2026 || '').trim() && !Number.isFinite(Number(String(rec.hours2026).replace(',', '.')))) warnings.push(`Linha ${line}: Horas 2026 não é numérico e não será atualizado.`);
+        if (rec.squad && !knownSquads.has(normalizeImportHeader(rec.squad))) warnings.push(`Linha ${line}: Squad "${rec.squad}" não cadastrada; a iniciativa ficará em ASD.`);
+      });
+      return { errors, warnings };
+    }
+
+    function importValidationHtml(validation) {
+      const render = (items, color) => items.slice(0, 8).map(item => `<li style="margin:4px 0;color:${color}">${escapeHtml(item)}</li>`).join('');
+      const extra = (items) => items.length > 8 ? `<li style="margin:4px 0">… e mais ${items.length - 8} ocorrência(s).</li>` : '';
+      return `
+        <div class="ux-v6-alert-list" style="margin-top:12px">
+          <div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>Erros críticos (bloqueiam a importação)</span></div><strong class="ux-v6-alert-count">${validation.errors.length}</strong></div>
+          <div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>Alertas para conferência</span></div><strong class="ux-v6-alert-count">${validation.warnings.length}</strong></div>
+        </div>
+        ${validation.errors.length ? `<ul style="margin:10px 0 0;padding-left:18px;font-size:12px;line-height:1.4">${render(validation.errors, '#b42318')}${extra(validation.errors)}</ul>` : ''}
+        ${validation.warnings.length ? `<ul style="margin:8px 0 0;padding-left:18px;font-size:12px;line-height:1.4">${render(validation.warnings, '#a15c00')}${extra(validation.warnings)}</ul>` : ''}
+      `;
+    }
+
     function planImportChanges(records) {
       const plan = { updates: [], creates: [], childUpserts: [], skipped: [] };
       records.forEach(rec => {
@@ -15529,6 +15569,7 @@ Recomendação PMO: ${d.recommendation}`;
         if (existing) plan.updates.push({ rec, project: existing });
         else plan.creates.push({ rec });
       });
+      plan.validation = validateOps4OpsImport(records);
       return plan;
     }
 
@@ -15939,16 +15980,18 @@ Recomendação PMO: ${d.recommendation}`;
       ];
       const body = `
         <div class="ux-v6-alert-list">${rows.map(([label, value]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('')}</div>
+        ${importValidationHtml(plan.validation)}
         <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">Modo seguro: a planilha atualiza campos vazios ou ainda iguais ao último valor importado. Se alguém editou manualmente um campo, a importação preserva o manual e registra no histórico. Ações, riscos/dependências e cronograma são criados a partir de Nota, Dependências e Prazos sem duplicar o que já existe.</p>
       `;
       openModal('Confirmar importação da planilha', 'Revise antes de aplicar. Isso atualiza a base para todos os usuários.', body, [
         `<button type="button" class="btn" onclick="_pendingImportPlan=null;closeModal()">Cancelar</button>`,
-        `<button type="button" class="btn primary" onclick="confirmImportPlan()">Aplicar importação</button>`
+        `<button type="button" class="btn primary" ${plan.validation.errors.length ? 'disabled title="Corrija os erros críticos antes de aplicar."' : ''} onclick="confirmImportPlan()">${plan.validation.errors.length ? 'Importação bloqueada' : 'Aplicar importação'}</button>`
       ]);
     }
 
     function confirmImportPlan() {
       if (!_pendingImportPlan) { closeModal(); return; }
+      if (_pendingImportPlan.validation && _pendingImportPlan.validation.errors.length) { toast('⚠️ Corrija os erros críticos da planilha antes de importar.'); return; }
       const result = applyImportPlan(_pendingImportPlan);
       _pendingImportPlan = null;
       closeModal();
@@ -16057,7 +16100,16 @@ Recomendação PMO: ${d.recommendation}`;
         if (!groups.has(project.id)) groups.set(project.id, { project, records: [] });
         groups.get(project.id).records.push(rec);
       });
-      return { groups, untagged, unmatchedTags: Array.from(unmatchedTags) };
+      const duplicateKeys = records.reduce((duplicates, rec) => {
+        duplicates.set(rec.key, (duplicates.get(rec.key) || 0) + 1);
+        return duplicates;
+      }, new Map());
+      const warnings = [];
+      const repeated = Array.from(duplicateKeys.entries()).filter(([, count]) => count > 1).map(([key]) => key);
+      if (repeated.length) warnings.push(`${repeated.length} chave(s) Jira repetida(s); será mantido o último estado de cada história.`);
+      if (untagged) warnings.push(`${untagged} linha(s) sem rótulo no formato #Nº da iniciativa.`);
+      if (unmatchedTags.size) warnings.push(`${unmatchedTags.size} rótulo(s) sem iniciativa correspondente na base.`);
+      return { groups, untagged, unmatchedTags: Array.from(unmatchedTags), validation: { errors: [], warnings } };
     }
 
     function applyJiraImportPlan(plan) {
@@ -16127,6 +16179,7 @@ Recomendação PMO: ${d.recommendation}`;
         : '';
       const body = `
         <div class="ux-v6-alert-list">${rows.map(([label, value]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('')}</div>
+        ${importValidationHtml(plan.validation)}
         <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">O vínculo usa o rótulo "#Nº da iniciativa" de cada história no Jira. Histórias já importadas antes são atualizadas (status, resumo etc.), sem duplicar.</p>
         ${unmatchedNote}
       `;
