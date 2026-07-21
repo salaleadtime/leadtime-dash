@@ -7317,30 +7317,45 @@
     .mtl-sq { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; line-height:1.45; }
     .mtl-iname .n { font-size:13px; font-weight:700; color:var(--ink); line-height:1.4; }
     .mtl-iname .m { font-size:11px; color:var(--muted); margin-top:4px; }
-    .mtl-track { position:relative; height:26px; }
-    .mtl-track .mtl-rail { position:absolute; left:0; right:0; top:9px; height:8px; border-radius:99px; background:#eef1f6; }
-    .mtl-seg { position:absolute; top:3px; height:20px; border-radius:6px; cursor:default; }
-    .mtl-seg.ok { background:var(--green); }
-    .mtl-seg.attn { background:var(--amber); }
-    .mtl-seg.late { background:var(--red); }
-    .mtl-seg.planned { background:transparent; border:2px dashed var(--line-strong); }
-    .mtl-seg:hover { filter:brightness(1.08); box-shadow:0 0 0 2px rgba(0,0,0,.08); }
+    .mtl-track { position:relative; height:30px; }
+    .mtl-track .mtl-rail { position:absolute; left:0; right:0; top:11px; height:8px; border-radius:99px; background:#eef1f6; }
+    /* base segment */
+    .mtl-seg { position:absolute; top:5px; height:20px; border-radius:6px; cursor:default; overflow:hidden; display:flex; align-items:center; }
+    .mtl-seg:hover { filter:brightness(1.1); box-shadow:0 0 0 2px rgba(0,0,0,.1); }
+    /* Phase: Discovery (light blue) */
+    .mtl-seg.phase-disc         { background:#76b7d4; }
+    .mtl-seg.phase-disc.late    { background:#d95f5f; }
+    .mtl-seg.phase-disc.attn    { background:#d4a336; }
+    .mtl-seg.phase-disc.ok      { background:#50a87a; }
+    /* Phase: Desenvolvimento/Planejamento (dark teal) */
+    .mtl-seg.phase-dev          { background:#2a7a96; }
+    .mtl-seg.phase-dev.late     { background:#bf2030; }
+    .mtl-seg.phase-dev.attn     { background:#b07020; }
+    .mtl-seg.phase-dev.ok       { background:#1a7a50; }
+    /* Labels inside bars */
+    .mtl-seg-d   { position:absolute; left:5px; font-size:9px; font-weight:800; color:rgba(255,255,255,.9); pointer-events:none; flex:none; }
+    .mtl-seg-dur { flex:1; text-align:center; font-size:10px; font-weight:700; color:#fff; white-space:nowrap; pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,.25); overflow:hidden; }
+    .mtl-seg-arrow { position:absolute; right:4px; font-size:10px; color:#fff; pointer-events:none; }
+    /* Implantação milestone star */
+    .mtl-seg-star { position:absolute; top:50%; transform:translate(-50%,-50%); font-size:15px; z-index:4; pointer-events:none; line-height:1; }
+    /* Risk tag in status column */
+    .mtl-risk-tag { display:inline-flex; align-items:center; gap:2px; background:rgba(191,24,48,.12); color:#bf1830; font-size:9px; font-weight:700; padding:1px 5px; border-radius:99px; margin-left:4px; white-space:nowrap; }
+    .mtl-risk-tag.missing { background:rgba(200,130,30,.12); color:#b07020; }
     .mtl-hours { text-align:right; font-size:12px; font-weight:700; color:var(--ink); white-space:nowrap; }
     .mtl-stat { text-align:right; font-size:11.5px; font-weight:700; white-space:nowrap; }
     .mtl-stat.ok { color:var(--green); } .mtl-stat.attn { color:var(--amber); } .mtl-stat.late { color:var(--red); }
     .mtl-stat small { display:block; font-weight:500; color:var(--muted); font-size:10px; margin-top:1px; }
     /* "Hoje" fica DENTRO da trilha (mesmo espaço de coordenadas 0-100% dos segmentos)
        em vez de esticado sobre a linha toda — assim nunca desalinha das colunas. */
-    .mtl-today-line { position:absolute; top:-6px; bottom:-6px; width:0; border-left:1.5px dashed var(--primary); opacity:.55; z-index:1; pointer-events:none; }
+    .mtl-today-line { position:absolute; top:-6px; bottom:-6px; width:0; border-left:1.5px dashed var(--primary); opacity:.55; z-index:5; pointer-events:none; }
     .mtl-today-tag { position:absolute; top:-3px; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); }
     .mtl-empty { padding:34px 16px; text-align:center; color:var(--muted); font-size:12.5px; }
-    .mtl-legend { display:flex; flex-wrap:wrap; gap:18px; padding:10px 20px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:11.5px; color:var(--muted); }
+    .mtl-legend { display:flex; flex-wrap:wrap; gap:14px; padding:10px 20px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:11.5px; color:var(--muted); }
     .mtl-legend .li { display:flex; align-items:center; gap:7px; }
     .mtl-legend .sw { width:18px; height:9px; border-radius:4px; flex:none; }
-    .mtl-legend .sw.ok { background:var(--green); }
-    .mtl-legend .sw.attn { background:var(--amber); }
-    .mtl-legend .sw.late { background:var(--red); }
-    .mtl-legend .sw.planned { background:transparent; border:2px dashed var(--line-strong); }
+    .mtl-legend .sw.phase-disc { background:#76b7d4; }
+    .mtl-legend .sw.phase-dev  { background:#2a7a96; }
+    .mtl-legend .sw.late-bar   { background:#d95f5f; }
     .mtl-legend .sw.today { width:0; height:14px; border-left:1.5px dashed var(--primary); }
 
     .mtl-picker { display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:9px 13px; margin-bottom:12px; }
@@ -14158,27 +14173,117 @@ Recomendação PMO: ${d.recommendation}`;
     function macroTimelineRowHtml(project, axis, isFirst) {
       const squad = squadForProject(project);
       const squadName = squad?.name || project.squad || 'Ainda Sem Definição';
-      const items = ensureBaseSchedule(project).filter(s => !s.jira);
-      const status = macroTimelineProjectStatus(project);
-      const doneCount = items.filter(s => scheduleCompleted(s)).length;
-      const jiraCount = scheduleJiraCount(project);
+      const items = ensureBaseSchedule(project);
+      const dateItems = items.filter(s => !s.jira);
       const todayPct = macroTimelineTodayPct(axis);
-      const segs = items.map(s => {
-        const st = scheduleStatus(s);
-        const pos = macroTimelineSegPct(axis, s);
-        const cls = st.cls === 'planned' ? 'planned' : macroTimelineStatusClass(st.cls);
-        const tip = `${s.item || 'Marco sem nome'} — ${formatBR(s.start)} a ${formatBR(s.end)} — ${st.label}`;
-        return `<div class="mtl-seg ${cls}" style="left:${pos.left}%;width:${pos.width}%" title="${escapeAttr(tip)}"></div>`;
-      }).join('');
-      const statusLabel = { late: 'Atrasado', attn: 'Atenção', ok: 'No prazo' }[status];
-      const name = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ') || 'Sem nome';
+      const DAY = 1000 * 60 * 60 * 24;
+
+      // ── Phase grouping ──────────────────────────────────────────────────────
+      // Discovery (light blue): Kickoff + Discovery marcos
+      // Planejamento/Dev (dark teal): Desenho + Histórias + Refinamento marcos
+      const DISC_KEYS = ['kickoff', 'discovery'];
+      const DEV_KEYS  = ['desenho', 'historias', 'refino'];
+      const discItems = dateItems.filter(s => DISC_KEYS.includes(s.baseKey));
+      const devItems  = dateItems.filter(s => DEV_KEYS.includes(s.baseKey));
+
+      // User-added implantação marco (name contains "implant")
+      const allSched = (project.schedule || []).filter(s => !s.deleted);
+      const implantMarco = allSched.find(s => !s.baseKey && s.item?.toLowerCase().includes('implant'));
+
+      function phaseSpan(phItems) {
+        const starts = phItems.map(s => s.start).filter(Boolean).sort();
+        const ends   = phItems.map(s => s.end || s.start).filter(Boolean).sort();
+        if (!starts.length) return null;
+        return { start: starts[0], end: ends[ends.length - 1] };
+      }
+
+      function monthsDur(span) {
+        if (!span?.start || !span?.end) return null;
+        const s = parseISODate(span.start), e = parseISODate(span.end);
+        if (!s || !e) return null;
+        const m = Math.round((e - s) / (DAY * 30));
+        return m >= 1 ? m : null;
+      }
+
+      function phaseStatusCls(phItems) {
+        if (!phItems.length) return '';
+        if (phItems.some(s => scheduleStatus(s).cls === 'late'))      return 'late';
+        if (phItems.some(s => scheduleStatus(s).cls === 'attention')) return 'attn';
+        if (phItems.every(s => scheduleCompleted(s)))                 return 'ok';
+        return '';
+      }
+
+      // ── Automatic risk detection ────────────────────────────────────────────
+      const today = parseISODate(fmtDate(new Date()));
+      const lateMarcos = dateItems.filter(s => {
+        if (scheduleCompleted(s)) return false;
+        const e = parseISODate(s.end);
+        return e && today && e < today;
+      });
+      const missingMarcos = dateItems.filter(s => !s.start && !s.end);
+      // A marco is "blocking" if it's late or missing dates AND is a prerequisite
+      // for the next phase (e.g. discovery not closed means dev can't start)
+      const isBlocked = lateMarcos.length > 0 || missingMarcos.length > 0;
+
+      // ── Continues into 2027? ────────────────────────────────────────────────
+      const allEnds = dateItems.map(s => s.end || s.start).filter(Boolean).sort();
+      const continues2027 = allEnds.length > 0 && allEnds[allEnds.length - 1] >= '2027-01-01';
+
+      // ── Build segments ──────────────────────────────────────────────────────
+      let segs = '';
+
+      const discSpan = phaseSpan(discItems);
+      if (discSpan) {
+        const pos  = macroTimelineSegPct(axis, { start: discSpan.start, end: discSpan.end });
+        const dur  = monthsDur(discSpan);
+        const dSt  = phaseStatusCls(discItems);
+        const tip  = `Discovery: ${formatBR(discSpan.start)} → ${formatBR(discSpan.end)}${dur ? ` · ${dur}m` : ''}`;
+        segs += `<div class="mtl-seg phase-disc ${dSt}" style="left:${pos.left}%;width:${pos.width}%" title="${escapeAttr(tip)}">` +
+                `<span class="mtl-seg-d">D</span><span class="mtl-seg-dur">${dur ? dur + 'm' : ''}</span>` +
+                `</div>`;
+      }
+
+      const devSpan = phaseSpan(devItems);
+      if (devSpan) {
+        const pos    = macroTimelineSegPct(axis, { start: devSpan.start, end: devSpan.end });
+        const dur    = monthsDur(devSpan);
+        const dSt    = phaseStatusCls(devItems);
+        const tip    = `Planejamento: ${formatBR(devSpan.start)} → ${formatBR(devSpan.end)}${dur ? ` · ${dur}m` : ''}`;
+        const arrow  = continues2027 ? `<span class="mtl-seg-arrow">▶</span>` : '';
+        segs += `<div class="mtl-seg phase-dev ${dSt}" style="left:${pos.left}%;width:${pos.width}%" title="${escapeAttr(tip)}">` +
+                `<span class="mtl-seg-dur">${dur ? dur + 'm' : ''}</span>${arrow}` +
+                `</div>`;
+      }
+
+      // Implantação star — user-added marco OR auto when all dev marcos done
+      if (implantMarco?.start) {
+        const pos = macroTimelineSegPct(axis, { start: implantMarco.start, end: implantMarco.start });
+        segs += `<div class="mtl-seg-star" style="left:${Math.min(pos.left + pos.width, 99)}%" title="${escapeAttr('Implantação: ' + formatBR(implantMarco.start))}">⭐</div>`;
+      } else if (devSpan && devItems.length > 0 && devItems.every(s => scheduleCompleted(s))) {
+        const pos = macroTimelineSegPct(axis, { start: devSpan.end, end: devSpan.end });
+        segs += `<div class="mtl-seg-star" style="left:${Math.min(pos.left + pos.width, 99)}%" title="Todos os marcos concluídos">⭐</div>`;
+      }
+
+      // ── Risk indicator ──────────────────────────────────────────────────────
+      const riskHtml = lateMarcos.length > 0
+        ? `<span class="mtl-risk-tag" title="Marcos atrasados: ${escapeAttr(lateMarcos.map(s => s.item).join(', '))}">⚠ ${lateMarcos.length} atrasado${lateMarcos.length > 1 ? 's' : ''}</span>`
+        : missingMarcos.length > 0
+        ? `<span class="mtl-risk-tag missing" title="Marcos sem data: ${escapeAttr(missingMarcos.map(s => s.item).join(', '))}">! ${missingMarcos.length} sem data</span>`
+        : '';
+
+      const overallStatus = macroTimelineProjectStatus(project);
+      const statusLabel = { late: 'Atrasado', attn: 'Atenção', ok: 'No prazo' }[overallStatus] || 'Planejado';
+      const doneCount = dateItems.filter(s => scheduleCompleted(s)).length;
+      const jiraCount = scheduleJiraCount(project);
       const borderTop = isFirst ? 'none' : '1px solid var(--line)';
+      const name = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ') || 'Sem nome';
+
       return `<button type="button" class="mtl-row" style="background:none;border:0;border-top:${borderTop};width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;margin:0" onclick="goToMacroTimelineInitiative('${escapeAttr(project.id)}')">
         <div class="mtl-sq" style="color:${squadColorFor(squadName)}">${escapeHtml(squadName)}</div>
-        <div class="mtl-iname"><div class="n">${escapeHtml(name)}</div><div class="m">${items.length} marco(s) padrão · ${jiraCount} histórias no Jira</div></div>
+        <div class="mtl-iname"><div class="n">${escapeHtml(name)}</div><div class="m">${doneCount}/${dateItems.length} marcos${jiraCount ? ` · ${jiraCount} hist. Jira` : ''}</div></div>
         <div class="mtl-track"><div class="mtl-rail"></div>${segs}<div class="mtl-today-line" style="left:${todayPct}%"></div></div>
         <div class="mtl-hours">${escapeHtml(formatHours(project.hours2026))}</div>
-        <div class="mtl-stat ${status}">${statusLabel}<small>${doneCount} de ${items.length} marcos</small></div>
+        <div class="mtl-stat ${overallStatus}">${statusLabel}${riskHtml}<small>${doneCount} de ${dateItems.length} marcos</small></div>
       </button>`;
     }
 
@@ -14260,11 +14365,13 @@ Recomendação PMO: ${d.recommendation}`;
 
       const geralBody = `
         <div class="mtl-legend">
-          <div class="li"><span class="sw ok"></span>No prazo / concluído</div>
-          <div class="li"><span class="sw attn"></span>Atenção — prazo perto do fim</div>
-          <div class="li"><span class="sw late"></span>Atrasado — sinaliza PDCA</div>
-          <div class="li"><span class="sw planned"></span>Planejado (ainda não iniciado)</div>
+          <div class="li"><span class="sw phase-disc"></span>Discovery (Kickoff → Discovery)</div>
+          <div class="li"><span class="sw phase-dev"></span>Planejamento (Desenho → Refinamento)</div>
+          <div class="li"><span class="sw late-bar"></span>Fase atrasada</div>
+          <div class="li"><span style="font-size:13px;line-height:1">⭐</span>Implantação</div>
+          <div class="li"><span style="font-size:11px;font-weight:700">▶</span>Continua 2027</div>
           <div class="li"><span class="sw today"></span>Hoje · ${escapeHtml(formatBR(fmtDate(new Date())))}</div>
+          <div class="li"><span class="mtl-risk-tag" style="position:static;margin:0">⚠</span>Marco em risco</div>
         </div>
         <div class="mtl-filterbar">
           <div class="mtl-fgroup">${squadChips}</div>
