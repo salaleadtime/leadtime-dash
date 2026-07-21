@@ -7308,28 +7308,40 @@
     .mtl-search input { all:unset; font-size:12.5px; color:var(--ink); width:100%; }
 
     .mtl-table { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
-    .mtl-thead { display:grid; grid-template-columns:132px 290px 1fr 116px; gap:18px; align-items:end; padding:13px 20px 11px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:800; }
-    .mtl-thead .mtl-axis { position:relative; height:14px; }
+    .mtl-thead { display:grid; grid-template-columns:120px 270px 1fr 84px 106px; gap:16px; align-items:end; padding:13px 20px 11px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:800; }
+    .mtl-thead .mtl-axis { position:relative; height:18px; }
     .mtl-thead .mtl-month { position:absolute; top:0; transform:translateX(-50%); }
-    .mtl-row { display:grid; grid-template-columns:132px 290px 1fr 116px; gap:18px; align-items:center; padding:16px 20px; border-top:1px solid var(--line); }
+    .mtl-row { display:grid; grid-template-columns:120px 270px 1fr 84px 106px; gap:16px; align-items:center; padding:16px 20px; border-top:1px solid var(--line); }
     .mtl-row:first-child { border-top:none; }
     .mtl-row.hidden { display:none; }
     .mtl-sq { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; line-height:1.45; }
     .mtl-iname .n { font-size:13px; font-weight:700; color:var(--ink); line-height:1.4; }
     .mtl-iname .m { font-size:11px; color:var(--muted); margin-top:4px; }
-    .mtl-track { position:relative; height:20px; }
-    .mtl-track .mtl-rail { position:absolute; left:0; right:0; top:7px; height:6px; border-radius:99px; background:#eef1f6; }
-    .mtl-seg { position:absolute; top:4px; height:12px; border-radius:99px; }
+    .mtl-track { position:relative; height:26px; }
+    .mtl-track .mtl-rail { position:absolute; left:0; right:0; top:9px; height:8px; border-radius:99px; background:#eef1f6; }
+    .mtl-seg { position:absolute; top:3px; height:20px; border-radius:6px; cursor:default; }
     .mtl-seg.ok { background:var(--green); }
     .mtl-seg.attn { background:var(--amber); }
     .mtl-seg.late { background:var(--red); }
     .mtl-seg.planned { background:transparent; border:2px dashed var(--line-strong); }
+    .mtl-seg:hover { filter:brightness(1.08); box-shadow:0 0 0 2px rgba(0,0,0,.08); }
+    .mtl-hours { text-align:right; font-size:12px; font-weight:700; color:var(--ink); white-space:nowrap; }
     .mtl-stat { text-align:right; font-size:11.5px; font-weight:700; white-space:nowrap; }
     .mtl-stat.ok { color:var(--green); } .mtl-stat.attn { color:var(--amber); } .mtl-stat.late { color:var(--red); }
     .mtl-stat small { display:block; font-weight:500; color:var(--muted); font-size:10px; margin-top:1px; }
-    .mtl-today { position:absolute; top:40px; bottom:0; width:0; border-left:2px dashed var(--primary); opacity:.45; z-index:1; pointer-events:none; }
-    .mtl-today-tag { position:absolute; top:0; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+    /* "Hoje" fica DENTRO da trilha (mesmo espaço de coordenadas 0-100% dos segmentos)
+       em vez de esticado sobre a linha toda — assim nunca desalinha das colunas. */
+    .mtl-today-line { position:absolute; top:-6px; bottom:-6px; width:0; border-left:1.5px dashed var(--primary); opacity:.55; z-index:1; pointer-events:none; }
+    .mtl-today-tag { position:absolute; top:-3px; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); }
     .mtl-empty { padding:34px 16px; text-align:center; color:var(--muted); font-size:12.5px; }
+    .mtl-legend { display:flex; flex-wrap:wrap; gap:18px; padding:14px 20px; border-top:1px solid var(--line); background:var(--panel-2); font-size:11.5px; color:var(--muted); }
+    .mtl-legend .li { display:flex; align-items:center; gap:7px; }
+    .mtl-legend .sw { width:18px; height:9px; border-radius:4px; flex:none; }
+    .mtl-legend .sw.ok { background:var(--green); }
+    .mtl-legend .sw.attn { background:var(--amber); }
+    .mtl-legend .sw.late { background:var(--red); }
+    .mtl-legend .sw.planned { background:transparent; border:2px dashed var(--line-strong); }
+    .mtl-legend .sw.today { width:0; height:14px; border-left:1.5px dashed var(--primary); }
 
     .mtl-picker { display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:9px 13px; margin-bottom:12px; }
     .mtl-picker select { all:unset; flex:1; font-size:13px; font-weight:700; color:var(--ink); padding:5px 9px; background:#fff; border-radius:8px; cursor:pointer; border:1px solid var(--line); }
@@ -7350,7 +7362,7 @@
 
     @media (max-width: 760px) {
       .mtl-thead, .mtl-row { grid-template-columns:76px 1fr; }
-      .mtl-thead .mtl-axis, .mtl-thead > div:last-child, .mtl-row .mtl-track, .mtl-row .mtl-stat { display:none; }
+      .mtl-thead .mtl-axis, .mtl-thead .mtl-hours-th, .mtl-thead > div:last-child, .mtl-row .mtl-track, .mtl-row .mtl-hours, .mtl-row .mtl-stat { display:none; }
     }
 </style>
 </head>
@@ -14150,11 +14162,13 @@ Recomendação PMO: ${d.recommendation}`;
       const status = macroTimelineProjectStatus(project);
       const doneCount = items.filter(s => scheduleCompleted(s)).length;
       const jiraCount = scheduleJiraCount(project);
+      const todayPct = macroTimelineTodayPct(axis);
       const segs = items.map(s => {
         const st = scheduleStatus(s);
         const pos = macroTimelineSegPct(axis, s);
         const cls = st.cls === 'planned' ? 'planned' : macroTimelineStatusClass(st.cls);
-        return `<div class="mtl-seg ${cls}" style="left:${pos.left}%;width:${pos.width}%"></div>`;
+        const tip = `${s.item || 'Marco sem nome'} — ${formatBR(s.start)} a ${formatBR(s.end)} — ${st.label}`;
+        return `<div class="mtl-seg ${cls}" style="left:${pos.left}%;width:${pos.width}%" title="${escapeAttr(tip)}"></div>`;
       }).join('');
       const statusLabel = { late: 'Atrasado', attn: 'Atenção', ok: 'No prazo' }[status];
       const name = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ') || 'Sem nome';
@@ -14162,7 +14176,8 @@ Recomendação PMO: ${d.recommendation}`;
       return `<button type="button" class="mtl-row" style="background:none;border:0;border-top:${borderTop};width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;margin:0" onclick="goToMacroTimelineInitiative('${escapeAttr(project.id)}')">
         <div class="mtl-sq" style="color:${squadColorFor(squadName)}">${escapeHtml(squadName)}</div>
         <div class="mtl-iname"><div class="n">${escapeHtml(name)}</div><div class="m">${items.length} marco(s) padrão · ${jiraCount} histórias no Jira</div></div>
-        <div class="mtl-track"><div class="mtl-rail"></div>${segs}</div>
+        <div class="mtl-track"><div class="mtl-rail"></div>${segs}<div class="mtl-today-line" style="left:${todayPct}%"></div></div>
+        <div class="mtl-hours">${escapeHtml(formatHours(project.hours2026))}</div>
         <div class="mtl-stat ${status}">${statusLabel}<small>${doneCount} de ${items.length} marcos</small></div>
       </button>`;
     }
@@ -14251,16 +14266,22 @@ Recomendação PMO: ${d.recommendation}`;
         </div>
         <div class="mtl-table">
           <div class="mtl-tablewrap">
-            <div class="mtl-today" style="left:${todayPct}%"></div>
-            <div class="mtl-today-tag" style="left:${todayPct}%">Hoje</div>
             <div class="mtl-thead">
               <div>Squad</div><div>Iniciativa</div>
-              <div class="mtl-axis">${ticks.map(t => `<span class="mtl-month" style="left:${t.pct}%">${t.label}</span>`).join('')}</div>
+              <div class="mtl-axis">${ticks.map(t => `<span class="mtl-month" style="left:${t.pct}%">${t.label}</span>`).join('')}<span class="mtl-today-tag" style="left:${todayPct}%">Hoje</span></div>
+              <div class="mtl-hours-th" style="text-align:right">Horas 2026</div>
               <div style="text-align:right">Status</div>
             </div>
             <div class="mtl-tbody">
               ${rowsHtml || `<div class="mtl-empty">Nenhuma iniciativa encontrada com esses filtros.</div>`}
             </div>
+          </div>
+          <div class="mtl-legend">
+            <div class="li"><span class="sw ok"></span>No prazo / concluído</div>
+            <div class="li"><span class="sw attn"></span>Atenção — prazo perto do fim</div>
+            <div class="li"><span class="sw late"></span>Atrasado — sinaliza PDCA</div>
+            <div class="li"><span class="sw planned"></span>Planejado (ainda não iniciado)</div>
+            <div class="li"><span class="sw today"></span>Hoje · ${escapeHtml(formatBR(fmtDate(new Date())))}</div>
           </div>
         </div>`;
 
