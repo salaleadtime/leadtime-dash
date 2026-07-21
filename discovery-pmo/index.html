@@ -5709,6 +5709,14 @@
       box-shadow: 0 12px 28px rgba(15, 23, 42, .05);
       padding: 16px 17px;
     }
+    .ux-v6-risk-banner {
+      display:flex; align-items:center; gap:12px;
+      background:linear-gradient(135deg,#fff5f5,#fff8f5);
+      border:1.5px solid #f3c6c1; border-radius:14px;
+      padding:12px 16px; transition:box-shadow .15s;
+    }
+    .ux-v6-risk-banner:hover { box-shadow:0 4px 16px rgba(191,24,48,.12); }
+    .ux-v6-risk-icon { font-size:18px; flex:none; }
 
     .ux-v6-side-title {
       display: flex;
@@ -7282,12 +7290,38 @@
     }
     .pmo-squad-chip.asd { background: #fee2e2; color: #991b1b; }
 
-    /* ── Timeline Executiva — página cheia, não modal ── */
+    /* ── Roadmap — página cheia ── */
     .mtl-page { position:fixed; inset:0; z-index:200; background:var(--bg); overflow-y:auto; }
-    .mtl-page-head { position:sticky; top:0; z-index:5; background:#fff; border-bottom:1px solid var(--line); padding:18px 28px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; box-shadow:0 1px 2px rgba(23,29,42,.04); }
-    .mtl-page-head h2 { margin:0 0 4px; font-size:21px; font-weight:800; letter-spacing:-.02em; color:var(--ink); }
-    .mtl-page-head p { margin:0; color:var(--muted); font-size:12.5px; max-width:64ch; }
+    /* header moderno */
+    .mtl-page-head {
+      position:sticky; top:0; z-index:5;
+      background:linear-gradient(135deg,#0f2744 0%,#1a4068 55%,#1d5a82 100%);
+      border-bottom:none; padding:0; display:flex; flex-direction:column;
+      box-shadow:0 2px 12px rgba(0,0,0,.18);
+    }
+    .mtl-head-top { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px 28px 10px; }
+    .mtl-head-left { display:flex; align-items:center; gap:0; }
+    .mtl-head-accent { width:4px; min-height:36px; border-radius:3px; background:linear-gradient(180deg,#3ecfcf,#27a2b8); flex:none; margin-right:14px; }
+    .mtl-head-eyebrow { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:rgba(255,255,255,.5); margin-bottom:3px; }
+    .mtl-page-head h2 { margin:0; font-size:20px; font-weight:800; letter-spacing:-.02em; color:#fff; }
+    .mtl-head-kpis { display:flex; gap:8px; align-items:center; }
+    .mtl-kpi { display:flex; flex-direction:column; align-items:center; padding:6px 13px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:10px; min-width:60px; cursor:default; transition:background .15s; }
+    .mtl-kpi:hover { background:rgba(255,255,255,.14); }
+    .mtl-kpi .v { font-size:17px; font-weight:800; color:#fff; line-height:1; }
+    .mtl-kpi .l { font-size:9.5px; color:rgba(255,255,255,.55); margin-top:2px; white-space:nowrap; }
+    .mtl-kpi.risk .v { color:#ff7070; }
+    .mtl-kpi.late .v { color:#ffc06e; }
+    .mtl-kpi.ok-kpi .v { color:#6eddb4; }
+    .mtl-head-close { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:8px; color:#fff; font-size:12px; font-weight:700; padding:7px 16px; cursor:pointer; transition:background .15s; white-space:nowrap; }
+    .mtl-head-close:hover { background:rgba(255,255,255,.2); }
+    .mtl-head-strip { padding:0 28px 10px; display:flex; align-items:center; gap:20px; font-size:11px; color:rgba(255,255,255,.45); }
+    .mtl-head-strip span { display:flex; align-items:center; gap:5px; }
     .mtl-page-body { padding:18px 28px 60px; max-width:1360px; margin:0 auto; }
+    /* risk section in atrasos tab */
+    .mtl-risk-section { background:#fff5f5; border:1px solid #f3c6c1; border-radius:12px; margin-bottom:14px; overflow:hidden; }
+    .mtl-risk-section-head { padding:10px 16px; background:#bf1830; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; gap:8px; }
+    .mtl-risk-row { display:grid; grid-template-columns:120px 1fr auto; gap:12px; align-items:center; padding:10px 16px; border-top:1px solid #fae0de; font-size:12.5px; }
+    .mtl-risk-row:first-child { border-top:none; }
     .mtl-tablewrap { position:relative; }
 
     .mtl-toggle { display:inline-flex; padding:3px; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; gap:2px; margin-bottom:14px; }
@@ -7347,8 +7381,8 @@
     .mtl-stat small { display:block; font-weight:500; color:var(--muted); font-size:10px; margin-top:1px; }
     /* "Hoje" fica DENTRO da trilha (mesmo espaço de coordenadas 0-100% dos segmentos)
        em vez de esticado sobre a linha toda — assim nunca desalinha das colunas. */
-    .mtl-today-line { position:absolute; top:-6px; bottom:-6px; width:0; border-left:1.5px dashed var(--primary); opacity:.55; z-index:5; pointer-events:none; }
-    .mtl-today-tag { position:absolute; top:-3px; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+    .mtl-today-line { position:absolute; top:-8px; bottom:-8px; width:0; border-left:2px solid rgba(var(--primary-rgb,30,90,200),.28); z-index:5; pointer-events:none; }
+    .mtl-today-tag { position:absolute; top:-4px; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:9px; font-weight:700; padding:2px 7px; border-radius:99px; z-index:6; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.18); letter-spacing:.01em; }
     .mtl-empty { padding:34px 16px; text-align:center; color:var(--muted); font-size:12.5px; }
     .mtl-legend { display:flex; flex-wrap:wrap; gap:14px; padding:10px 20px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:11.5px; color:var(--muted); }
     .mtl-legend .li { display:flex; align-items:center; gap:7px; }
@@ -14361,7 +14395,19 @@ Recomendação PMO: ${d.recommendation}`;
       });
       const rowsHtml = filteredProjects.map((p, i) => macroTimelineRowHtml(p, axis, i === 0)).join('');
 
-      const lastUpdate = data.timelineLastScheduleUpdate ? `<div class="mtl-strip"><div>🕒</div><div><strong>Última atualização do Cronograma</strong>${escapeHtml(data.timelineLastScheduleOwner || 'Alguém')} ${data.timelineLastScheduleItem ? `editou "${escapeHtml(data.timelineLastScheduleItem)}"` : 'atualizou um marco'} em ${escapeHtml(formatBRDateTime(data.timelineLastScheduleUpdate))}.</div></div>` : '';
+      // ── KPI summaries for header ──────────────────────────────────────────
+      const today = parseISODate(fmtDate(new Date()));
+      const riskProjects = allProjects.filter(p => {
+        const di = ensureBaseSchedule(p).filter(s => !s.jira);
+        return di.some(s => { const e = parseISODate(s.end); return !scheduleCompleted(s) && e && today && e < today; })
+            || di.some(s => !s.start && !s.end);
+      });
+      const doneProjects = allProjects.filter(p =>
+        ensureBaseSchedule(p).filter(s => !s.jira).every(s => scheduleCompleted(s))
+      );
+      const todayLabel = `Hoje·${formatBR(fmtDate(new Date())).slice(0,5)}`;
+
+      const lastUpdate = data.timelineLastScheduleUpdate ? `<div class="mtl-strip"><div>🕒</div><div><strong>Última atualização do Cronograma</strong> — ${escapeHtml(data.timelineLastScheduleOwner || 'Alguém')} ${data.timelineLastScheduleItem ? `editou "${escapeHtml(data.timelineLastScheduleItem)}"` : 'atualizou um marco'} em ${escapeHtml(formatBRDateTime(data.timelineLastScheduleUpdate))}.</div></div>` : '';
 
       const geralBody = `
         <div class="mtl-legend">
@@ -14382,7 +14428,7 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="mtl-tablewrap">
             <div class="mtl-thead">
               <div>Squad</div><div>Iniciativa</div>
-              <div class="mtl-axis">${ticks.map(t => `<span class="mtl-month" style="left:${t.pct}%">${t.label}</span>`).join('')}<span class="mtl-today-tag" style="left:${todayPct}%">Hoje</span></div>
+              <div class="mtl-axis">${ticks.map(t => `<span class="mtl-month" style="left:${t.pct}%">${t.label}</span>`).join('')}<span class="mtl-today-tag" style="left:${todayPct}%">${escapeHtml(todayLabel)}</span></div>
               <div class="mtl-hours-th" style="text-align:right">Horas 2026</div>
               <div style="text-align:right">Status</div>
             </div>
@@ -14399,22 +14445,62 @@ Recomendação PMO: ${d.recommendation}`;
         <div class="mtl-picker"><label style="font-size:11.5px;font-weight:700;color:var(--muted)">Iniciativa</label><select onchange="setMacroTimelineSelectedInitiative(this.value)">${initOptions}</select></div>
         ${selectedProject ? macroTimelineInitiativeCardHtml(selectedProject) : `<div class="mtl-empty">Nenhuma iniciativa cadastrada.</div>`}`;
 
-      const lateBody = `<div class="mtl-table"><div class="mtl-thead" style="grid-template-columns:132px 1fr 130px 100px"><div>Squad</div><div>Iniciativa / marco</div><div>Atraso</div><div></div></div>
-        <div>${lateAll.length ? lateAll.map(lateScheduleRowHtml).join('') : `<div class="mtl-empty">Nenhum marco de Cronograma atrasado.</div>`}</div></div>`;
+      const riskRowsHtml = riskProjects.map(p => {
+        const squad = squadForProject(p);
+        const name = [initiativeNumber(p), displayProjectTitle(p)].filter(Boolean).join(' · ') || 'Sem nome';
+        const di = ensureBaseSchedule(p).filter(s => !s.jira);
+        const lateCount = di.filter(s => { const e = parseISODate(s.end); return !scheduleCompleted(s) && e && today && e < today; }).length;
+        const missingCount = di.filter(s => !s.start && !s.end).length;
+        const tag = lateCount > 0
+          ? `<span class="mtl-risk-tag">⚠ ${lateCount} atrasado${lateCount > 1 ? 's' : ''}</span>`
+          : `<span class="mtl-risk-tag missing">! ${missingCount} sem data</span>`;
+        return `<div class="mtl-risk-row">
+          <div style="font-size:11px;color:#8a2b26;font-weight:700">${escapeHtml(squad?.name || 'Sem squad')}</div>
+          <div><strong style="font-size:12.5px">${escapeHtml(name)}</strong></div>
+          <div style="display:flex;align-items:center;gap:6px">${tag}<button type="button" class="mini-text-btn" onclick="goToMacroTimelineInitiative('${escapeAttr(p.id)}')">Ver →</button></div>
+        </div>`;
+      }).join('');
+
+      const lateBody = `
+        ${riskProjects.length ? `<div class="mtl-risk-section">
+          <div class="mtl-risk-section-head">🔴 ${riskProjects.length} iniciativa${riskProjects.length > 1 ? 's' : ''} com risco — marcos atrasados ou sem data</div>
+          ${riskRowsHtml}
+        </div>` : ''}
+        <div class="mtl-table"><div class="mtl-thead" style="grid-template-columns:132px 1fr 130px 100px"><div>Squad</div><div>Iniciativa / marco</div><div>Atraso</div><div></div></div>
+        <div>${lateAll.length ? lateAll.map(lateScheduleRowHtml).join('') : `<div class="mtl-empty">Nenhum marco de Cronograma com prazo vencido.</div>`}</div></div>`;
 
       const bodyMap = { geral: geralBody, init: initBody, late: lateBody };
 
       root.innerHTML = `
         <div class="mtl-page">
           <div class="mtl-page-head">
-            <div><h2>Roadmap</h2><p>Cronograma Anual — visão macro por Squad e iniciativa, gerada automaticamente a partir dos 6 marcos padrão do Cronograma. Recalculada a cada abertura.</p></div>
-            <button type="button" class="ux-v6-report-btn" onclick="closeMacroTimelinePanel()">Fechar</button>
+            <div class="mtl-head-top">
+              <div class="mtl-head-left">
+                <div class="mtl-head-accent"></div>
+                <div>
+                  <div class="mtl-head-eyebrow">Cronograma Anual 2026</div>
+                  <h2>Roadmap</h2>
+                </div>
+              </div>
+              <div class="mtl-head-kpis">
+                <div class="mtl-kpi" title="Total de iniciativas"><span class="v">${allProjects.length}</span><span class="l">Iniciativas</span></div>
+                <div class="mtl-kpi risk" title="Iniciativas com marco atrasado ou sem data"><span class="v">${riskProjects.length}</span><span class="l">Em risco</span></div>
+                <div class="mtl-kpi late" title="Marcos de cronograma com prazo vencido"><span class="v">${lateAll.length}</span><span class="l">Marcos vencidos</span></div>
+                <div class="mtl-kpi ok-kpi" title="Iniciativas com todos os marcos concluídos"><span class="v">${doneProjects.length}</span><span class="l">Concluídas</span></div>
+              </div>
+              <button type="button" class="mtl-head-close" onclick="closeMacroTimelinePanel()">✕ Fechar</button>
+            </div>
+            <div class="mtl-head-strip">
+              <span>📅 Recalculado a cada abertura</span>
+              ${lateAll.length ? `<span style="color:#ff8080">⚠ ${lateAll.length} marco${lateAll.length > 1 ? 's' : ''} vencido${lateAll.length > 1 ? 's' : ''}</span>` : '<span style="color:#6eddb4">✓ Sem atrasos</span>'}
+              ${riskProjects.length ? `<span style="color:#ff8080">🔴 ${riskProjects.length} iniciativa${riskProjects.length > 1 ? 's' : ''} em risco</span>` : ''}
+            </div>
           </div>
           <div class="mtl-page-body">
             <div class="mtl-toggle">
               <button type="button" class="${macroTimelineViewMode === 'geral' ? 'active' : ''}" onclick="setMacroTimelineView('geral')">Visão geral</button>
               <button type="button" class="${macroTimelineViewMode === 'init' ? 'active' : ''}" onclick="setMacroTimelineView('init')">Por iniciativa</button>
-              <button type="button" class="${macroTimelineViewMode === 'late' ? 'active' : ''}" onclick="setMacroTimelineView('late')">Atrasos ${lateAll.length ? `<span class="mtl-badge">${lateAll.length}</span>` : ''}</button>
+              <button type="button" class="${macroTimelineViewMode === 'late' ? 'active' : ''}" onclick="setMacroTimelineView('late')">Riscos / Atrasos ${(riskProjects.length || lateAll.length) ? `<span class="mtl-badge">${Math.max(riskProjects.length, lateAll.length)}</span>` : ''}</button>
             </div>
             ${lastUpdate}
             ${bodyMap[macroTimelineViewMode] || ''}
@@ -14424,9 +14510,42 @@ Recomendação PMO: ${d.recommendation}`;
       if (macroTimelineViewMode === 'geral') refocusSearchInput('mtlSearchInput');
     }
 
+    // ── Notificações horárias de marcos fora do prazo ───────────────────────
+    let _mtlNotifInterval = null;
+    function initScheduleNotifications() {
+      if (!('Notification' in window)) return;
+      function doCheck() {
+        const lateItems = collectLateScheduleMarcos(data?.projects || []);
+        if (!lateItems.length) return;
+        const lastMs = parseInt(storageGet('mtl-last-notif') || '0');
+        if (Date.now() - lastMs < 55 * 60 * 1000) return; // debounce 55 min
+        storageSet('mtl-last-notif', String(Date.now()));
+        const squads = [...new Set(lateItems.map(i => squadForProject(i.project)?.name).filter(Boolean))].slice(0, 3).join(', ');
+        try {
+          new Notification('⚠ Roadmap — Marcos fora do prazo', {
+            body: `${lateItems.length} marco(s) de Cronograma vencido(s)${squads ? ' · Squads: ' + squads : ''}. Abra o Roadmap para detalhes.`,
+            tag: 'roadmap-late',
+            renotify: true,
+          });
+        } catch (_) {}
+      }
+      if (_mtlNotifInterval) return; // já iniciado
+      if (Notification.permission === 'granted') {
+        _mtlNotifInterval = setInterval(doCheck, 60 * 60 * 1000);
+        setTimeout(doCheck, 1500); // verifica ao abrir
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(perm => {
+          if (perm !== 'granted') return;
+          _mtlNotifInterval = setInterval(doCheck, 60 * 60 * 1000);
+          setTimeout(doCheck, 1500);
+        });
+      }
+    }
+
     function openMacroTimelinePanel() {
       macroTimelineOpen = true;
       data.timelineHasUnseenScheduleUpdate = false;
+      initScheduleNotifications();
       renderSidebar();
       renderMacroTimelinePanel();
     }
@@ -16646,6 +16765,24 @@ Recomendação PMO: ${d.recommendation}`;
         ? lateScheduleItems.slice(0, 5).map(item => lateScheduleRowHtml(item)).join('')
         : `<div class="ux-v6-attention-empty">Nenhum marco de Cronograma atrasado.</div>`;
 
+      // Iniciativas em risco (marco vencido ou sem data) para evidenciar na tela principal
+      const _today = parseISODate(fmtDate(new Date()));
+      const riskInitiatives = allProjects.filter(p => {
+        const di = ensureBaseSchedule(p).filter(s => !s.jira);
+        return di.some(s => { const e = parseISODate(s.end); return !scheduleCompleted(s) && e && _today && e < _today; })
+            || di.some(s => !s.start && !s.end);
+      });
+      const riskBannerHtml = riskInitiatives.length
+        ? `<div class="ux-v6-risk-banner" onclick="openMacroTimelinePanel();setMacroTimelineView('late')" title="Ver riscos no Roadmap" style="cursor:pointer">
+            <span class="ux-v6-risk-icon">🔴</span>
+            <div>
+              <strong>${riskInitiatives.length} iniciativa${riskInitiatives.length > 1 ? 's' : ''} com risco no Roadmap</strong>
+              <span style="font-size:11px;color:var(--muted);display:block;margin-top:2px">${riskInitiatives.slice(0,3).map(p => escapeHtml([initiativeNumber(p), displayProjectTitle(p)].filter(Boolean).join(' · ') || 'Sem nome')).join(' · ')}</span>
+            </div>
+            <span style="font-size:11px;font-weight:700;color:var(--primary);white-space:nowrap">Ver Roadmap →</span>
+          </div>`
+        : '';
+
       const currentDiscoveryMonthLabel = formatMonthYearPT(new Date());
       const nextDiscoveriesHtml = currentMonthDiscoveries(5).map(project => {
         const squad = squadForProject(project);
@@ -16732,6 +16869,7 @@ Recomendação PMO: ${d.recommendation}`;
               <div class="ux-v6-side-title"><strong>Ações Acordadas</strong>${attentionActions.length ? `<span class="ux-v6-side-link" onclick="openAttentionActionsModal()" style="cursor:pointer" title="Ver todas as ações acordadas atrasadas ou a vencer">Ver todas (${attentionActions.length})</span>` : ''}</div>
               <div class="ux-v6-alert-list">${attentionActionsHtml}</div>
             </section>
+            ${riskBannerHtml}
             <section class="ux-v6-side-card">
               <div class="ux-v6-side-title"><strong>⚠ Marcos em atraso</strong>${lateScheduleItems.length ? `<span class="ux-v6-side-link" onclick="openLateScheduleModal()" style="cursor:pointer" title="Ver todos os marcos de Cronograma atrasados">Ver todos (${lateScheduleItems.length})</span>` : ''}</div>
               <div class="ux-v6-alert-list">${lateScheduleHtml}</div>
