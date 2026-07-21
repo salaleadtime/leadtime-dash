@@ -75,6 +75,8 @@
       letter-spacing:.01em;
       white-space:nowrap;
     }
+    .title-meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px}
+    .title-meta .last-updated-badge{margin-top:0}
     .btn{
       border:0;
       border-radius:999px;
@@ -5527,13 +5529,15 @@
       <div class="title-wrap">
         <h1>Painel Estratégico de Entregas</h1>
         <p>Visão estratégica e operacional para acompanhar entregas, bloqueios, dependências e rota de produção.</p>
-        <div class="last-updated-badge" id="lastUpdatedBadge" style="display:none">
-          <span class="dot" style="animation:pulse-dot 2.4s ease infinite"></span>
-          <span id="lastUpdatedText">Última importação: —</span>
+        <div class="title-meta">
+          <div class="last-updated-badge" id="lastUpdatedBadge" style="display:none">
+            <span class="dot" style="animation:pulse-dot 2.4s ease infinite"></span>
+            <span id="lastUpdatedText">Última importação: —</span>
+          </div>
+          <span class="ds-attribution">Solução criada por DS</span>
         </div>
       </div>
       <div class="toolbar">
-        <span class="ds-attribution">Desenvolvido pelo time de DS</span>
         <label class="file-label" title="Importar só neste dashboard (Acomp._Geral_Todas_Squads ou Sprint_ativa) — dados ficam aqui">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>
           JIRA
