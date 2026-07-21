@@ -7234,6 +7234,70 @@
     }
     .pmo-squad-chip.asd { background: #fee2e2; color: #991b1b; }
 
+    /* ── Timeline Executiva (reaproveita a mesma chrome do painel de Relatórios) ── */
+    .mtl-toggle { display:inline-flex; padding:3px; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; gap:2px; margin-bottom:14px; }
+    .mtl-toggle button { all:unset; cursor:pointer; font-size:12px; font-weight:700; padding:7px 15px; border-radius:8px; color:var(--muted); display:inline-flex; align-items:center; gap:6px; }
+    .mtl-toggle button.active { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(23,29,42,.08); }
+    .mtl-toggle .mtl-badge { background:var(--red); color:#fff; font-size:10px; font-weight:800; padding:1px 6px; border-radius:99px; }
+
+    .mtl-strip { display:flex; gap:10px; align-items:flex-start; padding:11px 14px; border-radius:12px; border:1px solid var(--line); background:var(--panel-2); font-size:12px; color:var(--muted); margin-bottom:12px; }
+    .mtl-strip strong { display:block; color:var(--ink); font-size:12.5px; margin-bottom:2px; }
+    .mtl-strip.warn { background:#fff8e1; border-color:#f3dfa0; }
+
+    .mtl-filterbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:8px 9px; }
+    .mtl-fgroup { display:flex; align-items:center; gap:3px; background:#fff; border-radius:9px; padding:3px; border:1px solid var(--line); }
+    .mtl-chip { all:unset; cursor:pointer; font-size:11.5px; padding:6px 11px; border-radius:7px; color:var(--muted); font-weight:600; white-space:nowrap; }
+    .mtl-chip.active { background:var(--ink); color:#fff; }
+    .mtl-chip.sqdot::before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; background:currentColor; vertical-align:middle; }
+    .mtl-search { margin-left:auto; display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--line); border-radius:9px; padding:6px 11px; min-width:190px; }
+    .mtl-search input { all:unset; font-size:12.5px; color:var(--ink); width:100%; }
+
+    .mtl-table { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
+    .mtl-thead { display:grid; grid-template-columns:112px 260px 1fr 108px; gap:14px; align-items:end; padding:11px 16px 9px; border-bottom:1px solid var(--line); background:var(--panel-2); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:800; }
+    .mtl-thead .mtl-axis { position:relative; height:14px; }
+    .mtl-thead .mtl-month { position:absolute; top:0; transform:translateX(-50%); }
+    .mtl-row { display:grid; grid-template-columns:112px 260px 1fr 108px; gap:14px; align-items:center; padding:12px 16px; border-top:1px solid var(--line); }
+    .mtl-row:first-child { border-top:none; }
+    .mtl-row.hidden { display:none; }
+    .mtl-sq { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; line-height:1.3; }
+    .mtl-iname .n { font-size:12.5px; font-weight:700; color:var(--ink); }
+    .mtl-iname .m { font-size:11px; color:var(--muted); margin-top:2px; }
+    .mtl-track { position:relative; height:16px; }
+    .mtl-track .mtl-rail { position:absolute; left:0; right:0; top:5px; height:6px; border-radius:99px; background:#eef1f6; }
+    .mtl-seg { position:absolute; top:2px; height:12px; border-radius:99px; }
+    .mtl-seg.ok { background:var(--green); }
+    .mtl-seg.attn { background:var(--amber); }
+    .mtl-seg.late { background:var(--red); }
+    .mtl-seg.planned { background:transparent; border:2px dashed var(--line-strong); }
+    .mtl-stat { text-align:right; font-size:11.5px; font-weight:700; white-space:nowrap; }
+    .mtl-stat.ok { color:var(--green); } .mtl-stat.attn { color:var(--amber); } .mtl-stat.late { color:var(--red); }
+    .mtl-stat small { display:block; font-weight:500; color:var(--muted); font-size:10px; margin-top:1px; }
+    .mtl-today { position:absolute; top:0; bottom:0; width:0; border-left:2px dashed var(--primary); opacity:.5; z-index:2; pointer-events:none; }
+    .mtl-today-tag { position:absolute; top:6px; transform:translateX(-50%); background:var(--primary); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; z-index:3; white-space:nowrap; }
+    .mtl-tbody { position:relative; }
+    .mtl-empty { padding:34px 16px; text-align:center; color:var(--muted); font-size:12.5px; }
+
+    .mtl-picker { display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:9px 13px; margin-bottom:12px; }
+    .mtl-picker select { all:unset; flex:1; font-size:13px; font-weight:700; color:var(--ink); padding:5px 9px; background:#fff; border-radius:8px; cursor:pointer; border:1px solid var(--line); }
+    .mtl-card { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
+    .mtl-card-head { padding:16px 18px; border-bottom:1px solid var(--line); background:var(--panel-2); display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .mtl-card-head h3 { margin:2px 0 3px; font-size:16px; }
+    .mtl-marco { display:grid; grid-template-columns:20px 1fr 140px 100px; gap:12px; align-items:flex-start; padding:12px 18px; border-top:1px solid var(--line); }
+    .mtl-marco:first-child { border-top:none; }
+    .mtl-dot { width:10px; height:10px; border-radius:50%; margin-top:4px; }
+    .mtl-dot.ok { background:var(--green); } .mtl-dot.attn { background:var(--amber); } .mtl-dot.late { background:var(--red); }
+    .mtl-dot.planned { background:#fff; border:2px solid var(--line-strong); } .mtl-dot.jira { background:#fff; border:2px solid var(--blue); }
+    .mtl-mname { font-size:13px; font-weight:700; display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .mtl-mbadge { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; padding:2px 7px; border-radius:99px; background:#eaf1fd; color:var(--blue); }
+    .mtl-mperiod { font-size:12px; color:var(--muted); }
+    .mtl-mstatus { font-size:11.5px; font-weight:700; text-align:right; }
+    .mtl-replan { grid-column:2/5; margin-top:8px; padding:10px 12px; border-radius:10px; background:#fdeceb; border:1px solid #f3c6c1; font-size:11.5px; color:#8a2b26; }
+    .mtl-replan strong { display:block; margin-bottom:3px; }
+
+    @media (max-width: 760px) {
+      .mtl-thead, .mtl-row { grid-template-columns:76px 1fr; }
+      .mtl-thead .mtl-axis, .mtl-thead > div:last-child, .mtl-row .mtl-track, .mtl-row .mtl-stat { display:none; }
+    }
 </style>
 </head>
 <body>
@@ -7252,6 +7316,7 @@
 
       <div class="side-actions">
         <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
+        <button type="button" class="ghost-btn" id="macroTimelineBtn" onclick="openMacroTimelinePanel()" title="Ver Timeline Executiva por Squad e iniciativa">🕒 Timeline <span id="macroTimelineBadge" class="tab-badge hidden" style="margin-left:4px">Atualizado</span></button>
         <button type="button" class="ghost-btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
         <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
         <button type="button" class="ghost-btn" onclick="openReportsPanel()" title="Abrir relatórios executivos">▤ Relatórios</button>
@@ -7415,6 +7480,7 @@
   <div id="toast" class="toast">Salvo</div>
 
   <div id="uxV6ReportsRoot"></div>
+  <div id="uxV6TimelineRoot"></div>
 
   <script>
     const today = new Date();
@@ -10146,6 +10212,12 @@
     let squadDrawerSearchTerm = '';
     let reportsOpen = false;
     let reportsActiveTab = 'squad';
+    let macroTimelineOpen = false;
+    let macroTimelineViewMode = 'geral';
+    let macroTimelineSquadFilter = 'all';
+    let macroTimelineStatusFilter = 'all';
+    let macroTimelineSearch = '';
+    let macroTimelineSelectedId = '';
     let showAllSquads = false;
     let modalState = {};
     let draggedCardId = null;
@@ -10617,7 +10689,7 @@
     }
 
     function nextMilestone(project) {
-      const open = [...project.schedule].filter(s => !scheduleCompleted(s)).sort((a,b) => new Date(a.end) - new Date(b.end));
+      const open = [...project.schedule].filter(s => !s.jira && !scheduleCompleted(s)).sort((a,b) => new Date(a.end) - new Date(b.end));
       return open[0]?.item || 'Sem pendência crítica';
     }
 
@@ -10716,6 +10788,7 @@
         renderSidebar();
         renderSquadOverview();
         renderReportsPanel();
+        renderMacroTimelinePanel();
         renderImportHistoryBadge();
         renderHero(safeProject);
         renderMetrics(safeProject);
@@ -10953,6 +11026,66 @@
         </div>
         <span class="ux-v6-attention-badge ${overdue ? 'crit' : 'amber'}">${badge}</span>
       </button>`;
+    }
+
+    // Espelha o padrão de "Ações Acordadas": agrega, na tela principal, todo marco do
+    // Cronograma atrasado de qualquer iniciativa — ninguém precisa entrar iniciativa por
+    // iniciativa pra descobrir isso.
+    function collectLateScheduleMarcos(allProjects) {
+      const list = [];
+      (allProjects || []).forEach(project => {
+        ensureBaseSchedule(project);
+        (project.schedule || []).forEach(item => {
+          if (item.jira) return;
+          const days = scheduleDaysLate(item);
+          if (days > 0) list.push({ project, item, days });
+        });
+      });
+      return list.sort((a, b) => b.days - a.days);
+    }
+
+    function lateScheduleRowHtml({ project, item, days }) {
+      const squad = squadForProject(project);
+      const initiativeLabel = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ');
+      return `<button type="button" class="ux-v6-attention-item" onclick="goToLateSchedule('${escapeAttr(project.id)}')" title="Abrir ${escapeAttr(displayProjectTitle(project))} na aba Cronograma">
+        <div class="ux-v6-attention-main">
+          <strong>${escapeHtml(item.item)}</strong>
+          <span>${escapeHtml(initiativeLabel || 'Sem iniciativa')} · ${escapeHtml(squad?.name || project.squad || 'A validar')}</span>
+        </div>
+        <span class="ux-v6-attention-badge crit">${days}d atrasado</span>
+      </button>`;
+    }
+
+    function goToLateSchedule(projectId) {
+      if (!(data.projects || []).some(p => p.id === projectId)) { toast('Iniciativa não encontrada'); return; }
+      closeModal();
+      activeProjectId = projectId;
+      viewMode = 'project';
+      persistViewState();
+      saveData();
+      setTimeout(() => {
+        const scheduleTabBtn = document.querySelector('.tab[data-tab="schedule"]');
+        const schedulePanel = document.getElementById('tab-schedule');
+        if (scheduleTabBtn && schedulePanel) {
+          document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          scheduleTabBtn.classList.add('active');
+          schedulePanel.classList.add('active');
+        }
+      }, 60);
+    }
+
+    function openLateScheduleModal() {
+      const lateItems = collectLateScheduleMarcos(data.projects || []);
+      const rows = lateItems.length
+        ? lateItems.map(lateScheduleRowHtml).join('')
+        : `<div class="ux-v6-attention-empty">Nenhum marco de Cronograma atrasado.</div>`;
+      openModal(
+        'Marcos em atraso',
+        'Todo marco do Cronograma vencido e não concluído, em qualquer iniciativa. Clique num item para abrir a iniciativa na aba Cronograma.',
+        `<div class="ux-v6-alert-list">${rows}</div>`,
+        [`<button type="button" class="btn" onclick="closeModal()">Fechar</button>`]
+      );
     }
 
     function openAttentionActionsModal() {
@@ -11313,21 +11446,89 @@
       toast(`Card movido para ${laneTitle(laneId)}`);
     }
 
+    // Os 6 itens abaixo entram sozinhos em toda iniciativa (retroativo, inclusive nas já
+    // cadastradas) assim que o Cronograma é aberto — ninguém precisa criar "Kickoff",
+    // "Discovery" etc. na mão. São editáveis (dono, datas, observações) mas não podem ser
+    // excluídos (baseKey identifica o item; ver deleteSchedule/openScheduleModal). O item
+    // "jira" não tem data — é um card informativo, calculado a partir de project.jiraStories
+    // (mesma fonte que já alimenta o card de Épicos), então nunca duplica cadastro.
+    const SCHEDULE_BASE_TEMPLATE = [
+      { baseKey: 'kickoff', item: 'Kickoff' },
+      { baseKey: 'discovery', item: 'Discovery' },
+      { baseKey: 'desenho', item: 'Desenho de solução' },
+      { baseKey: 'historias', item: 'Escrita das histórias' },
+      { baseKey: 'jira', item: 'Qtd de Histórias no Jira', jira: true },
+      { baseKey: 'refino', item: 'Refinamento Técnico' },
+    ];
+
+    function estimateBaseScheduleDates(project) {
+      const DAY = 1000 * 60 * 60 * 24;
+      const base = parseISODate(project.discoveryDate) || parseISODate(fmtDate(new Date()));
+      const devStart = parseISODate(project.startDev) || new Date(base.getTime() + 30 * DAY);
+      const devEnd = parseISODate(project.endDev) || new Date(devStart.getTime() + 30 * DAY);
+      const span = Math.max(devStart.getTime() - base.getTime(), 10 * DAY);
+      const kickoffEnd = new Date(base.getTime() + Math.min(3 * DAY, span * 0.15));
+      const discoveryEnd = new Date(base.getTime() + span * 0.45);
+      const desenhoEnd = new Date(base.getTime() + span * 0.75);
+      const refinoEnd = new Date(devStart.getTime() + Math.max(7 * DAY, (devEnd.getTime() - devStart.getTime()) * 0.2));
+      return {
+        kickoff: { start: fmtDate(base), end: fmtDate(kickoffEnd) },
+        discovery: { start: fmtDate(kickoffEnd), end: fmtDate(discoveryEnd) },
+        desenho: { start: fmtDate(discoveryEnd), end: fmtDate(desenhoEnd) },
+        historias: { start: fmtDate(desenhoEnd), end: fmtDate(devStart) },
+        refino: { start: fmtDate(devStart), end: fmtDate(refinoEnd) },
+      };
+    }
+
+    function ensureBaseSchedule(project) {
+      if (!Array.isArray(project.schedule)) project.schedule = [];
+      const missing = SCHEDULE_BASE_TEMPLATE.filter(tpl => !project.schedule.some(s => s.baseKey === tpl.baseKey));
+      if (!missing.length) return project.schedule;
+      const dates = estimateBaseScheduleDates(project);
+      missing.forEach(tpl => {
+        if (tpl.jira) {
+          project.schedule.push({ id: uid(), baseKey: tpl.baseKey, item: tpl.item, jira: true, owner: '', start: '', end: '', done: false, observations: '' });
+          return;
+        }
+        const d = dates[tpl.baseKey] || {};
+        project.schedule.push({ id: uid(), baseKey: tpl.baseKey, item: tpl.item, owner: '', start: d.start || '', end: d.end || '', done: false, observations: '' });
+      });
+      return project.schedule;
+    }
+
+    function scheduleJiraCount(project) {
+      return (project.jiraStories || []).length;
+    }
+
+    function scheduleDaysLate(item) {
+      if (scheduleCompleted(item)) return 0;
+      const originalEnd = (item.replanHistory && item.replanHistory[0]) ? item.replanHistory[0].from : item.end;
+      const due = parseISODate(originalEnd);
+      const today = parseISODate(fmtDate(new Date()));
+      if (!due || !today || today <= due) return 0;
+      return Math.round((today - due) / (1000 * 60 * 60 * 24));
+    }
+
     function renderSchedule(project) {
       const wrap = document.getElementById('scheduleGrid');
-      const items = [...(project.schedule || [])].sort((a, b) => new Date(a.start || a.end || 0) - new Date(b.start || b.end || 0));
-      if (!items.length) {
+      ensureBaseSchedule(project);
+      const dateItems = [...project.schedule].filter(s => !s.jira);
+      const jiraItem = project.schedule.find(s => s.jira);
+      const items = dateItems.sort((a, b) => new Date(a.start || a.end || 0) - new Date(b.start || b.end || 0));
+
+      const header = `<div class="gantt-scale"><div>Marco</div><div>Linha do tempo</div><div>Prazo / PDCA</div><div>Status</div><div></div></div>`;
+
+      if (!items.length && !jiraItem) {
         wrap.innerHTML = `<div class="empty-state">Nenhum marco cadastrado. Clique em “+ Novo marco” para iniciar o cronograma executivo.</div>`;
         return;
       }
 
       const DAY = 1000 * 60 * 60 * 24;
       const dates = items.flatMap(s => [parseISODate(s.start), parseISODate(s.end)]).filter(Boolean);
-      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+      const minDate = dates.length ? new Date(Math.min(...dates.map(d => d.getTime()))) : new Date();
+      const maxDate = dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
       const totalDays = Math.max(1, Math.round((maxDate - minDate) / DAY) + 1);
 
-      const header = `<div class="gantt-scale"><div>Marco</div><div>Linha do tempo</div><div>Prazo / PDCA</div><div>Status</div><div></div></div>`;
       const rows = items.map(s => {
         const st = scheduleStatus(s);
         const view = scheduleProgressView(s);
@@ -11339,16 +11540,21 @@
         const observations = String(s.observations || s.notes || '').trim();
         const pdcaAction = String(s.pdcaAction || '').trim();
         const pdcaNeeded = scheduleNeedsPdca(s);
+        const daysLate = scheduleDaysLate(s);
         const pdcaHint = pdcaNeeded && !observations && !pdcaAction
           ? `<div class="gantt-note pdca-note">Revisar prazo, registrar observação ou ação de replanejamento.</div>`
           : '';
+        const replanHint = daysLate > 0
+          ? `<div class="gantt-note pdca-note">⚠ Atrasado há ${daysLate} dia(s)${s.replanHistory && s.replanHistory.length ? ` · replanejado ${s.replanHistory.length}x` : ''}. Edite o marco para registrar um novo prazo.</div>`
+          : '';
         const noteText = [observations, pdcaAction ? `Ação: ${pdcaAction}` : ''].filter(Boolean).join(' · ');
+        const baseBadge = s.baseKey ? `<span class="mini-text-btn" style="cursor:default;opacity:.7">Padrão</span>` : '';
         return `<div class="gantt-row" data-status="${st.cls}">
           <div class="gantt-title">
-            <strong title="${escapeAttr(s.item)}">${escapeHtml(s.item || 'Marco sem nome')}</strong>
+            <strong title="${escapeAttr(s.item)}">${escapeHtml(s.item || 'Marco sem nome')}</strong> ${baseBadge}
             <span>${formatBR(s.start)} até ${formatBR(s.end)}</span>
             ${noteText ? `<div class="gantt-note">${escapeHtml(noteText)}</div>` : ''}
-            ${pdcaHint}
+            ${replanHint || pdcaHint}
             <div class="gantt-mobile-meta">
               <span>Dono: ${escapeHtml(s.owner || 'Sem dono')}</span>
               <span>${view.label}</span>
@@ -11366,7 +11572,21 @@
         </div>`;
       }).join('');
 
-      wrap.innerHTML = header + rows;
+      const jiraRow = jiraItem ? `<div class="gantt-row" data-status="planned">
+          <div class="gantt-title">
+            <strong>${escapeHtml(jiraItem.item)}</strong> <span class="mini-text-btn" style="cursor:default;opacity:.7">Automático · Jira</span>
+            <span>${scheduleJiraCount(project)} história(s) importada(s)</span>
+            <div class="gantt-note">Atualizado junto com a última importação do Jira · sem data, não entra na Timeline.</div>
+          </div>
+          <div class="gantt-track"></div>
+          <div class="gantt-progress-text">—</div>
+          <div class="auto-status">${scheduleJiraCount(project)}</div>
+          <div class="gantt-actions"></div>
+          <div class="gantt-owner"></div>
+          <div class="gantt-date"></div>
+        </div>` : '';
+
+      wrap.innerHTML = header + rows + jiraRow;
     }
 
     function renderScheduleSignals(project) {
@@ -11924,10 +12144,24 @@
       saveData(true);
     }
 
+    // Sinaliza pra Timeline Executiva que o Cronograma mudou: acende o badge
+    // "Atualizado" no menu (limpo quando o painel é aberto, ver openMacroTimelinePanel)
+    // e alimenta a notificação de última atualização exibida dentro do painel.
+    function markTimelineScheduleUpdated(itemName, owner) {
+      data.timelineLastScheduleUpdate = new Date().toISOString();
+      data.timelineLastScheduleItem = itemName || '';
+      data.timelineLastScheduleOwner = owner || '';
+      if (!macroTimelineOpen) data.timelineHasUnseenScheduleUpdate = true;
+      renderSidebar();
+    }
+
     function deleteSchedule(id) {
       const p = getProject();
+      const item = p.schedule.find(x => x.id === id);
+      if (item && item.baseKey) { toast('Este marco é padrão e não pode ser excluído — só editado.'); return; }
       p.schedule = p.schedule.filter(x => x.id !== id);
       recordTombstone(id);
+      if (item) markTimelineScheduleUpdated(item.item, item.owner);
       saveData(true);
     }
 
@@ -12093,7 +12327,16 @@
         observations: ''
       };
       if (!item) { toast('Marco não encontrado'); return; }
+      if (item.jira) { toast('Este item é automático, calculado pela importação do Jira — não é editável.'); return; }
+      const daysLate = isEdit ? scheduleDaysLate(item) : 0;
       modalState = { type: 'schedule', isEdit, item };
+      const baseNote = item.baseKey ? `<div class="schedule-hint">Marco padrão: sempre visível em toda iniciativa. Dono, datas e observações podem ser editados, mas o item não pode ser excluído.</div>` : '';
+      const replanBlock = daysLate > 0 ? `
+          <div class="form-field full schedule-observations">
+            <label>⚠ Atrasado há ${daysLate} dia(s)${item.replanHistory && item.replanHistory.length ? ` · já replanejado ${item.replanHistory.length}x` : ''}</label>
+            <div class="schedule-hint">Ao mudar a data Fim abaixo, registre o motivo do novo prazo — o sistema guarda o prazo original no histórico, não perde o rastro do atraso.</div>
+            <textarea id="sch-replan-reason" placeholder="Motivo do novo prazo (ex.: aguardando validação de negócio, dependência de outra squad)."></textarea>
+          </div>` : '';
       openModal(isEdit ? 'Editar marco do cronograma' : 'Novo marco no cronograma', 'O prazo é calculado automaticamente. Se vencer sem conclusão, o sistema sinaliza PDCA para revisão do plano.', `
         <div class="form-grid">
           ${field('Marco / entrega', 'sch-item', item.item)}
@@ -12105,11 +12348,13 @@
             <label class="check-toggle"><input id="sch-done" type="checkbox" ${scheduleCompleted(item) ? 'checked' : ''} /> <span>Marco concluído. Quando marcado, o status muda para concluído e o indicador apresenta 100%.</span></label>
             <div class="schedule-hint">Se a data final passar e este campo não estiver marcado, o sistema não mostra 100%; ele sinaliza PDCA para revisão.</div>
           </div>
+          ${baseNote}
+          ${replanBlock}
           <div class="form-field full schedule-observations"><label>Observações</label><textarea id="sch-observations" placeholder="Ex.: motivo do atraso, dependência, evidência, decisão pendente ou ponto de atenção para gestão.">${escapeHtml(item.observations || item.notes || '')}</textarea></div>
           <div class="form-field full"><label>Ação PDCA / Próximo passo</label><textarea id="sch-pdca-action" placeholder="Ex.: replanejar data com PO, escalar dependência com DBA, validar novo marco com negócio.">${escapeHtml(item.pdcaAction || '')}</textarea></div>
         </div>
       `, [
-        isEdit ? `<button type="button" class="btn" onclick="deleteScheduleFromModal()">Excluir</button>` : '',
+        (isEdit && !item.baseKey) ? `<button type="button" class="btn" onclick="deleteScheduleFromModal()">Excluir</button>` : '',
         `<button type="button" class="btn" onclick="closeModal()">Cancelar</button>`,
         `<button type="button" class="btn primary" onclick="saveScheduleModal()">Salvar</button>`
       ]);
@@ -12118,6 +12363,8 @@
     function saveScheduleModal() {
       const p = getProject();
       const item = modalState.item;
+      const wasLate = modalState.isEdit && !scheduleCompleted(item) && scheduleDaysLate(item) > 0;
+      const oldEnd = item.end;
       item.item = document.getElementById('sch-item').value.trim() || 'Novo marco';
       item.owner = document.getElementById('sch-owner').value.trim();
       item.start = document.getElementById('sch-start').value || fmtDate(new Date());
@@ -12126,12 +12373,18 @@
         toast('A data fim não pode ser anterior à data início');
         return;
       }
+      if (wasLate && item.end !== oldEnd) {
+        const reasonEl = document.getElementById('sch-replan-reason');
+        item.replanHistory = item.replanHistory || [];
+        item.replanHistory.push({ from: oldEnd, to: item.end, reason: (reasonEl?.value || '').trim(), at: new Date().toISOString() });
+      }
       item.done = document.getElementById('sch-done').checked;
       item.observations = document.getElementById('sch-observations').value.trim();
       item.pdcaAction = document.getElementById('sch-pdca-action').value.trim();
       item.progress = scheduleCompleted(item) ? 100 : null;
       item.updatedAt = new Date().toISOString();
       if (!modalState.isEdit) p.schedule.push(item);
+      markTimelineScheduleUpdated(item.item, item.owner);
       closeModal();
       saveData(true);
     }
@@ -13693,6 +13946,260 @@ Recomendação PMO: ${d.recommendation}`;
     function closeReportsPanel() {
       reportsOpen = false;
       renderReportsPanel();
+    }
+
+    // ═══════════════════════════════════════
+    // TIMELINE EXECUTIVA — visão macro por Squad/iniciativa, 100% derivada do
+    // Cronograma (project.schedule via ensureBaseSchedule). Nunca cria cadastro
+    // próprio: só lê e recalcula a cada abertura, com new Date() atual.
+    // ═══════════════════════════════════════
+    const MTL_SQUAD_PALETTE = ['#7b61ff', '#2d6cdf', '#1f9d75', '#c2740c', '#bf1830', '#0e9488', '#a8325e', '#5b6472'];
+    function squadColorFor(name) {
+      const s = String(name || '');
+      let hash = 0;
+      for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+      return MTL_SQUAD_PALETTE[hash % MTL_SQUAD_PALETTE.length];
+    }
+
+    function macroTimelineStatusClass(cls) {
+      if (cls === 'late') return 'late';
+      if (cls === 'attention') return 'attn';
+      return 'ok';
+    }
+
+    function macroTimelineProjectStatus(project) {
+      const items = ensureBaseSchedule(project).filter(s => !s.jira);
+      if (items.some(s => scheduleStatus(s).cls === 'late')) return 'late';
+      if (items.some(s => scheduleStatus(s).cls === 'attention')) return 'attn';
+      return 'ok';
+    }
+
+    function macroTimelineAxis(allProjects) {
+      const DAY = 1000 * 60 * 60 * 24;
+      let dates = [];
+      allProjects.forEach(p => {
+        ensureBaseSchedule(p).filter(s => !s.jira).forEach(s => {
+          const st = parseISODate(s.start); const en = parseISODate(s.end);
+          if (st) dates.push(st);
+          if (en) dates.push(en);
+        });
+      });
+      const today = parseISODate(fmtDate(new Date()));
+      if (today) dates.push(today);
+      if (!dates.length) dates = [new Date(), new Date(Date.now() + 30 * DAY)];
+      const min = new Date(Math.min(...dates.map(d => d.getTime())));
+      const max = new Date(Math.max(...dates.map(d => d.getTime())));
+      const totalDays = Math.max(1, Math.round((max - min) / DAY) + 1);
+      return { min, max, totalDays };
+    }
+
+    function macroTimelineSegPct(axis, item) {
+      const DAY = 1000 * 60 * 60 * 24;
+      const start = parseISODate(item.start) || axis.min;
+      const end = parseISODate(item.end) || start;
+      const left = clamp(Math.round(((start - axis.min) / DAY) / axis.totalDays * 100), 0, 98);
+      const durDays = Math.max(1, Math.round((end - start) / DAY) + 1);
+      const width = clamp(Math.round((durDays / axis.totalDays) * 100), 0.6, 100 - left);
+      return { left, width };
+    }
+
+    function macroTimelineMonthTicks(axis) {
+      const DAY = 1000 * 60 * 60 * 24;
+      const MS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const ticks = [];
+      let cursor = new Date(axis.min.getFullYear(), axis.min.getMonth(), 1);
+      const totalMonths = (axis.max.getFullYear() - axis.min.getFullYear()) * 12 + (axis.max.getMonth() - axis.min.getMonth()) + 1;
+      const step = Math.max(1, Math.ceil(totalMonths / 7));
+      let i = 0;
+      while (cursor <= axis.max && ticks.length < 10) {
+        if (i % step === 0) {
+          const pct = clamp(Math.round(((cursor - axis.min) / DAY) / axis.totalDays * 100), 0, 100);
+          const label = MS[cursor.getMonth()] + (cursor.getFullYear() !== axis.min.getFullYear() ? `/${String(cursor.getFullYear()).slice(2)}` : '');
+          ticks.push({ pct, label });
+        }
+        cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+        i++;
+      }
+      return ticks;
+    }
+
+    function macroTimelineTodayPct(axis) {
+      const DAY = 1000 * 60 * 60 * 24;
+      const today = parseISODate(fmtDate(new Date())) || axis.min;
+      return clamp(Math.round(((today - axis.min) / DAY) / axis.totalDays * 100), 0, 100);
+    }
+
+    function macroTimelineRowHtml(project, axis) {
+      const squad = squadForProject(project);
+      const squadName = squad?.name || project.squad || 'Ainda Sem Definição';
+      const items = ensureBaseSchedule(project).filter(s => !s.jira);
+      const status = macroTimelineProjectStatus(project);
+      const doneCount = items.filter(s => scheduleCompleted(s)).length;
+      const jiraCount = scheduleJiraCount(project);
+      const segs = items.map(s => {
+        const st = scheduleStatus(s);
+        const pos = macroTimelineSegPct(axis, s);
+        const cls = st.cls === 'planned' ? 'planned' : macroTimelineStatusClass(st.cls);
+        return `<div class="mtl-seg ${cls}" style="left:${pos.left}%;width:${pos.width}%"></div>`;
+      }).join('');
+      const statusLabel = { late: 'Atrasado', attn: 'Atenção', ok: 'No prazo' }[status];
+      const name = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ') || 'Sem nome';
+      return `<button type="button" class="mtl-row" style="all:unset;display:grid;width:100%;text-align:left;cursor:pointer" onclick="goToMacroTimelineInitiative('${escapeAttr(project.id)}')">
+        <div class="mtl-sq" style="color:${squadColorFor(squadName)}">${escapeHtml(squadName)}</div>
+        <div class="mtl-iname"><div class="n">${escapeHtml(name)}</div><div class="m">${items.length} marco(s) padrão · ${jiraCount} histórias no Jira</div></div>
+        <div class="mtl-track"><div class="mtl-rail"></div>${segs}</div>
+        <div class="mtl-stat ${status}">${statusLabel}<small>${doneCount} de ${items.length} marcos</small></div>
+      </button>`;
+    }
+
+    function macroTimelineInitiativeCardHtml(project) {
+      const squad = squadForProject(project);
+      const squadName = squad?.name || project.squad || 'Ainda Sem Definição';
+      const items = ensureBaseSchedule(project);
+      const dateItems = items.filter(s => !s.jira);
+      const jiraItem = items.find(s => s.jira);
+      const status = macroTimelineProjectStatus(project);
+      const doneCount = dateItems.filter(s => scheduleCompleted(s)).length;
+      const colorMap = { ok: 'var(--green)', attn: 'var(--amber)', late: 'var(--red)' };
+      const marcosHtml = dateItems.map(s => {
+        const st = scheduleStatus(s);
+        const cls = st.cls === 'planned' ? 'planned' : macroTimelineStatusClass(st.cls);
+        const days = scheduleDaysLate(s);
+        const badge = s.baseKey
+          ? `<span class="mtl-mbadge">Padrão</span>`
+          : `<span class="mtl-mbadge" style="background:#f2f4f8;color:var(--muted)">Extra</span>`;
+        const replan = days > 0
+          ? `<div class="mtl-replan"><strong>⚠ Atrasado há ${days} dia(s)${s.replanHistory && s.replanHistory.length ? ` · replanejado ${s.replanHistory.length}x` : ''}</strong>Abra o Cronograma da iniciativa para registrar um novo prazo.</div>`
+          : '';
+        return `<div class="mtl-marco">
+          <span class="mtl-dot ${cls}"></span>
+          <div class="mtl-mname">${escapeHtml(s.item)} ${badge}${replan}</div>
+          <div class="mtl-mperiod">${formatBR(s.start)} – ${formatBR(s.end)}</div>
+          <div class="mtl-mstatus" style="color:${colorMap[cls] || 'var(--muted)'}">${st.label}</div>
+        </div>`;
+      }).join('');
+      const jiraHtml = jiraItem ? `<div class="mtl-marco">
+          <span class="mtl-dot jira"></span>
+          <div class="mtl-mname">${escapeHtml(jiraItem.item)} <span class="mtl-mbadge" style="background:#f2f4f8;color:var(--muted)">Automático · Jira</span></div>
+          <div class="mtl-mperiod">${scheduleJiraCount(project)} história(s) importada(s)</div>
+          <div class="mtl-mstatus">—</div>
+        </div>` : '';
+      const name = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ') || 'Sem nome';
+      const statusLabel = { late: 'Atrasado', attn: 'Atenção', ok: 'No prazo' }[status];
+      return `<div class="mtl-card">
+        <div class="mtl-card-head">
+          <div><div class="mtl-sq" style="color:${squadColorFor(squadName)}">${escapeHtml(squadName)}</div><h3>${escapeHtml(name)}</h3><div style="font-size:12px;color:var(--muted)">${doneCount} de ${dateItems.length} marcos concluídos · ${scheduleJiraCount(project)} histórias no Jira</div></div>
+          <span class="mtl-stat ${status}" style="align-self:flex-start;color:${colorMap[status]}">${statusLabel}</span>
+        </div>
+        ${marcosHtml}${jiraHtml}
+      </div>`;
+    }
+
+    function renderMacroTimelinePanel() {
+      const root = document.getElementById('uxV6TimelineRoot');
+      if (!root) return;
+      if (!macroTimelineOpen) { root.innerHTML = ''; return; }
+
+      const allProjects = data.projects || [];
+      allProjects.forEach(ensureBaseSchedule);
+      const axis = macroTimelineAxis(allProjects);
+      const ticks = macroTimelineMonthTicks(axis);
+      const todayPct = macroTimelineTodayPct(axis);
+      const lateAll = collectLateScheduleMarcos(allProjects);
+
+      const squadsPresent = sortedSquadsList().filter(sq => squadProjects(sq.id).length > 0);
+      const squadChips = [`<button type="button" class="mtl-chip ${macroTimelineSquadFilter === 'all' ? 'active' : ''}" onclick="setMacroTimelineSquadFilter('all')">Todas as squads</button>`]
+        .concat(squadsPresent.map(sq => `<button type="button" class="mtl-chip sqdot ${macroTimelineSquadFilter === sq.id ? 'active' : ''}" style="color:${squadColorFor(sq.name)}" onclick="setMacroTimelineSquadFilter('${escapeAttr(sq.id)}')">${escapeHtml(sq.name)}</button>`))
+        .join('');
+      const statusChips = ['all', 'ok', 'attn', 'late'].map(key => {
+        const label = { all: 'Todos status', ok: 'No prazo', attn: 'Atenção', late: 'Atrasado' }[key];
+        return `<button type="button" class="mtl-chip ${macroTimelineStatusFilter === key ? 'active' : ''}" onclick="setMacroTimelineStatusFilter('${key}')">${label}</button>`;
+      }).join('');
+
+      const filteredProjects = allProjects.filter(p => {
+        const squad = squadForProject(p);
+        const sqOk = macroTimelineSquadFilter === 'all' || squad?.id === macroTimelineSquadFilter;
+        const stOk = macroTimelineStatusFilter === 'all' || macroTimelineProjectStatus(p) === macroTimelineStatusFilter;
+        const name = ([initiativeNumber(p), displayProjectTitle(p)].filter(Boolean).join(' ') || '').toLowerCase();
+        const searchOk = !macroTimelineSearch || name.includes(macroTimelineSearch.toLowerCase());
+        return sqOk && stOk && searchOk;
+      });
+      const rowsHtml = filteredProjects.map(p => macroTimelineRowHtml(p, axis)).join('');
+
+      const lastUpdate = data.timelineLastScheduleUpdate ? `<div class="mtl-strip"><div>🕒</div><div><strong>Última atualização do Cronograma</strong>${escapeHtml(data.timelineLastScheduleOwner || 'Alguém')} ${data.timelineLastScheduleItem ? `editou "${escapeHtml(data.timelineLastScheduleItem)}"` : 'atualizou um marco'} em ${escapeHtml(formatBRDateTime(data.timelineLastScheduleUpdate))}.</div></div>` : '';
+
+      const geralBody = `
+        <div class="mtl-filterbar">
+          <div class="mtl-fgroup">${squadChips}</div>
+          <div class="mtl-fgroup">${statusChips}</div>
+          <div class="mtl-search"><input id="mtlSearchInput" placeholder="Buscar iniciativa…" value="${escapeAttr(macroTimelineSearch)}" oninput="setMacroTimelineSearch(this.value)" /></div>
+        </div>
+        <div class="mtl-table">
+          <div class="mtl-thead">
+            <div>Squad</div><div>Iniciativa</div>
+            <div class="mtl-axis">${ticks.map(t => `<span class="mtl-month" style="left:${t.pct}%">${t.label}</span>`).join('')}</div>
+            <div style="text-align:right">Status</div>
+          </div>
+          <div class="mtl-tbody">
+            <div class="mtl-today" style="left:${todayPct}%"></div>
+            <div class="mtl-today-tag" style="left:${todayPct}%">Hoje</div>
+            ${rowsHtml || `<div class="mtl-empty">Nenhuma iniciativa encontrada com esses filtros.</div>`}
+          </div>
+        </div>`;
+
+      const initOptions = allProjects.map(p => `<option value="${escapeAttr(p.id)}">${escapeHtml([initiativeNumber(p), displayProjectTitle(p)].filter(Boolean).join(' · ') || 'Sem nome')}</option>`).join('');
+      const selectedId = macroTimelineSelectedId && allProjects.some(p => p.id === macroTimelineSelectedId) ? macroTimelineSelectedId : (allProjects[0]?.id || '');
+      const selectedProject = allProjects.find(p => p.id === selectedId);
+      const initBody = `
+        <div class="mtl-picker"><label style="font-size:11.5px;font-weight:700;color:var(--muted)">Iniciativa</label><select onchange="setMacroTimelineSelectedInitiative(this.value)">${initOptions}</select></div>
+        ${selectedProject ? macroTimelineInitiativeCardHtml(selectedProject) : `<div class="mtl-empty">Nenhuma iniciativa cadastrada.</div>`}`;
+
+      const lateBody = `<div class="mtl-table"><div class="mtl-thead" style="grid-template-columns:118px 1fr 130px 100px"><div>Squad</div><div>Iniciativa / marco</div><div>Atraso</div><div></div></div>
+        <div>${lateAll.length ? lateAll.map(lateScheduleRowHtml).join('') : `<div class="mtl-empty">Nenhum marco de Cronograma atrasado.</div>`}</div></div>`;
+
+      const bodyMap = { geral: geralBody, init: initBody, late: lateBody };
+
+      root.innerHTML = `
+        <div id="uxV6TimelineBackdrop" class="ux-v6-report-backdrop active" onclick="closeMacroTimelinePanel()"></div>
+        <div class="ux-v6-report-modal active" style="width:min(1180px, 96vw)">
+          <div class="ux-v6-report-head">
+            <div><h2>Timeline Executiva</h2><p>Visão macro por Squad e iniciativa, gerada automaticamente a partir dos 6 marcos padrão do Cronograma. Recalculada a cada abertura.</p></div>
+            <div class="ux-v6-report-actions"><button type="button" class="ux-v6-report-btn" onclick="closeMacroTimelinePanel()">Fechar</button></div>
+          </div>
+          <div class="ux-v6-report-body" style="padding:16px 20px 20px">
+            <div class="mtl-toggle">
+              <button type="button" class="${macroTimelineViewMode === 'geral' ? 'active' : ''}" onclick="setMacroTimelineView('geral')">Visão geral</button>
+              <button type="button" class="${macroTimelineViewMode === 'init' ? 'active' : ''}" onclick="setMacroTimelineView('init')">Por iniciativa</button>
+              <button type="button" class="${macroTimelineViewMode === 'late' ? 'active' : ''}" onclick="setMacroTimelineView('late')">Atrasos ${lateAll.length ? `<span class="mtl-badge">${lateAll.length}</span>` : ''}</button>
+            </div>
+            ${lastUpdate}
+            ${bodyMap[macroTimelineViewMode] || ''}
+          </div>
+        </div>`;
+
+      if (macroTimelineViewMode === 'geral') refocusSearchInput('mtlSearchInput');
+    }
+
+    function openMacroTimelinePanel() {
+      macroTimelineOpen = true;
+      data.timelineHasUnseenScheduleUpdate = false;
+      renderSidebar();
+      renderMacroTimelinePanel();
+    }
+    function closeMacroTimelinePanel() {
+      macroTimelineOpen = false;
+      renderMacroTimelinePanel();
+    }
+    function setMacroTimelineView(mode) { macroTimelineViewMode = mode; renderMacroTimelinePanel(); }
+    function setMacroTimelineSquadFilter(id) { macroTimelineSquadFilter = id; renderMacroTimelinePanel(); }
+    function setMacroTimelineStatusFilter(key) { macroTimelineStatusFilter = key; renderMacroTimelinePanel(); }
+    function setMacroTimelineSearch(value) { macroTimelineSearch = value || ''; renderMacroTimelinePanel(); }
+    function setMacroTimelineSelectedInitiative(id) { macroTimelineSelectedId = id; renderMacroTimelinePanel(); }
+
+    function goToMacroTimelineInitiative(projectId) {
+      macroTimelineSelectedId = projectId;
+      macroTimelineViewMode = 'init';
+      renderMacroTimelinePanel();
     }
 
     function printReportsPanel() {
@@ -15772,6 +16279,8 @@ Recomendação PMO: ${d.recommendation}`;
         wrap.innerHTML = '';
         wrap.setAttribute('aria-hidden', 'true');
       }
+      const timelineBadge = document.getElementById('macroTimelineBadge');
+      if (timelineBadge) timelineBadge.classList.toggle('hidden', !data.timelineHasUnseenScheduleUpdate);
     }
 
     function renderProjectCardsForSquad(squad, searchTerm = '') {
@@ -15888,6 +16397,11 @@ Recomendação PMO: ${d.recommendation}`;
         ? attentionActions.slice(0, 5).map(item => attentionActionRowHtml(item)).join('')
         : `<div class="ux-v6-attention-empty">Nenhuma ação acordada atrasada ou a vencer nos próximos ${ATTENTION_DUE_SOON_DAYS} dias.</div>`;
 
+      const lateScheduleItems = collectLateScheduleMarcos(allProjects);
+      const lateScheduleHtml = lateScheduleItems.length
+        ? lateScheduleItems.slice(0, 5).map(item => lateScheduleRowHtml(item)).join('')
+        : `<div class="ux-v6-attention-empty">Nenhum marco de Cronograma atrasado.</div>`;
+
       const currentDiscoveryMonthLabel = formatMonthYearPT(new Date());
       const nextDiscoveriesHtml = currentMonthDiscoveries(5).map(project => {
         const squad = squadForProject(project);
@@ -15973,6 +16487,10 @@ Recomendação PMO: ${d.recommendation}`;
             <section class="ux-v6-side-card">
               <div class="ux-v6-side-title"><strong>Ações Acordadas</strong>${attentionActions.length ? `<span class="ux-v6-side-link" onclick="openAttentionActionsModal()" style="cursor:pointer" title="Ver todas as ações acordadas atrasadas ou a vencer">Ver todas (${attentionActions.length})</span>` : ''}</div>
               <div class="ux-v6-alert-list">${attentionActionsHtml}</div>
+            </section>
+            <section class="ux-v6-side-card">
+              <div class="ux-v6-side-title"><strong>⚠ Marcos em atraso</strong>${lateScheduleItems.length ? `<span class="ux-v6-side-link" onclick="openLateScheduleModal()" style="cursor:pointer" title="Ver todos os marcos de Cronograma atrasados">Ver todos (${lateScheduleItems.length})</span>` : ''}</div>
+              <div class="ux-v6-alert-list">${lateScheduleHtml}</div>
             </section>
             <section class="ux-v6-side-card" id="uxV6NextDiscoveriesCard">
               <div class="ux-v6-side-title"><div class="ux-v6-side-title-label"><strong>Próximos Discoveries</strong><span class="ux-v6-side-month">Mês atual: ${escapeHtml(currentDiscoveryMonthLabel)}</span></div><span class="ux-v6-side-link" onclick="openCalendarModal()" style="cursor:pointer" title="Abrir calendário de Discoveries">📅 Ver calendário</span></div>
