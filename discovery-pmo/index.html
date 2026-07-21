@@ -2404,8 +2404,9 @@
   
 
     /* === PATCH UX 2026-06-22: Header executivo estável + menu horizontal responsivo === */
-    html { overflow-x: hidden; }
-    body { overflow-x: hidden; }
+    /* clip evita uma área de rolagem intermediária e mantém o cabeçalho fixo. */
+    html { overflow-x: clip; }
+    body { overflow-x: clip; }
 
     .app-shell {
       display: block !important;
