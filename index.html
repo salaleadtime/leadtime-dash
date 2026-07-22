@@ -326,6 +326,10 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .bcyan .bdg-dot{background:#0891b2;box-shadow:0 0 0 2px rgba(8,145,178,.15)}
 .bred{background:#fff1f2;color:#9f1239;border:1px solid #fda4af}
 .bred .bdg-dot{background:#e11d48;box-shadow:0 0 0 2px rgba(225,29,72,.15)}
+.cancel-btn{display:block;margin-top:4px;padding:2px 6px;border:1px solid #fecaca;border-radius:5px;background:#fff;color:#b91c1c;font:600 9px/1.25 inherit;cursor:pointer}
+.cancel-btn:hover{background:#fff1f2;border-color:#fda4af}
+.cancel-btn.undo{color:#0369a1;border-color:#bae6fd}
+.cancel-btn.undo:hover{background:#f0f9ff;border-color:#7dd3fc}
 .bindigo{background:#eef2ff;color:#3730a3;border:1px solid #a5b4fc}
 .bindigo .bdg-dot{background:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.15)}
 
@@ -1452,6 +1456,7 @@ body{min-height:100vh}
     <button class="chip" data-f="s" data-v="Em Execução">Em Execução</button>
     <button class="chip" data-f="s" data-v="Concluído">Concluído</button>
     <button class="chip" data-f="s" data-v="Executado">Executado</button>
+    <button class="chip" data-f="s" data-v="Cancelado">Cancelados</button>
     <div class="fsep"></div>
     <span class="fl">Squad:</span>
     <select class="fsel" id="sqF"><option value="all">Todas</option></select>
@@ -2544,13 +2549,15 @@ function isValidIsoDate(value){
   var d = new Date(value + 'T00:00:00');
   return !isNaN(d.getTime()) && d.toISOString().slice(0,10) === value;
 }
+function isCancelled(rec){ return !!rec && String(rec.status||'').trim()==='Cancelado'; }
 function activeEpics(){
-  // Épicos ativos: SEM Data Fim VÁLIDA → aparecem na aba Épicos
-  return allData.filter(function(r){ return !isValidDate(r.fim); });
+  return allData.filter(function(r){ return !isCancelled(r) && !isValidDate(r.fim); });
 }
 function measuredEpics(){
-  // Épicos medidos: COM Data Fim VÁLIDA → aparecem na aba Medição
-  return allData.filter(function(r){ return isValidDate(r.fim); });
+  return allData.filter(function(r){ return !isCancelled(r) && isValidDate(r.fim); });
+}
+function listedEpics(){
+  return allData.filter(function(r){ return !isValidDate(r.fim) || isCancelled(r); });
 }
 
 // Regra única do fluxo:
@@ -2558,6 +2565,10 @@ function measuredEpics(){
 // - Sem Data Fim válida: card pertence a Épicos e recupera o status anterior.
 function normalizeWorkflowRecord(rec){
   if(!rec) return rec;
+  if(isCancelled(rec)){
+    rec.lt=0;
+    return rec;
+  }
   if(isValidDate(rec.fim)){
     if(rec.status!=='Concluído'){
       if(rec.status && rec.status!=='Concluído' && !rec.statusAntes) rec.statusAntes=rec.status;
@@ -2691,6 +2702,7 @@ function replaceFromSharedSource(rows){
   var delWarned=loadDeletedWarned(), delWarnedChanged=false;
   allData.forEach(function(r){
     if(!r||!r.id) return;
+    if(isCancelled(r)) return;
     if(!inIds[r.id] && (isValidDate(r.fim)||isValidDate(r.fimAntes))){
       if(!delWarned[r.id]){
         delWarned[r.id]=true; delWarnedChanged=true;
@@ -3089,7 +3101,7 @@ function fmtD(d){
 }
 function sBadge(s){
   var t=(s||'').trim();
-  var m={'Em Execução':'bblue','Concluído':'bgreen','Executado':'bgray'};
+  var m={'Em Execução':'bblue','Concluído':'bgreen','Executado':'bgray','Cancelado':'bred'};
   var cls=m[t]||'bgray';
   return '<span class="bdg '+cls+'"><span class="bdg-dot"></span>'+esc(t)+'</span>';
 }
@@ -3276,7 +3288,7 @@ function renderMetaPace(){
   var el=$id('metaPace'); if(!el) return;
   if(!allData.length){ el.innerHTML=''; return; }
   var tri=getCurrentTrimester();
-  var del=allData.filter(function(r){ return inTrimester(r.fim,tri); });
+  var del=allData.filter(function(r){ return !isCancelled(r) && inTrimester(r.fim,tri); });
   var d=del.length;
   if(!d){ renderMetaPaceEmpty(el,tri); return; }
   var Sd=del.reduce(function(s,r){ return s+r.lt; },0);
@@ -3431,6 +3443,7 @@ var HC_LT_WARN=180; // dias: épico ativo acima disso = Data Início suspeita
 function getDataAnomalies(){
   var out=[];
   allData.forEach(function(r){
+    if(isCancelled(r)) return;
     var done=r.status==='Executado'||r.status==='Concluído';
     // Regra 1: status "feito" mas sem Data Fim → LT cresce +1d a cada dia e infla a média
     if(done && !isValidDate(r.fim)){
@@ -3508,13 +3521,13 @@ function renderKPI(){
   var t=allData.length;
   if(!t){$id('kpiRow').innerHTML='';return;}
   var tri=getCurrentTrimester();
-  var triEpics=allData.filter(function(r){return inTrimester(r.fim,tri);});
+  var triEpics=allData.filter(function(r){return !isCancelled(r)&&inTrimester(r.fim,tri);});
   var delivered=triEpics.length;
   var avgTri=delivered?Math.round(triEpics.reduce(function(s,r){return s+r.lt;},0)/delivered):0;
   var naMeta=triEpics.filter(function(r){return r.lt<META;}).length;
   var pctMeta=delivered?Math.round(naMeta/delivered*100):0;
   var exec=activeEpics().length;
-  var crit=allData.filter(function(r){return r.lt>=META;}).length;
+  var crit=allData.filter(function(r){return !isCancelled(r)&&r.lt>=META;}).length;
   $id('kpiRow').innerHTML=
     kpi('kg','Entregues no TRI',''+delivered,'épicos finalizados no trimestre','cg')+
     kpi('kb','LT Médio TRI',''+avgTri,'dias · meta: '+META+'d','cb')+
@@ -3529,8 +3542,8 @@ function kpi(cls,lbl,val,sub,vcls){
 function renderSquads(){
   var tri=getCurrentTrimester();
   var prev=getPrevTrimester();
-  var triEpics=allData.filter(function(r){return inTrimester(r.fim,tri);});
-  var prevEpics=allData.filter(function(r){return inTrimester(r.fim,prev);});
+  var triEpics=allData.filter(function(r){return !isCancelled(r)&&inTrimester(r.fim,tri);});
+  var prevEpics=allData.filter(function(r){return !isCancelled(r)&&inTrimester(r.fim,prev);});
   var squads=Array.from(new Set(allData.map(function(r){return r.squad;}))).filter(Boolean).sort();
   var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706','Inception':'#ea580c','TopGun':'#0891b2','MadMax':'#e11d48','Terminator':'#4f46e5'};
   $id('squadCards').innerHTML=squads.map(function(sq){
@@ -3575,6 +3588,7 @@ function renderDeliveries(){
   var now=new Date(); now.setHours(0,0,0,0);
   var list=allData
     .filter(function(r){
+      if(isCancelled(r)) return false;
       var s=r.status.trim();
       var isDone=(s==='Concluído'||s==='Executado')&&r.fim;
       if(isDone) return false;
@@ -3604,7 +3618,7 @@ function renderDeliveries(){
 }
 
 function renderRisks(){
-  var all=allData.filter(function(r){return r.lt>=META;});
+  var all=allData.filter(function(r){return !isCancelled(r)&&r.lt>=META;});
   var byLt=function(a,b){return b.lt-a.lt;};
   var pending=all.filter(function(r){return !isValidDate(r.fim);}).sort(byLt);
   var done=all.filter(function(r){return isValidDate(r.fim);}).sort(byLt);
@@ -3660,11 +3674,11 @@ function getFiltered(){
   if(fIniD) fIniD.setHours(0,0,0,0);
   if(fFimD) fFimD.setHours(23,59,59,999);
 
-  // Base: somente épicos ATIVOS (os medidos estão na outra aba)
-  return activeEpics().filter(function(r){
+  // Cancelados continuam visíveis para auditoria, sem entrar em métricas de LT.
+  return listedEpics().filter(function(r){
     if(filt.s!=='all'&&r.status.trim()!==filt.s) return false;
     if(filt.sq!=='all'&&r.squad!==filt.sq) return false;
-    if(filt.l!=='all'&&ltCls(r.lt)!==filt.l) return false;
+    if(filt.l!=='all'&&(isCancelled(r)||ltCls(r.lt)!==filt.l)) return false;
     if(q&&(r.id+r.squad+r.resumo).toLowerCase().indexOf(q)<0) return false;
 
     // Filtro de período planejado de execução
@@ -3699,7 +3713,7 @@ function renderTbl(){
   $id('pgInfo').textContent=(Math.min((pg-1)*PG+1,tot))+'–'+(Math.min(pg*PG,tot))+' de '+tot;
 
   // Alerta: épicos com Data Início mas sem Data Fim (LT contado até hoje)
-  var semFim=allData.filter(function(r){return isValidDate(r.ini)&&!isValidDate(r.fim);});
+  var semFim=allData.filter(function(r){return !isCancelled(r)&&isValidDate(r.ini)&&!isValidDate(r.fim);});
   var alertEl=$id('semFimAlert'), alertTxt=$id('semFimAlertTxt');
   if(alertEl){
     if(semFim.length){
@@ -3713,20 +3727,23 @@ function renderTbl(){
   var ltMap={r:'ltr',a:'lta',g:'ltg'};
   var rows=sl.map(function(r){
     var gi=allData.indexOf(r);
+    var cancelado=isCancelled(r);
     var lc=ltMap[ltCls(r.lt)];
-    var semFimRow=isValidDate(r.ini)&&!isValidDate(r.fim);
+    var semFimRow=!cancelado&&isValidDate(r.ini)&&!isValidDate(r.fim);
     return '<tr'+(semFimRow?' style="background:#fff7ed"':'')+'>'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(jsq(r.id))+'\',this)" title="Copiar link do Jira">⎘</button></div>'+
         (isValidDate(r.fimAntes)?'<div class="era-med-badge" title="Estava em Medição com Data Fim '+esc(r.fimAntes)+'">↩ era Medição · '+esc(r.fimAntes.slice(5).replace('-','/'))+'</div>':'')+
       '</td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
-      '<td>'+sBadge(r.status)+'</td>'+
+      '<td>'+sBadge(r.status)+(cancelado
+        ?'<button class="cancel-btn undo" onclick="reactivateEpic(\''+esc(jsq(r.id))+'\')">↩ Reativar</button>'
+        :'<button class="cancel-btn" onclick="cancelEpic(\''+esc(jsq(r.id))+'\')">Cancelar</button>')+'</td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-i="'+gi+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
       '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
-      '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
+      '<td class="clt '+lc+'">'+(cancelado?'— não medido':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
       '<td class="cimp">'+
         '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
       '</td>'+
@@ -3902,6 +3919,33 @@ function renderHistorico(){
     '<tbody>'+rows+'</tbody></table>';
 }
 
+function persistCancellationChange(rec){
+  saveLocal();
+  queuePendingWrite(rec);
+  clearTimeout(_jbSaveTimer);
+  jbSave();
+  saveToSheets([_sheetsItem(rec.id, rec)]);
+  renderTbl(); renderMed(); renderDash(); updateTabCounts();
+}
+function cancelEpic(epicId){
+  var rec=allData.find(function(r){ return r.id===epicId; });
+  if(!rec || isCancelled(rec)) return;
+  if(!confirm('Cancelar o épico '+epicId+'? Ele ficará fora de todas as métricas de Lead Time.')) return;
+  if(rec.status && rec.status!=='Cancelado') rec.statusAntes=rec.status;
+  rec.status='Cancelado';
+  rec.lt=0;
+  persistCancellationChange(rec);
+  toast('Épico cancelado', '<strong>'+esc(epicId)+'</strong> foi excluído das métricas de Lead Time. Use “Reativar” caso necessário.','warn');
+}
+function reactivateEpic(epicId){
+  var rec=allData.find(function(r){ return r.id===epicId; });
+  if(!rec || !isCancelled(rec)) return;
+  rec.status=rec.statusAntes || 'Em Execução';
+  rec.statusAntes=null;
+  normalizeWorkflowRecord(rec);
+  persistCancellationChange(rec);
+  toast('Épico reativado', '<strong>'+esc(epicId)+'</strong> voltou a contar no Lead Time.');
+}
 function fc(el){
   var tabToRestore=rememberTab();
   var gi=parseInt(el.dataset.i), f=el.dataset.f;
@@ -7192,8 +7236,8 @@ function calSeedExample(){
   function fmtD(s){ if(!s)return'—'; var p=String(s).split('-'); if(p.length<3)return s; return p[2]+'/'+p[1]+'/'+p[0]; }
   function now0(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
   function parseLocalDate(s){ if(!s)return new Date(0); var p=String(s).split('-'); return new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); }
-  function activeEpics(){ return (window.allData||[]).filter(function(r){ return !r.fim; }); }
-  function measuredEpics(){ return (window.allData||[]).filter(function(r){ return !!r.fim; }); }
+  function activeEpics(){ return (window.allData||[]).filter(function(r){ return !isCancelled(r) && !r.fim; }); }
+  function measuredEpics(){ return (window.allData||[]).filter(function(r){ return !isCancelled(r) && !!r.fim; }); }
   function getCurrentTrimester(){
     if(typeof window.getCurrentTrimester==='function') return window.getCurrentTrimester();
     var now=now0(); return {from:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1),to:new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3+3,0),remaining:0};
@@ -7201,7 +7245,7 @@ function calSeedExample(){
   function inTrimester(dateStr,tri){ if(!dateStr)return false; var d=new Date(dateStr+'T00:00:00'); return d>=tri.from&&d<=tri.to; }
   function deliverList(){
     var n=now0();
-    return (window.allData||[]).filter(function(r){ return !r.fim && r.dataPrevista; })
+    return (window.allData||[]).filter(function(r){ return !isCancelled(r) && !r.fim && r.dataPrevista; })
       .sort(function(a,b){ return parseLocalDate(a.dataPrevista)-parseLocalDate(b.dataPrevista); });
   }
   function pKind(kind){ return kind==='green'?'var(--premium-green)':kind==='amber'?'var(--premium-amber)':kind==='blue'?'var(--premium-blue)':kind==='purple'?'var(--premium-purple)':'var(--premium-red)'; }
@@ -7775,7 +7819,7 @@ function calSeedExample(){
         '<td style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + (r.id||'—') + '</td>' +
         '<td>' + (r.squad||'—') + '</td>' +
         '<td><select data-idx="'+i+'" onchange="admStatusChange(this)">' +
-          ['Em Execução','Executado','Concluído'].map(function(s){
+          ['Em Execução','Executado','Concluído','Cancelado'].map(function(s){
             return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+s+'</option>';
           }).join('') +
         '</select></td>' +
