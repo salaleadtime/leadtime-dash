@@ -326,10 +326,6 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .bcyan .bdg-dot{background:#0891b2;box-shadow:0 0 0 2px rgba(8,145,178,.15)}
 .bred{background:#fff1f2;color:#9f1239;border:1px solid #fda4af}
 .bred .bdg-dot{background:#e11d48;box-shadow:0 0 0 2px rgba(225,29,72,.15)}
-.cancel-btn{display:block;margin-top:4px;padding:2px 6px;border:1px solid #fecaca;border-radius:5px;background:#fff;color:#b91c1c;font:600 9px/1.25 inherit;cursor:pointer}
-.cancel-btn:hover{background:#fff1f2;border-color:#fda4af}
-.cancel-btn.undo{color:#0369a1;border-color:#bae6fd}
-.cancel-btn.undo:hover{background:#f0f9ff;border-color:#7dd3fc}
 .bindigo{background:#eef2ff;color:#3730a3;border:1px solid #a5b4fc}
 .bindigo .bdg-dot{background:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.15)}
 
@@ -3736,9 +3732,7 @@ function renderTbl(){
       '</td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
-      '<td>'+sBadge(r.status)+(cancelado
-        ?'<button class="cancel-btn undo" onclick="reactivateEpic(\''+esc(jsq(r.id))+'\')">↩ Reativar</button>'
-        :'<button class="cancel-btn" onclick="cancelEpic(\''+esc(jsq(r.id))+'\')">Cancelar</button>')+'</td>'+
+      '<td>'+sBadge(r.status)+'</td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-i="'+gi+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
       '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
@@ -3919,33 +3913,6 @@ function renderHistorico(){
     '<tbody>'+rows+'</tbody></table>';
 }
 
-function persistCancellationChange(rec){
-  saveLocal();
-  queuePendingWrite(rec);
-  clearTimeout(_jbSaveTimer);
-  jbSave();
-  saveToSheets([_sheetsItem(rec.id, rec)]);
-  renderTbl(); renderMed(); renderDash(); updateTabCounts();
-}
-function cancelEpic(epicId){
-  var rec=allData.find(function(r){ return r.id===epicId; });
-  if(!rec || isCancelled(rec)) return;
-  if(!confirm('Cancelar o épico '+epicId+'? Ele ficará fora de todas as métricas de Lead Time.')) return;
-  if(rec.status && rec.status!=='Cancelado') rec.statusAntes=rec.status;
-  rec.status='Cancelado';
-  rec.lt=0;
-  persistCancellationChange(rec);
-  toast('Épico cancelado', '<strong>'+esc(epicId)+'</strong> foi excluído das métricas de Lead Time. Use “Reativar” caso necessário.','warn');
-}
-function reactivateEpic(epicId){
-  var rec=allData.find(function(r){ return r.id===epicId; });
-  if(!rec || !isCancelled(rec)) return;
-  rec.status=rec.statusAntes || 'Em Execução';
-  rec.statusAntes=null;
-  normalizeWorkflowRecord(rec);
-  persistCancellationChange(rec);
-  toast('Épico reativado', '<strong>'+esc(epicId)+'</strong> voltou a contar no Lead Time.');
-}
 function fc(el){
   var tabToRestore=rememberTab();
   var gi=parseInt(el.dataset.i), f=el.dataset.f;
@@ -7658,6 +7625,7 @@ function calSeedExample(){
       <!-- ABA: Épicos -->
       <div class="adm-pane" id="adm-epicos">
         <div class="adm-sec">Gerenciar Épicos <span id="admEpCount" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:#7c3aed"></span></div>
+        <p style="font-size:11px;color:#64748b;line-height:1.5;margin:-4px 0 10px">Cancelamentos são gerenciados somente neste painel e não entram no Lead Time.</p>
         <div class="adm-epics-wrap">
           <table class="adm-epic-table">
             <thead>
@@ -7684,6 +7652,7 @@ function calSeedExample(){
 (function(){
   var ADMIN_KEY = 'sala_admin_pwd';
   var IMP_KEY   = 'sala_imp_pwd';
+  var admDirtyEpics = {};
 
   function getAdminPwd(){ return storageGet(ADMIN_KEY) || 'sala@admin'; }
   function getImpPwd()  { return storageGet(IMP_KEY)   || 'sala'; }
@@ -7697,6 +7666,14 @@ function calSeedExample(){
     ov.classList.add('on');
     setTimeout(function(){ document.getElementById('adminPwdInput').focus(); }, 80);
   };
+
+  // Acesso discreto ao painel administrativo: sem botão exposto na tabela.
+  document.addEventListener('keydown', function(e){
+    if(e.ctrlKey && e.shiftKey && String(e.key||'').toLowerCase()==='l'){
+      e.preventDefault();
+      window.openAdmin();
+    }
+  });
 
   window.closeAdmin = function(){
     document.getElementById('adminOverlay').classList.remove('on');
@@ -7832,16 +7809,28 @@ function calSeedExample(){
   window.admStatusChange = function(sel){
     var idx = parseInt(sel.getAttribute('data-idx'));
     if(typeof allData !== 'undefined' && allData[idx]){
-      allData[idx].status = sel.value;
+      var rec=allData[idx], oldStatus=rec.status;
+      rec.status = sel.value;
+      if(sel.value==='Cancelado' && oldStatus!=='Cancelado') rec.statusAntes=oldStatus;
+      if(sel.value!=='Cancelado' && oldStatus==='Cancelado') rec.statusAntes=null;
+      normalizeWorkflowRecord(rec);
+      admDirtyEpics[rec.id]=rec;
     }
   };
 
   window.admSalvarEpicos = function(){
     try{
       if(typeof allData !== 'undefined'){
-        storageSet('leadtime_sala_v8_data', JSON.stringify(allData));
+        saveLocal();
+        var altered=Object.keys(admDirtyEpics).map(function(id){ return admDirtyEpics[id]; });
+        if(altered.length){
+          altered.forEach(function(rec){ queuePendingWrite(rec); });
+          saveToSheetsBatch(altered.map(function(rec){ return _sheetsItem(rec.id, rec); }));
+          admDirtyEpics={};
+        }
+        renderAll();
       }
-      admMsg('admEpMsg','✅ Alterações salvas! Feche o admin para ver o dashboard atualizado.');
+      admMsg('admEpMsg','✅ Alterações salvas e sincronizadas.');
     } catch(e){
       admMsg('admEpMsg','Erro ao salvar: ' + e.message, 'err');
     }
