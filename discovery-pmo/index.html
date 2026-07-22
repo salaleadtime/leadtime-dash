@@ -10083,7 +10083,32 @@
       ]
 };
 
+    // Migração única: a primeira versão do cronograma usava nomes livres, enquanto
+    // a regra atual cria marcos canônicos por `baseKey`. Sem esta equivalência, o
+    // mesmo marco aparece duas vezes (ex.: "Data de Discovery" e "Discovery").
+    const SCHEDULE_LEGACY_CLEANUP_VERSION = 'scheduleLegacyCleanupV1';
+    const SCHEDULE_BASE_LABEL_BY_KEY = {
+      kickoff: 'Kickoff',
+      discovery: 'Discovery',
+      desenho: 'Desenho de solução',
+      historias: 'Escrita das histórias',
+      refino: 'Refinamento Técnico'
+    };
+    const SCHEDULE_LEGACY_BASE_KEY_BY_LABEL = {
+      'kickoff': 'kickoff',
+      'discovery': 'discovery',
+      'data de discovery': 'discovery',
+      'desenho de solucao': 'desenho',
+      'desenho dos fluxos as is': 'desenho',
+      'desenho do fluxo as is': 'desenho',
+      'desenho dos fluxo as is': 'desenho',
+      'escrita das historias': 'historias',
+      'escritas das historias': 'historias',
+      'refinamento tecnico': 'refino'
+    };
+
     let _cardsJustReset = false;
+    let _scheduleLegacyCleanupJustRan = false;
     let data = loadData();
     let activeProjectId = data.activeProjectId || data.projects[0]?.id;
     if (!data.projects.some(p => p.id === activeProjectId)) activeProjectId = data.projects[0]?.id || defaultData.activeProjectId;
@@ -10302,11 +10327,18 @@
       // a migração "de uma vez só" rodar de novo a cada poll sobre o clone normalizado.
       data.cardsResetV1 = data.cardsResetV1 || normalizedRemote.cardsResetV1;
       data.squadNamesSyncedV1 = data.squadNamesSyncedV1 || normalizedRemote.squadNamesSyncedV1;
+      data[SCHEDULE_LEGACY_CLEANUP_VERSION] = data[SCHEDULE_LEGACY_CLEANUP_VERSION] || normalizedRemote[SCHEDULE_LEGACY_CLEANUP_VERSION];
       data.updatedAt = new Date(Math.max(Date.parse(data.updatedAt || '') || 0, Date.parse(normalizedRemote.updatedAt || '') || 0)).toISOString();
       activeProjectId = data.projects.some(p => p.id === keepActiveId) ? keepActiveId : (data.activeProjectId || data.projects[0].id);
       data.activeProjectId = activeProjectId;
       storageSet(STORAGE_KEY, JSON.stringify(data));
       render();
+      if (_scheduleLegacyCleanupJustRan) {
+        data.updatedAt = new Date().toISOString();
+        storageSet(STORAGE_KEY, JSON.stringify(data));
+        scheduleDiscGasSave();
+        _scheduleLegacyCleanupJustRan = false;
+      }
       _discGasApplyingRemote = false;
       return true;
     }
@@ -10331,9 +10363,14 @@
 
     setInterval(discGasSyncPull, 15000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasSyncPull(); });
-    // O reset único de cards (ver normalizeData) só vale pra todo mundo se chegar ao
-    // servidor — sem isso, ficaria só no localStorage de quem abriu a página primeiro.
-    if (_cardsJustReset) { data.updatedAt = new Date().toISOString(); scheduleDiscGasSave(); }
+    // Migrações únicas só valem para toda a base quando chegam ao servidor — sem isso,
+    // ficariam apenas no localStorage de quem abriu a página primeiro.
+    if (_cardsJustReset || _scheduleLegacyCleanupJustRan) {
+      data.updatedAt = new Date().toISOString();
+      storageSet(STORAGE_KEY, JSON.stringify(data));
+      scheduleDiscGasSave();
+      _scheduleLegacyCleanupJustRan = false;
+    }
     // ─────────────────────────────────────────────────────────────────────────
     const VIEW_MODE_KEY = STORAGE_KEY + '_view_mode_v5';
     const DASHBOARD_SQUAD_KEY = STORAGE_KEY + '_dashboard_squad_v5';
@@ -10539,7 +10576,91 @@
         }));
         return project;
       });
+      if (!cloned[SCHEDULE_LEGACY_CLEANUP_VERSION]) {
+        const cleanup = cleanupLegacyScheduleDuplicates(cloned);
+        cloned[SCHEDULE_LEGACY_CLEANUP_VERSION] = true;
+        if (cleanup.changed) _scheduleLegacyCleanupJustRan = true;
+      }
       return cloned;
+    }
+
+    function normalizeScheduleLabel(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
+    function legacyScheduleBaseKey(item) {
+      if (!item || item.jira) return '';
+      return item.baseKey || SCHEDULE_LEGACY_BASE_KEY_BY_LABEL[normalizeScheduleLabel(item.item)] || '';
+    }
+
+    function scheduleCleanupRichness(item) {
+      return (item?.done ? 32 : 0)
+        + (item?.owner ? 8 : 0)
+        + (item?.observations ? 8 : 0)
+        + (item?.pdcaAction ? 4 : 0)
+        + (item?.replanHistory?.length ? 4 : 0)
+        + (item?.start && item?.end ? 2 : 0);
+    }
+
+    function keepScheduleCleanupWinner(current, candidate) {
+      const currentScore = scheduleCleanupRichness(current);
+      const candidateScore = scheduleCleanupRichness(candidate);
+      if (candidateScore !== currentScore) return candidateScore > currentScore ? candidate : current;
+      return (Date.parse(candidate?.updatedAt || '') || 0) > (Date.parse(current?.updatedAt || '') || 0) ? candidate : current;
+    }
+
+    function cleanupLegacyScheduleDuplicates(payload) {
+      const tombstones = Array.isArray(payload.tombstones) ? payload.tombstones : (payload.tombstones = []);
+      const removedIds = new Set(tombstones.map(item => item?.id).filter(Boolean));
+      const migratedAt = new Date().toISOString();
+      let changed = false;
+
+      (payload.projects || []).forEach(project => {
+        const custom = [];
+        const groups = new Map();
+        let projectChanged = false;
+        (project.schedule || []).forEach(item => {
+          const baseKey = legacyScheduleBaseKey(item);
+          if (!baseKey) { custom.push(item); return; }
+          if (!groups.has(baseKey)) groups.set(baseKey, []);
+          groups.get(baseKey).push(item);
+        });
+
+        const cleaned = [];
+        groups.forEach((items, baseKey) => {
+          const winner = items.reduce(keepScheduleCleanupWinner);
+          const merged = { ...winner };
+          items.filter(item => item !== winner).forEach(item => {
+            ['owner', 'observations', 'pdcaAction', 'start', 'end'].forEach(field => {
+              if (!merged[field] && item[field]) merged[field] = item[field];
+            });
+            if ((!merged.replanHistory || !merged.replanHistory.length) && item.replanHistory?.length) merged.replanHistory = item.replanHistory;
+            if (item.done) { merged.done = true; merged.progress = 100; }
+            // IDs determinísticos dos marcos-padrão não viram tombstone global: isso
+            // poderia ocultar o mesmo `baseKey` em outras iniciativas.
+            if (item.id && !String(item.id).startsWith('sch-base-') && !removedIds.has(item.id)) {
+              tombstones.push({ id: item.id, deletedAt: migratedAt });
+              removedIds.add(item.id);
+            }
+          });
+          merged.baseKey = baseKey;
+          merged.item = SCHEDULE_BASE_LABEL_BY_KEY[baseKey] || merged.item;
+          merged.updatedAt = migratedAt;
+          cleaned.push(merged);
+          if (items.length > 1 || winner.baseKey !== baseKey || winner.item !== merged.item) projectChanged = true;
+        });
+        if (projectChanged) {
+          project.schedule = [...custom, ...cleaned];
+          project.updatedAt = migratedAt;
+          changed = true;
+        }
+      });
+      return { changed };
     }
 
     function normalizeRaids(raids) {
