@@ -10086,7 +10086,7 @@
     // Migração única: a primeira versão do cronograma usava nomes livres, enquanto
     // a regra atual cria marcos canônicos por `baseKey`. Sem esta equivalência, o
     // mesmo marco aparece duas vezes (ex.: "Data de Discovery" e "Discovery").
-    const SCHEDULE_LEGACY_CLEANUP_VERSION = 'scheduleLegacyCleanupV1';
+    const SCHEDULE_LEGACY_CLEANUP_VERSION = 'scheduleLegacyCleanupV2';
     const SCHEDULE_BASE_LABEL_BY_KEY = {
       kickoff: 'Kickoff',
       discovery: 'Discovery',
@@ -10098,7 +10098,9 @@
       'kickoff': 'kickoff',
       'discovery': 'discovery',
       'data de discovery': 'discovery',
+      'data discovery': 'discovery',
       'desenho de solucao': 'desenho',
+      'desenho da solucao': 'desenho',
       'desenho dos fluxos as is': 'desenho',
       'desenho do fluxo as is': 'desenho',
       'desenho dos fluxo as is': 'desenho',
