@@ -1393,6 +1393,10 @@ body{min-height:100vh}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     <span>Histórico</span>
   </button>
+  <button class="tbtn" onclick="openAdmin()" title="Área restrita para configurações e cancelamentos">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    <span>Admin</span>
+  </button>
   <button class="tbtn green" onclick="doExport()" title="Exportar Excel">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     <span>Excel</span>
@@ -7666,14 +7670,6 @@ function calSeedExample(){
     ov.classList.add('on');
     setTimeout(function(){ document.getElementById('adminPwdInput').focus(); }, 80);
   };
-
-  // Acesso discreto ao painel administrativo: sem botão exposto na tabela.
-  document.addEventListener('keydown', function(e){
-    if(e.ctrlKey && e.shiftKey && String(e.key||'').toLowerCase()==='l'){
-      e.preventDefault();
-      window.openAdmin();
-    }
-  });
 
   window.closeAdmin = function(){
     document.getElementById('adminOverlay').classList.remove('on');
