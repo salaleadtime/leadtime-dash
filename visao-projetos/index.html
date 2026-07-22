@@ -5850,11 +5850,11 @@
             <h2>Visão da sprint em andamento</h2>
             <p>
               Recorte automático das histórias da sprint ativa. Período considerado:
-              <b id="sprintPeriodDesc">08/06/2026 a 19/06/2026</b>.
+              <b id="sprintPeriodDesc">—</b>.
             </p>
             <div class="sprint-summary-line">
               <span class="badge blue" id="sprintSquadBadge">Squad: Contact</span>
-              <span class="badge green" id="sprintPeriodBadge">Sprint 08/06 → 19/06</span>
+              <span class="badge green" id="sprintPeriodBadge">Sprint —</span>
               <span class="sprint-source" id="sprintSourceText">Base sprint: ati.xlsx</span>
             </div>
             <div class="sprint-calendar-alert" id="sprintCalendarAlert" role="status"></div>
@@ -6186,8 +6186,8 @@
       if(!Number.isNaN(d.getTime())) importDateTime = d;
     })();
     let sprintSourceName = 'ati.xlsx';
-    let sprintStartLabel = '08/06/2026';
-    let sprintEndLabel   = '19/06/2026';
+    let sprintStartLabel = '';
+    let sprintEndLabel   = '';
 
     function parseIsoDateLocal(value){
       const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -6201,20 +6201,46 @@
       return date ? date.toLocaleDateString('pt-BR') : '';
     }
 
+    // Calendário padrão espelhado do dashboard principal — usado como fallback
+    // quando o localStorage está vazio (modo incógnito, primeiro acesso, etc.)
+    function _defaultCalendarSprints(){
+      return [
+        {name:'SPRINT 1',start:'2026-03-30',end:'2026-04-12'},
+        {name:'SPRINT 2',start:'2026-04-13',end:'2026-04-26'},
+        {name:'SPRINT 3',start:'2026-04-27',end:'2026-05-10'},
+        {name:'SPRINT 4',start:'2026-05-11',end:'2026-05-24'},
+        {name:'SPRINT 5',start:'2026-05-25',end:'2026-06-07'},
+        {name:'SPRINT 6',start:'2026-06-08',end:'2026-06-21'},
+        {name:'SPRINT 1',start:'2026-06-22',end:'2026-07-05'},
+        {name:'SPRINT 2',start:'2026-07-06',end:'2026-07-19'},
+        {name:'SPRINT 3',start:'2026-07-20',end:'2026-08-02'},
+        {name:'SPRINT 4',start:'2026-08-03',end:'2026-08-16'},
+        {name:'SPRINT 5',start:'2026-08-17',end:'2026-08-30'},
+        {name:'SPRINT 6',start:'2026-08-31',end:'2026-09-13'},
+        {name:'SPRINT 1',start:'2026-09-14',end:'2026-09-27'},
+        {name:'SPRINT 2',start:'2026-09-28',end:'2026-10-11'},
+        {name:'SPRINT 3',start:'2026-10-12',end:'2026-10-25'},
+        {name:'SPRINT 4',start:'2026-10-26',end:'2026-11-08'},
+        {name:'SPRINT 5',start:'2026-11-09',end:'2026-11-22'},
+        {name:'SPRINT 6',start:'2026-11-23',end:'2026-12-06'}
+      ];
+    }
+
     function detectActiveSprint(){
       try {
-        const cal = JSON.parse(storageGet('leadtime_sala_calendar_v2') || '[]');
-        if(!Array.isArray(cal) || !cal.length) return null;
-        const today = new Date(); today.setHours(0,0,0,0);
-        const sprints = cal.flatMap(tri => Array.isArray(tri.sprints) ? tri.sprints : [])
-          .map(sp => ({...sp, startDate:parseIsoDateLocal(sp.start), endDate:parseIsoDateLocal(sp.end)}))
-          .filter(sp => sp.startDate && sp.endDate);
+        const raw = storageGet('leadtime_sala_calendar_v2');
+        const cal = raw ? JSON.parse(raw) : [];
+        const sprints = (Array.isArray(cal) && cal.length
+          ? cal.flatMap(tri => Array.isArray(tri.sprints) ? tri.sprints : [])
+          : _defaultCalendarSprints()
+        ).map(sp => ({...sp, startDate:parseIsoDateLocal(sp.start), endDate:parseIsoDateLocal(sp.end)}))
+         .filter(sp => sp.startDate && sp.endDate);
         if(!sprints.length) return null;
+        const today = new Date(); today.setHours(0,0,0,0);
         // 1ª passagem: sprint cujo intervalo inclui hoje
         const active = sprints.find(sp => today >= sp.startDate && today <= sp.endDate);
         if(active) return active;
-        // Sem sprint em andamento, usa a encerrada mais recente por data — nunca
-        // pela ordem em que o calendário foi gravado no navegador.
+        // Sem sprint em andamento, usa a encerrada mais recente por data
         return sprints.filter(sp => sp.startDate <= today)
           .sort((a,b) => b.startDate - a.startDate)[0] || null;
       } catch(e){ return null; }
