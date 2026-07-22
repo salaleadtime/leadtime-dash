@@ -1583,6 +1583,11 @@ body{min-height:100vh}
 .xp-chip{font-size:11px;background:#f1f5f9;border:1px solid var(--border);border-radius:20px;padding:5px 11px;white-space:nowrap}
 .xp-chip-l{color:var(--tx2)}
 .xp-chip b{font-weight:800}
+/* Painel compacto de ritmo: a pista traduz a regra de lead time sem alterar os calculos. */
+.rp-card{background:#fff;border:1px solid var(--border);border-left:4px solid var(--rp-tone,#16a34a);border-radius:var(--rad);box-shadow:var(--shadow-sm);padding:12px 16px;margin-bottom:1rem;overflow:hidden}
+.rp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.rp-title{font-size:16px;font-weight:800;letter-spacing:-.2px;color:var(--tx)}.rp-title b{color:var(--rp-tone,#16a34a)}.rp-status{flex-shrink:0;font-size:10px;font-weight:800;color:var(--rp-tone,#16a34a);background:color-mix(in srgb,var(--rp-tone,#16a34a) 10%,white);border:1px solid color-mix(in srgb,var(--rp-tone,#16a34a) 28%,white);padding:4px 8px;border-radius:20px}
+.rp-track{position:relative;height:29px;margin:0 34px 5px}.rp-rail{position:absolute;top:14px;left:0;right:0;height:5px;border-radius:10px;background:linear-gradient(90deg,#16a34a 0 var(--rp-green),#d97706 var(--rp-green) var(--rp-amber),#dc2626 var(--rp-amber) 100%)}.rp-tick{position:absolute;top:7px;width:2px;height:19px;background:rgba(15,23,42,.18)}.rp-tick.g{left:var(--rp-green)}.rp-tick.a{left:var(--rp-amber)}.rp-car{position:absolute;top:0;left:var(--rp-pos);transform:translateX(-50%);width:38px;height:24px;color:var(--rp-tone,#16a34a);filter:drop-shadow(0 2px 2px rgba(15,23,42,.2));z-index:2}.rp-car svg{width:100%;height:100%;display:block}.rp-flag{position:absolute;right:-27px;top:0;width:24px;height:27px;color:#111827}.rp-flag svg{width:100%;height:100%}.rp-scale{display:flex;justify-content:space-between;margin:0 33px;font-size:9px;color:var(--tx3);font-weight:700}.rp-scale span:last-child{color:var(--r)}.rp-foot{display:flex;gap:0;margin-top:9px;border-top:1px solid var(--border-soft);padding-top:8px}.rp-metric{flex:1;min-width:0;padding:0 11px;border-right:1px solid var(--border-soft);font-size:10px;color:var(--tx2)}.rp-metric:first-child{padding-left:0}.rp-metric:last-child{border-right:0}.rp-metric b{display:block;font-size:11px;color:var(--tx);margin-top:1px}.rp-metric b.good{color:var(--g)}.rp-metric b.warn{color:var(--a)}.rp-metric b.risk{color:var(--r)}
+@media(max-width:760px){.rp-head{align-items:flex-start}.rp-title{font-size:13px}.rp-status{display:none}.rp-track{margin-left:18px;margin-right:24px}.rp-scale{margin-left:17px;margin-right:23px}.rp-foot{flex-wrap:wrap;gap:7px}.rp-metric{flex-basis:45%;border-right:0;padding-left:0}.rp-metric:last-child{display:none}}
 /* Régua de estouro (timeline) */
 .xr-panel{background:#fff;border:1px solid var(--border);border-radius:var(--rad);box-shadow:var(--shadow-sm);padding:1rem 1.2rem;margin-bottom:1rem}
 .xr-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem;flex-wrap:wrap;gap:6px}
@@ -3287,8 +3292,6 @@ function renderMetaPace(){
   var prazoDate=tri.to;
   var ddmm=('0'+prazoDate.getDate()).slice(-2)+'/'+('0'+(prazoDate.getMonth()+1)).slice(-2);
   var diasRestantes=tri.remaining;
-  var sugA=Math.floor(diasRestantes*0.85);
-  var sugB=sugA+1;
   var desvioSigned=(desvio>0?'+':'')+Math.round(desvio)+'d';
   var accent, hd;
   if(desvio<=0){
@@ -3304,18 +3307,25 @@ function renderMetaPace(){
     hd='<div class="xp-txt" style="color:var(--r)">Para recuperar a meta de '+META+'d no trimestre, são necessárias <b>'+necessario+' novas entregas</b> com LT ≈ '+EXPECTED_LT+'d até <b>'+ddmm+'</b> <b>('+diasRestantes+' dias)</b>.</div>'+
        '<div class="xp-sub">Desvio acumulado: +'+Math.round(desvio)+'d ('+d+' entrega'+(d!==1?'s':'')+' com média '+avgDel+'d). Ganho estimado por entrega rápida: '+ganho+'d.</div>';
   }
+  var greenEnd=Math.round(META*.73);
+  var amberEnd=Math.round(META*.89);
+  var tone=avgDel<greenEnd?'#16a34a':(avgDel<amberEnd?'#d97706':'#dc2626');
+  var toneClass=avgDel<greenEnd?'good':(avgDel<amberEnd?'warn':'risk');
+  var carPos=Math.max(3,Math.min(98,avgDel/META*100));
+  var headline=desvio<=0?'Ritmo sob controle — siga acelerando com segurança.':'Ritmo em risco — reduza o Lead Time antes da bandeira.';
+  var status=avgDel<greenEnd?'Verde · dentro da meta':(avgDel<amberEnd?'Amarelo · atenção':'Vermelho · risco');
+  var carSvg='<svg viewBox="0 0 120 48" aria-hidden="true"><path fill="currentColor" d="M16 31h12l9-16h36l12 9h17l8 7h6v9h-9a9 9 0 0 1-18 0H43a9 9 0 0 1-18 0H16z"/><path fill="#fff" opacity=".42" d="M47 18h25l7 6H43z"/><circle cx="34" cy="40" r="7" fill="#1f2937"/><circle cx="34" cy="40" r="3" fill="#cbd5e1"/><circle cx="98" cy="40" r="7" fill="#1f2937"/><circle cx="98" cy="40" r="3" fill="#cbd5e1"/></svg>';
+  var flagSvg='<svg viewBox="0 0 32 34" aria-hidden="true"><path d="M6 2v30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M7 4c6-4 11 4 18 0v16c-7 4-12-4-18 0z" fill="currentColor"/><path d="M9 6h4v4H9zm8 0h4v4h-4zm-4 4h4v4h-4zm8 0h4v4h-4zm-12 4h4v4H9zm8 0h4v4h-4z" fill="#fff" opacity=".92"/></svg>';
   el.innerHTML=
-    '<div class="xp-card" style="border-left-color:'+accent+'">'+
-      '<div class="xp-ico">🏁</div>'+
-      '<div class="xp-main">'+hd+
-        '<div class="xp-chips">'+
-          xpChip('Entregues no TRI '+tri.q,d+' · média '+avgDel+'d','#16a34a')+
-          xpChip('Desvio atual',desvioSigned,desvio<=0?'#16a34a':'#dc2626')+
-          xpChip('Meta',META+'d','#6366f1')+
-          xpChip('Necessário',(desvio>0&&ganho<=0)?'reduzir LT':(necessario+' novas entregas'),desvio<=0?'#16a34a':'#dc2626')+
-          xpChip('Prazo',ddmm+' · '+diasRestantes+' dias','#d97706')+
-          xpChip('Sugestão por épico',sugA+' / '+sugB+' dias','#0ea5e9')+
-        '</div>'+
+    '<div class="rp-card" style="--rp-tone:'+tone+';--rp-pos:'+carPos+'%;--rp-green:'+(greenEnd/META*100)+'%;--rp-amber:'+(amberEnd/META*100)+'%">'+
+      '<div class="rp-head"><div class="rp-title">'+headline+'</div><span class="rp-status">'+status+'</span></div>'+
+      '<div class="rp-track"><div class="rp-rail"></div><i class="rp-tick g"></i><i class="rp-tick a"></i><span class="rp-car">'+carSvg+'</span><span class="rp-flag">'+flagSvg+'</span></div>'+
+      '<div class="rp-scale"><span>0d</span><span>'+greenEnd+'d</span><span>'+amberEnd+'d</span><span>'+META+'d <em>meta</em></span></div>'+
+      '<div class="rp-foot">'+
+        '<span class="rp-metric">Média atual<b class="'+toneClass+'">'+avgDel+'d</b></span>'+
+        '<span class="rp-metric">Desvio acumulado<b class="'+(desvio<=0?'good':'risk')+'">'+desvioSigned+'</b></span>'+
+        '<span class="rp-metric">Entregas necessárias<b class="'+(necessario?'risk':'good')+'">'+necessario+'</b></span>'+
+        '<span class="rp-metric">Prazo<b>'+ddmm+' · '+diasRestantes+' dias</b></span>'+
       '</div>'+
     '</div>';
 }
