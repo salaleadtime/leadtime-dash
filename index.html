@@ -2338,6 +2338,45 @@ var PENDING_KEY = 'leadtime_sala_v8_pending';
 var DELETED_WARN_KEY = 'leadtime_sala_v8_deleted_warned';
 var PENDING_EDIT_TTL = 86400000; // 24h: preserva edição manual durante indisponibilidade temporária do Sheets
 var EDITABLE_FIELDS = ['status','statusAntes','chg','impedimento','ini','fim','fimAntes','dataPrevista'];
+// Cancelamentos precisam sobreviver mesmo quando o Sheets/Jira devolve uma
+// linha incompleta ou com o status operacional anterior. Este registro local é
+// removido somente quando o Admin reabre explicitamente o épico.
+var CANCELLED_SNAPSHOT_KEY = 'leadtime_sala_v8_cancelled_snapshots';
+function loadCancelledSnapshots(){
+  try{
+    var saved=JSON.parse(storageGet(CANCELLED_SNAPSHOT_KEY)||'{}');
+    return saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
+  }catch(e){ return {}; }
+}
+function saveCancelledSnapshots(snapshots){ storageSet(CANCELLED_SNAPSHOT_KEY,JSON.stringify(snapshots||{})); }
+function rememberCancelledRecord(rec){
+  if(!rec||!rec.id) return;
+  var snapshots=loadCancelledSnapshots();
+  snapshots[rec.id]={
+    status:'Cancelado', statusAntes:rec.statusAntes||'', ini:rec.ini||'',
+    fim:rec.fim||'', fimAntes:rec.fimAntes||'', dataPrevista:rec.dataPrevista||'',
+    savedAt:new Date().toISOString()
+  };
+  saveCancelledSnapshots(snapshots);
+}
+function clearCancelledRecord(id){
+  if(!id) return;
+  var snapshots=loadCancelledSnapshots();
+  if(Object.prototype.hasOwnProperty.call(snapshots,id)){
+    delete snapshots[id];
+    saveCancelledSnapshots(snapshots);
+  }
+}
+function applyCancelledSnapshot(rec,snapshot){
+  if(!rec||!snapshot) return rec;
+  rec.status='Cancelado';
+  rec.statusAntes=snapshot.statusAntes||rec.statusAntes||'';
+  if(snapshot.ini) rec.ini=snapshot.ini;
+  if(snapshot.fim) rec.fim=snapshot.fim;
+  if(snapshot.fimAntes) rec.fimAntes=snapshot.fimAntes;
+  if(snapshot.dataPrevista) rec.dataPrevista=snapshot.dataPrevista;
+  return normalizeWorkflowRecord(rec);
+}
 // Valores de CHG que vieram hardcoded do seed/JSON e jamais foram inseridos pelo usuário.
 // Mapeado como {epicId: chgValue}. Sempre que detectados, são apagados e o Sheets é corrigido.
 var _SEED_CHG_CORRECTIONS = {'SLOPC-33834': 'CHG0916531'};
@@ -2635,6 +2674,8 @@ function replaceFromSharedSource(rows){
   var _pend=loadPending();
   var _pendChanged=false;
   var _pendNow=Date.now();
+  var cancelledSnapshots=loadCancelledSnapshots();
+  var cancelledSnapshotsChanged=false;
 
   // Detectar mudanças de fim vindas do Sheets antes do merge
   var localMap={};
@@ -2649,6 +2690,18 @@ function replaceFromSharedSource(rows){
     var cloudMeta=(_epicMetaCloud&&_epicMetaCloud[r.id])||{};
     if(!r.resumo) r.resumo = (old&&old.resumo) || cachedResumo || cloudMeta.resumo || '';
     if(!r.squad)  r.squad  = (old&&old.squad)  || cachedSquad  || cloudMeta.squad  || '';
+
+    // O cancelamento administrativo prevalece sobre o retorno operacional do
+    // Sheets/Jira. Assim, uma linha vazia (ou ainda em execução no Jira) não
+    // apaga nem o status Cancelado nem a Data de Início já registrada.
+    if(old && isCancelled(old) && !cancelledSnapshots[r.id]){
+      rememberCancelledRecord(old);
+      cancelledSnapshots=loadCancelledSnapshots();
+    }
+    var cancelledSnapshot=cancelledSnapshots[r.id];
+    if(cancelledSnapshot && !isCancelled(r)){
+      applyCancelledSnapshot(r,cancelledSnapshot);
+    }
 
     // Proteção genérica contra race / escrita perdida: para QUALQUER campo
     // editável com valor pendente, se o Sheets ainda não devolveu exatamente
@@ -2671,6 +2724,14 @@ function replaceFromSharedSource(rows){
       }
     }
 
+    if(isCancelled(r) && !cancelledSnapshots[r.id]){
+      cancelledSnapshots[r.id]={
+        status:'Cancelado', statusAntes:r.statusAntes||'', ini:r.ini||'',
+        fim:r.fim||'', fimAntes:r.fimAntes||'', dataPrevista:r.dataPrevista||'',
+        savedAt:new Date().toISOString()
+      };
+      cancelledSnapshotsChanged=true;
+    }
     if(!old) return;
     var oldFimValido=isValidDate(old.fim);
     var newFimValido=isValidDate(r.fim);
@@ -2694,6 +2755,7 @@ function replaceFromSharedSource(rows){
     if(!r.squad  && old.squad)  r.squad  = old.squad;
   });
   if(_pendChanged) savePending(_pend);
+  if(cancelledSnapshotsChanged) saveCancelledSnapshots(cancelledSnapshots);
 
   // Detectar épicos deletados do Sheets que tinham fim ou fimAntes.
   // Alerta apenas UMA vez por épico (marca persistida): como o registro local
@@ -3999,6 +4061,9 @@ function fc(el){
     normalizeWorkflowRecord(rec);
     renderMed(); renderDash(); activateTab(targetTab);
   }
+  // Se a Data de Início (ou outro campo) for ajustada depois do cancelamento,
+  // atualiza também a proteção permanente desse cancelamento.
+  if(isCancelled(rec)) rememberCancelledRecord(rec);
 
   saveLocal();
   saveTab(targetTab);
@@ -7837,7 +7902,11 @@ function calSeedExample(){
       var rec=allData[idx], oldStatus=rec.status;
       rec.status = sel.value;
       if(sel.value==='Cancelado' && oldStatus!=='Cancelado') rec.statusAntes=oldStatus;
-      if(sel.value!=='Cancelado' && oldStatus==='Cancelado') rec.statusAntes=null;
+      if(sel.value==='Cancelado') rememberCancelledRecord(rec);
+      if(sel.value!=='Cancelado' && oldStatus==='Cancelado'){
+        rec.statusAntes=null;
+        clearCancelledRecord(rec.id);
+      }
       normalizeWorkflowRecord(rec);
       admDirtyEpics[rec.id]=rec;
     }
