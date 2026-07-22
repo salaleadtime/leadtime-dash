@@ -10998,7 +10998,7 @@
       const decisionNeeded = readiness.blocked > 0 || readiness.risks > 0 || pdca > 0 || readiness.readiness !== 'Alta';
       const next = nextMilestone(project);
       document.getElementById('projectName').textContent = project.name || 'Projeto sem nome';
-      document.getElementById('projectSummary').textContent = project.summary || 'Sem leitura executiva cadastrada.';
+      document.getElementById('projectSummary').textContent = buildExecutiveReading(project);
       document.getElementById('scoreValue').textContent = progress + '%';
       document.getElementById('progressRing').dataset.progress = progress;
       document.getElementById('progressRing').style.setProperty('--deg', (progress * 3.6) + 'deg');
@@ -13011,7 +13011,12 @@ Recomendação PMO: ${d.recommendation}`;
       if (businessInput && (!businessInput.value.trim() || businessInput.value === 'Não informado') && squad.business) businessInput.value = squad.business;
       if (rteInput && (!rteInput.value.trim() || rteInput.value === 'PMO/RTE') && squad.rteOwner) rteInput.value = squad.rteOwner;
       if (ownerInput && (!ownerInput.value.trim() || ownerInput.value === 'PMO/RTE') && squad.owner) ownerInput.value = squad.owner;
-      if (techLeadInput && !techLeadInput.value.trim() && squad.techLead) techLeadInput.value = squad.techLead;
+      // Tech Lead da Squad é um padrão vivo. Deixar o campo da iniciativa vazio faz
+      // com que ela o herde; preencher o input aqui criaria uma cópia que ficaria
+      // desatualizada na próxima troca do padrão da Squad.
+      if (techLeadInput && !techLeadInput.value.trim()) {
+        techLeadInput.placeholder = squad.techLead ? `Padrão da Squad: ${squad.techLead}` : 'A validar';
+      }
     }
 
     function handleProjectSquadChange() {
@@ -13186,13 +13191,20 @@ Recomendação PMO: ${d.recommendation}`;
       squad.techLead = document.getElementById('squad-tech-lead').value.trim();
       squad.rteOwner = document.getElementById('squad-rte-owner').value.trim();
       if (modalState.isEdit && previous) {
+        const previousName = String(previous.name || '').trim();
         Object.assign(previous, squad);
         previous.updatedAt = new Date().toISOString();
         data.projects.forEach(p => {
           if (p.squadId === squad.id) {
             p.squad = squad.name;
             if (!p.rteOwner || p.rteOwner === 'PMO/RTE') p.rteOwner = squad.rteOwner || p.rteOwner;
-            if (!p.techLead) p.techLead = squad.techLead || p.techLead;
+            // As filhas também carregam a Squad em campos próprios. Atualizar só a
+            // iniciativa mãe deixava relatórios e listas de filhas com o nome antigo.
+            (p.subInitiatives || []).forEach(child => {
+              if (!child.squad || String(child.squad).trim() === previousName) child.squad = squad.name;
+              if (!child.sourceSquad || String(child.sourceSquad).trim() === previousName) child.sourceSquad = squad.name;
+              child.updatedAt = new Date().toISOString();
+            });
             // Sem isto, a mudança em cascata do nome/RTE/Tech Lead da squad não teria
             // um "updatedAt" novo nessas iniciativas — e o merge por registro (ver
             // mergeById) descartaria essa mudança em qualquer outro navegador que já
@@ -13539,7 +13551,7 @@ Recomendação PMO: ${d.recommendation}`;
       const next = nextMilestone(project);
       const squad = squadForProject(project);
       document.getElementById('projectName').textContent = project.name || 'Projeto sem nome';
-      document.getElementById('projectSummary').textContent = project.summary || 'Sem leitura executiva cadastrada.';
+      document.getElementById('projectSummary').textContent = buildExecutiveReading(project);
       document.getElementById('scoreValue').textContent = progress + '%';
       document.getElementById('progressRing').dataset.progress = progress;
       document.getElementById('progressRing').style.setProperty('--deg', (progress * 3.6) + 'deg');
@@ -13605,7 +13617,43 @@ Recomendação PMO: ${d.recommendation}`;
       return n.toLocaleString('pt-BR') + 'h';
     }
 
+    function squadNameValue(project, fallback = 'A validar') {
+      return String(squadForProject(project)?.name || project?.squad || '').trim() || fallback;
+    }
+
+    function techLeadValue(project, fallback = 'A validar') {
+      // A iniciativa só deixa de herdar quando tem um Tech Lead próprio preenchido.
+      return String(project?.techLead || squadForProject(project)?.techLead || '').trim() || fallback;
+    }
+
+    function isLegacyGeneratedExecutiveReading(text) {
+      const value = String(text || '').trim();
+      return /^Iniciativa\s+\S+/i.test(value)
+        && /Squad:\s*/i.test(value)
+        && /Tech Lead:\s*/i.test(value);
+    }
+
+    function buildExecutiveReading(project) {
+      const reading = [
+        `Iniciativa ${initiativeNumber(project) || 'não informada'} — ${displayProjectTitle(project) || 'Sem nome'}.`,
+        `Tema: ${project?.theme || project?.business || 'A validar'}.`,
+        `Squad: ${squadNameValue(project)}.`,
+        `Líder da frente: ${peopleValue(project, 'frontLeader')}.`,
+        `PO: ${peopleValue(project, 'po')}.`,
+        `Tech Lead: ${techLeadValue(project)}.`,
+        `Área de Dados: ${peopleValue(project, 'dataArea')}.`,
+        `Data de Discovery: ${formatBR(project?.discoveryDate)}.`,
+        `Desenvolvimento previsto de ${formatBR(project?.startDev)} a ${formatBR(project?.endDev)}.`,
+        `Consumo 2026: ${formatHours(project?.hours2026)}.`
+      ].join(' ');
+      // `summary` era a antiga leitura calculada. Só um texto que não segue esse
+      // formato é tratado como observação manual e preservado no novo texto.
+      const manualNote = String(project?.executiveNote || (isLegacyGeneratedExecutiveReading(project?.summary) ? '' : project?.summary) || '').trim();
+      return manualNote ? `${reading} Observação executiva: ${manualNote}` : reading;
+    }
+
     function peopleValue(project, key, fallback = 'A validar') {
+      if (key === 'techLead') return techLeadValue(project, fallback);
       return String(project?.[key] || '').trim() || fallback;
     }
 
@@ -14007,7 +14055,8 @@ Recomendação PMO: ${d.recommendation}`;
         }
         const sq = squadForProject(project);
         const tipo = project.initiativeType === 'MÃE' ? `<span class="pmo-badge mae">MÃE</span>` : '—';
-        const asdTechLead = String(project.techLead||'').toUpperCase() === 'ASD';
+        const techLead = techLeadValue(project, '—');
+        const asdTechLead = String(techLead).toUpperCase() === 'ASD';
         return `<tr class="${project.initiativeType==='MÃE'?'pmo-mae-row':''}">
           <td class="pmo-num">${escapeHtml(String(project.initiativeNumber||''))}</td>
           <td>${tipo}</td>
@@ -14019,7 +14068,7 @@ Recomendação PMO: ${d.recommendation}`;
           <td>${escapeHtml(project.po||'—')}</td>
           <td>${escapeHtml(project.focalPoint||'—')}</td>
           <td>${squadDisplayName(sq, project)}</td>
-          <td>${asdTechLead ? '<span class="pmo-badge asd" title="Ainda Sem Definição">ASD</span>' : escapeHtml(project.techLead||'—')}</td>
+          <td>${asdTechLead ? '<span class="pmo-badge asd" title="Ainda Sem Definição">ASD</span>' : escapeHtml(techLead)}</td>
           <td class="pmo-date">${escapeHtml(formatBR(project.discoveryDate)||'—')}</td>
           <td class="pmo-date">${escapeHtml(formatBR(project.startDev)||'—')}</td>
           <td class="pmo-date">${escapeHtml(formatBR(project.endDev)||'—')}</td>
@@ -15020,7 +15069,7 @@ Recomendação PMO: ${d.recommendation}`;
           textCell(squad?.name || project.squad || 'A validar'),
           textCell(project.rteOwner || squad?.rteOwner || project.owner || 'A definir'),
           textCell(project.frontLeader || project.initiativeOwner || 'A definir'),
-          textCell(project.techLead || squad?.techLead || 'A definir'),
+          textCell(techLeadValue(project, 'A definir')),
           textCell(project.po || 'A definir'),
           textCell(project.dataArea || 'A definir'),
           textCell(reportPhase(project)),
@@ -15297,7 +15346,7 @@ Recomendação PMO: ${d.recommendation}`;
             </div>
           </div>
           ${field('Tema', 'project-business', project.business || project.theme || squad.business || '')}
-          ${field('Tech Lead', 'project-tech-lead', project.techLead || '')}
+          <div class="form-field"><label>Tech Lead</label><input id="project-tech-lead" type="text" value="${escapeAttr(project.techLead || '')}" placeholder="${escapeAttr(squad.techLead ? `Padrão da Squad: ${squad.techLead}` : 'A validar')}" /><small>Deixe vazio para herdar o Tech Lead padrão da Squad.</small></div>
           ${field('PO', 'project-po', project.po || '')}
           ${field('Ponto Focal', 'project-focal-point', project.focalPoint || '')}
           ${field('Discovery', 'project-discovery-date', project.discoveryDate || '', 'date')}
@@ -16430,7 +16479,7 @@ Recomendação PMO: ${d.recommendation}`;
       const next = nextMilestone(project);
       const squad = squadForProject(project);
       document.getElementById('projectName').textContent = project.name || 'Projeto sem nome';
-      document.getElementById('projectSummary').textContent = project.summary || 'Sem leitura executiva cadastrada.';
+      document.getElementById('projectSummary').textContent = buildExecutiveReading(project);
       document.getElementById('scoreValue').textContent = progress + '%';
       document.getElementById('progressRing').dataset.progress = progress;
       document.getElementById('progressRing').style.setProperty('--deg', (progress * 3.6) + 'deg');
@@ -16690,7 +16739,7 @@ Recomendação PMO: ${d.recommendation}`;
       const p = getProject();
       const d = deliveryReadinessDetails(p);
       const squad = squadForProject(p);
-      const text = `Leitura executiva — Discovery PMO Tracker\n\nIniciativa: ${initiativeNumber(p) || 'Não informada'}\nNome: ${p.name}\nSquad: ${squad?.name || p.squad || 'Não informada'}\nTema/Área: ${p.business || p.theme || 'Não informado'}\nLíder da frente: ${peopleValue(p, 'frontLeader')}\nDono da iniciativa: ${peopleValue(p, 'initiativeOwner')}\nPO: ${peopleValue(p, 'po')}\nPonto focal: ${peopleValue(p, 'focalPoint')}\nTech Lead: ${peopleValue(p, 'techLead')}\nÁrea de Dados: ${peopleValue(p, 'dataArea')}\nIA/RPA: ${peopleValue(p, 'aiRpa')}\nProcesso: ${peopleValue(p, 'processName')}\nConsumo Horas 2026: ${formatHours(p.hours2026)}\nData de Discovery: ${formatBR(p.discoveryDate)}\nInício Dev: ${formatBR(p.startDev)}\nTérmino Dev: ${formatBR(p.endDev)}\nIniciativas filhas vinculadas: ${subInitiativeCount(p)}\nStatus executivo: ${p.status}\nProntidão atual: ${d.readiness}\nMaturidade do Discovery: ${d.progress}%\nFase atual: ${currentDiscoveryPhase(p)}\nPróximo marco: ${nextMilestone(p)}\nRiscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma\nRecomendação PMO: ${d.recommendation}`;
+      const text = `Leitura executiva — Discovery PMO Tracker\n\nIniciativa: ${initiativeNumber(p) || 'Não informada'}\nNome: ${p.name}\nSquad: ${squadNameValue(p, 'Não informada')}\nTema/Área: ${p.business || p.theme || 'Não informado'}\nLíder da frente: ${peopleValue(p, 'frontLeader')}\nDono da iniciativa: ${peopleValue(p, 'initiativeOwner')}\nPO: ${peopleValue(p, 'po')}\nPonto focal: ${peopleValue(p, 'focalPoint')}\nTech Lead: ${techLeadValue(p)}\nÁrea de Dados: ${peopleValue(p, 'dataArea')}\nIA/RPA: ${peopleValue(p, 'aiRpa')}\nProcesso: ${peopleValue(p, 'processName')}\nConsumo Horas 2026: ${formatHours(p.hours2026)}\nData de Discovery: ${formatBR(p.discoveryDate)}\nInício Dev: ${formatBR(p.startDev)}\nTérmino Dev: ${formatBR(p.endDev)}\nIniciativas filhas vinculadas: ${subInitiativeCount(p)}\nStatus executivo: ${p.status}\nProntidão atual: ${d.readiness}\nMaturidade do Discovery: ${d.progress}%\nFase atual: ${currentDiscoveryPhase(p)}\nPróximo marco: ${nextMilestone(p)}\nRiscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma\nRecomendação PMO: ${d.recommendation}`;
       copyText(text);
     }
 
