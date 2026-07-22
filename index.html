@@ -505,7 +505,7 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .mb.p{background:var(--tx);border-color:var(--tx);color:#fff}
 
 /* ── RISK NOTIFICATION PANEL ── */
-.risk-notif-panel{margin:0;padding:.65rem 1.6rem;background:linear-gradient(135deg,#1a0808 0%,#2d0a0a 50%,#1a1a2e 100%);border-bottom:1px solid rgba(220,38,38,.25);display:flex;align-items:center;gap:14px;min-height:44px;position:relative;overflow:hidden}
+.risk-notif-panel{margin:0;padding:.65rem 1.6rem;background:linear-gradient(110deg,#12161f 0%,#1c1115 56%,#141725 100%);border-bottom:1px solid rgba(220,38,38,.3);display:flex;align-items:center;gap:14px;min-height:44px;position:relative;overflow:hidden}
 .risk-notif-panel.empty{display:none}
 .risk-notif-panel::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(220,38,38,.04) 60px,rgba(220,38,38,.04) 61px);pointer-events:none}
 .rnp-badge{flex-shrink:0;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(220,38,38,.4);animation:rnp-glow 2s ease-in-out infinite alternate}
@@ -516,6 +516,9 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 @keyframes rnp-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .rnp-item{display:inline-flex;align-items:center;gap:6px;padding:0 20px;font-size:11px;color:rgba(255,255,255,.75);border-right:1px solid rgba(255,255,255,.1)}
 .rnp-item-id{font-family:ui-monospace,monospace;font-size:10px;color:#fca5a5;font-weight:700}
+.rnp-item-squad{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;color:#cbd5e1;background:rgba(148,163,184,.13);border:1px solid rgba(148,163,184,.24);padding:2px 7px;border-radius:20px;white-space:nowrap}
+.rnp-item-title{color:rgba(255,255,255,.84);font-size:10.5px;font-weight:600;white-space:nowrap}
+.rnp-item-meta{font-size:10px;color:rgba(255,255,255,.52);white-space:nowrap}
 .rnp-item-lt{font-weight:800;padding:1px 6px;border-radius:4px;font-size:10px}
 .rnp-item-lt.crit{background:rgba(220,38,38,.25);color:#fca5a5;border:1px solid rgba(220,38,38,.35)}
 .rnp-item-lt.warn{background:rgba(217,119,6,.2);color:#fcd34d;border:1px solid rgba(217,119,6,.3)}
@@ -4378,13 +4381,12 @@ function renderRiskNotifPanel(){
     var rem=META_V-r.lt;
     var remTxt=rem>=0?('faltam '+rem+'d p/ meta'):(Math.abs(rem)+'d acima da meta');
     return '<span class="rnp-item">'+
+      '<span class="rnp-item-squad">'+esc(r.squad||'Squad não informada')+'</span>'+
       '<span class="rnp-item-id">'+esc(r.id.replace('SLOPC-','#'))+'</span>'+
-      '<span class="rnp-sep">·</span>'+
-      '<span style="color:rgba(255,255,255,.7);font-size:10.5px">'+esc(r.resumo?r.resumo.slice(0,38):r.squad||'—')+'</span>'+
-      '<span class="rnp-sep">·</span>'+
+      '<span class="rnp-item-title">'+esc(r.resumo?r.resumo.slice(0,38):'Sem resumo')+'</span>'+
       '<span class="rnp-item-lt '+(isCrit?'crit':'warn')+'">'+r.lt+'d</span>'+
       '<span class="rnp-sep">—</span>'+
-      '<span style="font-size:10px;color:rgba(255,255,255,.5)">'+remTxt+'</span>'+
+      '<span class="rnp-item-meta">'+remTxt+'</span>'+
     '</span>';
   }).join('');
   // Duplicate for seamless loop
