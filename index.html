@@ -2250,7 +2250,8 @@ var META=(function(){
   return 62;
 })();
 var allData=[], pg=1, PG=12, sortLT=null; // null | 'desc' | 'asc'
-var impSenhaOk=false, _impFocusTgt=null;
+var IMP_UNLOCK_SESSION_KEY='leadtime_sala_imp_unlocked_session';
+var impSenhaOk=(function(){ try{return sessionStorage.getItem(IMP_UNLOCK_SESSION_KEY)==='1';}catch(e){return false;} })(), _impFocusTgt=null;
 var ALL_SQUADS=['Contact','Expresso','Guardiões','Inception','Interestelar','MadMax','Terminator','TopGun'];
 var filt={s:'all',l:'all',sq:'all',dateIni:null,dateFim:null};
 var curTab='ep';
@@ -2335,7 +2336,7 @@ var PENDING_KEY = 'leadtime_sala_v8_pending';
 // entrada no histórico a cada poll (o registro local é preservado no merge,
 // então sem esta marca o mesmo épico dispararia o alerta a cada 2 minutos).
 var DELETED_WARN_KEY = 'leadtime_sala_v8_deleted_warned';
-var PENDING_EDIT_TTL = 600000; // 10 min sem confirmar → assume o que está no Sheets
+var PENDING_EDIT_TTL = 86400000; // 24h: preserva edição manual durante indisponibilidade temporária do Sheets
 var EDITABLE_FIELDS = ['status','statusAntes','chg','impedimento','ini','fim','fimAntes','dataPrevista'];
 // Valores de CHG que vieram hardcoded do seed/JSON e jamais foram inseridos pelo usuário.
 // Mapeado como {epicId: chgValue}. Sempre que detectados, são apagados e o Sheets é corrigido.
@@ -3743,7 +3744,7 @@ function renderTbl(){
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+(cancelado?'— não medido':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
       '<td class="cimp">'+
-        '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
+        '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
       '</td>'+
     '</tr>';
   });
@@ -3917,6 +3918,22 @@ function renderHistorico(){
     '<tbody>'+rows+'</tbody></table>';
 }
 
+var _impDraftTimers={};
+function saveImpedimentoDraft(el){
+  var gi=parseInt(el&&el.dataset&&el.dataset.i);
+  if(isNaN(gi)||!allData[gi]) return;
+  clearTimeout(_impDraftTimers[gi]);
+  _impDraftTimers[gi]=setTimeout(function(){
+    var rec=allData[gi];
+    if(!rec) return;
+    rec.impedimento=el.value||'';
+    saveLocal();
+    queuePendingWrite(rec);
+    clearTimeout(_jbSaveTimer);
+    jbSave();
+    saveToSheets([_sheetsItem(rec.id, rec)]);
+  },700);
+}
 function fc(el){
   var tabToRestore=rememberTab();
   var gi=parseInt(el.dataset.i), f=el.dataset.f;
@@ -4002,6 +4019,18 @@ function fc(el){
 
 function ar(el){el.style.height='auto';el.style.height=Math.max(72,el.scrollHeight)+'px';}
 
+function setImpUnlocked(unlocked){
+  impSenhaOk=!!unlocked;
+  try{
+    if(impSenhaOk) sessionStorage.setItem(IMP_UNLOCK_SESSION_KEY,'1');
+    else sessionStorage.removeItem(IMP_UNLOCK_SESSION_KEY);
+  }catch(e){}
+  var ico=document.getElementById('impThIco');
+  if(ico){
+    ico.textContent=impSenhaOk?'🔓':'🔒';
+    ico.title=impSenhaOk?'Edição desbloqueada · clique para bloquear novamente':'Clique para desbloquear edição';
+  }
+}
 function eimpFocus(el){
   if(impSenhaOk) return;
   el.blur();
@@ -4013,7 +4042,7 @@ function eimpFocus(el){
   setTimeout(function(){$id('impLockInput').focus();},60);
 }
 function eimpLockClick(){
-  if(impSenhaOk){ impSenhaOk=false; var ico=$id('impThIco'); if(ico){ico.textContent='🔒';ico.title='Clique para desbloquear edição';} return; }
+  if(impSenhaOk){ setImpUnlocked(false); return; }
   _impFocusTgt=null;
   var m=$id('impLockBox'), o=$id('impLockOv');
   $id('impLockInput').value='';
@@ -4023,8 +4052,7 @@ function eimpLockClick(){
 }
 function confirmImpSenha(){
   if($id('impLockInput').value==='sala'){
-    impSenhaOk=true;
-    var ico=$id('impThIco'); if(ico){ico.textContent='🔓';ico.title='Edição desbloqueada · clique para bloquear novamente';}
+    setImpUnlocked(true);
     closeImpLock(true);
   } else {
     $id('impLockErr').style.display='block';
@@ -7749,6 +7777,7 @@ function calSeedExample(){
     if(!n){ admMsg('admImpMsg','Digite a nova senha','err'); return; }
     if(n.length < 3){ admMsg('admImpMsg','Mínimo 3 caracteres','err'); return; }
     storageSet(IMP_KEY, n);
+    setImpUnlocked(false);
     document.getElementById('admSenhaImp').value = '';
     admMsg('admImpMsg','✅ Senha de impedimentos alterada!');
   };
@@ -7837,9 +7866,7 @@ function calSeedExample(){
   window.confirmImpSenha = function(){
     var inp = document.getElementById('impLockInput');
     if(inp && inp.value === getImpPwd()){
-      window.impSenhaOk = true;
-      var ico = document.getElementById('impThIco');
-      if(ico){ ico.textContent='🔓'; ico.title='Edição desbloqueada · clique para bloquear novamente'; }
+      setImpUnlocked(true);
       if(typeof closeImpLock === 'function') closeImpLock(true);
     } else {
       var err = document.getElementById('impLockErr');
@@ -7847,6 +7874,8 @@ function calSeedExample(){
       if(inp){ inp.value=''; inp.focus(); }
     }
   };
+  // Mantém o ícone coerente quando a página é recarregada na mesma sessão.
+  if(impSenhaOk) setImpUnlocked(true);
 })();
 </script>
 </body>
