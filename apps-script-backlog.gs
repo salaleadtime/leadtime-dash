@@ -1,9 +1,14 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
- * v8 — preserva dados existentes, valida payloads e torna as gravações concorrentes seguras
+ * v9 — doGet aguarda o lock de escrita antes de ler (evita ler planilha a
+ * meio de um clearContents()+setValues()) e devolve JSON de erro como o
+ * doPost em vez da página de erro padrão do Apps Script. saveBacklog
+ * continua mesclando por id/seq (mergeSnaps_); saveStories e saveVpData
+ * seguem sendo overwrite puro — quem grava por último decide o conteúdo
+ * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-21-backlog-sheet-chunks-v8';
+var BACKLOG_SCRIPT_VERSION = '2026-07-23-backlog-sheet-chunks-v9';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -38,52 +43,67 @@ function autorizarPlanilhaUmaVez() {
 }
 
 function doGet(e) {
-  var action = getParam_(e, 'action');
+  // Calculado fora do try para o catch também conseguir responder no formato
+  // JSONP esperado pelo cliente (_gasJsonp), em vez de um erro sem callback.
   var callback = getSafeCallback_(getParam_(e, 'callback'));
+  try {
+    var action = getParam_(e, 'action');
 
-  if (action === 'health') {
-    var data = readBacklogStore_();
-    return jsonOut_({
-      ok: true,
-      version: BACKLOG_SCRIPT_VERSION,
-      snapshots: data.length,
-      maxStories: maxStoryCount_(data),
-      currentStories: currentSnap_(data) ? storyCount_(currentSnap_(data)) : 0,
-      stories: readJsonFromSheet_(STORIES_SHEET, []).length
-    }, callback);
-  }
-
-  if (action === 'getBacklog') {
-    var backlog = readBacklogStore_();
-    return jsonOut_({
-      ok: true,
-      version: BACKLOG_SCRIPT_VERSION,
-      backlog: backlog,
-      snapshots: backlog.length,
-      maxStories: maxStoryCount_(backlog)
-    }, callback);
-  }
-
-  if (action === 'getStories') {
-    var stories = readJsonFromSheet_(STORIES_SHEET, []);
-    return jsonOut_({
-      ok: true,
-      version: BACKLOG_SCRIPT_VERSION,
-      stories: stories
-    }, callback);
-  }
-
-  if (action === 'getVpData') {
-    var key = getParam_(e, 'key');
-    var sheetName = getVpSheet_(key);
-    if (!sheetName) {
-      return jsonOut_({ ok: false, error: 'chave inválida: ' + key }, callback);
+    if (action === 'health') {
+      // withLock_ faz a leitura esperar uma gravação em andamento em vez de
+      // pegar a planilha a meio de clearContents()+setValues() (writeJsonToSheet_
+      // não usa transação — sem isso, doGet podia ler vazio nessa janela).
+      var healthData = withLock_(function() {
+        return {
+          backlog: readBacklogStore_(),
+          stories: readJsonFromSheet_(STORIES_SHEET, [])
+        };
+      });
+      return jsonOut_({
+        ok: true,
+        version: BACKLOG_SCRIPT_VERSION,
+        snapshots: healthData.backlog.length,
+        maxStories: maxStoryCount_(healthData.backlog),
+        currentStories: currentSnap_(healthData.backlog) ? storyCount_(currentSnap_(healthData.backlog)) : 0,
+        stories: healthData.stories.length
+      }, callback);
     }
-    var vpData = readJsonFromSheet_(sheetName, null);
-    return jsonOut_({ ok: true, data: vpData }, callback);
-  }
 
-  return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, data: [] }, callback);
+    if (action === 'getBacklog') {
+      var backlog = withLock_(function() { return readBacklogStore_(); });
+      return jsonOut_({
+        ok: true,
+        version: BACKLOG_SCRIPT_VERSION,
+        backlog: backlog,
+        snapshots: backlog.length,
+        maxStories: maxStoryCount_(backlog)
+      }, callback);
+    }
+
+    if (action === 'getStories') {
+      var stories = withLock_(function() { return readJsonFromSheet_(STORIES_SHEET, []); });
+      return jsonOut_({
+        ok: true,
+        version: BACKLOG_SCRIPT_VERSION,
+        stories: stories
+      }, callback);
+    }
+
+    if (action === 'getVpData') {
+      var key = getParam_(e, 'key');
+      var sheetName = getVpSheet_(key);
+      if (!sheetName) {
+        return jsonOut_({ ok: false, error: 'chave inválida: ' + key }, callback);
+      }
+      var vpData = withLock_(function() { return readJsonFromSheet_(sheetName, null); });
+      return jsonOut_({ ok: true, data: vpData }, callback);
+    }
+
+    return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, data: [] }, callback);
+  } catch (err) {
+    Logger.log('doGet falhou: ' + (err && err.stack || err));
+    return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'falha ao ler dados: ' + String(err && err.message || err) }, callback);
+  }
 }
 
 // LOCK_TIMEOUT_MS: tempo máximo esperando a vez de escrever. writeJsonToSheet_ faz
@@ -113,21 +133,29 @@ function doPost(e) {
       var parsedBacklog = parsePayload_(payload, true);
       if (!parsedBacklog.ok) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: parsedBacklog.error });
       var incoming = parsedBacklog.data;
-      var result = withLock_(function() {
-        var before = readBacklogStore_();
-        var merged = mergeSnaps_(before, incoming);
-        writeBacklogStore_(merged);
-        return { before: before, merged: merged };
-      });
-      return jsonOut_({
-        ok: true,
-        version: BACKLOG_SCRIPT_VERSION,
-        beforeSnapshots: result.before.length,
-        incomingSnapshots: incoming.length,
-        savedSnapshots: result.merged.length,
-        savedMaxStories: maxStoryCount_(result.merged),
-        currentStories: currentSnap_(result.merged) ? storyCount_(currentSnap_(result.merged)) : 0
-      });
+      try {
+        var result = withLock_(function() {
+          var before = readBacklogStore_();
+          var merged = mergeSnaps_(before, incoming);
+          writeBacklogStore_(merged);
+          return { before: before, merged: merged };
+        });
+        return jsonOut_({
+          ok: true,
+          version: BACKLOG_SCRIPT_VERSION,
+          beforeSnapshots: result.before.length,
+          incomingSnapshots: incoming.length,
+          savedSnapshots: result.merged.length,
+          savedMaxStories: maxStoryCount_(result.merged),
+          currentStories: currentSnap_(result.merged) ? storyCount_(currentSnap_(result.merged)) : 0
+        });
+      } catch (lockErr) {
+        // Sem este catch próprio, um erro de "lock não obtido" (mensagem específica
+        // e acionável, ver withLock_) caía no catch genérico do doPost e virava
+        // "falha interna ao processar a solicitação" — perdendo a informação de que
+        // era só tentar de novo, diferente de saveStories/saveVpData.
+        return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(lockErr && lockErr.message || lockErr) });
+      }
     }
 
     if (action === 'saveStories') {
