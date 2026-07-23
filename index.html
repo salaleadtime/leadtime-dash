@@ -2385,6 +2385,10 @@ var SEED_VERSION='2026-06-23-v34-sync-bulletproof';
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
 var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
 var BK_GAS_URL     = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+// Token compartilhado só barra bots/scanners que acham a URL do Apps Script sem
+// nunca abrir o dashboard — não é segredo real (fica no código-fonte do cliente).
+// Precisa bater com a Propriedade do Script API_TOKEN no Apps Script publicado.
+var BK_GAS_TOKEN   = '4cfa7e806a2a5202240c13ffa0065874c1c67888b1bce0be';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
 var _sheetsLastReadAt = 0;
@@ -5133,7 +5137,7 @@ function saveEpicMetaToCloud(rows){
   fetch(BK_GAS_URL, {
     method:'POST', mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'action=saveVpData&key=vpEpicMeta&payload='+encodeURIComponent(JSON.stringify(meta))
+    body:'action=saveVpData&key=vpEpicMeta&payload='+encodeURIComponent(JSON.stringify(meta))+'&token='+encodeURIComponent(BK_GAS_TOKEN)
   }).catch(function(){});
 }
 var MAX_BACKLOG_SNAPS=20; // limite de snapshots — impede crescimento indefinido do payload
@@ -5226,7 +5230,7 @@ function _gasJsonp(url, cb, timeoutMs){
     if(script.parentNode) script.parentNode.removeChild(script);
     cb('script error');
   };
-  script.src=url+'&callback='+name;
+  script.src=url+'&token='+encodeURIComponent(BK_GAS_TOKEN)+'&callback='+name;
   document.head.appendChild(script);
 }
 
@@ -5277,7 +5281,7 @@ function gasSaveBacklog(){
     method:'POST',
     mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'action=saveBacklog&payload='+encodeURIComponent(JSON.stringify(backlogSnaps))
+    body:'action=saveBacklog&payload='+encodeURIComponent(JSON.stringify(backlogSnaps))+'&token='+encodeURIComponent(BK_GAS_TOKEN)
   })
   .then(function(){
     toast('☁️ Backlog publicado','Verificando gravação no servidor…');
@@ -5323,9 +5327,11 @@ function gasLoadStories(cb){
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
     if(err){ if(cb) cb(err); return; }
     if(json && json.ok && Array.isArray(json.stories)){
-      // Servidor vazio mas temos estórias locais: NÃO sobrescreve (evita apagar a
-      // importação local). Em vez disso, sobe as locais para o servidor convergir.
-      if(!json.stories.length && allStories.length){
+      // Servidor com menos estórias que as locais: NÃO sobrescreve (evita apagar
+      // uma importação local recém-feita que ainda não terminou de subir, ex. ao
+      // clicar Atualizar logo após importar). Em vez disso, sobe as locais para
+      // o servidor convergir — mesma proteção já usada em gasLoadBacklog.
+      if(json.stories.length<allStories.length){
         if(!_gasStoriesSaving){ setTimeout(function(){ gasSaveStories(); },500); }
         if(cb) cb(null, 0);
         return;
@@ -5352,7 +5358,7 @@ function gasSaveStories(){
     method:'POST',
     mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories))
+    body:'action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories))+'&token='+encodeURIComponent(BK_GAS_TOKEN)
   })
   .then(function(){
     toast('☁️ Estórias publicadas','Sincronizando com o servidor…');
@@ -5816,7 +5822,7 @@ function emSaveState(){
 }
 function emSaveCloud(){
   if(!BK_GAS_URL) return;
-  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState))}).catch(function(){});
+  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState))+'&token='+encodeURIComponent(BK_GAS_TOKEN)}).catch(function(){});
 }
 function emLoadCloud(){
   if(!BK_GAS_URL) return;
@@ -6359,16 +6365,6 @@ function svKpiItem(color,val,lbl,sub,extra){
     '<span class="sv-kpi-sub">'+sub+'</span></div>';
 }
 
-// Lead time estimado a partir da estória mais antiga do épico — fallback usado
-// quando não há registro manual (allData) com Data Início cadastrada.
-function epicStoriesLT(stories){
-  var minIso=null;
-  stories.forEach(function(s){
-    if(s&&s.criado&&(!minIso||s.criado<minIso)) minIso=s.criado;
-  });
-  return minIso?calcLT(minIso,null):0;
-}
-
 function svEpicRow(ep,stories){
   var epicRec=allData.find(function(r){return r.id===ep;});
   var sq=(epicRec&&epicRec.squad)||((stories[0]&&stories[0].squad)||'');
@@ -6384,18 +6380,13 @@ function svEpicRow(ep,stories){
 
   // Lead time cell — recalcula a partir de ini/fim (evita depender do campo .lt
   // armazenado, que pode estar desatualizado e trata 0 dias como "sem dado").
-  // Quando não há registro manual, estima a partir da estória mais antiga do épico.
-  var ltHtml='<span style="color:#94a3b8;font-size:11px">—</span>';
+  // Sem Data Início oficial no épico, não há LT: a idade da estória mais antiga
+  // mede a história, não o épico, e inflava o número (ver mesma regra em #170).
+  var ltHtml='<span style="color:#94a3b8;font-size:11px" title="Épico sem Data Início registrada">sem LT</span>';
   var ltVal=(epicRec&&epicRec.ini)?calcLT(epicRec.ini,epicRec.fim):null;
-  var ltIsEstimate=false;
-  if(ltVal==null&&!isEmpty){
-    var estLT=epicStoriesLT(stories);
-    if(estLT>0){ ltVal=estLT; ltIsEstimate=true; }
-  }
   if(ltVal!=null){
     var ltCol=ltVal>=META?'#dc2626':ltVal>=40?'#d97706':'#16a34a';
-    var ltTitle=ltIsEstimate?'Estimado a partir da estória mais antiga (sem Data Início cadastrada)':'Lead time oficial';
-    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700" title="'+ltTitle+'">'+ltVal+'d'+(ltIsEstimate?' <span style="font-size:9px;font-weight:600;color:#94a3b8">(est.)</span>':'')+'</span>';
+    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700" title="Lead time oficial">'+ltVal+'d</span>';
   }
 
   // Status badge
