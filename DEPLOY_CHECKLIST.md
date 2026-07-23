@@ -15,29 +15,6 @@
    ⚠️ Não reutilizar uma versão antiga — senão o código editado **não** é publicado
 7. **Implantar**
 
-## Token compartilhado (API_TOKEN) — só na primeira vez
-
-Os 3 dashboards (`index.html`, `visao-projetos/index.html`, `discovery-pmo/index.html`)
-já mandam um token em toda chamada ao Apps Script (constantes `BK_GAS_TOKEN` /
-`_VP_GAS_TOKEN` / `DISC_GAS_TOKEN` — hoje as três têm o mesmo valor). Enquanto a
-Propriedade do Script abaixo não existir, o Apps Script **ignora** esse token e
-aceita tudo normalmente — ou seja, publicar o `.gs` acima não quebra nada por si só.
-
-⚠️ **Ordem importa**: só configure a propriedade DEPOIS de confirmar que o commit
-com o token nos 3 dashboards já está no ar (GitHub Pages publica `main` sozinho,
-mas leva um instante). Se configurar a propriedade antes disso, todo mundo fica
-sem acesso até o GitHub Pages atualizar.
-
-1. Confirmar que os 3 dashboards em produção já têm a constante do token (abrir
-   "Ver código-fonte" de qualquer um deles e procurar por `GAS_TOKEN`)
-2. No projeto do Apps Script: **Configurações do projeto (⚙️) → Propriedades do
-   script → Adicionar propriedade do script**
-3. Nome: `API_TOKEN` · Valor: o mesmo texto que está em `BK_GAS_TOKEN` no `index.html`
-4. Salvar
-
-A partir daqui, qualquer chamada sem o token (ou com token errado) recebe
-`{"ok":false,"error":"não autorizado"}` em vez de ler/gravar dados.
-
 ## Verificar (abrir no navegador)
 
 ```
@@ -47,16 +24,19 @@ https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_
 Resposta esperada (sinais de que deu certo):
 
 ```json
-{ "ok": true, "version": "2026-07-23-backlog-sheet-chunks-v10", "stories": 0, ... }
+{ "ok": true, "version": "2026-07-23-backlog-sheet-chunks-v11", "stories": 0, ... }
 ```
 
-- ✅ `"version"` = `2026-07-23-backlog-sheet-chunks-v10` → versão nova no ar
+- ✅ `"version"` = `2026-07-23-backlog-sheet-chunks-v11` → versão nova no ar
 - ✅ campo `"stories"` presente → ações de estória ativas
 - ✅ chave `discoveryPmo` disponível → Discovery PMO ativo no Apps Script publicado
 
-Depois de configurar o `API_TOKEN` (seção acima), essa mesma URL sem `&token=...`
-passa a responder `{"ok":false,"error":"não autorizado"}` — isso é o esperado,
-não um erro; é só um jeito rápido de confirmar que a trava está ativa.
+> Nota: a v10 chegou a exigir um token (`API_TOKEN`) em toda chamada, mas foi
+> revertida — a varredura de segredos do pipeline do Bradesco (GitLeaks) barrava
+> o build por causa do valor fixo no código-fonte. Se a Propriedade do Script
+> `API_TOKEN` ainda existir de quando isso foi testado, pode apagá-la (Configurações
+> do projeto → Propriedades do script) — o código não usa mais essa checagem,
+> então ela fica só como propriedade órfã, inofensiva, mas sem função.
 
 ## Testar de ponta a ponta
 

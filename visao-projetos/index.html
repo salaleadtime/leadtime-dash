@@ -6274,10 +6274,6 @@
 
     // ─── Sync com servidor (mesmo BK_GAS_URL do dashboard principal) ─────────
     var _VP_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
-    // Token compartilhado só barra bots/scanners que acham a URL do Apps Script sem
-    // nunca abrir o dashboard — não é segredo real (fica no código-fonte do cliente).
-    // Precisa bater com a Propriedade do Script API_TOKEN no Apps Script publicado.
-    var _VP_GAS_TOKEN = '4cfa7e806a2a5202240c13ffa0065874c1c67888b1bce0be';
 
     function _vpGasJsonp(url, cb){
       var name='_vpGP_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
@@ -6285,7 +6281,7 @@
       var done=false;
       window[name]=function(data){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb(null,data); };
       script.onerror=function(){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb('script error'); };
-      script.src=url+'&token='+encodeURIComponent(_VP_GAS_TOKEN)+'&callback='+name;
+      script.src=url+'&callback='+name;
       document.head.appendChild(script);
     }
 
@@ -6303,7 +6299,7 @@
       fetch(_VP_GAS_URL, {
         method:'POST', mode:'no-cors',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:'action=saveVpData&key='+encodeURIComponent(key)+'&payload='+encodeURIComponent(JSON.stringify(data))+'&token='+encodeURIComponent(_VP_GAS_TOKEN)
+        body:'action=saveVpData&key='+encodeURIComponent(key)+'&payload='+encodeURIComponent(JSON.stringify(data))
       }).catch(function(){});
     }
 
