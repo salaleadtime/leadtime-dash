@@ -1441,7 +1441,6 @@ body{min-height:100vh}
   <button class="tabbt" id="tab-me" onclick="goTab('me',this)">📊 Medição <span class="tab-ct" id="tabCtMe"></span></button>
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
-  <button class="tabbt" id="tab-si" onclick="goTab('si',this)">🧭 Situação <span class="tab-ct" id="tabCtSi"></span></button>
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
   <button class="tabbt" id="tab-em" onclick="goTab('em',this)">🚨 Demandas Emergenciais <span class="tab-ct" id="tabCtEm"></span></button>
   <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
@@ -2084,28 +2083,14 @@ tr:nth-child(even):hover td,
       <span class="fl">Squad:</span>
       <select class="fsel" id="svSqF"><option value="all">Todas</option></select>
       <div class="fsep"></div>
+      <span class="fl">Situação:</span>
+      <select class="fsel" id="svFaseF"><option value="all">Todas</option></select>
+      <div class="fsep"></div>
       <span id="svTotal" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
     </div>
     <div class="sv-card-list" id="svCardList"></div>
   </div>
 
-</div>
-
-<!-- ══ SITUAÇÃO PANE ══ -->
-<div class="pane" id="pane-si">
-  <div class="ep" id="siContent">
-    <div class="sv-kpi-hd" id="siPhaseKpi"></div>
-    <div class="fbar" id="siFbar">
-      <span class="fl">Squad:</span>
-      <select class="fsel" id="siSqF"><option value="all">Todas</option></select>
-      <div class="fsep"></div>
-      <span class="fl">Fase:</span>
-      <select class="fsel" id="siFaseF"><option value="all">Todas</option></select>
-      <div class="fsep"></div>
-      <span id="siTotal" style="font-size:10px;color:#94a3b8;margin-left:auto"></span>
-    </div>
-    <div class="sv-card-list" id="siCardList"></div>
-  </div>
 </div>
 
 <!-- ══ BACKLOG / REFINAMENTO PANE ══ -->
@@ -2368,7 +2353,7 @@ function loadTab(){
   try{ return storageGet(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='si'||id==='bk'||id==='em'||id==='cal'||id==='rd') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='em'||id==='cal'||id==='rd') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -3446,7 +3431,6 @@ function goTab(id,btn){
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
-  else if(id==='si') renderSituacaoView();
   else if(id==='bk') renderBacklogView();
   else if(id==='em') renderEmergencyView();
   else if(id==='cal') renderCalendar();
@@ -3472,7 +3456,6 @@ function activateTab(id){
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
-  else if(id==='si') renderSituacaoView();
   else if(id==='bk') renderBacklogView();
   else if(id==='em') renderEmergencyView();
   else if(id==='cal') renderCalendar();
@@ -3484,7 +3467,7 @@ function activateTab(id){
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='si'||id==='me'||id==='db'||id==='bk'||id==='em'||id==='cal'||id==='rd')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='em'||id==='cal'||id==='rd')?'none':'flex';
 }
 
 
@@ -4592,8 +4575,6 @@ function updateTabCounts(){
   var svEl=$id('tabCtSv');
   var visibleStoryCount=allStories.filter(function(s){return isStoryEpicVisible(s.epic);}).length;
   if(svEl) svEl.textContent=visibleStoryCount||'';
-  var siEl=$id('tabCtSi');
-  if(siEl) siEl.textContent=visibleStoryCount||'';
   var bkEl=$id('tabCtBk');
   if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?snapStoryCount(bkCurSnap):0; bkEl.textContent=bkCur||''; }
   var emEl=$id('tabCtEm');
@@ -6215,7 +6196,9 @@ function isStoryEpicVisible(epicId){
 // ─── Renderiza aba Estórias por Épico ──────────────────────
 function renderStoryView(){
   var svSq=$id('svSqF');
+  var svFase=$id('svFaseF');
   var sqFilter=svSq?svSq.value:'all';
+  var faseFilter=svFase?svFase.value:'all';
   var activeStoryEpics=allData.filter(function(r){return isStoryEpicVisible(r.id);});
   var activeStoryEpicIds=activeStoryEpics.map(function(r){return r.id;});
   var visibleStories=allStories.filter(function(s){return isStoryEpicVisible(s.epic);});
@@ -6231,6 +6214,14 @@ function renderStoryView(){
       return '<option value="'+esc(sq)+'"'+(sq===sqFilter?' selected':'')+'>'+esc(sq)+'</option>';
     }).join('');
     svSq.onchange=function(){renderStoryView();};
+  }
+
+  // Populate fase (Distribuição de Fase) dropdown
+  if(svFase){
+    svFase.innerHTML='<option value="all">Todas</option>'+SV_STATUS.map(function(st){
+      return '<option value="'+st.key+'"'+(st.key===faseFilter?' selected':'')+'>'+st.label+'</option>';
+    }).join('')+'<option value="other"'+(faseFilter==='other'?' selected':'')+'>Outros</option>';
+    svFase.onchange=function(){renderStoryView();};
   }
 
   // KPIs da aba respeitam a regra: concluídos ficam fora de Qtd Story/Épicos.
@@ -6274,13 +6265,16 @@ function renderStoryView(){
       (noStEpics.length?svKpiHdItem('#7c3aed',noStEpics.length,'Sem Estórias','épicos sem vínculo'):'')+
     '</div>';
 
-  // Apply squad filter
+  // Apply squad + fase (Distribuição de Fase) filters
   var filteredEpicIds=epicIds.filter(function(ep){
-    if(sqFilter==='all') return true;
     var sts=epicMap[ep];
-    var rec=allData.find(function(r){return r.id===ep;});
-    var sq=(rec&&rec.squad)||((sts[0]&&sts[0].squad)||'');
-    return sq===sqFilter;
+    if(sqFilter!=='all'){
+      var rec=allData.find(function(r){return r.id===ep;});
+      var sq=(rec&&rec.squad)||((sts[0]&&sts[0].squad)||'');
+      if(sq!==sqFilter) return false;
+    }
+    if(faseFilter!=='all'&&!sts.some(function(s){return classifySvStatus(s.status)===faseFilter;})) return false;
+    return true;
   });
 
   // Sort: critical LT first, then near-delivery, then by story count desc
@@ -6294,8 +6288,8 @@ function renderStoryView(){
     return (epicMap[b]||[]).length-(epicMap[a]||[]).length;
   });
 
-  // Epics with no stories (appended at bottom)
-  var noStoriesFiltered=noStEpics.filter(function(id){
+  // Epics with no stories (appended at bottom) — não fazem sentido sob filtro de fase
+  var noStoriesFiltered=faseFilter!=='all'?[]:noStEpics.filter(function(id){
     return sqFilter==='all'||((allData.find(function(r){return r.id===id;})||{}).squad===sqFilter);
   });
 
@@ -6470,101 +6464,6 @@ function getSquadAccent(sq){
     'Inception':'#ea580c','TopGun':'#0891b2','MadMax':'#e11d48','Terminator':'#4f46e5'
   };
   return map[sq]||'#94a3b8';
-}
-
-// ─── Renderiza aba Situação — Distribuição de Fase filtrável ───
-function renderSituacaoView(){
-  var siSq=$id('siSqF');
-  var siFase=$id('siFaseF');
-  var sqFilter=siSq?siSq.value:'all';
-  var faseFilter=siFase?siFase.value:'all';
-
-  var visibleStories=allStories.filter(function(s){return isStoryEpicVisible(s.epic);});
-
-  if(!allStories.length){
-    $id('siPhaseKpi').innerHTML='';
-    $id('siCardList').innerHTML='<div class="empty" style="padding:3rem">🧭 Nenhuma estória carregada.<br>Importe o export do Jira em "📋 Qtd Story/Épicos" para visualizar a Distribuição de Fase.</div>';
-    $id('siTotal').textContent='';
-    return;
-  }
-
-  // Populate squad dropdown
-  var allSquads=Array.from(new Set(visibleStories.map(function(s){return s.squad;}).filter(Boolean))).sort();
-  if(siSq){
-    siSq.innerHTML='<option value="all">Todas</option>'+allSquads.map(function(sq){
-      return '<option value="'+esc(sq)+'"'+(sq===sqFilter?' selected':'')+'>'+esc(sq)+'</option>';
-    }).join('');
-    siSq.onchange=function(){renderSituacaoView();};
-  }
-
-  // Populate fase dropdown from SV_STATUS
-  if(siFase){
-    siFase.innerHTML='<option value="all">Todas</option>'+SV_STATUS.map(function(st){
-      return '<option value="'+st.key+'"'+(st.key===faseFilter?' selected':'')+'>'+st.label+'</option>';
-    }).join('')+'<option value="other"'+(faseFilter==='other'?' selected':'')+'>Outros</option>';
-    siFase.onchange=function(){renderSituacaoView();};
-  }
-
-  // Stories restritas ao filtro de squad — base para a Distribuição de Fase
-  var squadStories=visibleStories.filter(function(s){return sqFilter==='all'||s.squad===sqFilter;});
-
-  // KPI strip: Distribuição de Fase — clicável para filtrar
-  var phaseCounts={other:0};
-  SV_STATUS.forEach(function(st){phaseCounts[st.key]=0;});
-  squadStories.forEach(function(s){var k=classifySvStatus(s.status);phaseCounts[k]=(phaseCounts[k]||0)+1;});
-  var phaseDefs=SV_STATUS.concat([{key:'other',label:'Outros',color:'#94a3b8'}]);
-  $id('siPhaseKpi').innerHTML=phaseDefs.filter(function(st){return phaseCounts[st.key]>0;}).map(function(st){
-    var on=faseFilter===st.key;
-    return '<div class="sv-kpi-hd-item" style="--kpi-accent:'+st.color+';cursor:pointer'+(on?';box-shadow:0 0 0 2px '+st.color:'')+'" onclick="setSituacaoFase(\''+st.key+'\')">'+
-      '<div class="sv-kpi-hd-v">'+phaseCounts[st.key]+'</div>'+
-      '<div class="sv-kpi-hd-l">'+st.label+'</div>'+
-    '</div>';
-  }).join('');
-
-  // Stories filtradas por fase (além do squad)
-  var filteredStories=squadStories.filter(function(s){
-    return faseFilter==='all'||classifySvStatus(s.status)===faseFilter;
-  });
-
-  $id('siTotal').textContent=filteredStories.length+' estória'+(filteredStories.length!==1?'s':'');
-
-  filteredStories.sort(function(a,b){
-    var sa=(a.squad||''), sb=(b.squad||'');
-    if(sa!==sb) return sa<sb?-1:1;
-    return (a.epic||'')<(b.epic||'')?-1:1;
-  });
-
-  var rows=filteredStories.map(function(s){
-    var epicRec=allData.find(function(r){return r.id===s.epic;});
-    var epicName=(epicRec&&epicRec.resumo)||s.epicName||'';
-    var accent=getSquadAccent(s.squad);
-    var stCls=storyStatusClass(s.status);
-    return '<tr>'+
-      '<td><a class="sv-card-ep" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a></td>'+
-      '<td title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</td>'+
-      '<td><a class="sv-card-ep" href="'+jiraUrl(s.epic)+'" target="_blank" rel="noopener">'+esc(s.epic)+'</a> '+
-        '<span style="color:#94a3b8;font-size:10px">'+esc(epicName)+'</span></td>'+
-      '<td>'+(s.squad?'<span class="sv-squad-pill" style="--sv-accent:'+accent+'"><span class="sv-squad-dot"></span>'+esc(s.squad)+'</span>':'<span style="color:#94a3b8;font-size:10px">—</span>')+'</td>'+
-      '<td style="text-align:center"><span class="bdg '+stCls+'">'+esc(s.status)+'</span></td>'+
-    '</tr>';
-  }).join('');
-
-  $id('siCardList').innerHTML=
-    '<div class="sv-tbl-wrap">'+
-      '<table class="sv-tbl">'+
-        '<thead><tr>'+
-          '<th>História</th><th>Resumo</th><th>Épico</th><th>Squad</th><th class="tc">Fase / Status</th>'+
-        '</tr></thead>'+
-        '<tbody>'+(rows||'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:2rem">Nenhuma estória nesta fase.</td></tr>')+'</tbody>'+
-      '</table>'+
-    '</div>';
-}
-
-function setSituacaoFase(key){
-  var siFase=$id('siFaseF');
-  if(!siFase) return;
-  siFase.value=siFase.value===key?'all':key;
-  renderSituacaoView();
 }
 
 // ════════════════════════════════════════
