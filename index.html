@@ -1547,7 +1547,7 @@ body{min-height:100vh}
     <div class="med-hero-icon">📊</div>
     <div>
       <div class="med-hero-t">Medição de Lead Time</div>
-      <div class="med-hero-s">Épicos finalizados — movidos automaticamente ao preencher a Data Fim</div>
+      <div class="med-hero-s">Épicos finalizados e cancelados — cancelamentos ficam registrados, sem impacto nos indicadores</div>
     </div>
   </div>
 
@@ -2672,8 +2672,14 @@ function activeEpics(){
 function measuredEpics(){
   return allData.filter(function(r){ return !isCancelled(r) && isValidDate(r.fim); });
 }
+// A aba Medição é também o registro de auditoria dos cancelamentos. Eles não
+// pertencem aos conjuntos calculados em measuredEpics(), portanto nunca entram
+// em média, meta, cards por squad ou qualquer indicador final.
+function measurementRows(){
+  return allData.filter(function(r){ return isCancelled(r) || isValidDate(r.fim); });
+}
 function listedEpics(){
-  return allData.filter(function(r){ return !isValidDate(r.fim) || isCancelled(r); });
+  return allData.filter(function(r){ return !isCancelled(r) && !isValidDate(r.fim); });
 }
 
 // Regra única do fluxo:
@@ -3916,7 +3922,7 @@ function renderRisks(){
 
 function renderPanorama(){
   var el=$id('panoramaGeral'); if(!el) return;
-  var t=allData.length;
+  var t=allData.filter(function(r){ return !isCancelled(r); }).length;
   if(!t){el.innerHTML='';return;}
   var measured=measuredEpics();
   var conc=measured.length;
@@ -4375,7 +4381,7 @@ function renderMed(){
   }
   syncTriChips();
 
-  var all=measuredEpics();
+  var all=measurementRows();
 
   // Populate squad dropdown preserving selection
   var sqSel=$id('medSqF');
@@ -4390,8 +4396,10 @@ function renderMed(){
   // Apply filters
   var list=all;
   if(medFilt.squad!=='all') list=list.filter(function(r){return r.squad===medFilt.squad;});
-  if(medFilt.dateFrom) list=list.filter(function(r){return r.fim>=medFilt.dateFrom;});
-  if(medFilt.dateTo) list=list.filter(function(r){return r.fim<=medFilt.dateTo;});
+  // Cancelados não têm Data Fim por definição: ficam sempre visíveis na
+  // Medição como registro de auditoria, sem se submeter ao filtro de entregas.
+  if(medFilt.dateFrom) list=list.filter(function(r){return isCancelled(r)||r.fim>=medFilt.dateFrom;});
+  if(medFilt.dateTo) list=list.filter(function(r){return isCancelled(r)||r.fim<=medFilt.dateTo;});
 
   // Date filter UI state
   var dc=$id('medDateClear');
@@ -4406,8 +4414,9 @@ function renderMed(){
     hint.textContent=isFiltered ? list.length+' de '+all.length+' épicos (filtrado)' : '';
   }
 
-  var n=list.length;
-  if(n===0){
+  var countable=list.filter(function(r){ return !isCancelled(r); });
+  var n=countable.length;
+  if(!list.length){
     // Auto-expand: só limpa o período quando é um filtro manual (não um trimestre selecionado
     // explicitamente) — trimestre recém-iniciado sem entregas ainda deve continuar marcado.
     if((medFilt.dateFrom||medFilt.dateTo)&&!medTriChip){
@@ -4417,7 +4426,8 @@ function renderMed(){
       syncTriChips();
       var dc2=$id('medDateClear'); if(dc2) dc2.classList.remove('on');
       list=all.filter(function(r){return medFilt.squad==='all'||r.squad===medFilt.squad;});
-      n=list.length;
+      countable=list.filter(function(r){ return !isCancelled(r); });
+      n=countable.length;
     }
     if(n===0){
       var emptyMsg=medTriChip
@@ -4430,25 +4440,26 @@ function renderMed(){
       return;
     }
   }
-  var lts=list.map(function(r){return r.lt;});
-  var avg=Math.round(lts.reduce(function(a,b){return a+b;},0)/n);
-  var minLT=Math.min.apply(null,lts);
-  var maxLT=Math.max.apply(null,lts);
-  var naMeta=list.filter(function(r){return r.lt<META;}).length;
-  var pctMeta=Math.round(naMeta/n*100);
+  var lts=countable.map(function(r){return r.lt;});
+  var avg=n?Math.round(lts.reduce(function(a,b){return a+b;},0)/n):0;
+  var minLT=n?Math.min.apply(null,lts):0;
+  var maxLT=n?Math.max.apply(null,lts):0;
+  var naMeta=countable.filter(function(r){return r.lt<META;}).length;
+  var pctMeta=n?Math.round(naMeta/n*100):0;
+  var cancelledCount=list.filter(isCancelled).length;
 
   $id('medKpi').innerHTML=
-    kpi('kn','Total Medido',''+n,'épicos finalizados','')+
+    kpi('kn','Total Medido',''+n,'épicos finalizados'+(cancelledCount?' · '+cancelledCount+' cancelado'+(cancelledCount!==1?'s':'')+' não contabilizado'+(cancelledCount!==1?'s':''):''),'')+
     kpi('kb','LT Médio',''+avg,'dias · meta: '+META+'d','cb')+
     kpi('kg','LT Mínimo',''+minLT,'melhor tempo','cg')+
     kpi('kr','LT Máximo',''+maxLT,'pior tempo','cr')+
     kpi('ka','Dentro da Meta',pctMeta+'%',naMeta+' de '+n+' épicos','ca');
 
   // Squad cards — baseado na lista filtrada
-  var squads=Array.from(new Set(list.map(function(r){return r.squad;}))).filter(Boolean).sort();
+  var squads=Array.from(new Set(countable.map(function(r){return r.squad;}))).filter(Boolean).sort();
   var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706','Inception':'#ea580c','TopGun':'#0891b2','MadMax':'#e11d48','Terminator':'#4f46e5'};
   $id('medSquads').innerHTML=squads.map(function(sq){
-    var items=list.filter(function(r){return r.squad===sq;});
+    var items=countable.filter(function(r){return r.squad===sq;});
     if(!items.length) return '';
     var savg=Math.round(items.reduce(function(s,r){return s+r.lt;},0)/items.length);
     var scrit=items.filter(function(r){return r.lt>=META;}).length;
@@ -4467,15 +4478,19 @@ function renderMed(){
     '</div>';
   }).join('');
 
-  $id('medCnt').textContent=n+' épico'+(n!==1?'s':'');
+  $id('medCnt').textContent=n+' medido'+(n!==1?'s':'')+(cancelledCount?' · '+cancelledCount+' cancelado'+(cancelledCount!==1?'s':''):'');
   renderMedStories();
 
   var ltMap={r:'ltr',a:'lta',g:'ltg'};
-  var sorted=list.slice().sort(function(a,b){return new Date(b.fim)-new Date(a.fim);});
+  var sorted=list.slice().sort(function(a,b){
+    if(isCancelled(a)!==isCancelled(b)) return isCancelled(a)?-1:1;
+    return new Date(b.fim)-new Date(a.fim);
+  });
   $id('medTblBody').innerHTML=sorted.map(function(r){
     var gi=allData.indexOf(r);
+    var cancelado=isCancelled(r);
     var lc=ltMap[ltCls(r.lt)];
-    var ltAlto=r.lt>100;
+    var ltAlto=!cancelado&&r.lt>100;
     return '<tr'+(ltAlto?' style="background:#fef9c3"':'')+'>'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(jsq(r.id))+'\',this)" title="Copiar link do Jira">⎘</button></div></td>'+
       squadBadge(r.squad)+
@@ -4484,7 +4499,7 @@ function renderMed(){
       '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
       '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
       '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
-      '<td class="clt '+lc+'">'+ltIco(r.lt)+' '+r.lt+'d</td>'+
+      '<td class="clt '+lc+'">'+(cancelado?'— não contabilizado':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
     '</tr>';
   }).join('');
 }
@@ -4569,7 +4584,7 @@ function renderMedStories(){
 }
 
 function updateTabCounts(){
-  var a=activeEpics().length, m=measuredEpics().length;
+  var a=activeEpics().length, m=measurementRows().length;
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
   var svEl=$id('tabCtSv');
@@ -8183,14 +8198,14 @@ function calSeedExample(){
     var META=window.META||62;
     var tri=getCurrentTrimester();
     var measured=measuredEpics();
-    var triMeasured=data.filter(function(r){ return inTrimester(r.fim,tri); });
+    var triMeasured=data.filter(function(r){ return !isCancelled(r) && inTrimester(r.fim,tri); });
     var active=activeEpics();
     var del=deliverList();
     var delivered=triMeasured.length;
     var avgTri=delivered?Math.round(triMeasured.reduce(function(s,r){return s+r.lt;},0)/delivered):0;
     var naMeta=triMeasured.filter(function(r){return r.lt<META;}).length;
     var pctMeta=delivered?pct(naMeta,delivered):0;
-    var crit=data.filter(function(r){return r.lt>=META;}).length;
+    var crit=data.filter(function(r){return !isCancelled(r) && r.lt>=META;}).length;
     var noEstimate = (window.allStories||[]).filter(function(s){ var pts = s.pts || s.pontos || s.estimativa || s.estimate || ''; return !String(pts||'').trim(); }).length;
     if(!window.allStories || !window.allStories.length) noEstimate = active.filter(function(r){ return !r.dataPrevista; }).length;
     var backlogSnaps=window.backlogSnaps||[];
