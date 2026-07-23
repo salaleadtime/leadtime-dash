@@ -407,6 +407,12 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sc-fill{height:100%;border-radius:2px;transition:width .5s}
 .sc-stats{display:flex;gap:8px;font-size:9.5px;color:var(--tx3)}
 .sc-stats strong{color:var(--tx2);font-weight:600}
+.sc-nm-wrap{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.lt-status-pill{display:inline-flex;align-items:center;gap:3px;font-size:8.5px;font-weight:700;padding:1px 6px;border-radius:20px;letter-spacing:.2px;white-space:nowrap;line-height:1.5}
+.lt-status-pill.lt-sp-g{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.lt-status-pill.lt-sp-a{background:#fef9c3;color:#a16207;border:1px solid #fde68a}
+.lt-status-pill.lt-sp-r{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+.lt-status-pill.lt-sp-na{background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0}
 
 /* ── ÉPICOS SUMMARY (header + KPIs + info cards) ── */
 .ep-hdr{margin-bottom:1.2rem}
@@ -730,7 +736,7 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .bk-squad-card.open .bk-squad-body{display:block}
 .bk-squad-hd{display:flex;flex-direction:column;gap:4px;padding:.7rem .9rem .6rem;cursor:pointer;user-select:none}
 .bk-squad-hd:hover{background:#fafafa}
-.bk-squad-hd-row1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bk-squad-hd-row1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .bk-squad-hd-row2{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:16px}
 .bk-squad-arrow{display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;font-size:9px;flex-shrink:0}
 .bk-squad-card.open .bk-squad-arrow{transform:rotate(90deg);color:#475569}
@@ -745,9 +751,20 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .bk-story-row:hover{background:#fafafa}
 .bk-badge-refined{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:#f0fdf4;color:#15803d;border:1px solid #86efac;white-space:nowrap}
 .bk-badge-backlog{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;white-space:nowrap}
+.bk-badge-homolog-ok{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;white-space:nowrap}
+.bk-badge-homolog-out{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap;animation:bk-pulse .9s infinite}
+@keyframes bk-pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.bk-sla-date{font-size:8px;font-weight:600;opacity:.8;margin-left:2px}
+.bk-sla-warn-pill{display:inline-flex;align-items:center;gap:2px;font-size:8px;font-weight:800;padding:1px 5px;border-radius:20px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;margin-left:3px;vertical-align:middle}
+.bk-story-row.homolog-out{background:#fff8f8}
+.bk-squad-card--sla-out{border-color:#fca5a5!important;box-shadow:0 0 0 1px #fca5a5,0 2px 8px rgba(220,38,38,.08)!important}
+.bk-sla-alert{font-size:9px;font-weight:700;color:#b91c1c;background:#fef2f2;border-top:1px solid #fecaca;padding:4px .9rem;margin-top:4px;border-radius:4px}
 .bk-spark-row{display:flex;align-items:flex-end;gap:2px;margin-top:5px;height:20px}
 .bk-spark-bar{width:6px;border-radius:2px 2px 0 0;flex-shrink:0;transition:height .3s}
 .bk-spark-lbl{font-size:9px;color:#94a3b8;margin-left:4px;align-self:center}
+.bk-st-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.bk-st-pill{display:inline-flex;align-items:center;gap:3px;font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:20px;white-space:nowrap;line-height:1.4}
+.bk-st-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 
 /* ── Qtd Story/Épicos — tabela discreta ── */
 .sv-tbl-wrap{background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(15,23,42,.04)}
@@ -3196,6 +3213,46 @@ function calcLT(ini,fim){
 }
 function ltCls(lt){return lt>=META?'r':lt>=40?'a':'g';}
 function ltIco(lt){return lt>=META?'⚠️':lt>=40?'⏰':'✅';}
+function ltStatusPill(cl){
+  if(cl==='g') return '<span class="lt-status-pill lt-sp-g">● Verde</span>';
+  if(cl==='a') return '<span class="lt-status-pill lt-sp-a">● Atenção</span>';
+  if(cl==='r') return '<span class="lt-status-pill lt-sp-r">● Crítico</span>';
+  return '<span class="lt-status-pill lt-sp-na">— S/D</span>';
+}
+
+// ─── SLA de Homologação ────────────────────────────────────
+var SLA_HOMOLOG_DAYS=5; // dias máximos permitidos em Homologação
+
+// Retorna a data (Date) da primeira importação em que a história apareceu em Homolog.
+// Se não houver snapshot anterior, usa importedAt do snapshot atual.
+function homologEntryDate(storyId){
+  var sorted=backlogSnaps.slice().sort(function(a,b){return new Date(a.importedAt)-new Date(b.importedAt);});
+  for(var i=0;i<sorted.length;i++){
+    var s=sorted[i];
+    var found=null;
+    for(var j=0;j<s.stories.length;j++){if(s.stories[j].id===storyId){found=s.stories[j];break;}}
+    if(found&&classifySvStatus(found.status)==='homolog') return new Date(s.importedAt);
+  }
+  return null;
+}
+
+// Retorna {date, days, out} ou null.
+function homologSLA(storyId){
+  var entry=homologEntryDate(storyId);
+  if(!entry) return null;
+  var today=new Date(); today.setHours(0,0,0,0);
+  var days=Math.floor((today-entry)/86400000);
+  return {date:entry, days:days, out:days>SLA_HOMOLOG_DAYS};
+}
+
+function fmtShortDate(d){
+  if(!d) return '—';
+  var dd=String(d.getDate()).padStart(2,'0');
+  var mm=String(d.getMonth()+1).padStart(2,'0');
+  return dd+'/'+mm+'/'+d.getFullYear();
+}
+// ──────────────────────────────────────────────────────────
+
 function fmtD(d){
   if(!d) return '—';
   var p=d.split('-');
@@ -3656,7 +3713,7 @@ function renderSquads(){
     if(!items.length){
       return '<div class="sc" style="opacity:.5">'+
         '<div class="sc-acc" style="background:'+acc+'"></div>'+
-        '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">sem entregas neste TRI</div></div></div>'+
+        '<div class="sc-hd"><div><div class="sc-nm-wrap"><span class="sc-nm">'+esc(sq)+'</span>'+ltStatusPill('na')+'</div><div class="sc-cnt">sem entregas neste TRI</div></div></div>'+
         '<div class="sc-lt" style="color:#94a3b8">—</div>'+
         '<div class="sc-sub">sem dados no trimestre</div>'+
       '</div>';
@@ -3678,7 +3735,7 @@ function renderSquads(){
     var pct=Math.min(100,Math.round(savg/200*100));
     return '<div class="sc">'+
       '<div class="sc-acc" style="background:'+acc+'"></div>'+
-      '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">'+items.length+' entrega'+(items.length!==1?'s':'')+' no TRI</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
+      '<div class="sc-hd"><div><div class="sc-nm-wrap"><span class="sc-nm">'+esc(sq)+'</span>'+ltStatusPill(cl)+'</div><div class="sc-cnt">'+items.length+' entrega'+(items.length!==1?'s':'')+' no TRI</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
       '<div class="sc-lt" style="color:'+col+'">'+savg+'</div>'+
       '<div class="sc-sub">dias · LT médio</div>'+
       trend+
@@ -4284,7 +4341,7 @@ function renderMed(){
     var acc=colors[sq]||'#334155';
     return '<div class="sc">'+
       '<div class="sc-acc" style="background:'+acc+'"></div>'+
-      '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">'+items.length+' medido'+(items.length!==1?'s':'')+'</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
+      '<div class="sc-hd"><div><div class="sc-nm-wrap"><span class="sc-nm">'+esc(sq)+'</span>'+ltStatusPill(cl)+'</div><div class="sc-cnt">'+items.length+' medido'+(items.length!==1?'s':'')+'</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
       '<div class="sc-lt" style="color:'+col+'">'+savg+'</div>'+
       '<div class="sc-sub">dias · LT médio</div>'+
       '<div class="sc-bar"><div class="sc-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
@@ -5405,22 +5462,77 @@ function renderBacklogView(){
       '</div>';
     }
 
+    // Agrupa histórias por status classificado + calcula SLA de Homologação
+    var stCounts={};
+    var homologSLAMap={};  // storyId → {date, days, out}
+    sqStories.forEach(function(s){
+      var k=classifySvStatus(s.status);
+      stCounts[k]=(stCounts[k]||0)+1;
+      if(k==='homolog'){
+        var sla=homologSLA(s.id);
+        if(sla) homologSLAMap[s.id]=sla;
+      }
+    });
+    var homologOut=Object.keys(homologSLAMap).filter(function(id){return homologSLAMap[id].out;}).length;
+
+    var stPillsHtml=SV_STATUS.filter(function(st){return stCounts[st.key]>0;}).map(function(st){
+      var warnHtml='';
+      if(st.key==='homolog'&&homologOut>0){
+        warnHtml='<span class="bk-sla-warn-pill">⚠️ '+homologOut+' fora do SLA</span>';
+      }
+      return '<span class="bk-st-pill" style="background:'+st.color+'22;border:1px solid '+st.color+'55;color:'+st.color+'">'+
+        '<span class="bk-st-dot" style="background:'+st.color+'"></span>'+
+        st.label+' <strong>'+stCounts[st.key]+'</strong>'+warnHtml+
+      '</span>';
+    }).join('');
+
     var rows=sqStories.map(function(s){
       var ref=isRefined(s);
-      var badge=ref
-        ?'<span class="bk-badge-refined">🃏 Refinada</span>'
-        :'<span class="bk-badge-backlog">📋 Backlog</span>';
-      return '<div class="bk-story-row">'+
+      var k=classifySvStatus(s.status);
+      var badge='';
+      var rowCls='bk-story-row';
+      if(k==='homolog'){
+        var sla=homologSLAMap[s.id];
+        if(sla){
+          var dateStr=fmtShortDate(sla.date);
+          if(sla.out){
+            rowCls+=' homolog-out';
+            badge='<span class="bk-badge-homolog-out">⚠️ Homolog · '+sla.days+'d<span class="bk-sla-date">desde '+dateStr+'</span></span>';
+          } else {
+            badge='<span class="bk-badge-homolog-ok">🔬 Homolog · '+sla.days+'d<span class="bk-sla-date">desde '+dateStr+'</span></span>';
+          }
+        } else {
+          badge='<span class="bk-badge-homolog-ok">🔬 Homolog</span>';
+        }
+      } else if(ref){
+        badge='<span class="bk-badge-refined">🃏 Refinada</span>';
+      } else {
+        badge='<span class="bk-badge-backlog">📋 Backlog</span>';
+      }
+      return '<div class="'+rowCls+'">'+
         '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
         '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
         badge+
       '</div>';
     }).join('');
 
-    return '<div class="bk-squad-card" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
+    var slaAlertHtml='';
+    if(homologOut>0){
+      var maxDays=Object.keys(homologSLAMap).reduce(function(m,id){
+        return homologSLAMap[id].out?Math.max(m,homologSLAMap[id].days):m;
+      },0);
+      slaAlertHtml='<div class="bk-sla-alert">'+
+        '⚠️ <strong>'+homologOut+'</strong> história'+(homologOut!==1?'s':'')+' em Homologação fora do SLA (máx. '+maxDays+'d · limite '+SLA_HOMOLOG_DAYS+'d)'+
+      '</div>';
+    }
+
+    return '<div class="bk-squad-card'+(homologOut>0?' bk-squad-card--sla-out':'')+'" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
       '<div class="bk-squad-hd" onclick="toggleCard(\''+cardId+'\')">'+
         '<div class="bk-squad-hd-row1">'+
-          '<span class="bk-squad-name">'+esc(sq)+'</span>'+
+          '<div>'+
+            '<span class="bk-squad-name">'+esc(sq)+'</span>'+
+            (stPillsHtml?'<div class="bk-st-pills">'+stPillsHtml+'</div>':'')+
+          '</div>'+
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">'+
             '<span class="bk-squad-cnt">'+cnt+'</span>'+
             '<span class="bk-squad-sub">histórias</span>'+
@@ -5433,6 +5545,7 @@ function renderBacklogView(){
             '<div class="bk-squad-arrow">&#9658;</div>'+
           '</div>'+
         '</div>'+
+        slaAlertHtml+
         sparkHtml+
       '</div>'+
       '<div class="bk-squad-body">'+rows+'</div>'+
