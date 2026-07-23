@@ -697,9 +697,13 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sv-story-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;padding:.35rem 1rem .35rem 1.6rem;border-bottom:1px solid #f8fafc}
 .sv-story-row:last-child{border-bottom:none}
 .sv-story-row:hover{background:#fafafa}
-.sv-tbl-body-row .sv-story-row{grid-template-columns:110px minmax(220px,1fr) 148px auto}
-.sv-story-sla{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:132px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}
-.sv-story-sla-date{font-size:8px;font-weight:700;opacity:.78}
+.sv-tbl-body-row .sv-story-row{grid-template-columns:110px minmax(220px,1fr) 138px 148px auto}
+.sv-story-column-head{display:grid;grid-template-columns:110px minmax(220px,1fr) 138px 148px auto;gap:8px;align-items:center;padding:.42rem 1rem .34rem 1.6rem;border-bottom:1px solid #e8edf5;background:#f1f5f9;color:#64748b;font-size:8.5px;font-weight:800;letter-spacing:.45px;text-transform:uppercase}
+.sv-story-column-head span:nth-last-child(-n+3){text-align:center}
+.sv-story-date{display:inline-flex;align-items:center;justify-content:center;min-width:0;color:#334155;font-size:10px;font-weight:700;white-space:nowrap}
+.sv-story-date.missing{color:#b45309;font-weight:600}
+.sv-story-date.na{color:#94a3b8;font-weight:600}
+.sv-story-sla{display:inline-flex;align-items:center;justify-content:center;min-width:112px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}
 .sv-story-sla.ok{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
 .sv-story-sla.overdue{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
 .sv-story-sla.missing{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
@@ -3299,11 +3303,22 @@ function svStorySlaHtml(story){
   }
   var sla=storyHomologSLA(story);
   if(!sla){
-    return '<span class="sv-story-sla missing" title="Informe ou importe a data de entrada em Homologação">SLA sem data de entrada</span>';
+    return '<span class="sv-story-sla missing" title="Informe ou importe a data de entrada em Homologação">Aguardando data</span>';
   }
-  var label=sla.out?homologLateLabel(sla):'SLA Homolog. · '+sla.days+'/'+SLA_HOMOLOG_DAYS+' DU';
+  var label=sla.out?homologLateLabel(sla):sla.days+'/'+SLA_HOMOLOG_DAYS+' DU';
   var title='Em Homologação desde '+fmtShortDate(sla.date)+' · limite de '+SLA_HOMOLOG_DAYS+' dias úteis';
-  return '<span class="sv-story-sla '+(sla.out?'overdue':'ok')+'" title="'+title+'"><span>'+label+'</span><span class="sv-story-sla-date">'+fmtShortDate(sla.date)+'</span></span>';
+  return '<span class="sv-story-sla '+(sla.out?'overdue':'ok')+'" title="'+title+'">'+label+'</span>';
+}
+
+function svStoryHomologDateHtml(story){
+  if(!isSlaHomologationStatus(story&&story.status)){
+    return '<span class="sv-story-date na">—</span>';
+  }
+  var sla=storyHomologSLA(story);
+  if(!sla){
+    return '<span class="sv-story-date missing" title="Informe ou importe a data de entrada em Homologação">Não informada</span>';
+  }
+  return '<span class="sv-story-date" title="Data de entrada em Homologação">'+fmtShortDate(sla.date)+'</span>';
 }
 
 function fmtShortDate(d){
@@ -6328,12 +6343,17 @@ function svEpicRow(ep,stories){
   var miniBar='<span style="color:#94a3b8;font-size:10px">—</span>';
   if(!isEmpty) miniBar=svMiniBar(stories);
 
-  // Story rows for accordion
-  var storyRows=stories.map(function(s){
+  // Story rows for accordion. The two deadline fields stay separate so that
+  // the date is easy to scan without competing with the SLA alert.
+  var storyColumns='<div class="sv-story-column-head" aria-hidden="true">'+
+    '<span>História</span><span></span><span>Entrada em homologação</span><span>Prazo (3 DU)</span><span>Status</span>'+
+  '</div>';
+  var storyRows=storyColumns+stories.map(function(s){
     var stCls=storyStatusClass(s.status);
-    return '<div class="sv-story-row">'+
+    return '<div class="sv-story-row" onclick="event.stopPropagation()">'+
       '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
       '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
+      svStoryHomologDateHtml(s)+
       svStorySlaHtml(s)+
       '<span class="bdg '+stCls+'">'+esc(s.status)+'</span>'+
     '</div>';
@@ -6354,11 +6374,13 @@ function svEpicRow(ep,stories){
     '<td style="text-align:center">'+stBadge+'</td>'+
   '</tr>'+
   (!isEmpty?
-    '<tr class="sv-tbl-body-row" id="'+bodyRowId+'">'+
+    '<tr class="sv-tbl-body-row'+(svOpenRows[bodyRowId]?' open':'')+'" id="'+bodyRowId+'">'+
       '<td colspan="6">'+storyRows+'</td>'+
     '</tr>'
   :'');
 }
+
+var svOpenRows={};
 
 function toggleCard(cardId){
   var card=document.getElementById(cardId);
@@ -6367,7 +6389,10 @@ function toggleCard(cardId){
 
 function toggleSvRow(bodyRowId){
   var row=document.getElementById(bodyRowId);
-  if(row) row.classList.toggle('open');
+  if(!row) return;
+  var isOpen=row.classList.toggle('open');
+  if(isOpen) svOpenRows[bodyRowId]=true;
+  else delete svOpenRows[bodyRowId];
 }
 
 // Helper: retorna cor do squad
