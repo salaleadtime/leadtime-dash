@@ -697,6 +697,12 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sv-story-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;padding:.35rem 1rem .35rem 1.6rem;border-bottom:1px solid #f8fafc}
 .sv-story-row:last-child{border-bottom:none}
 .sv-story-row:hover{background:#fafafa}
+.sv-tbl-body-row .sv-story-row{grid-template-columns:110px minmax(220px,1fr) 148px auto}
+.sv-story-sla{display:inline-flex;align-items:center;justify-content:center;min-width:132px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}
+.sv-story-sla.ok{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.sv-story-sla.overdue{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.sv-story-sla.missing{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.sv-story-sla.na{justify-content:flex-start;min-width:0;padding:0;background:transparent;color:#94a3b8;font-weight:600}
 .sv-story-key{font-family:ui-monospace,monospace;font-size:10px;color:#cc0000;text-decoration:none;font-weight:600}
 .sv-story-key:hover{text-decoration:underline}
 .sv-story-sum{font-size:11px;color:#334155;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -3221,7 +3227,26 @@ function ltStatusPill(cl){
 }
 
 // ─── SLA de Homologação ────────────────────────────────────
-var SLA_HOMOLOG_DAYS=5; // dias máximos permitidos em Homologação
+var SLA_HOMOLOG_DAYS=3; // dias úteis máximos permitidos em Homologação
+
+function homologBusinessDays(entry,today){
+  var cursor=new Date(entry.getFullYear(),entry.getMonth(),entry.getDate());
+  var end=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+  var days=0;
+  while(cursor<end){
+    cursor.setDate(cursor.getDate()+1);
+    var weekDay=cursor.getDay();
+    if(weekDay!==0&&weekDay!==6) days++;
+  }
+  return days;
+}
+
+// O SLA inicia somente quando a história está efetivamente "Em Homologação".
+// "Disponível para Homologação" ainda não consome o prazo.
+function isSlaHomologationStatus(status){
+  var s=String(status||'').toLowerCase();
+  return s.indexOf('em homolog')>=0;
+}
 
 // Retorna a data (Date) da primeira importação em que a história apareceu em Homolog.
 // Se não houver snapshot anterior, usa importedAt do snapshot atual.
@@ -3231,7 +3256,7 @@ function homologEntryDate(storyId){
     var s=sorted[i];
     var found=null;
     for(var j=0;j<s.stories.length;j++){if(s.stories[j].id===storyId){found=s.stories[j];break;}}
-    if(found&&classifySvStatus(found.status)==='homolog') return new Date(s.importedAt);
+    if(found&&isSlaHomologationStatus(found.status)) return new Date(s.importedAt);
   }
   return null;
 }
@@ -3241,8 +3266,35 @@ function homologSLA(storyId){
   var entry=homologEntryDate(storyId);
   if(!entry) return null;
   var today=new Date(); today.setHours(0,0,0,0);
-  var days=Math.floor((today-entry)/86400000);
+  var days=homologBusinessDays(entry,today);
   return {date:entry, days:days, out:days>SLA_HOMOLOG_DAYS};
+}
+
+// Reutiliza o mesmo SLA no painel de Histórias. Quando o arquivo trouxer a
+// data de entrada em Homologação, ela também serve de base na primeira importação.
+function storyHomologSLA(story){
+  var sla=homologSLA(story&&story.id);
+  if(sla) return sla;
+  var raw=story&&story.homologacaoData;
+  if(!raw) return null;
+  var entry=parseLocalDate(raw);
+  if(isNaN(entry.getTime())) return null;
+  var today=new Date(); today.setHours(0,0,0,0);
+  var days=homologBusinessDays(entry,today);
+  return {date:entry, days:days, out:days>SLA_HOMOLOG_DAYS};
+}
+
+function svStorySlaHtml(story){
+  if(!isSlaHomologationStatus(story&&story.status)){
+    return '<span class="sv-story-sla na">—</span>';
+  }
+  var sla=storyHomologSLA(story);
+  if(!sla){
+    return '<span class="sv-story-sla missing" title="Informe ou importe a data de entrada em Homologação">SLA sem data de entrada</span>';
+  }
+  var label=sla.out?'SLA vencido · '+sla.days+' DU':'SLA Homolog. · '+sla.days+'/'+SLA_HOMOLOG_DAYS+' DU';
+  var title='Em Homologação desde '+fmtShortDate(sla.date)+' · limite de '+SLA_HOMOLOG_DAYS+' dias úteis';
+  return '<span class="sv-story-sla '+(sla.out?'overdue':'ok')+'" title="'+title+'">'+label+'</span>';
 }
 
 function fmtShortDate(d){
@@ -5497,9 +5549,9 @@ function renderBacklogView(){
           var dateStr=fmtShortDate(sla.date);
           if(sla.out){
             rowCls+=' homolog-out';
-            badge='<span class="bk-badge-homolog-out">⚠️ Homolog · '+sla.days+'d<span class="bk-sla-date">desde '+dateStr+'</span></span>';
+            badge='<span class="bk-badge-homolog-out">⚠️ Homolog · '+sla.days+' DU<span class="bk-sla-date">desde '+dateStr+'</span></span>';
           } else {
-            badge='<span class="bk-badge-homolog-ok">🔬 Homolog · '+sla.days+'d<span class="bk-sla-date">desde '+dateStr+'</span></span>';
+            badge='<span class="bk-badge-homolog-ok">🔬 Homolog · '+sla.days+' DU<span class="bk-sla-date">desde '+dateStr+'</span></span>';
           }
         } else {
           badge='<span class="bk-badge-homolog-ok">🔬 Homolog</span>';
@@ -5522,7 +5574,7 @@ function renderBacklogView(){
         return homologSLAMap[id].out?Math.max(m,homologSLAMap[id].days):m;
       },0);
       slaAlertHtml='<div class="bk-sla-alert">'+
-        '⚠️ <strong>'+homologOut+'</strong> história'+(homologOut!==1?'s':'')+' em Homologação fora do SLA (máx. '+maxDays+'d · limite '+SLA_HOMOLOG_DAYS+'d)'+
+        '⚠️ <strong>'+homologOut+'</strong> história'+(homologOut!==1?'s':'')+' em Homologação fora do SLA (máx. '+maxDays+' DU · limite '+SLA_HOMOLOG_DAYS+' DU)'+
       '</div>';
     }
 
@@ -6228,6 +6280,7 @@ function svEpicRow(ep,stories){
     return '<div class="sv-story-row">'+
       '<a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
       '<span class="sv-story-sum" title="'+esc(s.resumo)+'">'+esc(s.resumo)+'</span>'+
+      svStorySlaHtml(s)+
       '<span class="bdg '+stCls+'">'+esc(s.status)+'</span>'+
     '</div>';
   }).join('');
