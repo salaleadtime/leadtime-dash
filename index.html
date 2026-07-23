@@ -1489,7 +1489,6 @@ body{min-height:100vh}
     <button class="chip" data-f="s" data-v="Em Execução">Em Execução</button>
     <button class="chip" data-f="s" data-v="Concluído">Concluído</button>
     <button class="chip" data-f="s" data-v="Executado">Executado</button>
-    <button class="chip" data-f="s" data-v="Cancelado">Cancelados</button>
     <div class="fsep"></div>
     <span class="fl">Squad:</span>
     <select class="fsel" id="sqF"><option value="all">Todas</option></select>
@@ -2670,6 +2669,16 @@ function isValidIsoDate(value){
   return !isNaN(d.getTime()) && d.toISOString().slice(0,10) === value;
 }
 function isCancelled(rec){ return !!rec && String(rec.status||'').trim()==='Cancelado'; }
+// Uma história sem épico conhecido continua elegível. Quando o épico existe no
+// painel, porém, Cancelado e concluído ficam restritos à aba Medição.
+function isStoryEpicVisible(epicId){
+  var rec=allData.find(function(r){return r.id===epicId;});
+  if(!rec) return true;
+  return !isCancelled(rec) && !isValidDate(rec.fim);
+}
+function visibleStoryRows(stories){
+  return (stories||[]).filter(function(s){ return isStoryEpicVisible(s&&s.epic); });
+}
 function activeEpics(){
   return allData.filter(function(r){ return !isCancelled(r) && !isValidDate(r.fim); });
 }
@@ -3807,7 +3816,7 @@ function closeHealthPanel(){
 }
 
 function renderKPI(){
-  var t=allData.length;
+  var t=allData.filter(function(r){return !isCancelled(r);}).length;
   if(!t){$id('kpiRow').innerHTML='';return;}
   var tri=getCurrentTrimester();
   var triEpics=allData.filter(function(r){return !isCancelled(r)&&inTrimester(r.fim,tri);});
@@ -3833,7 +3842,7 @@ function renderSquads(){
   var prev=getPrevTrimester();
   var triEpics=allData.filter(function(r){return !isCancelled(r)&&inTrimester(r.fim,tri);});
   var prevEpics=allData.filter(function(r){return !isCancelled(r)&&inTrimester(r.fim,prev);});
-  var squads=Array.from(new Set(allData.map(function(r){return r.squad;}))).filter(Boolean).sort();
+  var squads=Array.from(new Set(allData.filter(function(r){return !isCancelled(r);}).map(function(r){return r.squad;}))).filter(Boolean).sort();
   var colors={'Guardiões':'#7c3aed','Contact':'#2563eb','Expresso':'#16a34a','Interestelar':'#d97706','Inception':'#ea580c','TopGun':'#0891b2','MadMax':'#e11d48','Terminator':'#4f46e5'};
   $id('squadCards').innerHTML=squads.map(function(sq){
     var items=triEpics.filter(function(r){return r.squad===sq;});
@@ -4359,7 +4368,7 @@ function closeImpLock(success){
 }
 
 function populateSqF(){
-  var fromData=allData.map(function(r){return r.squad;}).filter(Boolean);
+  var fromData=allData.filter(function(r){return !isCancelled(r);}).map(function(r){return r.squad;}).filter(Boolean);
   var sq=Array.from(new Set(ALL_SQUADS.concat(fromData))).sort();
   var sel=$id('sqF'), cur=filt.sq;
   var opts='<option value="all">Todas</option>'+sq.map(function(s){return '<option value="'+esc(s)+'"'+(s===cur?' selected':'')+'>'+esc(s)+'</option>';}).join('');
@@ -4592,10 +4601,10 @@ function updateTabCounts(){
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
   var svEl=$id('tabCtSv');
-  var visibleStoryCount=allStories.filter(function(s){return isStoryEpicVisible(s.epic);}).length;
+  var visibleStoryCount=visibleStoryRows(allStories).length;
   if(svEl) svEl.textContent=visibleStoryCount||'';
   var bkEl=$id('tabCtBk');
-  if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?snapStoryCount(bkCurSnap):0; bkEl.textContent=bkCur||''; }
+  if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?visibleStoryRows(bkCurSnap.stories).length:0; bkEl.textContent=bkCur||''; }
   var emEl=$id('tabCtEm');
   if(emEl){ var emCount=getEmergencyStories().length; emEl.textContent=emCount||''; }
 }
@@ -4760,7 +4769,7 @@ function renderRiskNotifPanel(){
 // ═══════════════════════════════════════
 function renderRoadmapTab(){
   var root=$id('rdInner'); if(!root) return;
-  var stories=window.allStories||[];
+  var stories=visibleStoryRows(window.allStories||[]);
   var totalStories=stories.length;
   // Squad breakdown from stories
   var squadCnt={};
@@ -5545,12 +5554,15 @@ function renderBacklogView(){
   sortBacklogSnaps();
   var cur=getCurrentBacklogSnapshot();
   var prev=getPreviousBacklogSnapshot();
-  var stories=(cur&&Array.isArray(cur.stories))?cur.stories:[];
+  var stories=visibleStoryRows((cur&&Array.isArray(cur.stories))?cur.stories:[]);
+  var prevStories=visibleStoryRows((prev&&Array.isArray(prev.stories))?prev.stories:[]);
 
   // Aviso quando o snapshot mais recente (por data) tem menos histórias que o maior
   // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
-  var maxKnown=maxBacklogStoryCount(backlogSnaps);
-  var curCount=snapStoryCount(cur);
+  var maxKnown=backlogSnaps.reduce(function(max,snap){
+    return Math.max(max,visibleStoryRows(snap&&snap.stories).length);
+  },0);
+  var curCount=stories.length;
   var _bkWarnDismissed=(function(){ try{ return storageGet('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
   var staleWarningHtml='';
   if(maxKnown>curCount && !_bkWarnDismissed){
@@ -5564,7 +5576,7 @@ function renderBacklogView(){
   // Count per squad
   var curSquadCnt={}, prevSquadCnt={};
   stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
-  if(prev) prev.stories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
+  if(prev) prevStories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
 
   var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
   var totalBacklog=stories.length;
@@ -5575,11 +5587,11 @@ function renderBacklogView(){
   if(prev&&Array.isArray(prev.stories)&&prev.stories.length){
     var curIds={};
     stories.forEach(function(s){ if(s.id) curIds[s.id]=true; });
-    exitedBacklog=prev.stories.filter(function(s){ return s.id&&!curIds[s.id]; }).length;
+    exitedBacklog=prevStories.filter(function(s){ return s.id&&!curIds[s.id]; }).length;
   }
 
   // Global delta
-  var totalDelta=prev!==null?totalBacklog-prev.stories.length:null;
+  var totalDelta=prev!==null?totalBacklog-prevStories.length:null;
   var globalDeltaHtml='';
   if(totalDelta!==null){
     if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
@@ -5593,11 +5605,13 @@ function renderBacklogView(){
     var last5=backlogSnaps.slice(-5);
     var chips=last5.map(function(snap,idx){
       var isCur=idx===last5.length-1;
-      var delta=idx>0?(snap.stories.length-last5[idx-1].stories.length):null;
+      var snapCount=visibleStoryRows(snap.stories).length;
+      var previousCount=idx>0?visibleStoryRows(last5[idx-1].stories).length:0;
+      var delta=idx>0?(snapCount-previousCount):null;
       var deltaStr=delta===null?'':(delta>0?'<span style="color:#dc2626;font-size:9px">▲'+delta+'</span>':(delta<0?'<span style="color:#16a34a;font-size:9px">▼'+Math.abs(delta)+'</span>':''));
       return '<div class="bk-hist-chip'+(isCur?' bk-hist-chip-cur':'')+'">'+
         '<span class="bk-hist-chip-seq">#'+snap.seq+'</span>'+
-        '<span class="bk-hist-chip-cnt">'+snap.stories.length+'</span>'+
+        '<span class="bk-hist-chip-cnt">'+snapCount+'</span>'+
         (deltaStr?deltaStr:'')+
       '</div>';
     });
@@ -5629,7 +5643,7 @@ function renderBacklogView(){
     if(backlogSnaps.length>1){
       var snapSlice=backlogSnaps.slice(-10);
       var snapCounts=snapSlice.map(function(snap){
-        return snap.stories.filter(function(s){return s.squad===sq;}).length;
+        return visibleStoryRows(snap.stories).filter(function(s){return s.squad===sq;}).length;
       });
       var maxC=Math.max.apply(null,snapCounts)||1;
       var curVal=snapCounts[snapCounts.length-1];
@@ -5883,7 +5897,7 @@ function getEmergencySourceStories(){
   return Object.keys(map).map(function(k){return map[k];}).filter(function(s){
     var st=emNorm(s.status);
     var inProduction=st==='producao'||st==='em producao'||st.indexOf('deploy/producao')>=0||st.indexOf('deploy producao')>=0;
-    return st.indexOf('conclu')<0&&st.indexOf('cancel')<0&&!inProduction&&st.indexOf('homologada')<0;
+    return isStoryEpicVisible(s.epic)&&st.indexOf('conclu')<0&&st.indexOf('cancel')<0&&!inProduction&&st.indexOf('homologada')<0;
   });
 }
 function emRuleMatches(story,rule){
@@ -6206,14 +6220,6 @@ function isNearDelivery(stories){
   return blocking===0&&near>0;
 }
 
-function isStoryEpicVisible(epicId){
-  var rec=allData.find(function(r){return r.id===epicId;});
-  if(!rec) return true;
-  if(isValidDate(rec.fim)) return false;
-  var status=stripAcc(normalizeStatus(rec.status)).toLowerCase();
-  return status.indexOf('concluid')<0;
-}
-
 // ─── Renderiza aba Estórias por Épico ──────────────────────
 function renderStoryView(){
   var svSq=$id('svSqF');
@@ -6222,7 +6228,7 @@ function renderStoryView(){
   var faseFilter=svFase?svFase.value:'all';
   var activeStoryEpics=allData.filter(function(r){return isStoryEpicVisible(r.id);});
   var activeStoryEpicIds=activeStoryEpics.map(function(r){return r.id;});
-  var visibleStories=allStories.filter(function(s){return isStoryEpicVisible(s.epic);});
+  var visibleStories=visibleStoryRows(allStories);
 
   // Populate squad dropdown from active epics/stories only.
   var allSquads=Array.from(new Set(
@@ -8185,7 +8191,8 @@ function calSeedExample(){
 
   function renderDashboardPremium(){
     var root=$id('dbContent'); if(!root) return;
-    var data=window.allData||[];
+    var data=(window.allData||[]).filter(function(r){ return !isCancelled(r); });
+    var visibleStories=visibleStoryRows(window.allStories||[]);
     var META=window.META||62;
     var tri=getCurrentTrimester();
     var measured=measuredEpics();
@@ -8197,13 +8204,14 @@ function calSeedExample(){
     var naMeta=triMeasured.filter(function(r){return r.lt<META;}).length;
     var pctMeta=delivered?pct(naMeta,delivered):0;
     var crit=data.filter(function(r){return !isCancelled(r) && r.lt>=META;}).length;
-    var noEstimate = (window.allStories||[]).filter(function(s){ var pts = s.pts || s.pontos || s.estimativa || s.estimate || ''; return !String(pts||'').trim(); }).length;
-    if(!window.allStories || !window.allStories.length) noEstimate = active.filter(function(r){ return !r.dataPrevista; }).length;
+    var noEstimate = visibleStories.filter(function(s){ var pts = s.pts || s.pontos || s.estimativa || s.estimate || ''; return !String(pts||'').trim(); }).length;
+    if(!visibleStories.length) noEstimate = active.filter(function(r){ return !r.dataPrevista; }).length;
     var backlogSnaps=window.backlogSnaps||[];
     var getCurrentBacklogSnapshot=window.getCurrentBacklogSnapshot||function(){return null;};
     var snapStoryCount=window.snapStoryCount||function(){return 0;};
-    var backlogTotal = backlogSnaps && backlogSnaps.length ? (getCurrentBacklogSnapshot() ? snapStoryCount(getCurrentBacklogSnapshot()) : 0) : 0;
-    var refined = window.allStories && window.allStories.length ? window.allStories.length : backlogTotal;
+    var currentBacklog=getCurrentBacklogSnapshot();
+    var backlogTotal = backlogSnaps && backlogSnaps.length && currentBacklog ? visibleStoryRows(currentBacklog.stories).length : 0;
+    var refined = visibleStories.length || backlogTotal;
     var dependencies = active.filter(function(r){ return String(r.impedimento||'').trim(); }).length;
     var hero = [
       {v:delivered,l:'Entregues'}, {v:(avgTri||'—')+(avgTri?'d':''),l:'LT médio'}, {v:(delivered?pctMeta+'%':'—'),l:'Na meta'}, {v:crit,l:'Críticos'}
@@ -8680,7 +8688,7 @@ function calSeedExample(){
   };
 
   function admCarregarDados(){
-    var data = (typeof allData !== 'undefined') ? allData : [];
+    var data = (typeof allData !== 'undefined') ? allData.filter(function(r){ return !isCancelled(r); }) : [];
     var total = data.length;
     var conc = data.filter(function(r){ return r.status==='Concluído'; }).length;
     var meta = parseInt(storageGet('sala_meta_dias') || '62');
@@ -8707,11 +8715,12 @@ function calSeedExample(){
   };
 
   function admCarregarEpicos(){
-    var data = (typeof allData !== 'undefined') ? allData : [];
+    var data = (typeof allData !== 'undefined') ? allData.map(function(r,i){return {r:r,i:i};}).filter(function(item){return !isCancelled(item.r);}) : [];
     var meta = parseInt(storageGet('sala_meta_dias') || '62');
     document.getElementById('admEpCount').textContent = '— ' + data.length + ' épicos';
     var html = '';
-    data.forEach(function(r, i){
+    data.forEach(function(item){
+      var r=item.r, i=item.i;
       var lt = r.lt || 0;
       var cls = lt >= meta ? 'adm-lt-r' : (lt >= 40 ? 'adm-lt-a' : 'adm-lt-g');
       html += '<tr>' +
