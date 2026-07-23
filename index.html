@@ -736,7 +736,7 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .bk-squad-card.open .bk-squad-body{display:block}
 .bk-squad-hd{display:flex;flex-direction:column;gap:4px;padding:.7rem .9rem .6rem;cursor:pointer;user-select:none}
 .bk-squad-hd:hover{background:#fafafa}
-.bk-squad-hd-row1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bk-squad-hd-row1{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .bk-squad-hd-row2{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:16px}
 .bk-squad-arrow{display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;font-size:9px;flex-shrink:0}
 .bk-squad-card.open .bk-squad-arrow{transform:rotate(90deg);color:#475569}
@@ -754,6 +754,9 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .bk-spark-row{display:flex;align-items:flex-end;gap:2px;margin-top:5px;height:20px}
 .bk-spark-bar{width:6px;border-radius:2px 2px 0 0;flex-shrink:0;transition:height .3s}
 .bk-spark-lbl{font-size:9px;color:#94a3b8;margin-left:4px;align-self:center}
+.bk-st-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.bk-st-pill{display:inline-flex;align-items:center;gap:3px;font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:20px;white-space:nowrap;line-height:1.4}
+.bk-st-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 
 /* ── Qtd Story/Épicos — tabela discreta ── */
 .sv-tbl-wrap{background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(15,23,42,.04)}
@@ -5342,6 +5345,19 @@ function renderBacklogView(){
       '</div>';
     }
 
+    // Agrupa histórias por status classificado
+    var stCounts={};
+    sqStories.forEach(function(s){
+      var k=classifySvStatus(s.status);
+      stCounts[k]=(stCounts[k]||0)+1;
+    });
+    var stPillsHtml=SV_STATUS.filter(function(st){return stCounts[st.key]>0;}).map(function(st){
+      return '<span class="bk-st-pill" style="background:'+st.color+'22;border:1px solid '+st.color+'55;color:'+st.color+'">'+
+        '<span class="bk-st-dot" style="background:'+st.color+'"></span>'+
+        st.label+' <strong>'+stCounts[st.key]+'</strong>'+
+      '</span>';
+    }).join('');
+
     var rows=sqStories.map(function(s){
       var ref=isRefined(s);
       var badge=ref
@@ -5357,7 +5373,10 @@ function renderBacklogView(){
     return '<div class="bk-squad-card" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
       '<div class="bk-squad-hd" onclick="toggleCard(\''+cardId+'\')">'+
         '<div class="bk-squad-hd-row1">'+
-          '<span class="bk-squad-name">'+esc(sq)+'</span>'+
+          '<div>'+
+            '<span class="bk-squad-name">'+esc(sq)+'</span>'+
+            (stPillsHtml?'<div class="bk-st-pills">'+stPillsHtml+'</div>':'')+
+          '</div>'+
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">'+
             '<span class="bk-squad-cnt">'+cnt+'</span>'+
             '<span class="bk-squad-sub">histórias</span>'+
