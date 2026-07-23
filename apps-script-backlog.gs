@@ -1,19 +1,36 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
- * v9 — doGet aguarda o lock de escrita antes de ler (evita ler planilha a
- * meio de um clearContents()+setValues()) e devolve JSON de erro como o
- * doPost em vez da página de erro padrão do Apps Script. saveBacklog
- * continua mesclando por id/seq (mergeSnaps_); saveStories e saveVpData
- * seguem sendo overwrite puro — quem grava por último decide o conteúdo
- * daquela chave, sem merge.
+ * v10 — exige token compartilhado em toda ação (ver checkToken_/API_TOKEN);
+ * doGet aguarda o lock de escrita antes de ler (evita ler planilha a meio
+ * de um clearContents()+setValues()) e devolve JSON de erro como o doPost
+ * em vez da página de erro padrão do Apps Script. saveBacklog continua
+ * mesclando por id/seq (mergeSnaps_); saveStories e saveVpData seguem
+ * sendo overwrite puro — quem grava por último decide o conteúdo daquela
+ * chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-23-backlog-sheet-chunks-v9';
+var BACKLOG_SCRIPT_VERSION = '2026-07-23-backlog-sheet-chunks-v10';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
 var CHUNK_SIZE = 45000;
 var MAX_PAYLOAD_CHARS = 4000000;
+
+// Token compartilhado: barra bots/scanners que acham esta URL sem nunca abrir
+// um dos dashboards (que embutem o mesmo token em toda chamada). Não é uma
+// autenticação real — quem vir o código-fonte do dashboard vê o token — só
+// filtra tráfego automatizado que não passa pela página.
+// Configure em Extensões → Propriedades do script → API_TOKEN, com o MESMO
+// valor que está em BK_GAS_TOKEN/_VP_GAS_TOKEN/DISC_GAS_TOKEN nos 3 dashboards.
+// Enquanto a propriedade não existir, a checagem fica desligada (não quebra
+// nada logo após colar esta versão) — só passa a valer depois de configurada.
+var API_TOKEN_PROPERTY = 'API_TOKEN';
+
+function checkToken_(e) {
+  var required = PropertiesService.getScriptProperties().getProperty(API_TOKEN_PROPERTY);
+  if (!required) return true;
+  return getParam_(e, 'token') === required;
+}
 
 var VP_SHEET_MAP = {
   vpGeral:      '_vp_geral',
@@ -47,6 +64,7 @@ function doGet(e) {
   // JSONP esperado pelo cliente (_gasJsonp), em vez de um erro sem callback.
   var callback = getSafeCallback_(getParam_(e, 'callback'));
   try {
+    if (!checkToken_(e)) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'não autorizado' }, callback);
     var action = getParam_(e, 'action');
 
     if (action === 'health') {
@@ -126,6 +144,7 @@ function withLock_(fn) {
 
 function doPost(e) {
   try {
+    if (!checkToken_(e)) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'não autorizado' });
     var action = getParam_(e, 'action');
 
     if (action === 'saveBacklog') {
