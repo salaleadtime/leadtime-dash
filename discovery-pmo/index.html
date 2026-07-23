@@ -10152,10 +10152,6 @@
     // Sem isso, cada usuário só enxerga as próprias edições (tudo ficava só no localStorage
     // do navegador). Guarda a base inteira sob uma chave própria no mesmo Web App do GAS.
     const DISC_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
-    // Token compartilhado só barra bots/scanners que acham a URL do Apps Script sem
-    // nunca abrir o dashboard — não é segredo real (fica no código-fonte do cliente).
-    // Precisa bater com a Propriedade do Script API_TOKEN no Apps Script publicado.
-    const DISC_GAS_TOKEN = '4cfa7e806a2a5202240c13ffa0065874c1c67888b1bce0be';
     const DISC_GAS_KEY = 'discoveryPmo';
     let _discGasSaving = false;
     let _discGasSaveTimer = null;
@@ -10180,7 +10176,7 @@
         delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
         cb('script error');
       };
-      script.src = url + '&token=' + encodeURIComponent(DISC_GAS_TOKEN) + '&callback=' + name;
+      script.src = url + '&callback=' + name;
       document.head.appendChild(script);
     }
 
@@ -10199,7 +10195,7 @@
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'action=saveVpData&key=' + DISC_GAS_KEY + '&payload=' + encodeURIComponent(JSON.stringify(payload)) + '&token=' + encodeURIComponent(DISC_GAS_TOKEN)
+        body: 'action=saveVpData&key=' + DISC_GAS_KEY + '&payload=' + encodeURIComponent(JSON.stringify(payload))
       }).catch(() => {});
     }
 
