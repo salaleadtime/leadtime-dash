@@ -17,6 +17,7 @@ var VP_SHEET_MAP = {
   vpOpUpdates:  '_vp_opupdates',
   vpQuickNotes: '_vp_quicknotes',
   vpEpicMeta:   '_vp_epic_meta',
+  emergencyDemand: '_emergency_demand',
   discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
 };
 

@@ -1410,6 +1410,7 @@ body{min-height:100vh}
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
+  <button class="tabbt" id="tab-em" onclick="goTab('em',this)">🚨 Demandas Emergenciais <span class="tab-ct" id="tabCtEm"></span></button>
   <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
   <button class="tabbt" id="tab-rd" onclick="goTab('rd',this)">🗺️ Roadmap <span class="tab-ct" id="tabCtRd" style="background:#0052cc;color:#fff"></span></button>
 </nav>
@@ -1963,6 +1964,21 @@ tr:nth-child(even):hover td,
   .top .tbtn span{ display:inline!important; }
 }
 
+/* ══ DEMANDAS EMERGENCIAIS ══ */
+.em-wrap{max-width:1800px;margin:0 auto;padding:18px 20px 32px}
+.em-toolbar,.em-section-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.em-toolbar{margin-bottom:14px}.em-section-hd{align-items:center;margin:18px 0 9px}
+.em-section-hd h2{margin:0;font-size:15px;color:#172033}.em-muted{font-size:11px;color:#7b8798}
+.em-controls{display:flex;align-items:flex-end;gap:7px;flex-wrap:wrap}.em-field{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;color:#667085;text-transform:uppercase;letter-spacing:.04em}
+.em-select,.em-input,.em-textarea{border:1px solid #dbe2ec;border-radius:7px;background:#fff;color:#1f2937;font:inherit;font-size:12px;padding:7px 9px;min-height:34px}.em-select:focus,.em-input:focus,.em-textarea:focus{outline:2px solid #bfd7ff;border-color:#4f8fe8}.em-textarea{min-height:62px;resize:vertical;text-transform:none;letter-spacing:0}
+.em-btn{border:1px solid #dbe2ec;border-radius:7px;background:#fff;color:#526174;font-size:11px;font-weight:700;padding:7px 10px;cursor:pointer}.em-btn:hover{background:#f6f8fb}.em-btn.primary{background:#7a0000;border-color:#7a0000;color:#fff}.em-btn.ghost{border-color:transparent;background:transparent;color:#667085;padding-left:6px;padding-right:6px}
+.em-rule-box,.em-editor{background:#fff;border:1px solid #e4e9f1;border-radius:10px;padding:12px;margin-bottom:14px}.em-rule-grid,.em-editor-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}.em-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:10px}
+.em-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.em-kpi{background:#f7f8fa;border:1px solid #edf0f4;border-radius:12px;padding:13px 14px}.em-kpi small{display:block;color:#7b8798;font-size:11px}.em-kpi strong{display:block;color:#151b26;font-size:22px;line-height:1.15;margin:5px 0}.em-kpi span{font-size:11px;color:#475467}
+.em-brief{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}.em-brief-row{display:grid;grid-template-columns:104px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid #edf0f4;font-size:12px}.em-brief-row b{color:#344054}.em-brief-row span{color:#475467}
+.em-rule-note{border-left:3px solid #2f7de1;padding:7px 10px;margin:9px 0 15px;font-size:11px;color:#475467}.em-badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:700;white-space:nowrap;background:#eef2f7;color:#475467}.em-badge.green{background:#dcfce7;color:#166534}.em-badge.amber{background:#fef3c7;color:#92400e}.em-badge.red{background:#fee2e2;color:#991b1b}.em-badge.blue{background:#dbeafe;color:#1e40af}.em-badge.violet{background:#ede9fe;color:#5b21b6}
+.em-table-wrap{overflow-x:auto;border:1px solid #e4e9f1;border-radius:10px;background:#fff}.em-table{width:100%;border-collapse:collapse;min-width:1180px;font-size:11px}.em-table th{background:#f7f9fc;color:#667085;text-transform:uppercase;letter-spacing:.04em;font-size:9px;text-align:left;padding:9px 10px;white-space:nowrap}.em-table td{padding:10px;border-top:1px solid #edf0f4;vertical-align:top;color:#344054}.em-table tr:hover td{background:#fafbfe}.em-story{min-width:230px}.em-story a{font-weight:800;color:#a0001d;text-decoration:none}.em-story-title{display:block;margin-top:3px;line-height:1.35}.em-labels{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}.em-label{font-size:9px;border-radius:999px;padding:2px 6px;background:#eef2f7;color:#667085}.em-comment{min-width:170px;max-width:240px;white-space:normal}.em-nowrap{white-space:nowrap}.em-edit{font-size:10px;padding:4px 7px}.em-alert{color:#991b1b;font-weight:700}.em-history{margin-top:10px;border-top:1px solid #edf0f4;padding-top:8px}.em-history-row{display:grid;grid-template-columns:90px 1fr;gap:8px;padding:4px 0;font-size:11px;color:#475467}.em-empty{padding:40px 20px;text-align:center;color:#7b8798}.em-count{background:#7a0000;color:#fff!important}
+@media(max-width:900px){.em-rule-grid,.em-editor-grid,.em-kpis,.em-brief{grid-template-columns:1fr}.em-brief-row{grid-template-columns:90px 1fr}}
+
 </style>
 <div class="pane" id="pane-db">
 <div class="db" id="dbContent">
@@ -2053,6 +2069,11 @@ tr:nth-child(even):hover td,
     </div>
   </div>
 
+</div>
+
+<!-- ══ DEMANDAS EMERGENCIAIS PANE ══ -->
+<div class="pane" id="pane-em">
+  <div class="em-wrap" id="emContent"></div>
 </div>
 
 <!-- ══ CALENDÁRIO PANE ══ -->
@@ -2261,6 +2282,11 @@ var STORIES_KEY='leadtime_sala_v8_stories';
 var STORY_LIMIT=12;
 var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
 var backlogSnaps=[];
+var EMERGENCY_KEY='leadtime_sala_emergency_v1';
+var EMERGENCY_CLOUD_KEY='emergencyDemand';
+var emergencyState={rules:[],meta:{}};
+var emergencyRuleId='credito-rural';
+var emergencyEditingId='';
 var stFilt={epic:'all',status:'all'};
 var medFilt={squad:'all',dateFrom:'',dateTo:''};
 var medTriChip=0; // 0=nenhum, 1-4=trimestre ativo
@@ -2277,7 +2303,7 @@ function loadTab(){
   try{ return storageGet(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal'||id==='rd') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='em'||id==='cal'||id==='rd') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -3218,6 +3244,7 @@ function goTab(id,btn){
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
+  else if(id==='em') renderEmergencyView();
   else if(id==='cal') renderCalendar();
   else if(id==='rd') renderRoadmapTab();
   updateTabCounts();
@@ -3242,6 +3269,7 @@ function activateTab(id){
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
+  else if(id==='em') renderEmergencyView();
   else if(id==='cal') renderCalendar();
   else if(id==='rd') renderRoadmapTab();
   updateTabCounts();
@@ -3251,7 +3279,7 @@ function activateTab(id){
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal'||id==='rd')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='em'||id==='cal'||id==='rd')?'none':'flex';
 }
 
 
@@ -4363,6 +4391,8 @@ function updateTabCounts(){
   }
   var bkEl=$id('tabCtBk');
   if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?snapStoryCount(bkCurSnap):0; bkEl.textContent=bkCur||''; }
+  var emEl=$id('tabCtEm');
+  if(emEl){ var emCount=getEmergencyStories().length; emEl.textContent=emCount||''; }
 }
 
 // ═══════════════════════════════════════
@@ -4445,6 +4475,7 @@ function doRefresh(){
   if(BK_GAS_URL){
     try{ gasLoadBacklog(function(err,n){ if(!err && n>0) renderBacklogView(); }); }catch(e){}
     try{ gasLoadStories(function(){}); }catch(e){}
+    try{ emLoadCloud(); }catch(e){}
   }
 
   var btn=document.querySelector('.tbtn[onclick="doRefresh()"]');
@@ -4664,7 +4695,7 @@ function detectStoriesFormat(wb){
       var hasChave=cells.some(function(c){return isChaveCol(c)||c==='id';});
       var hasLink=cells.some(function(c){return isEpicCol(c)||isParentCol(c);});
       if(hasChave&&hasLink){
-        var map={id:-1,epic:-1,parent:-1,epicName:-1,resumo:-1,status:-1,squad:-1,criado:-1,tipo:-1};
+        var map={id:-1,epic:-1,parent:-1,epicName:-1,resumo:-1,status:-1,squad:-1,criado:-1,atualizado:-1,tipo:-1,sprint:-1,estimativa:-1,prazo:-1,homologacaoData:-1,responsavel:-1,labelsIdx:[]};
         // id: prioriza Chave/Issue key/Key; só cai em "ID" (numérico interno) se não houver chave
         cells.forEach(function(c,j){ if(map.id<0&&isChaveCol(c)) map.id=j; });
         if(map.id<0) cells.forEach(function(c,j){ if(map.id<0&&c==='id') map.id=j; });
@@ -4678,6 +4709,13 @@ function detectStoriesFormat(wb){
           else if(map.status<0&&(c.indexOf('situacao')>=0||c==='status'||c.indexOf('estado')>=0)) map.status=j;
           else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('equipe')>=0||c==='time')) map.squad=j;
           else if(map.criado<0&&(c.indexOf('criado')>=0||c.indexOf('created')>=0)) map.criado=j;
+          else if(map.atualizado<0&&(c.indexOf('atualizado')>=0||c.indexOf('updated')>=0)) map.atualizado=j;
+          else if(map.sprint<0&&c.indexOf('sprint')>=0) map.sprint=j;
+          else if(map.estimativa<0&&(c.indexOf('estimativa')>=0||c.indexOf('story point')>=0||c.indexOf('original estimate')>=0||c.indexOf('horas estimadas')>=0)) map.estimativa=j;
+          else if(map.prazo<0&&(c==='prazo'||c.indexOf('data limite')>=0||c.indexOf('due date')>=0)) map.prazo=j;
+          else if(map.homologacaoData<0&&c.indexOf('homolog')>=0&&(c.indexOf('data')>=0||c.indexOf('entrada')>=0||c.indexOf('inicio')>=0)) map.homologacaoData=j;
+          else if(map.responsavel<0&&(c.indexOf('responsavel')>=0||c.indexOf('assignee')>=0||c.indexOf('atribu')>=0)) map.responsavel=j;
+          else if(c.indexOf('rotulo')>=0||c.indexOf('label')>=0) map.labelsIdx.push(j);
           else if(map.tipo<0&&(c.indexOf('tipo')>=0||c.indexOf('type')>=0)) map.tipo=j;
         });
         if(map.id>=0&&(map.epic>=0||map.parent>=0)) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
@@ -4747,7 +4785,14 @@ function loadStoriesXlsx(file){
         var status=m.status>=0?(row[m.status]||'').toString().trim():'';
         var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
         var criado=m.criado>=0?parseD(row[m.criado]):null;
-        stories.push({id:id,epic:epic,epicName:epicName,resumo:resumo,status:status,squad:squad,criado:criado});
+        var atualizado=m.atualizado>=0?parseD(row[m.atualizado]):null;
+        var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
+        var estimativa=m.estimativa>=0?(row[m.estimativa]||'').toString().trim():'';
+        var prazo=m.prazo>=0?parseD(row[m.prazo]):null;
+        var homologacaoData=m.homologacaoData>=0?parseD(row[m.homologacaoData]):null;
+        var responsavel=m.responsavel>=0?(row[m.responsavel]||'').toString().trim():'';
+        var labels=m.labelsIdx.length?m.labelsIdx.map(function(li){return(row[li]||'').toString().trim();}).filter(Boolean).join(' | '):'';
+        stories.push({id:id,epic:epic,epicName:epicName,resumo:resumo,status:status,squad:squad,criado:criado,atualizado:atualizado,sprint:sprint,estimativa:estimativa,prazo:prazo,homologacaoData:homologacaoData,responsavel:responsavel,labels:labels});
       }
       if(m.status<0){
         toast('⚠️ Coluna de status não encontrada',
@@ -5105,7 +5150,7 @@ function detectBacklogFormat(wb){
       var cells=row.map(function(c){return stripAcc((c||'').toString()).toLowerCase();});
       var hasChave=cells.some(function(c){return c.indexOf('chave')>=0||c==='key';});
       if(hasChave){
-        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1,labelsIdx:[]};
+        var map={id:-1,resumo:-1,status:-1,squad:-1,points:-1,sprint:-1,atualizado:-1,prazo:-1,homologacaoData:-1,responsavel:-1,labelsIdx:[]};
         cells.forEach(function(c,j){
           if(map.id<0&&(c.indexOf('chave')>=0||c==='key'||c==='chave do item')) map.id=j;
           else if(map.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
@@ -5113,6 +5158,10 @@ function detectBacklogFormat(wb){
           else if(map.squad<0&&(c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('time')>=0)) map.squad=j;
           else if(map.points<0&&(c.indexOf('story point')>=0||c.indexOf('pontos')>=0||c.indexOf('points')>=0||c.indexOf('estimativa')>=0||c.indexOf('historia point')>=0)) map.points=j;
           else if(map.sprint<0&&c.indexOf('sprint')>=0) map.sprint=j;
+          else if(map.atualizado<0&&(c.indexOf('atualizado')>=0||c.indexOf('updated')>=0)) map.atualizado=j;
+          else if(map.prazo<0&&(c==='prazo'||c.indexOf('data limite')>=0||c.indexOf('due date')>=0)) map.prazo=j;
+          else if(map.homologacaoData<0&&c.indexOf('homolog')>=0&&(c.indexOf('data')>=0||c.indexOf('entrada')>=0||c.indexOf('inicio')>=0)) map.homologacaoData=j;
+          else if(map.responsavel<0&&(c.indexOf('responsavel')>=0||c.indexOf('assignee')>=0||c.indexOf('atribu')>=0)) map.responsavel=j;
           else if(c.indexOf('rotulo')>=0||c.indexOf('label')>=0) map.labelsIdx.push(j);
         });
         if(map.id>=0) return {hrow:i,sheetName:sheetNames[s],rows:rows,map:map};
@@ -5155,11 +5204,14 @@ function loadBacklogXlsx(file){
         var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
         var pts=m.points>=0?parseFloat(row[m.points])||0:0;
         var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
+        var atualizado=m.atualizado>=0?parseD(row[m.atualizado]):null;
+        var prazo=m.prazo>=0?parseD(row[m.prazo]):null;
+        var homologacaoData=m.homologacaoData>=0?parseD(row[m.homologacaoData]):null;
+        var responsavel=m.responsavel>=0?(row[m.responsavel]||'').toString().trim():'';
         var labels=m.labelsIdx.length>0
           ? m.labelsIdx.map(function(li){return(row[li]||'').toString().trim();}).filter(Boolean).join(' ')
           : null;
-        // Guarda apenas campos usados pela view (id/resumo/squad/labels) para reduzir payload do GAS
-        stories.push({id:id,resumo:resumo,squad:squad,labels:labels});
+        stories.push({id:id,resumo:resumo,status:status,squad:squad,labels:labels,sprint:sprint,estimativa:pts||'',atualizado:atualizado,prazo:prazo,homologacaoData:homologacaoData,responsavel:responsavel});
       }
       if(!stories.length){
         toast('Nenhuma história encontrada','O arquivo não contém histórias válidas.','err');
@@ -5381,6 +5433,225 @@ function renderBacklogView(){
     historyHtml+
     '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Backlog por Squad · Importação #'+cur.seq+'</div>'+
     '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
+}
+
+// ═══════════════════════════════════════
+// DEMANDAS EMERGENCIAIS
+// Camada automática (importação) + camada manual separada por chave da história.
+// A importação nunca grava em emergencyState.meta, portanto não apaga comentários,
+// estimativas, condições operacionais ou justificativas preenchidas pelo usuário.
+// ═══════════════════════════════════════
+var _emRuleOpen=false;
+var _emCloudTimer=null;
+
+function emDefaultRule(){
+  return {id:'credito-rural',name:'Crédito Rural',type:'titleStarts',value:'Crédito Rural',active:true,updatedAt:'2026-07-22T00:00:00.000Z'};
+}
+function emEnsureState(){
+  if(!emergencyState||typeof emergencyState!=='object') emergencyState={rules:[],meta:{}};
+  if(!Array.isArray(emergencyState.rules)) emergencyState.rules=[];
+  if(!emergencyState.meta||typeof emergencyState.meta!=='object') emergencyState.meta={};
+  if(!emergencyState.rules.some(function(r){return r&&r.id==='credito-rural';})) emergencyState.rules.unshift(emDefaultRule());
+  if(!emergencyState.rules.some(function(r){return r&&r.id===emergencyRuleId;})) emergencyRuleId=emergencyState.rules[0].id;
+}
+function emLoadLocal(){
+  try{
+    var raw=storageGet(EMERGENCY_KEY);
+    if(raw) emergencyState=JSON.parse(raw)||emergencyState;
+    emergencyRuleId=storageGet(EMERGENCY_KEY+'_selected')||emergencyRuleId;
+  }catch(e){}
+  emEnsureState();
+}
+function emMergeState(incoming){
+  if(!incoming||typeof incoming!=='object') return;
+  emEnsureState();
+  var ruleMap={};
+  emergencyState.rules.forEach(function(r){if(r&&r.id)ruleMap[r.id]=r;});
+  (incoming.rules||[]).forEach(function(r){
+    if(!r||!r.id)return;
+    var local=ruleMap[r.id];
+    if(!local||String(r.updatedAt||'')>String(local.updatedAt||'')) ruleMap[r.id]=r;
+  });
+  emergencyState.rules=Object.keys(ruleMap).map(function(k){return ruleMap[k];});
+  var incomingMeta=incoming.meta||{};
+  Object.keys(incomingMeta).forEach(function(id){
+    var local=emergencyState.meta[id], remote=incomingMeta[id];
+    if(!local||String(remote&&remote.updatedAt||'')>String(local&&local.updatedAt||'')) emergencyState.meta[id]=remote;
+  });
+  emEnsureState();
+}
+function emSaveState(){
+  emEnsureState();
+  try{
+    storageSet(EMERGENCY_KEY,JSON.stringify(emergencyState));
+    storageSet(EMERGENCY_KEY+'_selected',emergencyRuleId);
+  }catch(e){}
+  clearTimeout(_emCloudTimer);
+  _emCloudTimer=setTimeout(emSaveCloud,500);
+}
+function emSaveCloud(){
+  if(!BK_GAS_URL) return;
+  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState))}).catch(function(){});
+}
+function emLoadCloud(){
+  if(!BK_GAS_URL) return;
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&t='+Date.now(),function(err,json){
+    if(err||!json||!json.ok||!json.data) return;
+    emMergeState(json.data);
+    try{storageSet(EMERGENCY_KEY,JSON.stringify(emergencyState));}catch(e){}
+    if(curTab==='em') renderEmergencyView();
+    updateTabCounts();
+  });
+}
+function emNorm(v){return stripAcc(String(v||'')).toLowerCase().trim();}
+function emSplitLabels(v){
+  if(Array.isArray(v)) return v.filter(Boolean).map(String);
+  var s=String(v||'').trim();
+  if(!s) return [];
+  var parts=s.split(/[|,;]+/).map(function(x){return x.trim();}).filter(Boolean);
+  return parts.length?parts:[s];
+}
+function emDateISO(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(typeof v==='number'&&v>20000){var d0=new Date(Date.UTC(1899,11,30)+Math.round(v)*86400000);return d0.toISOString().slice(0,10);}
+  return parseD(v)||'';
+}
+function emParseCrossHomologation(){
+  var stored=null;
+  try{stored=JSON.parse(storageGet('sala_cross_import_homologation_v1')||'null');}catch(e){}
+  var matrix=stored&&Array.isArray(stored.matrix)?stored.matrix:null;
+  if(!matrix||!matrix.length) return [];
+  var h=-1,cells=[];
+  for(var i=0;i<Math.min(8,matrix.length);i++){
+    cells=(matrix[i]||[]).map(function(x){return emNorm(x);});
+    if(cells.some(function(x){return x.indexOf('chave')>=0||x==='issue key';})){h=i;break;}
+  }
+  if(h<0) return [];
+  function idx(names){for(var a=0;a<names.length;a++){for(var j=0;j<cells.length;j++){if(cells[j]===names[a]||cells[j].indexOf(names[a])>=0)return j;}}return -1;}
+  var keyI=idx(['chave do item','issue key','chave']),sumI=idx(['resumo','summary']),statusI=idx(['situacao','status']),squadI=idx(['squad','equipe','time']),sprintI=idx(['sprint']),estimateI=idx(['horas estimadas','original estimate','estimativa']),dueI=idx(['data limite','due date','prazo']),entryI=idx(['entrada homologacao','data entrada homologacao','inicio homologacao']),respI=idx(['responsavel','assignee']);
+  var labelIs=[];cells.forEach(function(c,j){if(c.indexOf('rotulo')>=0||c.indexOf('label')>=0)labelIs.push(j);});
+  var out=[];
+  for(var r=h+1;r<matrix.length;r++){
+    var row=matrix[r]||[],id=extractJiraKey(row[keyI]);if(!id)continue;
+    out.push({id:id,resumo:sumI>=0?String(row[sumI]||''):'',status:statusI>=0?String(row[statusI]||''):'Em homologação',squad:squadI>=0?normalizeSquad(String(row[squadI]||'')):'',sprint:sprintI>=0?String(row[sprintI]||''):'',estimativa:estimateI>=0?String(row[estimateI]||''):'',prazo:dueI>=0?emDateISO(row[dueI]):'',homologacaoData:entryI>=0?emDateISO(row[entryI]):'',responsavel:respI>=0?String(row[respI]||''):'',labels:labelIs.map(function(li){return String(row[li]||'');}).filter(Boolean).join(' | ')});
+  }
+  return out;
+}
+function emMergeStory(target,source){
+  if(!source) return target;
+  Object.keys(source).forEach(function(k){var v=source[k];if(v!==undefined&&v!==null&&v!=='')target[k]=v;});
+  return target;
+}
+function getEmergencySourceStories(){
+  var map={};
+  var cur=getCurrentBacklogSnapshot();
+  ((cur&&cur.stories)||[]).forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory({id:s.id,status:'Product Backlog'},s);});
+  (allStories||[]).forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory(map[s.id]||{id:s.id},s);});
+  emParseCrossHomologation().forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory(map[s.id]||{id:s.id},s);});
+  return Object.keys(map).map(function(k){return map[k];}).filter(function(s){
+    var st=emNorm(s.status);
+    return st.indexOf('conclu')<0&&st.indexOf('cancel')<0&&st.indexOf('produc')<0&&st.indexOf('homologada')<0;
+  });
+}
+function emRuleMatches(story,rule){
+  if(!rule||rule.active===false) return false;
+  var value=emNorm(rule.value),title=emNorm(story.resumo),labels=emNorm(story.labels),squad=emNorm(story.squad);
+  if(!value) return false;
+  if(rule.type==='titleContains') return title.indexOf(value)>=0;
+  if(rule.type==='labelAny') return value.split(/[|,;]+/).some(function(v){v=v.trim();return v&&labels.indexOf(v)>=0;});
+  if(rule.type==='squad') return squad===value;
+  return title.indexOf(value)===0;
+}
+function getEmergencyStories(){
+  emEnsureState();
+  var source=getEmergencySourceStories();
+  if(emergencyRuleId==='all') return source.filter(function(s){return emergencyState.rules.some(function(r){return emRuleMatches(s,r);});});
+  var rule=emergencyState.rules.find(function(r){return r.id===emergencyRuleId;})||emergencyState.rules[0];
+  return source.filter(function(s){return emRuleMatches(s,rule);});
+}
+function emTodayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function emParseLocal(iso){if(!iso)return null;var p=String(iso).split('-');if(p.length!==3)return null;var d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d;}
+function emIsBusinessDay(d){var n=d.getDay();return n!==0&&n!==6;}
+function emAddBusinessDaysInclusive(iso,count){
+  var d=emParseLocal(iso);if(!d)return '';
+  var n=0;while(n<count){if(emIsBusinessDay(d))n++;if(n<count)d.setDate(d.getDate()+1);}
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function emBusinessDaysInclusive(fromIso,toIso){
+  var from=emParseLocal(fromIso),to=emParseLocal(toIso);if(!from||!to||from>to)return 0;
+  var n=0;while(from<=to){if(emIsBusinessDay(from))n++;from.setDate(from.getDate()+1);}return n;
+}
+function emHours(v){
+  if(v===null||v===undefined||v==='')return 0;if(typeof v==='number')return v;
+  var s=emNorm(v).replace(',','.');var days=0,hours=0,m=s.match(/([\d.]+)\s*(?:d|dia|day)/);if(m)days=parseFloat(m[1])||0;m=s.match(/([\d.]+)\s*(?:h|hora|hour)/);if(m)hours=parseFloat(m[1])||0;
+  if(days||hours)return days*8+hours;var n=parseFloat(s);return isNaN(n)?0:n;
+}
+function emForecast(story,meta){
+  var hours=emHours(meta&&meta.estimateHours!==undefined?meta.estimateHours:story.estimativa);if(!hours)return '';
+  var start=(meta&&meta.forecastStart)||story.atualizado||emTodayISO();
+  return emAddBusinessDaysInclusive(start,Math.max(1,Math.ceil(hours/8)));
+}
+function emIsHomologation(story){var s=emNorm(story.status);return s.indexOf('homolog')>=0&&s.indexOf('homologada')<0;}
+function emSla(story){
+  if(!emIsHomologation(story))return {applies:false,label:'—',cls:'',days:0,due:''};
+  var entry=story.homologacaoData||'';if(!entry)return {applies:true,missing:true,label:'Sem data de entrada',cls:'',days:0,due:''};
+  var due=emAddBusinessDaysInclusive(entry,3),today=emTodayISO(),days=emBusinessDaysInclusive(entry,today);
+  if(today>due)return {applies:true,overdue:true,label:'SLA vencido',cls:'red',days:days,due:due};
+  if(today===due)return {applies:true,dueToday:true,label:'Vence hoje',cls:'amber',days:days,due:due};
+  return {applies:true,ok:true,label:'No prazo',cls:'green',days:days,due:due};
+}
+function emFmtDate(iso){return iso?fmtD(iso):'—';}
+function emStatusClass(status){var s=emNorm(status);if(s.indexOf('homolog')>=0)return'violet';if(s.indexOf('desenvolv')>=0)return'blue';if(s.indexOf('backlog')>=0)return'green';if(s.indexOf('imped')>=0||s.indexOf('bloq')>=0)return'red';return'';}
+function emRefined(story){return isRefined(story);}
+function emSelectedRule(){return emergencyState.rules.find(function(r){return r.id===emergencyRuleId;})||emergencyState.rules[0];}
+function emRuleDescription(rule){if(!rule)return'Todas as regras ativas';var names={titleStarts:'título começa com',titleContains:'título contém',labelAny:'possui um dos Labels',squad:'Squad é'};return(names[rule.type]||names.titleStarts)+' “'+rule.value+'”';}
+
+function emSelectRule(value){emergencyRuleId=value;storageSet(EMERGENCY_KEY+'_selected',value);emergencyEditingId='';renderEmergencyView();updateTabCounts();}
+function emToggleRule(open){_emRuleOpen=(open===undefined)?!_emRuleOpen:!!open;renderEmergencyView();}
+function emSaveRule(){
+  var name=($id('emRuleName').value||'').trim(),type=$id('emRuleType').value,value=($id('emRuleValue').value||'').trim();
+  if(!name||!value){toast('Regra incompleta','Informe nome e valor da regra.','warn');return;}
+  var id='regra-'+Date.now().toString(36);emergencyState.rules.push({id:id,name:name,type:type,value:value,active:true,updatedAt:new Date().toISOString()});emergencyRuleId=id;_emRuleOpen=false;emSaveState();renderEmergencyView();updateTabCounts();toast('Regra salva',name+' já está disponível no seletor.');
+}
+function emOpenEditor(id){emergencyEditingId=id;renderEmergencyView();setTimeout(function(){var e=$id('emEditor');if(e)e.scrollIntoView({behavior:'smooth',block:'nearest'});},0);}
+function emCancelEditor(){emergencyEditingId='';renderEmergencyView();}
+function emPreviewForecast(){
+  var story=getEmergencySourceStories().find(function(s){return s.id===emergencyEditingId;});if(!story)return;
+  var existing=emergencyState.meta[story.id]||{},hours=emHours($id('emEditEstimate').value),start=existing.forecastStart||emTodayISO();
+  $id('emForecastPreview').textContent=hours?emFmtDate(emAddBusinessDaysInclusive(start,Math.max(1,Math.ceil(hours/8)))):'—';
+}
+function emSaveStory(){
+  var story=getEmergencySourceStories().find(function(s){return s.id===emergencyEditingId;});if(!story)return;
+  var old=emergencyState.meta[story.id]||{},estimate=emHours($id('emEditEstimate').value),condition=$id('emEditCondition').value,justification=$id('emEditJustification').value,comment=($id('emEditComment').value||'').trim();
+  var start=old.forecastStart||(estimate?emTodayISO():'');var forecast=estimate?emAddBusinessDaysInclusive(start,Math.max(1,Math.ceil(estimate/8))):'';
+  if(forecast&&forecast<emTodayISO()&&!justification){toast('Justificativa necessária','Selecione uma justificativa porque a data prevista já passou.','warn');return;}
+  var changed=[];if(String(old.estimateHours||'')!==String(estimate||''))changed.push('estimativa');if((old.condition||'')!==condition)changed.push('condição operacional');if((old.justification||'')!==justification)changed.push('justificativa');if((old.comment||'')!==comment)changed.push('comentário');
+  var history=Array.isArray(old.history)?old.history.slice():[];if(changed.length)history.unshift({date:new Date().toLocaleDateString('pt-BR'),text:'Atualizado: '+changed.join(', ')});
+  emergencyState.meta[story.id]={estimateHours:estimate||'',forecastStart:start,condition:condition,justification:justification,comment:comment,commentDate:comment?new Date().toLocaleDateString('pt-BR'):'',history:history.slice(0,20),updatedAt:new Date().toISOString()};
+  emergencyEditingId='';emSaveState();renderEmergencyView();toast('Demanda atualizada','Informações manuais preservadas separadamente da importação.');
+}
+function emCopySummary(){
+  var stories=getEmergencyStories(),rule=emergencyRuleId==='all'?null:emSelectedRule(),lines=['Demandas Emergenciais — '+(rule?rule.name:'Todos os conjuntos'),'Atualizado em '+new Date().toLocaleDateString('pt-BR'),''];
+  stories.forEach(function(s){var meta=emergencyState.meta[s.id]||{},fc=emForecast(s,meta),sla=emSla(s);lines.push(s.id+' — '+s.resumo+' | '+(s.status||'Sem status')+' | '+s.squad+' | previsão: '+emFmtDate(fc)+(sla.applies?' | homologação: '+sla.label:'')+(meta.comment?' | '+meta.comment:''));});
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(lines.join('\n')).then(function(){toast('Resumo copiado','Cole no corpo do e-mail ou Teams.');});}else{toast('Cópia indisponível','Use o botão Copiar Tela para gerar a imagem.','warn');}
+}
+
+function renderEmergencyView(){
+  var host=$id('emContent');if(!host)return;emEnsureState();
+  var stories=getEmergencyStories(),rule=emergencyRuleId==='all'?null:emSelectedRule(),today=emTodayISO();
+  var ruleOptions='<option value="all"'+(emergencyRuleId==='all'?' selected':'')+'>Todas as demandas emergenciais</option>'+emergencyState.rules.filter(function(r){return r.active!==false;}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===emergencyRuleId?' selected':'')+'>'+esc(r.name)+'</option>';}).join('');
+  var ruleBox=_emRuleOpen?'<div class="em-rule-box em-no-capture"><div class="em-rule-grid"><label class="em-field">Nome<input class="em-input" id="emRuleName" placeholder="Ex.: Cartões"></label><label class="em-field">Localizar por<select class="em-select" id="emRuleType"><option value="titleStarts">Início do título</option><option value="titleContains">Texto no título</option><option value="labelAny">Rótulo (Label)</option><option value="squad">Squad</option></select></label><label class="em-field">Valor<input class="em-input" id="emRuleValue" placeholder="Ex.: credito-rural"></label></div><div class="em-actions"><button class="em-btn" onclick="emToggleRule(false)">Cancelar</button><button class="em-btn primary" onclick="emSaveRule()">Salvar regra</button></div></div>':'';
+  var editor='';
+  if(emergencyEditingId){
+    var editStory=getEmergencySourceStories().find(function(s){return s.id===emergencyEditingId;});
+    if(editStory){var em=emergencyState.meta[editStory.id]||{},estimate=em.estimateHours||emHours(editStory.estimativa)||'',preview=estimate?emForecast(editStory,Object.assign({},em,{estimateHours:estimate})):'';var justifications=['','Dependência externa','Aguardando definição','Capacidade da Squad','Homologação pendente','Mudança de escopo','Impedimento técnico','Outro'];var conditions=['','Aguardando homologação','Refinamento bloqueado','Dependência externa','Impedida'];var hist=(em.history||[]).map(function(h){return'<div class="em-history-row"><b>'+esc(h.date)+'</b><span>'+esc(h.text)+'</span></div>';}).join('');editor='<div class="em-editor em-no-capture" id="emEditor"><div class="em-section-hd" style="margin-top:0"><h2>'+esc(editStory.id)+' · complementar acompanhamento</h2><span class="em-muted">Dados manuais não são substituídos pela importação</span></div><div class="em-editor-grid"><label class="em-field">Estimativa em horas<input class="em-input" id="emEditEstimate" inputmode="decimal" value="'+esc(estimate)+'" oninput="emPreviewForecast()"></label><label class="em-field">Condição operacional<select class="em-select" id="emEditCondition">'+conditions.map(function(v){return'<option value="'+esc(v)+'"'+(v===(em.condition||'')?' selected':'')+'>'+esc(v||'Sem condição adicional')+'</option>';}).join('')+'</select></label><label class="em-field">Data prevista<span class="em-input" id="emForecastPreview" style="display:flex;align-items:center">'+emFmtDate(preview)+'</span></label><label class="em-field">Justificativa se a previsão vencer<select class="em-select" id="emEditJustification">'+justifications.map(function(v){return'<option value="'+esc(v)+'"'+(v===(em.justification||'')?' selected':'')+'>'+esc(v||'Selecione quando necessário')+'</option>';}).join('')+'</select></label><label class="em-field" style="grid-column:span 2">Comentário<textarea class="em-textarea" id="emEditComment">'+esc(em.comment||'')+'</textarea></label></div><div class="em-rule-note"><b>Regra:</b> a data prevista é calculada automaticamente com base na estimativa em horas úteis.</div>'+(hist?'<div class="em-history"><b style="font-size:11px">Histórico</b>'+hist+'</div>':'')+'<div class="em-actions"><button class="em-btn" onclick="emCancelEditor()">Cancelar</button><button class="em-btn primary" onclick="emSaveStory()">Salvar</button></div></div>';}
+  }
+  var forecasts=stories.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort(),nextForecast=forecasts[0]||'';
+  var dev=stories.filter(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}).length,hom=stories.filter(emIsHomologation).length,pb=stories.filter(function(s){return emNorm(s.status).indexOf('backlog')>=0;}).length,overdue=stories.filter(function(s){var f=emForecast(s,emergencyState.meta[s.id]||{});return f&&f<today;}).length,slaLate=stories.filter(function(s){return emSla(s).overdue;}).length;
+  var latestComment='Sem alinhamento manual registrado.';stories.some(function(s){var m=emergencyState.meta[s.id]||{};if(m.comment){latestComment=m.comment+(m.commentDate?' · '+m.commentDate:'');return true;}return false;});
+  var rows=stories.map(function(s){var meta=emergencyState.meta[s.id]||{},forecast=emForecast(s,meta),sla=emSla(s),labels=emSplitLabels(s.labels),hours=meta.estimateHours||emHours(s.estimativa)||'',isLate=forecast&&forecast<today,just=meta.justification||'';var condition=meta.condition?'<div style="margin-top:4px"><span class="em-badge amber">'+esc(meta.condition)+'</span></div>':'';var slaHtml=sla.applies?'<span class="em-badge '+sla.cls+'">'+esc(sla.label)+'</span><div class="em-muted" style="margin-top:3px">'+(sla.days?esc(sla.days===1?'1 dia útil':sla.days+' dias úteis'):'')+(sla.due?' · limite '+emFmtDate(sla.due):'')+'</div>':'<span class="em-muted">Não se aplica</span>';var forecastHtml=forecast?'<b>'+emFmtDate(forecast)+'</b>':'<span class="em-alert">Sem estimativa</span>';if(isLate)forecastHtml+='<div style="margin-top:4px"><span class="em-badge red">Vencida</span></div><div class="em-muted" style="margin-top:3px">'+esc(just||'Justificativa pendente')+'</div>';return'<tr><td class="em-story"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a><span class="em-story-title">'+esc(s.resumo||'Sem resumo')+'</span>'+(labels.length?'<div class="em-labels">'+labels.slice(0,4).map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div>':'')+'<button class="em-btn em-edit em-no-capture" style="margin-top:6px" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">Editar</button></td><td class="em-nowrap">'+esc(s.squad||'—')+'</td><td><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'Sem status')+'</span>'+condition+'</td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Não refinada')+'</span></td><td>'+slaHtml+'</td><td class="em-nowrap">'+esc(s.sprint||'—')+'</td><td class="em-nowrap">'+(hours?esc(hours+'h'):'—')+'</td><td class="em-nowrap">'+forecastHtml+'</td><td class="em-comment">'+esc(meta.comment||'—')+(meta.commentDate?'<div class="em-muted">Atualizado em '+esc(meta.commentDate)+'</div>':'')+'</td></tr>';}).join('');
+  var filterDesc=rule?emRuleDescription(rule):'todas as regras ativas';
+  host.innerHTML='<div class="em-toolbar em-no-capture"><div class="em-controls"><label class="em-field">Conjunto monitorado<select class="em-select" onchange="emSelectRule(this.value)">'+ruleOptions+'</select></label><button class="em-btn ghost" onclick="emToggleRule()">+ Regra</button><button class="em-btn ghost" onclick="emCopySummary()">Copiar resumo</button></div><span class="em-muted">Filtro: '+esc(filterDesc)+'</span></div>'+ruleBox+editor+'<div class="em-section-hd"><h2>Resumo semanal</h2><span class="em-badge blue">'+esc(rule?rule.name:'Todos os conjuntos')+' · atualização '+new Date().toLocaleDateString('pt-BR')+'</span></div><div class="em-kpis"><div class="em-kpi"><small>Histórias identificadas</small><strong>'+stories.length+'</strong><span>Filtro automático por título, Squad ou Label</span></div><div class="em-kpi"><small>Em andamento</small><strong>'+(dev+hom)+'</strong><span>'+dev+' desenvolvimento · '+hom+' homologação · '+pb+' Product Backlog</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(nextForecast)+'</strong><span>'+overdue+' previsão(ões) vencida(s) · '+slaLate+' SLA(s) de homologação vencido(s)</span></div></div><div class="em-brief"><div class="em-brief-row"><b>Panorama</b><span>'+stories.length+' demanda(s), distribuída(s) em '+Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).length+' Squad(s).</span></div><div class="em-brief-row"><b>Avanços</b><span>'+dev+' em desenvolvimento, '+hom+' em homologação e '+pb+' no Product Backlog.</span></div><div class="em-brief-row"><b>Risco</b><span>'+(overdue||slaLate?(overdue+' previsão(ões) vencida(s) e '+slaLate+' SLA(s) de homologação vencido(s).'):'Nenhum prazo vencido identificado no conjunto.')+'</span></div><div class="em-brief-row"><b>Alinhamento</b><span>'+esc(latestComment)+'</span></div></div><div class="em-section-hd"><h2>Acompanhamento operacional</h2><span class="em-muted">SLA de homologação: 3 dias úteis · dados manuais preservados</span></div>'+(stories.length?'<div class="em-table-wrap"><table class="em-table"><thead><tr><th>História / Labels</th><th>Squad</th><th>Status</th><th>Refinamento</th><th>Prazo / SLA</th><th>Sprint</th><th>Estimativa</th><th>Data prevista</th><th>Comentário</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="em-empty">Nenhuma história corresponde à regra selecionada. Use <b>+ Regra</b> para cadastrar outro título, Squad ou Label.</div>');
 }
 
 // ─── Status groups para visualização de estórias ──────────
@@ -6542,6 +6813,7 @@ function captureTarget(){
   if(curTab==='me') return $id('pane-me');
   if(curTab==='sv') return $id('pane-sv');
   if(curTab==='bk') return $id('pane-bk');
+  if(curTab==='em') return $id('pane-em');
   if(curTab==='cal') return $id('calWrap');
   return $id('pane-ep');
 }
@@ -6566,6 +6838,7 @@ function captureOnClone(clonedDoc){
   // Oculta o botão flutuante na captura
   var fab=clonedDoc.getElementById('fabCap');
   if(fab) fab.style.display='none';
+  clonedDoc.querySelectorAll('.em-no-capture').forEach(function(el){el.style.display='none';});
 }
 
 var _capCanvas=null;  // guarda o último canvas capturado (para fallback de download)
@@ -6901,6 +7174,8 @@ var SEED=[
     loadStoriesLocal();
     // Restore backlog snapshots
     loadBacklogSnaps();
+    // Restore regras e complementos manuais das Demandas Emergenciais
+    emLoadLocal();
     if(backlogSnaps.length){
       sortBacklogSnaps();
       var bkLastSnap=getCurrentBacklogSnapshot();
@@ -6947,6 +7222,7 @@ var SEED=[
     // Pre-warm: dispara health check e aguarda resposta antes de carregar backlog/estórias,
     // garantindo que o cold-start do Apps Script já esteja resolvido.
     function _afterWarmup(){
+      emLoadCloud();
       gasLoadBacklog(function(err, count){
         if(!err && count>0){
           var bkN=$id('bkUpName'); if(bkN) bkN.textContent='Backlog sincronizado';
