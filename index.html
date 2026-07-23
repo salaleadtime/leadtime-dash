@@ -5308,9 +5308,11 @@ function gasLoadStories(cb){
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
     if(err){ if(cb) cb(err); return; }
     if(json && json.ok && Array.isArray(json.stories)){
-      // Servidor vazio mas temos estórias locais: NÃO sobrescreve (evita apagar a
-      // importação local). Em vez disso, sobe as locais para o servidor convergir.
-      if(!json.stories.length && allStories.length){
+      // Servidor com menos estórias que as locais: NÃO sobrescreve (evita apagar
+      // uma importação local recém-feita que ainda não terminou de subir, ex. ao
+      // clicar Atualizar logo após importar). Em vez disso, sobe as locais para
+      // o servidor convergir — mesma proteção já usada em gasLoadBacklog.
+      if(json.stories.length<allStories.length){
         if(!_gasStoriesSaving){ setTimeout(function(){ gasSaveStories(); },500); }
         if(cb) cb(null, 0);
         return;

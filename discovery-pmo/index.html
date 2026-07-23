@@ -7642,7 +7642,17 @@
 
   <script>
     const today = new Date();
-    const fmtDate = (date) => new Date(date).toISOString().slice(0,10);
+    // toISOString() converte pra UTC antes de fatiar a data — no fuso do Brasil
+    // (UTC-3), entre ~21h e meia-noite isso já mostra o dia seguinte, fazendo
+    // "hoje" virar amanhã em todo cálculo de atraso/risco. Usa os componentes
+    // locais da data em vez de passar por UTC.
+    const fmtDate = (date) => {
+      const d = new Date(date);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
     const plusDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return fmtDate(d); };
 
     function uid(prefix = 'id') {
@@ -10193,10 +10203,22 @@
       if (_discGasSaveTimer) clearTimeout(_discGasSaveTimer);
       _discGasSaveTimer = setTimeout(() => {
         _discGasSaveTimer = null;
-        if (_discGasSaving) return;
+        // Se um save anterior ainda está em cooldown, reagenda em vez de descartar
+        // a edição em silêncio (antes, um save que caísse nessa janela de ~1.2s
+        // nunca era reenviado e ficava só no localStorage).
+        if (_discGasSaving) { scheduleDiscGasSave(); return; }
         _discGasSaving = true;
-        discGasSave(data);
-        setTimeout(() => { _discGasSaving = false; }, 800);
+        // Busca o estado remoto e mescla por registro antes de gravar por cima —
+        // sem isso, o save sempre reenviava o `data` local puro, e duas pessoas
+        // salvando na mesma janela de ~15s do polling faziam a segunda gravação
+        // apagar silenciosamente o que a primeira acabara de salvar, mesmo com
+        // todo o merge por registro já existente (ele só rodava na leitura).
+        discGasLoad((err, remote) => {
+          if (!err) mergeRemoteIntoData(remote);
+          storageSet(STORAGE_KEY, JSON.stringify(data));
+          discGasSave(data);
+          setTimeout(() => { _discGasSaving = false; }, 800);
+        });
       }, 400);
     }
 
@@ -10326,11 +10348,13 @@
       data.tombstones.push({ id, deletedAt: new Date().toISOString() });
     }
 
-    function applyRemoteDiscData(remote) {
+    // Mescla um payload remoto no `data` local por registro/tumba (mesmas regras de
+    // mergeProjectsById/mergeById/mergeTombstones), sem tocar na tela. Extraído de
+    // applyRemoteDiscData para ser reaproveitado também no caminho de SAVE — antes,
+    // só o polling mesclava; o save sempre sobrescrevia o servidor com o `data`
+    // local puro, perdendo o que outra aba tivesse acabado de salvar.
+    function mergeRemoteIntoData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
-      if (isUserEditingNow()) return false;
-
-      const keepActiveId = activeProjectId;
       const normalizedRemote = normalizeData(deepClone(remote));
       const tombstones = mergeTombstones(data.tombstones, normalizedRemote.tombstones);
       const deletedIds = new Set(tombstones.map(t => t.id));
@@ -10340,7 +10364,6 @@
       if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
       if (!projectsMerge.list.length) return false; // nunca fica sem nenhuma iniciativa por causa do merge
 
-      _discGasApplyingRemote = true;
       data.tombstones = tombstones;
       data.projects = projectsMerge.list;
       data.squads = squadsMerge.list.length ? squadsMerge.list : data.squads;
@@ -10354,6 +10377,16 @@
       data.squadNamesSyncedV1 = data.squadNamesSyncedV1 || normalizedRemote.squadNamesSyncedV1;
       data[SCHEDULE_LEGACY_CLEANUP_VERSION] = data[SCHEDULE_LEGACY_CLEANUP_VERSION] || normalizedRemote[SCHEDULE_LEGACY_CLEANUP_VERSION];
       data.updatedAt = new Date(Math.max(Date.parse(data.updatedAt || '') || 0, Date.parse(normalizedRemote.updatedAt || '') || 0)).toISOString();
+      return true;
+    }
+
+    function applyRemoteDiscData(remote) {
+      if (isUserEditingNow()) return false;
+
+      const keepActiveId = activeProjectId;
+      if (!mergeRemoteIntoData(remote)) return false;
+
+      _discGasApplyingRemote = true;
       activeProjectId = data.projects.some(p => p.id === keepActiveId) ? keepActiveId : (data.activeProjectId || data.projects[0].id);
       data.activeProjectId = activeProjectId;
       storageSet(STORAGE_KEY, JSON.stringify(data));
@@ -11424,7 +11457,7 @@
               return `<section class="ux-v6-raid-squad-block">
                 <div class="ux-v6-raid-squad-head">
                   <div><strong>${escapeHtml(group.name)}</strong><span>${group.items.length} item(ns) em aberto${late ? ` · ${late} atrasado(s)` : ''}</span></div>
-                  <button type="button" class="ux-v6-raid-open-squad" onclick="goToRaidSquad('${escapeAttr(group.squadId)}', '${escapeAttr(group.name)}')">Abrir Squad</button>
+                  <button type="button" class="ux-v6-raid-open-squad" onclick="goToRaidSquad('${escapeJs(group.squadId)}', '${escapeJs(group.name)}')">Abrir Squad</button>
                 </div>
                 <div class="ux-v6-raid-items">
                   ${group.items.map(item => {
@@ -12057,7 +12090,7 @@
             <div class="confluence-link-label">📘 Documentação no Confluence</div>
             <div class="confluence-link-value">${confluenceUrl ? escapeHtml(confluenceUrl) : 'Nenhum link cadastrado ainda — edite a iniciativa (✎) para incluir.'}</div>
           </div>
-          ${confluenceUrl ? `<button type="button" class="btn soft compact-action" onclick="window.open('${escapeAttr(confluenceUrl)}', '_blank', 'noopener')">Abrir material</button>` : ''}
+          ${confluenceUrl ? `<button type="button" class="btn soft compact-action" onclick="window.open('${escapeJs(confluenceUrl)}', '_blank', 'noopener')">Abrir material</button>` : ''}
         </div>`;
 
       document.getElementById('attachments').innerHTML = `
@@ -12857,10 +12890,13 @@
 
     // Sem esquema, "Abrir material" resolveria como caminho relativo ao próprio
     // dashboard em vez de abrir o site externo — completa com https:// por padrão.
+    // Só http(s) é aceito como esquema explícito: qualquer outro (javascript:,
+    // data:, vbscript: etc.) é tratado como se não tivesse esquema e cai no
+    // fallback https://, em vez de ser executado ao clicar em "Abrir material".
     function normalizeExternalUrl(raw) {
       const value = String(raw || '').trim();
       if (!value) return '';
-      return /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`;
+      return /^https?:\/\//i.test(value) ? value : `https://${value}`;
     }
 
     function badgeClass(priority) {
@@ -12910,6 +12946,18 @@
     }
 
     function escapeAttr(str) { return escapeHtml(str).replace(/'/g, '&#39;'); }
+
+    // Para valores interpolados dentro de um onclick="...('...')" (JS embutido em
+    // atributo): o navegador decodifica entidades HTML (&#39; etc.) antes de rodar
+    // o JS, então escapeAttr() sozinho não protege — a aspa volta a existir como
+    // caractere literal e quebra a string. Aqui a aspa simples vira \' (escape de
+    // JS, não de HTML), que sobrevive ao parser HTML e chega ao JS já escapada.
+    function escapeJs(str) {
+      return escapeHtml(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/[\r\n]+/g, ' ');
+    }
 
     function toast(msg) {
       const el = document.getElementById('toast');
