@@ -1430,7 +1430,7 @@
     .homologation-copy{border:0;background:transparent;color:#667085;width:24px;height:24px;padding:0;border-radius:5px;cursor:pointer;font-size:15px;line-height:1;}
     .homologation-copy:hover{background:#F1F4F8;color:var(--red-dark);}
     .homologation-squad{border:1px solid var(--squad-border);background:var(--squad-bg);color:var(--squad-color);}
-    .homologation-date-input{width:138px;border:1px solid #DDE3EE;border-radius:7px;padding:6px 7px;background:#fff;color:var(--text);font:inherit;font-size:11px;}
+    .homologation-date-input{width:132px;border:1px solid #E7EBF2;border-radius:7px;padding:5px 6px;background:#FBFCFE;color:#475467;font:inherit;font-size:10px;}
     .homologation-date-input:focus{outline:2px solid #F6C5D0;border-color:#CC092F;}
     @media(max-width:900px){
       .homologation-list-head{display:none;}
@@ -8317,12 +8317,13 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       return count;
     }
 
-    function addBusinessDaysInclusive(startDate, businessDays){
+    // A data de entrada não consome SLA: os 3 dias úteis começam no próximo dia útil.
+    function slaDueDateAfterBusinessDays(startDate, businessDays){
       const result = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
       let counted = 0;
       while(counted < businessDays){
+        result.setDate(result.getDate() + 1);
         if(isBusinessDay(result)) counted++;
-        if(counted < businessDays) result.setDate(result.getDate() + 1);
       }
       return result;
     }
@@ -8331,12 +8332,21 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       if(!isHomologation(row)) return {applies:false, label:'Não se aplica', badge:'gray', detail:'Apenas para status Em homologação.'};
       const entry = parseFlexibleDate(row.homologacaoData);
       if(!entry) return {applies:true, missing:true, label:'Sem data', badge:'gray', detail:'Clique para informar'};
-      const due = addBusinessDaysInclusive(entry, 3);
+      const due = slaDueDateAfterBusinessDays(entry, 3);
       const today = new Date();
       const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const diffMs = due.getTime() - todayOnly.getTime();
       const dueText = due.toLocaleDateString('pt-BR');
-      if(diffMs < 0) return {applies:true, overdue:true, label:'SLA vencido', badge:'red', detail:`Venceu em ${dueText}`, dueText};
+      if(diffMs < 0){
+        let lateDays=0;
+        const cursor = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+        cursor.setDate(cursor.getDate() + 1);
+        while(cursor <= todayOnly){
+          if(isBusinessDay(cursor)) lateDays++;
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        return {applies:true, overdue:true, label:`${lateDays} ${lateDays === 1 ? 'dia' : 'dias'} em atraso`, badge:'red', detail:`Prazo encerrado em ${dueText}`, dueText, lateDays};
+      }
       if(diffMs === 0) return {applies:true, dueToday:true, label:'Vence hoje', badge:'amber', detail:`Prazo: ${dueText}`, dueText};
       return {applies:true, ok:true, label:'No prazo', badge:'green', detail:`Prazo: ${dueText}`, dueText};
     }

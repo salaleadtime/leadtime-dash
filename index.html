@@ -698,7 +698,8 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sv-story-row:last-child{border-bottom:none}
 .sv-story-row:hover{background:#fafafa}
 .sv-tbl-body-row .sv-story-row{grid-template-columns:110px minmax(220px,1fr) 148px auto}
-.sv-story-sla{display:inline-flex;align-items:center;justify-content:center;min-width:132px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}
+.sv-story-sla{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:132px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}
+.sv-story-sla-date{font-size:8px;font-weight:700;opacity:.78}
 .sv-story-sla.ok{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
 .sv-story-sla.overdue{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
 .sv-story-sla.missing{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
@@ -2314,6 +2315,8 @@ var curTab='ep';
 // Estórias
 var allStories=[];
 var STORIES_KEY='leadtime_sala_v8_stories';
+var HOMOLOGATION_VISUAL_KEY='vpBaseHomologacaoImportada';
+var HOMOLOGATION_CROSS_KEY='sala_cross_import_homologation_v1';
 var STORY_LIMIT=12;
 var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
 var backlogSnaps=[];
@@ -3273,15 +3276,21 @@ function homologSLA(storyId){
 // Reutiliza o mesmo SLA no painel de Histórias. Quando o arquivo trouxer a
 // data de entrada em Homologação, ela também serve de base na primeira importação.
 function storyHomologSLA(story){
-  var sla=homologSLA(story&&story.id);
-  if(sla) return sla;
   var raw=story&&story.homologacaoData;
-  if(!raw) return null;
-  var entry=parseLocalDate(raw);
-  if(isNaN(entry.getTime())) return null;
-  var today=new Date(); today.setHours(0,0,0,0);
-  var days=homologBusinessDays(entry,today);
-  return {date:entry, days:days, out:days>SLA_HOMOLOG_DAYS};
+  if(raw){
+    var entry=parseLocalDate(raw);
+    if(!isNaN(entry.getTime())){
+      var today=new Date(); today.setHours(0,0,0,0);
+      var days=homologBusinessDays(entry,today);
+      return {date:entry, days:days, out:days>SLA_HOMOLOG_DAYS};
+    }
+  }
+  return homologSLA(story&&story.id);
+}
+
+function homologLateLabel(sla){
+  var late=Math.max(0,(sla&&sla.days||0)-SLA_HOMOLOG_DAYS);
+  return late+' '+(late===1?'dia':'dias')+' em atraso';
 }
 
 function svStorySlaHtml(story){
@@ -3292,9 +3301,9 @@ function svStorySlaHtml(story){
   if(!sla){
     return '<span class="sv-story-sla missing" title="Informe ou importe a data de entrada em Homologação">SLA sem data de entrada</span>';
   }
-  var label=sla.out?'SLA vencido · '+sla.days+' DU':'SLA Homolog. · '+sla.days+'/'+SLA_HOMOLOG_DAYS+' DU';
+  var label=sla.out?homologLateLabel(sla):'SLA Homolog. · '+sla.days+'/'+SLA_HOMOLOG_DAYS+' DU';
   var title='Em Homologação desde '+fmtShortDate(sla.date)+' · limite de '+SLA_HOMOLOG_DAYS+' dias úteis';
-  return '<span class="sv-story-sla '+(sla.out?'overdue':'ok')+'" title="'+title+'">'+label+'</span>';
+  return '<span class="sv-story-sla '+(sla.out?'overdue':'ok')+'" title="'+title+'"><span>'+label+'</span><span class="sv-story-sla-date">'+fmtShortDate(sla.date)+'</span></span>';
 }
 
 function fmtShortDate(d){
@@ -4863,10 +4872,10 @@ function extractEpicName(v){
 }
 
 // Carrega planilha de Estórias
-function loadStoriesXlsx(file){
+function loadStoriesXlsx(file, mergeHomologation){
   if(typeof XLSX==='undefined'){
     // Continua automaticamente quando a biblioteca terminar de carregar
-    loadLib(XLSX_CDN,function(){loadStoriesXlsx(file);});
+    loadLib(XLSX_CDN,function(){loadStoriesXlsx(file,mergeHomologation);});
     return;
   }
   var reader=new FileReader();
@@ -4940,18 +4949,39 @@ function loadStoriesXlsx(file){
           'Reexporte do Jira incluindo a coluna do épico pai (Epic Link ou Parent).','err');
         return;
       }
-      allStories=stories;
+      // O export específico de Homologação é uma atualização complementar:
+      // preserva as demais histórias já exibidas e atualiza apenas as chaves recebidas.
+      var isHomologationFeed=!!mergeHomologation||stripAcc((file.name||'').toLowerCase()).indexOf('homolog')>=0;
+      if(isHomologationFeed){
+        // Uma única anexação também disponibiliza a mesma carga para a Visão
+        // de Projetos, que a lê automaticamente quando estiver aberta.
+        try{
+          var homologSheet=wb.Sheets[wb.SheetNames[0]];
+          storageSet(HOMOLOGATION_CROSS_KEY,JSON.stringify({matrix:XLSX.utils.sheet_to_json(homologSheet,{header:1,defval:''}),fileName:file.name,savedAt:new Date().toISOString()}));
+        }catch(crossError){}
+      }
+      if(isHomologationFeed&&allStories.length){
+        var existingById={};
+        allStories.forEach(function(item,idx){if(item&&item.id) existingById[item.id]=idx;});
+        stories.forEach(function(item){
+          var index=existingById[item.id];
+          if(index===undefined){ allStories.push(item); }
+          else { allStories[index]=Object.assign({},allStories[index],item); }
+        });
+      } else {
+        allStories=stories;
+      }
       backfillEpicSquads();
       saveStoriesLocal();
       var upName=$id('svUpName'); if(upName) upName.textContent=file.name;
-      var upSub=$id('svUpSub'); if(upSub) upSub.textContent=stories.length+' estórias carregadas';
+      var upSub=$id('svUpSub'); if(upSub) upSub.textContent=(isHomologationFeed?'Homologação atualizada · ':'')+stories.length+' estórias carregadas';
       var upSaved=$id('svUpSaved'); if(upSaved) upSaved.classList.remove('hidden');
-      var upSavedTxt=$id('svUpSavedTxt'); if(upSavedTxt) upSavedTxt.textContent='Salvo localmente · '+stories.length+' estórias';
+      var upSavedTxt=$id('svUpSavedTxt'); if(upSavedTxt) upSavedTxt.textContent='Salvo localmente · '+allStories.length+' estórias';
       renderStoryView();
       renderRoadmapTab();
       renderRiskNotifPanel();
       updateTabCounts();
-      toast('📋 Estórias carregadas',stories.length+' estórias importadas de "'+file.name+'".');
+      toast(isHomologationFeed?'🧪 Homologação atualizada':'📋 Estórias carregadas',stories.length+' estórias importadas de "'+file.name+'".');
     }catch(err){
       toast('Erro ao ler arquivo','Verifique se é um .xlsx válido: '+err.message,'err');
     }
@@ -4969,6 +4999,30 @@ function loadStoriesLocal(){
     var raw=storageGet(STORIES_KEY);
     if(raw) allStories=JSON.parse(raw);
   }catch(e){}
+}
+
+// Quando a carga é feita diretamente na Visão de Projetos, reutiliza a mesma
+// base local para atualizar a tabela Qtd Story/Épicos sem apagar as demais linhas.
+function mergeHomologationFromVisual(){
+  try{
+    var saved=JSON.parse(storageGet(HOMOLOGATION_VISUAL_KEY)||'null');
+    if(!saved||!Array.isArray(saved.rows)||!saved.rows.length) return false;
+    var byId={};
+    allStories.forEach(function(item,idx){if(item&&item.id) byId[item.id]=idx;});
+    var changed=false;
+    saved.rows.forEach(function(row){
+      var id=extractJiraKey(row.chave||row.id);
+      if(!id) return;
+      var incoming={id:id,epic:extractJiraKey(row.epic),epicName:'',resumo:row.resumo||'',status:row.situacao||'',squad:normalizeSquad(row.squad||''),criado:parseD(row.criado),atualizado:parseD(row.atualizado),sprint:row.sprint||'',estimativa:row.estimativa||'',prazo:parseD(row.prazo),homologacaoData:parseD(row.homologacaoData),responsavel:row.responsavel||'',labels:Array.isArray(row.rotulos)?row.rotulos.join(' | '):(row.rotulos||'')};
+      if(byId[id]===undefined){ allStories.push(incoming); byId[id]=allStories.length-1; changed=true; }
+      else {
+        var merged=Object.assign({},allStories[byId[id]],incoming);
+        if(JSON.stringify(merged)!==JSON.stringify(allStories[byId[id]])){allStories[byId[id]]=merged;changed=true;}
+      }
+    });
+    if(changed) saveStoriesLocal();
+    return changed;
+  }catch(e){return false;}
 }
 
 // ═══════════════════════════════════════
@@ -5521,7 +5575,7 @@ function renderBacklogView(){
       var k=classifySvStatus(s.status);
       stCounts[k]=(stCounts[k]||0)+1;
       if(k==='homolog'){
-        var sla=homologSLA(s.id);
+        var sla=storyHomologSLA(s);
         if(sla) homologSLAMap[s.id]=sla;
       }
     });
@@ -5549,7 +5603,7 @@ function renderBacklogView(){
           var dateStr=fmtShortDate(sla.date);
           if(sla.out){
             rowCls+=' homolog-out';
-            badge='<span class="bk-badge-homolog-out">⚠️ Homolog · '+sla.days+' DU<span class="bk-sla-date">desde '+dateStr+'</span></span>';
+            badge='<span class="bk-badge-homolog-out">⚠️ '+homologLateLabel(sla)+'<span class="bk-sla-date">desde '+dateStr+'</span></span>';
           } else {
             badge='<span class="bk-badge-homolog-ok">🔬 Homolog · '+sla.days+' DU<span class="bk-sla-date">desde '+dateStr+'</span></span>';
           }
@@ -5574,7 +5628,7 @@ function renderBacklogView(){
         return homologSLAMap[id].out?Math.max(m,homologSLAMap[id].days):m;
       },0);
       slaAlertHtml='<div class="bk-sla-alert">'+
-        '⚠️ <strong>'+homologOut+'</strong> história'+(homologOut!==1?'s':'')+' em Homologação fora do SLA (máx. '+maxDays+' DU · limite '+SLA_HOMOLOG_DAYS+' DU)'+
+        '⚠️ <strong>'+homologOut+'</strong> história'+(homologOut!==1?'s':'')+' em Homologação fora do SLA (até '+homologLateLabel({days:maxDays})+' · limite '+SLA_HOMOLOG_DAYS+' DU)'+
       '</div>';
     }
 
@@ -6466,13 +6520,16 @@ function loadMultipleFiles(files, propagate){
       }
     }
     if(detected.homologation_visao.length){
+      var homologationStoryFile=detected.homologation_visao[0];
+      loadStoriesXlsx(homologationStoryFile.file, true);
+      lines.push('🧪 Homologação → Tab Qtd Story/Épicos (SLA atualizado)');
       if(propagate){
-        var hv=detected.homologation_visao[0];
+        var hv=homologationStoryFile;
         var ok3=_saveCrossImport('sala_cross_import_homologation_v1',hv.wb,hv.file.name);
         lines.push(ok3 ? '🧪 Homologação → propagado para Visão de Projetos automaticamente'
                        : '🧪 Homologação → abra a Visão de Projetos e use "Importar Homologação"');
       } else {
-        lines.push('🧪 Homologação detectada → use "🌐 Importar em Todos" para propagar, ou abra a Visão de Projetos');
+        lines.push('🧪 Homologação detectada → Qtd Story/Épicos atualizada; use "🌐 Importar em Todos" para também atualizar a Visão de Projetos');
       }
     }
     if(detected.unknown.length) lines.push('⚠️ Não identificado: '+detected.unknown.join(', '));
@@ -6931,8 +6988,19 @@ function parseD(v){
   }
   var s=v.toString().trim();
   if(!s||s==='null'||s==='-') return null;
-  var m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if(m) return m[3]+'-'+m[2]+'-'+m[1];
+  // Export do Jira em português, como "03/jul/26 10:56 AM".
+  var jira=s.match(/^(\d{1,2})[\/\s]([a-záàâãéêíóôõúç]+)[\/\s](\d{2,4})(?:,?\s+(\d{1,2}):(\d{2})(?:\s*([AP]M))?)?$/i);
+  if(jira){
+    var months={jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+    var month=months[stripAcc(jira[2]).toLowerCase().slice(0,3)];
+    var year=Number(jira[3]); if(year<100) year+=2000;
+    if(month){
+      var day=String(Number(jira[1])).padStart(2,'0');
+      return year+'-'+String(month).padStart(2,'0')+'-'+day;
+    }
+  }
   // ISO date or similar
   var iso=s.split('T')[0].split(' ')[0];
   if(/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
@@ -7543,6 +7611,7 @@ var SEED=[
     }
     // Restore stories from localStorage
     loadStoriesLocal();
+    mergeHomologationFromVisual();
     // Restore backlog snapshots
     loadBacklogSnaps();
     // Restore regras e complementos manuais das Demandas Emergenciais
@@ -7571,6 +7640,14 @@ var SEED=[
     }
     renderAll(normalizeTab(loadTab()));
   }
+
+  window.addEventListener('storage',function(event){
+    if(event.key!==HOMOLOGATION_VISUAL_KEY) return;
+    if(mergeHomologationFromVisual()){
+      renderStoryView();
+      updateTabCounts();
+    }
+  });
 
   // Carrega config do JSONBin apenas para manter o botão, mas Google Sheets vence como fonte oficial.
   jbLoadConfig();
