@@ -700,10 +700,14 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sv-tbl-body-row .sv-story-row{grid-template-columns:110px minmax(220px,1fr) 138px 148px auto}
 .sv-story-column-head{display:grid;grid-template-columns:110px minmax(220px,1fr) 138px 148px auto;gap:8px;align-items:center;padding:.42rem 1rem .34rem 1.6rem;border-bottom:1px solid #e8edf5;background:#f1f5f9;color:#64748b;font-size:8.5px;font-weight:800;letter-spacing:.45px;text-transform:uppercase}
 .sv-story-column-head span:nth-last-child(-n+3){text-align:center}
+.sv-story-head-label{display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.1}
+.sv-story-head-label small{font-size:7px;font-weight:600;letter-spacing:0;text-transform:none;color:#94a3b8}
 .sv-story-date{display:inline-flex;align-items:center;justify-content:center;min-width:0;color:#334155;font-size:10px;font-weight:700;white-space:nowrap}
 .sv-story-date.missing{color:#b45309;font-weight:600}
 .sv-story-date.na{color:#94a3b8;font-weight:600}
+.sv-story-sla-cell{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
 .sv-story-sla{display:inline-flex;align-items:center;justify-content:center;min-width:112px;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}
+.sv-story-sla-note{font-size:7.5px;font-weight:600;color:#94a3b8;white-space:nowrap}
 .sv-story-sla.ok{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
 .sv-story-sla.overdue{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
 .sv-story-sla.missing{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
@@ -3236,16 +3240,49 @@ function ltStatusPill(cl){
 // ─── SLA de Homologação ────────────────────────────────────
 var SLA_HOMOLOG_DAYS=3; // dias úteis máximos permitidos em Homologação
 
+function homologEasterSunday(year){
+  var a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4;
+  var f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  var h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4;
+  var l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  return new Date(year,Math.floor((h+l-7*m+114)/31)-1,((h+l-7*m+114)%31)+1);
+}
+
+function homologNationalHolidayKeys(year){
+  var fixed=[[0,1],[3,21],[4,1],[8,7],[9,12],[10,2],[10,15],[10,20],[11,25]].map(function(item){
+    return year+'-'+String(item[0]+1).padStart(2,'0')+'-'+String(item[1]).padStart(2,'0');
+  });
+  var goodFriday=homologEasterSunday(year); goodFriday.setDate(goodFriday.getDate()-2);
+  fixed.push(goodFriday.getFullYear()+'-'+String(goodFriday.getMonth()+1).padStart(2,'0')+'-'+String(goodFriday.getDate()).padStart(2,'0'));
+  return fixed;
+}
+
+function homologIsBusinessDay(date){
+  var weekDay=date.getDay();
+  if(weekDay===0||weekDay===6) return false;
+  var key=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+  return homologNationalHolidayKeys(date.getFullYear()).indexOf(key)<0;
+}
+
 function homologBusinessDays(entry,today){
   var cursor=new Date(entry.getFullYear(),entry.getMonth(),entry.getDate());
   var end=new Date(today.getFullYear(),today.getMonth(),today.getDate());
   var days=0;
   while(cursor<end){
     cursor.setDate(cursor.getDate()+1);
-    var weekDay=cursor.getDay();
-    if(weekDay!==0&&weekDay!==6) days++;
+    if(homologIsBusinessDay(cursor)) days++;
   }
   return days;
+}
+
+function homologDueDate(entry){
+  var due=new Date(entry.getFullYear(),entry.getMonth(),entry.getDate());
+  var counted=0;
+  while(counted<SLA_HOMOLOG_DAYS){
+    due.setDate(due.getDate()+1);
+    if(homologIsBusinessDay(due)) counted++;
+  }
+  return due;
 }
 
 // O SLA inicia somente quando a história está efetivamente "Em Homologação".
@@ -3274,7 +3311,7 @@ function homologSLA(storyId){
   if(!entry) return null;
   var today=new Date(); today.setHours(0,0,0,0);
   var days=homologBusinessDays(entry,today);
-  return {date:entry, days:days, out:days>SLA_HOMOLOG_DAYS};
+  return {date:entry, due:homologDueDate(entry), days:days, out:days>SLA_HOMOLOG_DAYS};
 }
 
 // Reutiliza o mesmo SLA no painel de Histórias. Quando o arquivo trouxer a
@@ -3286,7 +3323,7 @@ function storyHomologSLA(story){
     if(!isNaN(entry.getTime())){
       var today=new Date(); today.setHours(0,0,0,0);
       var days=homologBusinessDays(entry,today);
-      return {date:entry, days:days, out:days>SLA_HOMOLOG_DAYS};
+      return {date:entry, due:homologDueDate(entry), days:days, out:days>SLA_HOMOLOG_DAYS};
     }
   }
   return homologSLA(story&&story.id);
@@ -3294,7 +3331,7 @@ function storyHomologSLA(story){
 
 function homologLateLabel(sla){
   var late=Math.max(0,(sla&&sla.days||0)-SLA_HOMOLOG_DAYS);
-  return late+' '+(late===1?'dia':'dias')+' em atraso';
+  return late+' '+(late===1?'dia útil':'dias úteis')+' em atraso';
 }
 
 function svStorySlaHtml(story){
@@ -3303,11 +3340,13 @@ function svStorySlaHtml(story){
   }
   var sla=storyHomologSLA(story);
   if(!sla){
-    return '<span class="sv-story-sla missing" title="Informe ou importe a data de entrada em Homologação">Aguardando data</span>';
+    return '<span class="sv-story-sla-cell"><span class="sv-story-sla missing" title="Informe ou importe a data de entrada em Homologação">Aguardando data</span></span>';
   }
   var label=sla.out?homologLateLabel(sla):sla.days+'/'+SLA_HOMOLOG_DAYS+' DU';
-  var title='Em Homologação desde '+fmtShortDate(sla.date)+' · limite de '+SLA_HOMOLOG_DAYS+' dias úteis';
-  return '<span class="sv-story-sla '+(sla.out?'overdue':'ok')+'" title="'+title+'">'+label+'</span>';
+  var due=sla.due||homologDueDate(sla.date);
+  var dueText=fmtShortDate(due);
+  var title='Em Homologação desde '+fmtShortDate(sla.date)+' · prazo até '+dueText+' · limite de '+SLA_HOMOLOG_DAYS+' dias úteis';
+  return '<span class="sv-story-sla-cell"><span class="sv-story-sla '+(sla.out?'overdue':'ok')+'" title="'+title+'">'+label+'</span><span class="sv-story-sla-note">Prazo '+dueText+'</span></span>';
 }
 
 function svStoryHomologDateHtml(story){
@@ -6346,7 +6385,7 @@ function svEpicRow(ep,stories){
   // Story rows for accordion. The two deadline fields stay separate so that
   // the date is easy to scan without competing with the SLA alert.
   var storyColumns='<div class="sv-story-column-head" aria-hidden="true">'+
-    '<span>História</span><span></span><span>Entrada em homologação</span><span>Prazo (3 DU)</span><span>Status</span>'+
+    '<span>História</span><span></span><span class="sv-story-head-label">Entrada<small>Homologação</small></span><span class="sv-story-head-label">SLA<small>3 dias úteis</small></span><span>Status</span>'+
   '</div>';
   var storyRows=storyColumns+stories.map(function(s){
     var stCls=storyStatusClass(s.status);

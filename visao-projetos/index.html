@@ -8345,7 +8345,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
           if(isBusinessDay(cursor)) lateDays++;
           cursor.setDate(cursor.getDate() + 1);
         }
-        return {applies:true, overdue:true, label:`${lateDays} ${lateDays === 1 ? 'dia' : 'dias'} em atraso`, badge:'red', detail:`Prazo encerrado em ${dueText}`, dueText, lateDays};
+        return {applies:true, overdue:true, label:`${lateDays} ${lateDays === 1 ? 'dia útil' : 'dias úteis'} em atraso`, badge:'red', detail:`Prazo encerrado em ${dueText}`, dueText, lateDays};
       }
       if(diffMs === 0) return {applies:true, dueToday:true, label:'Vence hoje', badge:'amber', detail:`Prazo: ${dueText}`, dueText};
       return {applies:true, ok:true, label:'No prazo', badge:'green', detail:`Prazo: ${dueText}`, dueText};
