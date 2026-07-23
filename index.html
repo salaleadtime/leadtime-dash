@@ -6344,16 +6344,6 @@ function svKpiItem(color,val,lbl,sub,extra){
     '<span class="sv-kpi-sub">'+sub+'</span></div>';
 }
 
-// Lead time estimado a partir da estória mais antiga do épico — fallback usado
-// quando não há registro manual (allData) com Data Início cadastrada.
-function epicStoriesLT(stories){
-  var minIso=null;
-  stories.forEach(function(s){
-    if(s&&s.criado&&(!minIso||s.criado<minIso)) minIso=s.criado;
-  });
-  return minIso?calcLT(minIso,null):0;
-}
-
 function svEpicRow(ep,stories){
   var epicRec=allData.find(function(r){return r.id===ep;});
   var sq=(epicRec&&epicRec.squad)||((stories[0]&&stories[0].squad)||'');
@@ -6369,18 +6359,13 @@ function svEpicRow(ep,stories){
 
   // Lead time cell — recalcula a partir de ini/fim (evita depender do campo .lt
   // armazenado, que pode estar desatualizado e trata 0 dias como "sem dado").
-  // Quando não há registro manual, estima a partir da estória mais antiga do épico.
-  var ltHtml='<span style="color:#94a3b8;font-size:11px">—</span>';
+  // Sem Data Início oficial no épico, não há LT: a idade da estória mais antiga
+  // mede a história, não o épico, e inflava o número (ver mesma regra em #170).
+  var ltHtml='<span style="color:#94a3b8;font-size:11px" title="Épico sem Data Início registrada">sem LT</span>';
   var ltVal=(epicRec&&epicRec.ini)?calcLT(epicRec.ini,epicRec.fim):null;
-  var ltIsEstimate=false;
-  if(ltVal==null&&!isEmpty){
-    var estLT=epicStoriesLT(stories);
-    if(estLT>0){ ltVal=estLT; ltIsEstimate=true; }
-  }
   if(ltVal!=null){
     var ltCol=ltVal>=META?'#dc2626':ltVal>=40?'#d97706':'#16a34a';
-    var ltTitle=ltIsEstimate?'Estimado a partir da estória mais antiga (sem Data Início cadastrada)':'Lead time oficial';
-    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700" title="'+ltTitle+'">'+ltVal+'d'+(ltIsEstimate?' <span style="font-size:9px;font-weight:600;color:#94a3b8">(est.)</span>':'')+'</span>';
+    ltHtml='<span style="color:'+ltCol+';font-size:13px;font-weight:700" title="Lead time oficial">'+ltVal+'d</span>';
   }
 
   // Status badge
