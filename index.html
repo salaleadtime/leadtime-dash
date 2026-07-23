@@ -407,6 +407,12 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sc-fill{height:100%;border-radius:2px;transition:width .5s}
 .sc-stats{display:flex;gap:8px;font-size:9.5px;color:var(--tx3)}
 .sc-stats strong{color:var(--tx2);font-weight:600}
+.sc-nm-wrap{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.lt-status-pill{display:inline-flex;align-items:center;gap:3px;font-size:8.5px;font-weight:700;padding:1px 6px;border-radius:20px;letter-spacing:.2px;white-space:nowrap;line-height:1.5}
+.lt-status-pill.lt-sp-g{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.lt-status-pill.lt-sp-a{background:#fef9c3;color:#a16207;border:1px solid #fde68a}
+.lt-status-pill.lt-sp-r{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+.lt-status-pill.lt-sp-na{background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0}
 
 /* ── ÉPICOS SUMMARY (header + KPIs + info cards) ── */
 .ep-hdr{margin-bottom:1.2rem}
@@ -3157,6 +3163,12 @@ function calcLT(ini,fim){
 }
 function ltCls(lt){return lt>=META?'r':lt>=40?'a':'g';}
 function ltIco(lt){return lt>=META?'⚠️':lt>=40?'⏰':'✅';}
+function ltStatusPill(cl){
+  if(cl==='g') return '<span class="lt-status-pill lt-sp-g">● Verde</span>';
+  if(cl==='a') return '<span class="lt-status-pill lt-sp-a">● Atenção</span>';
+  if(cl==='r') return '<span class="lt-status-pill lt-sp-r">● Crítico</span>';
+  return '<span class="lt-status-pill lt-sp-na">— S/D</span>';
+}
 function fmtD(d){
   if(!d) return '—';
   var p=d.split('-');
@@ -3615,7 +3627,7 @@ function renderSquads(){
     if(!items.length){
       return '<div class="sc" style="opacity:.5">'+
         '<div class="sc-acc" style="background:'+acc+'"></div>'+
-        '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">sem entregas neste TRI</div></div></div>'+
+        '<div class="sc-hd"><div><div class="sc-nm-wrap"><span class="sc-nm">'+esc(sq)+'</span>'+ltStatusPill('na')+'</div><div class="sc-cnt">sem entregas neste TRI</div></div></div>'+
         '<div class="sc-lt" style="color:#94a3b8">—</div>'+
         '<div class="sc-sub">sem dados no trimestre</div>'+
       '</div>';
@@ -3637,7 +3649,7 @@ function renderSquads(){
     var pct=Math.min(100,Math.round(savg/200*100));
     return '<div class="sc">'+
       '<div class="sc-acc" style="background:'+acc+'"></div>'+
-      '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">'+items.length+' entrega'+(items.length!==1?'s':'')+' no TRI</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
+      '<div class="sc-hd"><div><div class="sc-nm-wrap"><span class="sc-nm">'+esc(sq)+'</span>'+ltStatusPill(cl)+'</div><div class="sc-cnt">'+items.length+' entrega'+(items.length!==1?'s':'')+' no TRI</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
       '<div class="sc-lt" style="color:'+col+'">'+savg+'</div>'+
       '<div class="sc-sub">dias · LT médio</div>'+
       trend+
@@ -4243,7 +4255,7 @@ function renderMed(){
     var acc=colors[sq]||'#334155';
     return '<div class="sc">'+
       '<div class="sc-acc" style="background:'+acc+'"></div>'+
-      '<div class="sc-hd"><div><div class="sc-nm">'+esc(sq)+'</div><div class="sc-cnt">'+items.length+' medido'+(items.length!==1?'s':'')+'</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
+      '<div class="sc-hd"><div><div class="sc-nm-wrap"><span class="sc-nm">'+esc(sq)+'</span>'+ltStatusPill(cl)+'</div><div class="sc-cnt">'+items.length+' medido'+(items.length!==1?'s':'')+'</div></div><div class="sc-ico">'+ltIco(savg)+'</div></div>'+
       '<div class="sc-lt" style="color:'+col+'">'+savg+'</div>'+
       '<div class="sc-sub">dias · LT médio</div>'+
       '<div class="sc-bar"><div class="sc-fill" style="width:'+pct+'%;background:'+col+'"></div></div>'+
