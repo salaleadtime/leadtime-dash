@@ -2734,7 +2734,7 @@
       background:#FFFFFF;
     }
     #sprintTableMain{
-      min-width:1120px;
+      min-width:1260px;
     }
     #sprintTableMain th,
     #sprintTableMain td{
@@ -3186,7 +3186,7 @@
     }
 
     #sprintTableMain{
-      min-width:1120px;
+      min-width:1260px;
     }
 
     #sprintTableMain th,
@@ -5989,6 +5989,7 @@
                   <th>Épico - Chave</th>
                   <th>História</th>
                   <th>Status</th>
+                  <th>SLA Homolog</th>
                   <th>Squad</th>
                   <th>Rótulos</th>
                   <th>Próximo passo</th>
@@ -7778,6 +7779,7 @@
         const key = storyKey(r);
         const epicKey = extractJiraKey(r.epic);
         const labels = (r.rotulos || []).slice(0,3).map(label => `<span class="sprint-label" title="${escapeAttr(label)}">${escapeHtml(label)}</span>`).join('') || '<span class="muted">Sem rótulo</span>';
+        const sla = homologationSlaInfo(r);
 
         return `<tr onclick="openJiraIssue('${escapeJs(key)}', event)">
           <td class="epic-key-cell">
@@ -7787,12 +7789,13 @@
           </td>
           <td><div class="story-title">${escapeHtml(r.resumo)}</div></td>
           <td>${renderStatusBadge(r.situacao)}</td>
+          <td>${renderSlaCell(sla, key)}</td>
           <td>${escapeHtml(r.squad)}</td>
           <td><div class="sprint-labels">${labels}</div></td>
           <td>${escapeHtml(r.proximo || 'Acompanhar evolução na sprint.')}</td>
           <td><button class="mini-action" onclick="openJiraIssue('${escapeJs(key)}', event)" title="Abrir no Jira">↗</button></td>
         </tr>`;
-      }).join('') : '<tr><td colspan="7"><div class="empty">Nenhuma história da sprint encontrada para os filtros aplicados.</div></td></tr>';
+      }).join('') : '<tr><td colspan="8"><div class="empty">Nenhuma história da sprint encontrada para os filtros aplicados.</div></td></tr>';
     }
 
 
