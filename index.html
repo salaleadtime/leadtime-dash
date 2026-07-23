@@ -4930,7 +4930,7 @@ function extractEpicName(v){
 function loadStoriesXlsx(file, mergeHomologation){
   if(typeof XLSX==='undefined'){
     // Continua automaticamente quando a biblioteca terminar de carregar
-    loadLib(XLSX_CDN,function(){loadStoriesXlsx(file,mergeHomologation);});
+    loadXlsxLib(function(){loadStoriesXlsx(file,mergeHomologation);});
     return;
   }
   var reader=new FileReader();
@@ -5412,7 +5412,7 @@ function detectBacklogFormat(wb){
 
 function loadBacklogXlsx(file){
   if(typeof XLSX==='undefined'){
-    loadLib(XLSX_CDN,function(){loadBacklogXlsx(file);});
+    loadXlsxLib(function(){loadBacklogXlsx(file);});
     return;
   }
   var reader=new FileReader();
@@ -6539,7 +6539,7 @@ function detectUnifiedFileType(wb, fileName){
 // propagate=true → salva sprint/geral/homologação para Visão de Projetos via localStorage
 function loadMultipleFiles(files, propagate){
   if(typeof XLSX==='undefined'){
-    loadLib(XLSX_CDN,function(){loadMultipleFiles(files, propagate);});
+    loadXlsxLib(function(){loadMultipleFiles(files, propagate);});
     return;
   }
   var fileList=Array.from(files);
@@ -6858,7 +6858,7 @@ function detectImportFormat(wb){
 
 function loadXlsx(file){
   if(typeof XLSX==='undefined'){
-    loadLib(XLSX_CDN,function(){loadXlsx(file);});
+    loadXlsxLib(function(){loadXlsx(file);});
     return;
   }
   var reader=new FileReader();
@@ -7426,7 +7426,7 @@ function loadGS(){
   var url=$id('gsUrl').value.trim();
   if(!url){toast('Link vazio','Cole o link CSV do Google Sheets.','warn');return;}
   if(typeof XLSX==='undefined'){
-    loadLib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){loadGS();});
+    loadXlsxLib(function(){loadGS();});
     return;
   }
   fetch(url).then(function(r){
@@ -7561,10 +7561,34 @@ function loadLib(src,cb){
   s.onerror=function(){ delete _libQueue[src]; toast('Erro de rede','Não foi possível carregar a biblioteca.','err'); };
   document.head.appendChild(s);
 }
-var XLSX_CDN='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+// Tenta uma lista de fontes em ordem (ex.: cópia local primeiro, CDN como
+// reserva) — evita falha total quando a rede corporativa bloqueia o CDN.
+function loadLibFallback(srcs,cb){
+  var list=srcs.slice();
+  function tryNext(){
+    var src=list.shift();
+    if(!src){ toast('Erro de rede','Não foi possível carregar a biblioteca.','err'); return; }
+    if(_libQueue[src]){ if(cb) _libQueue[src].push(cb); return; }
+    _libQueue[src]=cb?[cb]:[];
+    var s=document.createElement('script');
+    s.src=src;
+    s.onload=function(){
+      var q=_libQueue[src]; delete _libQueue[src];
+      (q||[]).forEach(function(f){ try{f();}catch(e){} });
+    };
+    s.onerror=function(){ delete _libQueue[src]; tryNext(); };
+    document.head.appendChild(s);
+  }
+  tryNext();
+}
+// Cópia local em vendor/ evita depender do CDN externo (bloqueado em redes
+// corporativas) — o CDN só é usado como reserva se o arquivo local sumir.
+var XLSX_SOURCES=['vendor/xlsx.full.min.js','https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
+var XLSX_CDN=XLSX_SOURCES[0];
+function loadXlsxLib(cb){ loadLibFallback(XLSX_SOURCES,cb); }
 // Pré-carrega o leitor de Excel na abertura da página, para a importação
 // estar pronta no primeiro clique (sem o aviso "Carregando biblioteca...").
-if(typeof XLSX==='undefined') loadLib(XLSX_CDN);
+if(typeof XLSX==='undefined') loadXlsxLib();
 
 // ═══════════════════════════════════════
 // SEED DATA (fallback inicial)
