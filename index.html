@@ -3397,7 +3397,7 @@ function fmtD(d){
 }
 function sBadge(s){
   var t=(s||'').trim();
-  var m={'Em Execução':'bblue','Concluído':'bgreen','Executado':'bgray','Cancelado':'bred'};
+  var m={'Em Execução':'bblue','Priorizado':'bviolet','Refinamento':'bamber','Backlog':'bgray','Concluído':'bgreen','Executado':'bgray','Cancelado':'bred'};
   var cls=m[t]||'bgray';
   return '<span class="bdg '+cls+'"><span class="bdg-dot"></span>'+esc(t)+'</span>';
 }
@@ -6332,17 +6332,18 @@ function renderStoryView(){
         '<thead><tr>'+
           '<th>Épico</th>'+
           '<th>Squad</th>'+
+          '<th>Status do Épico</th>'+
           '<th class="tc">Lead Time</th>'+
           '<th class="tc">Stories</th>'+
           '<th>Distribuição de Fase</th>'+
-          '<th class="tc">Status</th>'+
+          '<th class="tc">Situação operacional</th>'+
         '</tr></thead>'+
         '<tbody>'+rows+(noStRows?
-          '<tr class="sv-tbl-section"><td colspan="6">Épicos sem estórias vinculadas</td></tr>'+noStRows
+          '<tr class="sv-tbl-section"><td colspan="7">Épicos sem estórias vinculadas</td></tr>'+noStRows
         :'')+
         '</tbody>'+
         '<tfoot><tr>'+
-          '<td colspan="2">'+filteredEpicIds.length+' épico'+(filteredEpicIds.length!==1?'s':'')+' exibido'+(filteredEpicIds.length!==1?'s':'')+
+          '<td colspan="3">'+filteredEpicIds.length+' épico'+(filteredEpicIds.length!==1?'s':'')+' exibido'+(filteredEpicIds.length!==1?'s':'')+
             (noStoriesFiltered.length?' · '+noStoriesFiltered.length+' sem estórias':'')+
           '</td>'+
           '<td style="text-align:center"></td>'+
@@ -6383,6 +6384,7 @@ function svEpicRow(ep,stories){
   var isFull=total>=STORY_LIMIT;
   var near=!isEmpty&&isNearDelivery(stories);
   var rowId='sv_'+ep.replace(/[^a-z0-9]/gi,'_');
+  var epicStatus=epicRec&&epicRec.status ? sBadge(epicRec.status) : '<span style="color:#94a3b8;font-size:10px">Não informado</span>';
 
   // Lead time cell — recalcula a partir de ini/fim (evita depender do campo .lt
   // armazenado, que pode estar desatualizado e trata 0 dias como "sem dado").
@@ -6433,6 +6435,7 @@ function svEpicRow(ep,stories){
     '<td>'+
       (sq?'<span class="sv-squad-pill" style="--sv-accent:'+accent+'"><span class="sv-squad-dot"></span>'+esc(sq)+'</span>':'<span style="color:#94a3b8;font-size:10px">—</span>')+
     '</td>'+
+    '<td style="text-align:center">'+epicStatus+'</td>'+
     '<td style="text-align:center">'+ltHtml+'</td>'+
     '<td style="text-align:center"><span class="sv-stories-num">'+(isEmpty?'—':total)+'</span></td>'+
     '<td>'+miniBar+'</td>'+
@@ -6440,7 +6443,7 @@ function svEpicRow(ep,stories){
   '</tr>'+
   (!isEmpty?
     '<tr class="sv-tbl-body-row'+(svOpenRows[bodyRowId]?' open':'')+'" id="'+bodyRowId+'">'+
-      '<td colspan="6">'+storyRows+'</td>'+
+      '<td colspan="7">'+storyRows+'</td>'+
     '</tr>'
   :'');
 }
@@ -6709,6 +6712,9 @@ function normalizeStatus(s){
   var lc=stripAcc(t).toLowerCase();
   if(lc.indexOf('execuc')>=0 && lc.indexOf('em')>=0) return 'Em Execução';
   if(lc.indexOf('execuc')>=0) return 'Em Execução';
+  if(lc.indexOf('prioriz')>=0) return 'Priorizado';
+  if(lc.indexOf('refin')>=0) return 'Refinamento';
+  if(lc.indexOf('backlog')>=0) return 'Backlog';
   if(lc.indexOf('concluid')>=0 || lc==='done' || lc==='resolved') return 'Concluído';
   if(lc.indexOf('executad')>=0) return 'Executado';
   if(lc.indexOf('cancelad')>=0) return 'Cancelado';
