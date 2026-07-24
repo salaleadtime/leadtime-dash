@@ -6937,7 +6937,7 @@
             <span class="badge homologation-squad" style="--squad-bg:${squadTone.bg};--squad-color:${squadTone.color};--squad-border:${squadTone.border}">${escapeHtml(row.squad || 'Squad não informada')}</span>
             ${row.epic ? `<span class="badge gray">Épico ${escapeHtml(extractJiraKey(row.epic) || row.epic)}</span>` : ''}
           </div>
-          <input class="homologation-date-input" type="datetime-local" value="${escapeAttr(dateInputValue)}" onchange="updateHomologationDate('${escapeJs(key)}', this.value)" title="Altere manualmente a data de entrada em homologação" aria-label="Data de entrada em homologação de ${escapeAttr(key)}" />
+          <input class="homologation-date-input" type="date" value="${escapeAttr(dateInputValue)}" onchange="updateHomologationDate('${escapeJs(key)}', this.value)" title="Informe a data de entrada em homologação" aria-label="Data de entrada em homologação de ${escapeAttr(key)}" />
           <span class="badge ${sla.overdue ? 'red' : sla.dueToday ? 'amber' : sla.missing ? 'gray' : 'green'}">${escapeHtml(sla.label || 'Em homologação')}</span>
         </div>`;
       }).join('');
@@ -6961,7 +6961,7 @@
       const date = parseFlexibleDate(value);
       if(!date) return '';
       const pad = n => String(n).padStart(2, '0');
-      return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
     }
 
     function formatHomologationDate(value){
