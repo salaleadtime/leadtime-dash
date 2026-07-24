@@ -6355,6 +6355,27 @@
           try{ renderAll(); }catch(e){}
         }
       });
+      gasLoadVpData('vpHomologation', function(err, serverData){
+        var local = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
+        if(err) return;
+        // Migra a carga que jÃ¡ existia apenas no navegador para a primeira
+        // sincronizaÃ§Ã£o compartilhada. Depois disso, o servidor passa a ser a
+        // referÃªncia para novos usuÃ¡rios e outras janelas.
+        if(!serverData || !Array.isArray(serverData.rows)){
+          if(local && Array.isArray(local.rows) && local.rows.length){
+            gasSaveVpData('vpHomologation', local);
+          }
+          return;
+        }
+        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
+        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
+        if(serverTime > localTime){
+          homologationRows = serverData.rows.map(applyRefinementRule).filter(isHomologation);
+          homologationSourceName = serverData.sourceName || 'Homologação compartilhada';
+          storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(serverData));
+          try{ renderAll(); }catch(e){}
+        }
+      });
       gasLoadVpData('vpOpUpdates', function(err, serverData){
         if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
         operationalUpdates = serverData;
@@ -6551,6 +6572,15 @@
     const CROSS_IMPORT_SPRINT_KEY = 'sala_cross_import_sprint_v1';
     const CROSS_IMPORT_GENERAL_KEY = 'sala_cross_import_general_v1';
     const CROSS_IMPORT_HOMOLOGATION_KEY = 'sala_cross_import_homologation_v1';
+    function persistHomologationBase(){
+      const data = {
+        rows: homologationRows,
+        sourceName: homologationSourceName,
+        importedAt: new Date().toISOString()
+      };
+      storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(data));
+      gasSaveVpData('vpHomologation', data);
+    }
     function persistImportedBases(){
       try{
         const importedAt = new Date().toISOString();
@@ -6944,11 +6974,7 @@
       const item = homologationRows.find(row => sameText(storyKey(row), key));
       if(!item) return;
       item.homologacaoData = value ? formatHomologationDate(value) : '';
-      storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify({
-        rows: homologationRows,
-        sourceName: homologationSourceName,
-        importedAt: new Date().toISOString()
-      }));
+      persistHomologationBase();
       renderAll();
     }
 
@@ -8934,11 +8960,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
           if(!parsed) return;
           homologationRows = parsed.filter(isHomologation);
           homologationSourceName = file.name;
-          storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify({
-            rows: homologationRows,
-            sourceName: homologationSourceName,
-            importedAt: new Date().toISOString()
-          }));
+          persistHomologationBase();
           renderAll();
           alert(`${homologationRows.length} item(ns) em homologação carregado(s).`);
         }catch(error){
@@ -9122,7 +9144,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
         } else if (type === 'homologation') {
           homologationRows = parsed.filter(isHomologation);
           homologationSourceName = stored.fileName || 'Homologação (via SALA)';
-          try { storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify({rows: homologationRows, sourceName: homologationSourceName, importedAt: stored.savedAt})); } catch(e){}
+          try { persistHomologationBase(); } catch(e){}
         } else {
           rows = parsed;
           sourceName = stored.fileName || 'Acomp. Geral (via SALA)';
