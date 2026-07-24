@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report de Riscos & Iniciativas | SALA Transformação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0f1923; --navy-card:#162030; --navy-border:#1e2f42;
+    --red:#cc0000; --red-dark:#a00000;
+    --text:#e8edf2; --text-muted:#8899aa;
+    --green:#2ecc71; --yellow:#f39c12; --orange:#e67e22; --crimson:#e74c3c; --blue:#3498db;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--navy);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.5}
+  header.top{background:linear-gradient(135deg,#cc0000 0%,#8b0000 50%,#0f1923 100%);padding:22px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;border-bottom:1px solid var(--navy-border)}
+  header.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}
+  header.top .subtitle{margin:4px 0 0;font-size:13px;color:rgba(232,237,242,.85)}
+  .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .badge{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+  .last-update{font-size:11.5px;color:rgba(232,237,242,.75);font-family:'IBM Plex Mono',monospace}
+  .back-link{color:#fff;text-decoration:none;font-size:12px;border:1px solid rgba(255,255,255,.35);padding:6px 12px;border-radius:8px;display:inline-flex;align-items:center;gap:6px}
+  .back-link:hover{background:rgba(255,255,255,.1)}
+
+  nav.tabs{display:flex;gap:4px;padding:0 24px;background:var(--navy-card);border-bottom:1px solid var(--navy-border);overflow-x:auto}
+  nav.tabs button{background:none;border:none;color:var(--text-muted);padding:14px 16px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+  nav.tabs button:hover{color:var(--text)}
+  nav.tabs button.active{color:#fff;border-bottom-color:var(--red)}
+
+  main{padding:24px 28px 60px;max-width:1400px;margin:0 auto}
+  .panel{display:none}
+  .panel.active{display:block}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:26px}
+  .kpi-card{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;padding:16px 18px}
+  .kpi-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .kpi-value{font-size:30px;font-weight:700;margin-top:6px;font-family:'IBM Plex Mono',monospace}
+  .kpi-sub{font-size:11.5px;color:var(--text-muted);margin-top:4px}
+  .kpi-card.accent-green .kpi-value{color:var(--green)}
+  .kpi-card.accent-yellow .kpi-value{color:var(--yellow)}
+  .kpi-card.accent-red .kpi-value{color:var(--crimson)}
+  .kpi-card.accent-blue .kpi-value{color:var(--blue)}
+
+  h2.section-title{font-size:16px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  p.section-desc{color:var(--text-muted);font-size:12.5px;margin:0 0 16px}
+
+  .card{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;padding:20px;margin-bottom:22px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.8px}
+  thead th{text-align:left;color:var(--text-muted);text-transform:uppercase;font-size:10.5px;letter-spacing:.4px;font-weight:600;padding:8px 10px;border-bottom:1px solid var(--navy-border);white-space:nowrap}
+  tbody td{padding:10px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  .tbl-wrap{overflow-x:auto}
+
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+  .pill-discovery{background:rgba(52,152,219,.15);color:var(--blue);border:1px solid rgba(52,152,219,.35)}
+  .pill-iniciar{background:rgba(136,153,170,.15);color:var(--text-muted);border:1px solid rgba(136,153,170,.3)}
+  .pill-green{background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.35)}
+  .pill-yellow{background:rgba(243,156,18,.15);color:var(--yellow);border:1px solid rgba(243,156,18,.35)}
+  .pill-red{background:rgba(231,76,60,.15);color:var(--crimson);border:1px solid rgba(231,76,60,.35)}
+  .pill-muted{background:rgba(136,153,170,.12);color:var(--text-muted);border:1px solid rgba(136,153,170,.25)}
+
+  .squad-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted)}
+  .num-tag{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text-muted)}
+
+  .empty-state{text-align:center;padding:34px 20px;color:var(--text-muted);font-size:13px}
+  .empty-state strong{color:var(--text);display:block;margin-bottom:6px;font-size:14px}
+
+  .btn{background:var(--navy-border);border:1px solid rgba(255,255,255,.12);color:var(--text);padding:8px 14px;border-radius:8px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#233549}
+  .btn-red{background:var(--red);border-color:var(--red)}
+  .btn-red:hover{background:var(--red-dark)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+  .toolbar .spacer{flex:1}
+  select,input[type=text],input[type=date]{background:var(--navy);border:1px solid var(--navy-border);color:var(--text);padding:7px 10px;border-radius:7px;font-family:inherit;font-size:12.5px}
+  td[contenteditable="true"]{outline:none;border-radius:5px;cursor:text}
+  td[contenteditable="true"]:hover{background:rgba(255,255,255,.04)}
+  td[contenteditable="true"]:focus{background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px var(--blue)}
+  td[contenteditable="true"]:empty:before{content:attr(data-ph);color:var(--text-muted)}
+  .del-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:15px;padding:2px 6px;border-radius:6px}
+  .del-btn:hover{color:var(--crimson);background:rgba(231,76,60,.12)}
+
+  .note{background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.3);border-radius:10px;padding:12px 16px;font-size:12.5px;color:#f5c778;margin-bottom:18px;display:flex;gap:10px}
+  .note.info{background:rgba(52,152,219,.08);border-color:rgba(52,152,219,.3);color:#8fc4ea}
+  .note b{color:var(--text)}
+
+  .aug-badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:2px 8px;border-radius:6px;background:rgba(204,0,0,.15);color:#ff8080;border:1px solid rgba(204,0,0,.35)}
+
+  .save-flag{font-size:11px;color:var(--green);opacity:0;transition:opacity .3s}
+  .save-flag.show{opacity:1}
+
+  @media print{
+    nav.tabs, .toolbar, .btn, .back-link{display:none!important}
+    .panel{display:block!important}
+    body{background:#fff;color:#111}
+    .card,.kpi-card{background:#fff;border-color:#ccc}
+    header.top{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  @media (max-width:720px){
+    header.top{padding:16px}
+    main{padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>📋 Report de Riscos & Iniciativas</h1>
+    <p class="subtitle">Portabilidade AS IS · Discovery PMO Tracker — visão consolidada para acompanhamento executivo</p>
+  </div>
+  <div class="header-right">
+    <a class="back-link" href="../discovery-pmo/" title="Voltar ao painel Discovery PMO">← Painel Discovery PMO</a>
+    <span class="badge">SALA TRANSFORMAÇÃO</span>
+    <span class="last-update" id="lastUpdate"></span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button type="button" class="tab-btn active" data-tab="geral">Visão Geral</button>
+  <button type="button" class="tab-btn" data-tab="riscos">Riscos</button>
+  <button type="button" class="tab-btn" data-tab="status">Status das Iniciativas</button>
+  <button type="button" class="tab-btn" data-tab="refino">Refinamento Técnico</button>
+  <button type="button" class="tab-btn" data-tab="agosto">Próximas · Agosto/2026</button>
+</nav>
+
+<main>
+
+  <!-- ═══════════════ VISÃO GERAL ═══════════════ -->
+  <section class="panel active" id="panel-geral">
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Iniciativas ativas</div>
+        <div class="kpi-value" id="kpiTotal">—</div>
+        <div class="kpi-sub">Base oficial Discovery PMO</div>
+      </div>
+      <div class="kpi-card accent-blue">
+        <div class="kpi-label">Em Discovery</div>
+        <div class="kpi-value" id="kpiDiscovery">—</div>
+        <div class="kpi-sub" id="kpiDiscoveryPct"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">A iniciar</div>
+        <div class="kpi-value" id="kpiIniciar">—</div>
+        <div class="kpi-sub" id="kpiIniciarPct"></div>
+      </div>
+      <div class="kpi-card accent-red" id="kpiRiscosCard">
+        <div class="kpi-label">Riscos cadastrados</div>
+        <div class="kpi-value" id="kpiRiscos">0</div>
+        <div class="kpi-sub" id="kpiRiscosSub">Nenhum risco registrado ainda</div>
+      </div>
+      <div class="kpi-card accent-yellow">
+        <div class="kpi-label">Em refinamento técnico</div>
+        <div class="kpi-value" id="kpiRefino">0</div>
+        <div class="kpi-sub" id="kpiRefinoSub">Nenhum marco definido ainda</div>
+      </div>
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">Marcos em agosto/2026</div>
+        <div class="kpi-value" id="kpiAgosto">—</div>
+        <div class="kpi-sub">Discovery, início de dev ou entrega</div>
+      </div>
+    </div>
+
+    <div class="note info">
+      <span>ℹ️</span>
+      <div>
+        <b>Sobre este report.</b> As colunas de <b>status, squad, responsáveis e datas</b> vêm direto da base oficial do
+        <a href="../discovery-pmo/" style="color:#8fc4ea">Discovery PMO Tracker</a> (14 iniciativas cadastradas). As seções de
+        <b>Riscos</b> e <b>Refinamento Técnico</b> ainda não têm nenhum registro na base oficial — foram deixadas como tabelas
+        editáveis abaixo para você preencher. O preenchimento fica salvo neste navegador (localStorage); use <b>Exportar JSON</b>
+        em cada aba para guardar uma cópia ou levar os dados para o painel principal.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">📊 Distribuição por squad</h2>
+      <p class="section-desc">Quantidade de iniciativas ativas por squad, cruzado com status.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Squad</th><th>Em Discovery</th><th>A iniciar</th><th>Total</th></tr></thead>
+          <tbody id="squadSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ RISCOS ═══════════════ -->
+  <section class="panel" id="panel-riscos">
+    <h2 class="section-title">⚠️ Riscos</h2>
+    <p class="section-desc">Quantos riscos existem, qual é cada um, e com quem estão (responsável pela mitigação).</p>
+
+    <div class="note">
+      <span>⚠️</span>
+      <div>Nenhum risco está cadastrado na base oficial do Discovery PMO no momento. Use o botão abaixo para registrar os riscos
+      atuais — cada linha pode ser editada clicando diretamente na célula.</div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn btn-red" onclick="addRiskRow()">+ Adicionar risco</button>
+        <button class="btn" onclick="exportTable('risks')">⬇ Exportar JSON</button>
+        <button class="btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+        <span class="spacer"></span>
+        <span class="save-flag" id="saveFlagRisks">✓ salvo</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:20%">Risco</th>
+              <th style="width:16%">Iniciativa vinculada</th>
+              <th style="width:9%">Squad</th>
+              <th style="width:12%">Com quem está</th>
+              <th style="width:9%">Severidade</th>
+              <th style="width:9%">Status</th>
+              <th style="width:17%">Mitigação / próximo passo</th>
+              <th style="width:6%"></th>
+            </tr>
+          </thead>
+          <tbody id="risksBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="risksEmpty" style="display:none">
+        <strong>Nenhum risco cadastrado</strong>
+        Clique em "+ Adicionar risco" para começar a registrar.
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ STATUS DAS INICIATIVAS ═══════════════ -->
+  <section class="panel" id="panel-status">
+    <h2 class="section-title">📌 Status das Iniciativas</h2>
+    <p class="section-desc">Todas as iniciativas ativas da base oficial, com squad, responsáveis e datas de discovery/desenvolvimento.</p>
+
+    <div class="card">
+      <div class="toolbar">
+        <select id="filterSquad" onchange="renderStatus()"><option value="">Todas as squads</option></select>
+        <select id="filterStatus" onchange="renderStatus()">
+          <option value="">Todos os status</option>
+          <option value="Em Discovery">Em Discovery</option>
+          <option value="A iniciar">A iniciar</option>
+        </select>
+        <span class="spacer"></span>
+        <button class="btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Status</th>
+              <th>PO</th><th>Tech Lead</th><th>Líder de frente</th>
+              <th>Discovery</th><th>Início Dev</th><th>Entrega alvo</th><th>Horas 2026</th>
+            </tr>
+          </thead>
+          <tbody id="statusBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ REFINAMENTO TÉCNICO ═══════════════ -->
+  <section class="panel" id="panel-refino">
+    <h2 class="section-title">🛠 Iniciativas em Refinamento Técnico</h2>
+    <p class="section-desc">Iniciativas que estão no refinamento técnico e seus prazos.</p>
+
+    <div class="note">
+      <span>⚠️</span>
+      <div>Nenhuma iniciativa tem o marco de cronograma "Refinamento Técnico" preenchido na base oficial ainda. Registre abaixo
+      quais iniciativas estão nessa fase e o prazo previsto — o Tech Lead é pré-preenchido a partir da base oficial ao escolher a iniciativa.</div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn btn-red" onclick="addRefinoRow()">+ Adicionar iniciativa em refinamento</button>
+        <button class="btn" onclick="exportTable('refino')">⬇ Exportar JSON</button>
+        <button class="btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+        <span class="spacer"></span>
+        <span class="save-flag" id="saveFlagRefino">✓ salvo</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:24%">Iniciativa</th>
+              <th style="width:10%">Squad</th>
+              <th style="width:16%">Responsável técnico</th>
+              <th style="width:12%">Prazo do refinamento</th>
+              <th style="width:12%">Status</th>
+              <th style="width:20%">Observação</th>
+              <th style="width:6%"></th>
+            </tr>
+          </thead>
+          <tbody id="refinoBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="refinoEmpty" style="display:none">
+        <strong>Nenhuma iniciativa em refinamento técnico registrada</strong>
+        Clique em "+ Adicionar iniciativa em refinamento" para começar.
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ AGOSTO 2026 ═══════════════ -->
+  <section class="panel" id="panel-agosto">
+    <h2 class="section-title">🗓 Próximas Iniciativas — Agosto/2026</h2>
+    <p class="section-desc">Iniciativas com marco (Discovery, início de desenvolvimento ou entrega alvo) previsto para agosto/2026, com base nas datas cadastradas.</p>
+
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Status atual</th><th>Marco em agosto/2026</th><th>Data</th><th>PO</th></tr>
+          </thead>
+          <tbody id="augustBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="note">
+      <span>⚠️</span>
+      <div><b>Inconsistência de data encontrada na base oficial:</b> a iniciativa <b>113292 · Garantias - Registro em Cartório
+      Op de Crédito</b> tem a Data de Discovery cadastrada como <b>03/08/2006</b> (ano 2006). É bem provável que o correto seja
+      <b>03/08/2026</b> — vale confirmar e corrigir direto no painel Discovery PMO.</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ═══════════ Dados reais — base oficial Discovery PMO (14 iniciativas) ═══════════
+const INITIATIVES = [{"num": "113286", "name": "Consórcio Cobrança - Atendimentos demandas", "squad": "Expresso", "status": "Em Discovery", "po": "Daniel Lima", "techLead": "Moseas Souza", "frontLeader": "Celso Perussi", "discoveryDate": "2026-06-11", "startDev": "2026-07-01", "endDev": "2026-08-01", "target": "2026-08-01", "hours2026": 1615}, {"num": "113292", "name": "Garantias - Registro em Cartório Op de Crédio", "squad": "Expresso", "status": "Em Discovery", "po": "Fernanda Rocha", "techLead": "Moseas Souza", "frontLeader": "Marcos Tasca", "discoveryDate": "2006-08-03", "startDev": "2026-09-01", "endDev": "2026-10-01", "target": "2026-10-01", "hours2026": 1800}, {"num": "113345", "name": "Cartões - Não Monetário - Tratar base PCCF", "squad": "Contact", "status": "Em Discovery", "po": "Sandra Souza", "techLead": "Silmara Rosalem", "frontLeader": "Luciana Possamai", "discoveryDate": "2026-06-11", "startDev": "2026-07-01", "endDev": "2026-09-01", "target": "2026-09-01", "hours2026": 2440}, {"num": "113359", "name": "Compensação de Cheques", "squad": "Ainda Sem Definição", "status": "A iniciar", "po": "Mariana Nakaya", "techLead": "Silmara Rosalem", "frontLeader": "Luis Fernando", "discoveryDate": "2026-08-03", "startDev": "2026-10-01", "endDev": "2026-11-01", "target": "2026-11-01", "hours2026": 2000}, {"num": "98434", "name": "Automação Câmbio Trade Finance QuickWin", "squad": "Contact", "status": "Em Discovery", "po": "André Dias", "techLead": "Rodrigo D'avila", "frontLeader": "Everson Gimenez", "discoveryDate": "2026-06-11", "startDev": "2026-07-01", "endDev": "2026-11-01", "target": "2026-11-01", "hours2026": 5197}, {"num": "116596", "name": "Jornada de Automação: Conversão Robôs em RPA", "squad": "ASD", "status": "Em Discovery", "po": "Beatriz Miranda", "techLead": "Juliana Ribeiro", "frontLeader": "Cinthia Ribeiro", "discoveryDate": "2026-06-11", "startDev": "2026-07-26", "endDev": "2027-12-01", "target": "2027-12-01", "hours2026": 8064}, {"num": "113319", "name": "Conciliação e Portabilidade Notificação Suspensão", "squad": "Terminator", "status": "Em Discovery", "po": "Jane Silva", "techLead": "ASD", "frontLeader": "Davi Lopes", "discoveryDate": "2026-07-01", "startDev": "2026-08-01", "endDev": "2026-08-01", "target": "2026-08-01", "hours2026": 1390}, {"num": "113317", "name": "Automatização Fluxo Pagamento Veículos", "squad": "Interstelar", "status": "A iniciar", "po": "Rodrigo Santos", "techLead": "ASD", "frontLeader": "Davi Lopes", "discoveryDate": "2026-08-03", "startDev": "2026-10-01", "endDev": "2026-11-01", "target": "2026-11-01", "hours2026": 2500}, {"num": "113315", "name": "Consignado, Conciliação e Portabilidade", "squad": "Ainda Sem Definição", "status": "A iniciar", "po": "Daniel Lima", "techLead": "ASD", "frontLeader": "Davi Lopes", "discoveryDate": "2026-08-10", "startDev": "2026-10-01", "endDev": "2026-11-01", "target": "2026-11-01", "hours2026": 1978}, {"num": "113301", "name": "Consórcio - Termo", "squad": "Expresso", "status": "A iniciar", "po": "Vinicius Barbosa", "techLead": "ASD", "frontLeader": "Marcos Tasca", "discoveryDate": "2026-08-10", "startDev": "2026-11-01", "endDev": "2026-12-01", "target": "2026-12-01", "hours2026": 1200}, {"num": "113309", "name": "Recepção Doc. Físicos, Ofícios e Ctrl Pendências", "squad": "MadMax", "status": "Em Discovery", "po": "Sérgio Cartapatti", "techLead": "ASD", "frontLeader": "Marcos Tasca", "discoveryDate": "2026-07-01", "startDev": "2026-08-01", "endDev": "2027-03-01", "target": "2027-03-01", "hours2026": 5376}, {"num": "113260", "name": "API EXTRATO - 2ª via de extrato Bancário", "squad": "Inception", "status": "Em Discovery", "po": "Sandra Souza", "techLead": "ASD", "frontLeader": "Carolina Máximo", "discoveryDate": "2026-07-01", "startDev": "2026-09-01", "endDev": "2027-03-01", "target": "2027-03-01", "hours2026": 5376}, {"num": "113308", "name": "Gestão de Fornecedores e Indexação Legado", "squad": "ASD", "status": "Em Discovery", "po": "Vinicius Barbosa", "techLead": "ASD", "frontLeader": "Marcos Tasca", "discoveryDate": "2026-07-01", "startDev": "2026-09-01", "endDev": "2027-04-01", "target": "2027-04-01", "hours2026": 8064}, {"num": "113327", "name": "FIRP / Abono / Mtoken / APP RM", "squad": "ASD", "status": "Em Discovery", "po": "Paulo Nascimento", "techLead": "ASD", "frontLeader": "Luciana Possamai", "discoveryDate": "2026-07-01", "startDev": "2026-09-01", "endDev": "2028-09-01", "target": "2028-09-01", "hours2026": 4032}];
+
+const AUGUST_START = new Date('2026-08-01T00:00:00');
+const AUGUST_END   = new Date('2026-08-31T23:59:59');
+
+function fmtDate(iso){
+  if(!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  if(!y||!m||!d) return iso;
+  return d+'/'+m+'/'+y;
+}
+function inAugust(iso){
+  if(!iso) return false;
+  const dt = new Date(iso+'T00:00:00');
+  if(isNaN(dt)) return false;
+  return dt >= AUGUST_START && dt <= AUGUST_END;
+}
+function statusPill(status){
+  const cls = status === 'Em Discovery' ? 'pill-discovery' : 'pill-iniciar';
+  return '<span class="pill '+cls+'">'+status+'</span>';
+}
+
+// ─── Tabs ───
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─── Visão Geral / KPIs ───
+function renderOverview(){
+  const total = INITIATIVES.length;
+  const discovery = INITIATIVES.filter(i=>i.status==='Em Discovery').length;
+  const iniciar = INITIATIVES.filter(i=>i.status==='A iniciar').length;
+  const augustCount = INITIATIVES.filter(i=> inAugust(i.discoveryDate)||inAugust(i.startDev)||inAugust(i.endDev)||inAugust(i.target)).length;
+
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiDiscovery').textContent = discovery;
+  document.getElementById('kpiDiscoveryPct').textContent = Math.round(discovery/total*100)+'% do total';
+  document.getElementById('kpiIniciar').textContent = iniciar;
+  document.getElementById('kpiIniciarPct').textContent = Math.round(iniciar/total*100)+'% do total';
+  document.getElementById('kpiAgosto').textContent = augustCount;
+
+  const bySquad = {};
+  INITIATIVES.forEach(i=>{
+    bySquad[i.squad] = bySquad[i.squad] || {discovery:0, iniciar:0};
+    if(i.status==='Em Discovery') bySquad[i.squad].discovery++; else bySquad[i.squad].iniciar++;
+  });
+  const rows = Object.keys(bySquad).sort().map(sq=>{
+    const s = bySquad[sq];
+    return '<tr><td><span class="squad-tag">'+sq+'</span></td><td>'+s.discovery+'</td><td>'+s.iniciar+'</td><td><b>'+(s.discovery+s.iniciar)+'</b></td></tr>';
+  }).join('');
+  document.getElementById('squadSummaryBody').innerHTML = rows;
+}
+
+// ─── Status das Iniciativas ───
+function populateSquadFilter(){
+  const sel = document.getElementById('filterSquad');
+  const squads = [...new Set(INITIATIVES.map(i=>i.squad))].sort();
+  squads.forEach(sq=>{
+    const opt = document.createElement('option');
+    opt.value = sq; opt.textContent = sq;
+    sel.appendChild(opt);
+  });
+}
+function renderStatus(){
+  const fSquad = document.getElementById('filterSquad').value;
+  const fStatus = document.getElementById('filterStatus').value;
+  const rows = INITIATIVES
+    .filter(i=> (!fSquad || i.squad===fSquad) && (!fStatus || i.status===fStatus))
+    .map(i=>{
+      return '<tr>'
+        +'<td class="num-tag">'+i.num+'</td>'
+        +'<td>'+i.name+'</td>'
+        +'<td><span class="squad-tag">'+i.squad+'</span></td>'
+        +'<td>'+statusPill(i.status)+'</td>'
+        +'<td>'+i.po+'</td>'
+        +'<td>'+i.techLead+'</td>'
+        +'<td>'+i.frontLeader+'</td>'
+        +'<td>'+fmtDate(i.discoveryDate)+'</td>'
+        +'<td>'+fmtDate(i.startDev)+'</td>'
+        +'<td>'+fmtDate(i.target)+'</td>'
+        +'<td>'+(i.hours2026 ? i.hours2026.toLocaleString('pt-BR')+'h' : '—')+'</td>'
+        +'</tr>';
+    }).join('');
+  document.getElementById('statusBody').innerHTML = rows || '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:20px">Nenhuma iniciativa encontrada com esse filtro.</td></tr>';
+}
+
+// ─── Agosto 2026 ───
+function renderAugust(){
+  const milestoneLabels = {discoveryDate:'Início do Discovery', startDev:'Início do Desenvolvimento', endDev:'Fim do Desenvolvimento', target:'Entrega alvo'};
+  const rows = [];
+  INITIATIVES.forEach(i=>{
+    ['discoveryDate','startDev','endDev','target'].forEach(k=>{
+      if(inAugust(i[k])){
+        rows.push({num:i.num,name:i.name,squad:i.squad,status:i.status,milestone:milestoneLabels[k],date:i[k],po:i.po,field:k});
+      }
+    });
+  });
+  // remove duplicate milestone label if endDev == target on same date (already distinct row is fine, but avoid literal dup row same field+date)
+  const seen = new Set();
+  const dedup = rows.filter(r=>{
+    const key = r.num+'|'+r.date+'|'+r.milestone;
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+  dedup.sort((a,b)=> new Date(a.date) - new Date(b.date));
+  const html = dedup.map(r=>{
+    return '<tr>'
+      +'<td class="num-tag">'+r.num+'</td>'
+      +'<td>'+r.name+'</td>'
+      +'<td><span class="squad-tag">'+r.squad+'</span></td>'
+      +'<td>'+statusPill(r.status)+'</td>'
+      +'<td><span class="aug-badge">'+r.milestone+'</span></td>'
+      +'<td>'+fmtDate(r.date)+'</td>'
+      +'<td>'+r.po+'</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('augustBody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px">Nenhum marco em agosto/2026.</td></tr>';
+}
+
+// ─── Riscos (editável, persistido em localStorage) ───
+const RISK_KEY = 'sala_report_riscos_iniciativas_v1';
+let risks = JSON.parse(localStorage.getItem(RISK_KEY) || '[]');
+
+function saveRisks(){
+  localStorage.setItem(RISK_KEY, JSON.stringify(risks));
+  flashSave('saveFlagRisks');
+  updateRiskKpi();
+}
+function flashSave(id){
+  const el = document.getElementById(id);
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'), 1200);
+}
+function initiativeOptions(selectedNum){
+  return '<option value="">— selecione —</option>' + INITIATIVES.map(i=>
+    '<option value="'+i.num+'" '+(i.num===selectedNum?'selected':'')+'>'+i.num+' · '+i.name+'</option>'
+  ).join('');
+}
+function severityOptions(sel){
+  return ['Alta','Média','Baixa'].map(s=>'<option '+(s===sel?'selected':'')+'>'+s+'</option>').join('');
+}
+function riskStatusOptions(sel){
+  return ['Aberto','Em mitigação','Mitigado'].map(s=>'<option '+(s===sel?'selected':'')+'>'+s+'</option>').join('');
+}
+function addRiskRow(){
+  risks.push({id:Date.now(), title:'', initiative:'', owner:'', severity:'Média', status:'Aberto', mitigation:''});
+  saveRisks();
+  renderRisks();
+}
+function removeRisk(id){
+  risks = risks.filter(r=>r.id!==id);
+  saveRisks();
+  renderRisks();
+}
+function updateRiskField(id, field, value){
+  const r = risks.find(r=>r.id===id);
+  if(r){ r[field]=value; saveRisks(); }
+}
+function renderRisks(){
+  document.getElementById('risksEmpty').style.display = risks.length ? 'none' : 'block';
+  document.getElementById('risksBody').innerHTML = risks.map(r=>{
+    const initiative = INITIATIVES.find(i=>i.num===r.initiative);
+    const squad = initiative ? initiative.squad : '—';
+    return '<tr>'
+      +'<td contenteditable="true" data-ph="Descreva o risco" oninput="updateRiskField('+r.id+',\'title\',this.textContent)">'+esc(r.title)+'</td>'
+      +'<td><select onchange="onRiskInitiativeChange('+r.id+',this.value)">'+initiativeOptions(r.initiative)+'</select></td>'
+      +'<td><span class="squad-tag">'+squad+'</span></td>'
+      +'<td contenteditable="true" data-ph="Nome do responsável" oninput="updateRiskField('+r.id+',\'owner\',this.textContent)">'+esc(r.owner)+'</td>'
+      +'<td><select onchange="updateRiskField('+r.id+',\'severity\',this.value)">'+severityOptions(r.severity)+'</select></td>'
+      +'<td><select onchange="updateRiskField('+r.id+',\'status\',this.value)">'+riskStatusOptions(r.status)+'</select></td>'
+      +'<td contenteditable="true" data-ph="Ação de mitigação" oninput="updateRiskField('+r.id+',\'mitigation\',this.textContent)">'+esc(r.mitigation)+'</td>'
+      +'<td><button class="del-btn" onclick="removeRisk('+r.id+')" title="Remover">✕</button></td>'
+      +'</tr>';
+  }).join('');
+}
+function onRiskInitiativeChange(id, value){
+  updateRiskField(id, 'initiative', value);
+  renderRisks();
+}
+function updateRiskKpi(){
+  const kpi = document.getElementById('kpiRiscos');
+  const sub = document.getElementById('kpiRiscosSub');
+  kpi.textContent = risks.length;
+  if(!risks.length){ sub.textContent = 'Nenhum risco registrado ainda'; return; }
+  const alta = risks.filter(r=>r.severity==='Alta').length;
+  const abertos = risks.filter(r=>r.status!=='Mitigado').length;
+  sub.textContent = alta + ' de severidade alta · ' + abertos + ' em aberto';
+}
+
+// ─── Refinamento Técnico (editável, persistido em localStorage) ───
+const REFINO_KEY = 'sala_report_refino_tecnico_v1';
+let refinos = JSON.parse(localStorage.getItem(REFINO_KEY) || '[]');
+
+function saveRefinos(){
+  localStorage.setItem(REFINO_KEY, JSON.stringify(refinos));
+  flashSave('saveFlagRefino');
+  updateRefinoKpi();
+}
+function refinoStatusOptions(sel){
+  return ['Não iniciado','Em andamento','Concluído'].map(s=>'<option '+(s===sel?'selected':'')+'>'+s+'</option>').join('');
+}
+function addRefinoRow(){
+  refinos.push({id:Date.now(), initiative:'', owner:'', deadline:'', status:'Não iniciado', note:''});
+  saveRefinos();
+  renderRefinos();
+}
+function removeRefino(id){
+  refinos = refinos.filter(r=>r.id!==id);
+  saveRefinos();
+  renderRefinos();
+}
+function updateRefinoField(id, field, value){
+  const r = refinos.find(r=>r.id===id);
+  if(r){ r[field]=value; saveRefinos(); }
+}
+function onRefinoInitiativeChange(id, value){
+  const r = refinos.find(r=>r.id===id);
+  const initiative = INITIATIVES.find(i=>i.num===value);
+  if(r){
+    r.initiative = value;
+    if(initiative && !r.owner) r.owner = initiative.techLead;
+    saveRefinos();
+  }
+  renderRefinos();
+}
+function renderRefinos(){
+  document.getElementById('refinoEmpty').style.display = refinos.length ? 'none' : 'block';
+  document.getElementById('refinoBody').innerHTML = refinos.map(r=>{
+    const initiative = INITIATIVES.find(i=>i.num===r.initiative);
+    const squad = initiative ? initiative.squad : '—';
+    return '<tr>'
+      +'<td><select onchange="onRefinoInitiativeChange('+r.id+',this.value)">'+initiativeOptions(r.initiative)+'</select></td>'
+      +'<td><span class="squad-tag">'+squad+'</span></td>'
+      +'<td contenteditable="true" data-ph="Nome do responsável" oninput="updateRefinoField('+r.id+',\'owner\',this.textContent)">'+esc(r.owner)+'</td>'
+      +'<td><input type="date" value="'+esc(r.deadline)+'" onchange="updateRefinoField('+r.id+',\'deadline\',this.value)"></td>'
+      +'<td><select onchange="updateRefinoField('+r.id+',\'status\',this.value)">'+refinoStatusOptions(r.status)+'</select></td>'
+      +'<td contenteditable="true" data-ph="Observação" oninput="updateRefinoField('+r.id+',\'note\',this.textContent)">'+esc(r.note)+'</td>'
+      +'<td><button class="del-btn" onclick="removeRefino('+r.id+')" title="Remover">✕</button></td>'
+      +'</tr>';
+  }).join('');
+}
+function updateRefinoKpi(){
+  const kpi = document.getElementById('kpiRefino');
+  const sub = document.getElementById('kpiRefinoSub');
+  kpi.textContent = refinos.length;
+  if(!refinos.length){ sub.textContent = 'Nenhum marco definido ainda'; return; }
+  const andamento = refinos.filter(r=>r.status==='Em andamento').length;
+  sub.textContent = andamento + ' em andamento';
+}
+
+function esc(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function exportTable(kind){
+  const payload = kind==='risks' ? risks : refinos;
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (kind==='risks' ? 'riscos' : 'refinamento-tecnico') + '-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+// ─── Init ───
+document.getElementById('lastUpdate').textContent = 'Gerado em ' + new Date().toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'});
+populateSquadFilter();
+renderOverview();
+renderStatus();
+renderAugust();
+renderRisks();
+renderRefinos();
+updateRiskKpi();
+updateRefinoKpi();
+</script>
+</body>
+</html>
