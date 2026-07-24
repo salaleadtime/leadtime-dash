@@ -18,6 +18,7 @@ var MAX_PAYLOAD_CHARS = 4000000;
 var VP_SHEET_MAP = {
   vpGeral:      '_vp_geral',
   vpSprint:     '_vp_sprint',
+  vpHomologation: '_vp_homologation',
   vpDeliveries: '_vp_deliveries',
   vpOpUpdates:  '_vp_opupdates',
   vpQuickNotes: '_vp_quicknotes',
