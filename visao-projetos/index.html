@@ -6165,6 +6165,10 @@
       setTimeout(() => alert('Não consegui ler a base inicial embutida no HTML. Use Importar do Jira para carregar a planilha.'), 300);
     }
 
+    // Nunca usar o snapshot HTML histórico como fonte no primeiro acesso.
+    // Sem localStorage, ele fazia usuários novos verem números desatualizados.
+    initialDataRaw = [];
+
     let initialSprintDataRaw = [];
     try {
       initialSprintDataRaw = JSON.parse(document.getElementById('initialSprintData')?.textContent || '[]');
@@ -6172,6 +6176,8 @@
       console.error('Erro ao ler base da sprint embutida:', err);
       initialSprintDataRaw = [];
     }
+
+    initialSprintDataRaw = [];
 
     let rows = [];
     let sprintRows = [];
@@ -6313,9 +6319,19 @@
       }, 3000);
     }
 
+    let vpInitialSyncPending = true;
+    function hideVpInitialSync(){
+      if(!vpInitialSyncPending) return;
+      vpInitialSyncPending = false;
+      hideLoadingOverlay();
+    }
+
     function gasLoadAndApplyVpAll(){
       gasLoadVpData('vpGeral', function(err, serverData){
-        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
+        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length){
+          hideVpInitialSync();
+          return;
+        }
         var local = readStoredJSON('vpBaseGeralImportada', null);
         var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
         var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
@@ -6325,6 +6341,7 @@
           storageSet('vpBaseGeralImportada', JSON.stringify(serverData));
           try{ renderAll(); }catch(e){}
         }
+        hideVpInitialSync();
       });
       gasLoadVpData('vpSprint', function(err, serverData){
         if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
@@ -9489,6 +9506,10 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
     /* ══════════════════════════════════════════════════════════ */
 
+    // No primeiro acesso ainda nÃ£o hÃ¡ uma base local: aguarda a fonte
+    // compartilhada em vez de mostrar o snapshot histÃ³rico embutido.
+    showLoadingOverlay();
+    setTimeout(hideVpInitialSync, 8000);
     setupFilters();
     restoreSquadFromUrl();
     bindFilterEvents();
