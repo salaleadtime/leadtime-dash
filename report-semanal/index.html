@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Report Semanal Executivo — Discovery para Delivery</title>
+<style>
+:root{
+  --bg:#f4f6fa; --surface:#fff; --surface-2:#f8fafc;
+  --ink:#162033; --muted:#657186; --line:#e2e7ef;
+  --brand:#b5122b; --brand-dark:#6f0717; --brand-soft:#fff0f3;
+  --blue:#235db5; --blue-soft:#edf4ff;
+  --green:#137252; --green-soft:#edf9f4;
+  --amber:#a86406; --amber-soft:#fff7e8;
+  --shadow:0 12px 34px rgba(26,39,68,.08); --radius:16px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,Segoe UI,Arial,sans-serif}
+button,input{font:inherit}
+
+/* ---------- Hero compacto ---------- */
+.hero{background:linear-gradient(125deg,var(--brand-dark),var(--brand) 65%,#d62d4c);color:#fff;padding:22px 30px}
+.hero-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:rgba(255,255,255,.7)}
+h1{font-size:24px;line-height:1.15;letter-spacing:-.7px;margin:6px 0 0}
+.hero .period{margin:9px 0 0;font-size:12px;color:rgba(255,255,255,.82);font-weight:600}
+.actions{display:flex;gap:8px}
+.btn{border:1px solid rgba(255,255,255,.26);color:#fff;background:rgba(255,255,255,.1);padding:8px 12px;border-radius:9px;cursor:pointer;font-weight:700;font-size:12px}
+.btn:hover{background:rgba(255,255,255,.18)}
+
+.shell{max-width:1240px;margin:0 auto;padding:20px 24px 34px}
+
+/* ---------- Veredito ---------- */
+.verdict{display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);
+  border-left:6px solid var(--brand);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 18px;margin-bottom:14px}
+.verdict .v-main{flex:1;min-width:240px}
+.verdict b{font-size:16px;display:block;letter-spacing:-.2px}
+.verdict p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.verdict .v-tag{font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.08em;
+  background:var(--green-soft);color:var(--green);padding:7px 11px;border-radius:999px;white-space:nowrap}
+
+/* ---------- KPIs ---------- */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px;
+  box-shadow:0 6px 18px rgba(30,43,68,.04);position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.kpi span{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:850}
+.kpi b{font-size:26px;display:block;margin:5px 0 2px;letter-spacing:-.5px}
+.kpi small{color:var(--muted);font-size:10.5px;line-height:1.35;display:block}
+.kpi.attention{background:linear-gradient(135deg,#fff,#fff8ea)}
+
+/* ---------- Seções ---------- */
+.section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin:14px 0;overflow:hidden}
+.section-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:14px}
+.section-head h2{margin:0;font-size:16px;letter-spacing:-.2px}
+.section-head p{margin:2px 0 0;color:var(--muted);font-size:11px}
+.tag{border-radius:999px;padding:5px 9px;font-size:10px;font-weight:850;background:var(--brand-soft);color:var(--brand);white-space:nowrap}
+.section-body{padding:14px 18px}
+
+/* ---------- Decisões ---------- */
+.decisions{display:grid;gap:8px}
+.decision{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:11px;align-items:center;
+  border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+.d-n{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  background:var(--amber-soft);color:var(--amber);font-weight:900;font-size:11px}
+.decision b{display:block;font-size:12.5px}
+.decision span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+.deadline{font-weight:850;color:var(--brand);font-size:11px;white-space:nowrap}
+
+/* ---------- Tabelas ---------- */
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;padding:0 10px 9px;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+td{padding:10px;border-top:1px solid var(--line);vertical-align:top;font-size:11.5px}
+tbody tr:hover td{background:#fbfcfe}
+.code{font-weight:900;color:var(--brand)}
+.nowrap{white-space:nowrap}
+.status{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:9.5px;font-weight:850}
+.status.discovery{background:var(--blue-soft);color:var(--blue)}
+.status.start{background:var(--amber-soft);color:var(--amber)}
+.signal{display:flex;align-items:center;gap:6px;font-weight:800;font-size:10px}
+.signal::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.signal.green{color:var(--green)} .signal.amber{color:var(--amber)}
+.signal.blue{color:var(--blue)} .signal.gray{color:#7a879a}
+.ask{font-size:10px;font-weight:800;padding:5px 8px;border-radius:8px;background:var(--amber-soft);color:var(--amber);display:inline-block}
+
+/* ---------- Marcos ---------- */
+.milestones{display:grid;gap:7px}
+.ms{display:grid;grid-template-columns:66px minmax(0,1fr) auto;gap:12px;align-items:center;
+  border:1px solid var(--line);border-radius:11px;padding:9px 12px}
+.ms .date{font-size:10.5px;font-weight:900;color:var(--blue);text-transform:uppercase;letter-spacing:.05em}
+.ms b{font-size:12px;display:block}
+.ms span{font-size:10.5px;color:var(--muted)}
+.ms .dev{font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap}
+
+/* ---------- Apêndice ---------- */
+details.appendix{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin:14px 0}
+details.appendix>summary{padding:14px 18px;cursor:pointer;font-weight:800;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+details.appendix>summary::-webkit-details-marker{display:none}
+details.appendix>summary::after{content:"▾ abrir";font-size:10px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+details.appendix[open]>summary::after{content:"▴ fechar"}
+details.appendix[open]>summary{border-bottom:1px solid var(--line)}
+.appendix-body{padding:14px 18px}
+.search{border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%;max-width:320px;outline:none;margin-bottom:12px}
+.search:focus{border-color:#e399a7;box-shadow:0 0 0 3px rgba(181,18,43,.08)}
+.footer{color:var(--muted);font-size:10.5px;line-height:1.55;margin:16px 3px}
+
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){
+  .hero{padding:20px 16px} h1{font-size:20px}
+  .shell{padding:16px 14px 28px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .decision,.ms{grid-template-columns:1fr;gap:5px}
+  .verdict{flex-direction:column;align-items:flex-start}
+}
+@media print{
+  body{background:#fff;font-size:10.5px}
+  .hero{padding:14px 18px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .actions,.search{display:none!important}
+  .shell{max-width:none;padding:10px}
+  .section,.verdict,.kpi,details.appendix{box-shadow:none;break-inside:avoid}
+  .section{margin:9px 0}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  details.appendix{break-before:page}
+  details.appendix>summary::after{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-top">
+    <div>
+      <div class="eyebrow">Overview DS · Planejamento 2026</div>
+      <h1>Report Semanal Executivo — Discovery → Delivery</h1>
+      <p class="period" id="heroPeriod"></p>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="window.print()">Exportar PDF</button>
+      <button class="btn" id="copyBtn" onclick="copySummary()">Copiar resumo</button>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+
+  <section class="verdict">
+    <div class="v-main">
+      <b id="verdictTitle"></b>
+      <p id="verdictText"></p>
+    </div>
+    <span class="v-tag" id="verdictTag"></span>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Indicadores principais"></section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>Decisões da semana</h2><p>O que precisa de resposta da gestão — com prazo.</p></div>
+      <span class="tag" id="decisionCount"></span>
+    </div>
+    <div class="section-body decisions" id="decisions"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>Iniciativas que exigem ação</h2><p>Atenções preventivas e janelas de refinamento já datadas.</p></div>
+      <span class="tag" id="actionCount"></span>
+    </div>
+    <div class="section-body table-wrap">
+      <table>
+        <thead><tr><th>Iniciativa</th><th>Squad</th><th>Situação</th><th>Prazo</th><th>Responsável</th><th>Ação esperada</th></tr></thead>
+        <tbody id="actionRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>Próximos marcos — agosto</h2><p>Discoveries a iniciar e janela de desenvolvimento associada.</p></div>
+      <span class="tag" id="milestoneCount"></span>
+    </div>
+    <div class="section-body milestones" id="milestones"></div>
+  </section>
+
+  <details class="appendix">
+    <summary>Base completa das iniciativas <span class="tag" id="baseCount"></span></summary>
+    <div class="appendix-body">
+      <input id="search" class="search" type="search" placeholder="Buscar iniciativa, squad ou número…" aria-label="Buscar iniciativas">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Discovery</th><th>Status</th><th>Refinamento</th><th>Histórias</th><th>Sinal</th></tr></thead>
+          <tbody id="baseRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <p class="footer" id="footerNote"></p>
+</main>
+
+<script>
+/* =========================================================================
+   PONTO ÚNICO DE ATUALIZAÇÃO SEMANAL
+   Edite apenas CONFIG e DATA. Todos os KPIs, contagens, tabelas e o resumo
+   copiável são derivados daqui — não há número escrito à mão no HTML.
+   ========================================================================= */
+
+const CONFIG = {
+  period: "20 a 24 jul. 2026",
+  updatedAt: "24 jul. 2026 · 15:09 BRT",
+  source: "Discovery PMO Tracker",
+  verdict: {
+    tag: "Plano estável",
+    title: "Plano estável, com atenção preventiva",
+    text: "Pendência de arquitetura solucionada na semana, sem risco formal no roadmap. " +
+          "Três iniciativas seguem em Discovery sem histórias e sem próximo refinamento informado."
+  },
+  decisions: [
+    { title:"Confirmar backlog mínimo dos refinamentos",
+      detail:"As três iniciativas com janela agendada ainda aparecem com zero histórias no recorte do Jira.",
+      deadline:"Antes da janela" },
+    { title:"Definir próximo marco das atenções preventivas",
+      detail:"Registrar data, responsável e resultado esperado — evitar permanência em Discovery sem evidência de evolução.",
+      deadline:"Próxima semana" },
+    { title:"Validar capacidade da Squad Interstelar",
+      detail:"Três iniciativas da squad iniciam Discovery em agosto, com desenvolvimento sobreposto entre out. e nov.",
+      deadline:"Antes de agosto" }
+  ]
+};
+
+const DATA = [
+  // Em Discovery — com evidência de backlog
+  { id:"113286", name:"Consórcio Cobrança — Atendimentos de demandas", squad:"Expresso",
+    discovery:"11 jun.", status:"Em Discovery", stories:4 },
+  { id:"113345", name:"Cartões — Não Monetário — Tratar base PCCF", squad:"Interstelar",
+    discovery:"11 jun.", status:"Em Discovery", stories:24 },
+  { id:"116596", name:"Jornada de Automação — Conversão de Robôs em RPA", squad:"Terminator",
+    discovery:"11 jun.", status:"Em Discovery", stories:4 },
+
+  // Em Discovery — com janela de refinamento datada
+  { id:"113308", name:"Gestão de Fornecedores e Indexação Legado", squad:"MadMax",
+    discovery:"01 jul.", status:"Em Discovery", stories:0,
+    refinement:{ window:"03 – 14 ago.", owner:"Rennan Gustavo", ask:"Confirmar backlog mínimo" } },
+  { id:"113260", name:"API EXTRATO — 2ª via de extrato bancário", squad:"Inception",
+    discovery:"01 jul.", status:"Em Discovery", stories:0,
+    refinement:{ window:"10 – 30 ago.", owner:"Victor Cruz", ask:"Confirmar histórias e critérios" } },
+  { id:"113327", name:"FIRP / Abono / Mtoken / APP RM", squad:"Inception",
+    discovery:"01 jul.", status:"Em Discovery", stories:0,
+    refinement:{ window:"10 – 31 ago.", owner:"Victor Fortunato", ask:"Confirmar histórias e dependências" } },
+
+  // Em Discovery — atenção preventiva (sem histórias, sem refinamento)
+  { id:"98434",  name:"Automação Câmbio Trade Finance QuickWin", squad:"Contact",
+    discovery:"11 jun.", status:"Em Discovery", stories:0, ask:"Definir próximo marco" },
+  { id:"113319", name:"Conciliação e Portabilidade — Notificação de Suspensão", squad:"Terminator",
+    discovery:"01 jul.", status:"Em Discovery", stories:0, ask:"Confirmar evolução" },
+  { id:"113309", name:"Recepção de Documentos Físicos, Ofícios e Controle de Pendências", squad:"MadMax",
+    discovery:"01 jul.", status:"Em Discovery", stories:0, ask:"Definir responsável/data" },
+
+  // A iniciar — marcos de agosto
+  { id:"113292", name:"Garantias — Registro em Cartório Op. de Crédito", squad:"Expresso",
+    discovery:"03 ago.", status:"A iniciar", stories:0, owner:"Mara Denise", dev:"01 set. – 01 out." },
+  { id:"113359", name:"Compensação de Cheques", squad:"Interstelar",
+    discovery:"03 ago.", status:"A iniciar", stories:0, owner:"Henrique Pasquim", dev:"01 out. – 01 nov." },
+  { id:"113317", name:"Automatização do Fluxo de Pagamento de Veículos", squad:"Interstelar",
+    discovery:"03 ago.", status:"A iniciar", stories:0, owner:"Milena Bento", dev:"01 out. – 01 nov." },
+  { id:"113315", name:"Consignado, Conciliação e Portabilidade", squad:"Interstelar",
+    discovery:"10 ago.", status:"A iniciar", stories:0, owner:"Helen da Silva Martins", dev:"01 out. – 01 nov." },
+  { id:"113301", name:"Consórcio — Termo", squad:"Expresso",
+    discovery:"10 ago.", status:"A iniciar", stories:0, owner:"Tarsio Redigulo", dev:"01 nov. – 01 dez." }
+];
+
+/* ---------- Regras de classificação (fonte única da verdade) ---------- */
+const isPlanned   = i => i.status === "A iniciar";
+const hasWindow   = i => Boolean(i.refinement);
+const isAttention = i => i.status === "Em Discovery" && i.stories === 0 && !i.refinement;
+const hasBacklog  = i => i.status === "Em Discovery" && i.stories > 0;
+
+function signalOf(i){
+  if (isPlanned(i))   return { label:"Planejada",  cls:"gray"  };
+  if (isAttention(i)) return { label:"Atenção",    cls:"amber" };
+  if (hasWindow(i))   return { label:"Refinamento",cls:"blue"  };
+  return { label:"Em evolução", cls:"green" };
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+/* ---------- Agregados derivados ---------- */
+const planned   = DATA.filter(isPlanned);
+const windows   = DATA.filter(hasWindow);
+const attention = DATA.filter(isAttention);
+const backlog   = DATA.filter(hasBacklog);
+const discovery = DATA.filter(i => i.status === "Em Discovery");
+const stories   = DATA.reduce((sum, i) => sum + i.stories, 0);
+
+/* ---------- Render ---------- */
+function renderHeader(){
+  document.getElementById("heroPeriod").textContent =
+    `Período: ${CONFIG.period}  ·  Base: ${CONFIG.updatedAt}  ·  Fonte: ${CONFIG.source}`;
+  document.getElementById("verdictTag").textContent   = CONFIG.verdict.tag;
+  document.getElementById("verdictTitle").textContent = CONFIG.verdict.title;
+  document.getElementById("verdictText").textContent  = CONFIG.verdict.text;
+  document.getElementById("footerNote").textContent =
+    `Fonte: ${CONFIG.source}. "Atenção preventiva" é leitura gerencial derivada exclusivamente dos campos ` +
+    `disponíveis — iniciativa em Discovery, zero histórias e ausência de refinamento registrado. ` +
+    `Não representa atraso nem risco formal.`;
+}
+
+function renderKpis(){
+  const cards = [
+    { c:"var(--blue)",  label:"Carteira ativa",     value:DATA.length,
+      sub:`${discovery.length} em Discovery · ${planned.length} a iniciar` },
+    { c:"var(--green)", label:"Backlog evidenciado", value:backlog.length,
+      sub:`${stories} histórias no Jira` },
+    { c:"var(--blue)",  label:"Refinamento datado",  value:windows.length,
+      sub:"Janelas com período e responsável" },
+    { c:"var(--amber)", label:"Atenção preventiva",  value:attention.length,
+      sub:"Sem histórias e sem próximo marco", attn:true }
+  ];
+  document.getElementById("kpis").innerHTML = cards.map(k => `
+    <article class="kpi${k.attn ? " attention" : ""}" style="--c:${k.c}">
+      <span>${esc(k.label)}</span><b>${k.value}</b><small>${esc(k.sub)}</small>
+    </article>`).join("");
+}
+
+function renderDecisions(){
+  document.getElementById("decisionCount").textContent = `${CONFIG.decisions.length} decisões`;
+  document.getElementById("decisions").innerHTML = CONFIG.decisions.map((d, n) => `
+    <div class="decision">
+      <div class="d-n">${n + 1}</div>
+      <div><b>${esc(d.title)}</b><span>${esc(d.detail)}</span></div>
+      <div class="deadline">${esc(d.deadline)}</div>
+    </div>`).join("");
+}
+
+function renderActions(){
+  // Uma única tabela substitui "Fila de atenção" + "Janelas de refinamento".
+  const rows = [
+    ...attention.map(i => ({ i, sit:{ label:"Atenção", cls:"amber" },
+        prazo:"A definir", owner:"—", ask:i.ask })),
+    ...windows.map(i => ({ i, sit:{ label:"Refinamento", cls:"blue" },
+        prazo:i.refinement.window, owner:i.refinement.owner, ask:i.refinement.ask }))
+  ];
+  document.getElementById("actionCount").textContent = `${rows.length} iniciativas`;
+  document.getElementById("actionRows").innerHTML = rows.map(r => `
+    <tr>
+      <td><span class="code">${esc(r.i.id)}</span><br>${esc(r.i.name)}</td>
+      <td class="nowrap">${esc(r.i.squad)}</td>
+      <td><span class="signal ${r.sit.cls}">${r.sit.label}</span></td>
+      <td class="nowrap"><b>${esc(r.prazo)}</b></td>
+      <td class="nowrap">${esc(r.owner)}</td>
+      <td><span class="ask">${esc(r.ask)}</span></td>
+    </tr>`).join("");
+}
+
+function renderMilestones(){
+  document.getElementById("milestoneCount").textContent = `${planned.length} iniciativas`;
+  document.getElementById("milestones").innerHTML = planned.map(i => `
+    <div class="ms">
+      <div class="date">${esc(i.discovery)}</div>
+      <div><b><span class="code">${esc(i.id)}</span> · ${esc(i.name)}</b>
+        <span>${esc(i.squad)} · Dono: ${esc(i.owner)}</span></div>
+      <div class="dev">Dev: ${esc(i.dev)}</div>
+    </div>`).join("");
+}
+
+function renderBase(){
+  const query = document.getElementById("search").value.toLowerCase().trim();
+  const visible = DATA.filter(i => {
+    const sig = signalOf(i).label;
+    return `${i.id} ${i.name} ${i.squad} ${i.status} ${sig}`.toLowerCase().includes(query);
+  });
+
+  document.getElementById("baseCount").textContent = `${DATA.length} iniciativas`;
+  document.getElementById("baseRows").innerHTML = visible.length
+    ? visible.map(i => {
+        const sig = signalOf(i);
+        const cls = i.status === "Em Discovery" ? "discovery" : "start";
+        return `<tr>
+          <td class="code">${esc(i.id)}</td>
+          <td>${esc(i.name)}</td>
+          <td>${esc(i.squad)}</td>
+          <td class="nowrap">${esc(i.discovery)}</td>
+          <td><span class="status ${cls}">${esc(i.status)}</span></td>
+          <td class="nowrap">${i.refinement ? esc(i.refinement.window) : "—"}</td>
+          <td><b>${i.stories}</b></td>
+          <td><span class="signal ${sig.cls}">${sig.label}</span></td>
+        </tr>`;
+      }).join("")
+    : `<tr><td colspan="8" style="text-align:center;color:#657186;padding:26px">Nenhuma iniciativa encontrada.</td></tr>`;
+}
+
+/* ---------- Resumo copiável (para e-mail / Teams) ---------- */
+function buildSummary(){
+  const lines = [
+    `REPORT SEMANAL EXECUTIVO — DISCOVERY → DELIVERY`,
+    `Período: ${CONFIG.period} | Base: ${CONFIG.updatedAt}`,
+    ``,
+    `LEITURA: ${CONFIG.verdict.title}`,
+    CONFIG.verdict.text,
+    ``,
+    `NÚMEROS: ${DATA.length} iniciativas (${discovery.length} em Discovery, ${planned.length} a iniciar) | ` +
+      `${backlog.length} com backlog (${stories} histórias) | ${windows.length} com refinamento datado | ` +
+      `${attention.length} em atenção preventiva`,
+    ``,
+    `DECISÕES:`,
+    ...CONFIG.decisions.map((d, n) => `${n + 1}. ${d.title} — ${d.deadline}`),
+    ``,
+    `ATENÇÃO PREVENTIVA:`,
+    ...attention.map(i => `- ${i.id} ${i.name} (${i.squad}) — ${i.ask}`),
+    ``,
+    `REFINAMENTOS DATADOS:`,
+    ...windows.map(i => `- ${i.id} ${i.name} — ${i.refinement.window} (${i.refinement.owner})`)
+  ];
+  return lines.join("\n");
+}
+
+async function copySummary(){
+  const btn = document.getElementById("copyBtn");
+  const original = "Copiar resumo";
+  try {
+    await navigator.clipboard.writeText(buildSummary());
+    btn.textContent = "Resumo copiado ✓";
+  } catch {
+    btn.textContent = "Não foi possível copiar";
+  }
+  setTimeout(() => { btn.textContent = original; }, 2200);
+}
+
+renderHeader();
+renderKpis();
+renderDecisions();
+renderActions();
+renderMilestones();
+renderBase();
+document.getElementById("search").addEventListener("input", renderBase);
+</script>
+</body>
+</html>
