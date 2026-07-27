@@ -76,6 +76,16 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .blk-h p{margin:1px 0 0;font-size:9.5px;color:var(--muted)}
 .blk-b{padding:13px 14px}
 .tagn{font-size:9px;font-weight:850;padding:4px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary);white-space:nowrap}
+/* apêndice recolhível — detalhe granular que já aparece resumido em outro bloco
+   (cards de refinamento, feed de evolução, riscos) não precisa ficar aberto por padrão */
+details.blk-more{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;overflow:hidden;background:var(--panel)}
+details.blk-more>summary{list-style:none;cursor:pointer;padding:10px 14px;background:var(--panel-2);display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.blk-more>summary::-webkit-details-marker{display:none}
+details.blk-more>summary::after{content:"▾ ver detalhe";font-size:9px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+details.blk-more[open]>summary{border-bottom:1px solid var(--line)}
+details.blk-more[open]>summary::after{content:"▴ ocultar"}
+details.blk-more h2{margin:0;font-size:13.5px;letter-spacing:-.2px}
+details.blk-more p{margin:1px 0 0;font-size:9.5px;color:var(--muted)}
 
 .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .cols2{display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
@@ -229,6 +239,8 @@ body[data-model="B"] .only-a{display:none}
   .app-tools,.edit-ui,.rm{display:none!important}
   body{background:#fff}.stage{padding:0}.report{box-shadow:none;border-radius:0;width:auto}
   .blk,.kpi{break-inside:avoid}
+  details.blk-more{break-inside:avoid}
+  details.blk-more>summary::after{display:none}
 }
 </style>
 </head>
@@ -379,25 +391,26 @@ body[data-model="B"] .only-a{display:none}
       </div>
     </div>
 
-    <!-- ══ MODELO A: semáforo compacto ══ -->
-    <div class="blk only-a">
-      <div class="blk-h"><div><h2>Situação por iniciativa</h2><p>Agrupado por urgência — maturidade, variação semanal e próximo marco.</p></div><span class="tagn" id="semaTag">14 iniciativas</span></div>
+    <!-- ══ Detalhe granular por iniciativa — recolhido por padrão: já resumido
+         nos cards de refinamento, no feed de evolução e na tabela de riscos ══ -->
+    <details class="blk-more only-a">
+      <summary><div><h2>Situação por iniciativa</h2><p>Agrupado por urgência — maturidade, variação semanal e próximo marco.</p></div><span class="tagn" id="semaTag">14 iniciativas</span></summary>
       <div class="blk-b" id="semaGrid"></div>
-    </div>
+    </details>
 
     <!-- ══ MODELO B: tabela detalhada ══ -->
-    <div class="blk only-b">
-      <div class="blk-h"><div><h2>Acompanhamento das iniciativas</h2><p>Visão consolidada do portfólio.</p></div><span class="tagn" id="tblTag">14 iniciativas</span></div>
+    <details class="blk-more only-b">
+      <summary><div><h2>Acompanhamento das iniciativas</h2><p>Visão consolidada do portfólio.</p></div><span class="tagn" id="tblTag">14 iniciativas</span></summary>
       <div class="blk-b" style="overflow:auto">
         <table class="tb2"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Prontidão</th><th>Semana</th><th>Próximo marco</th><th>PO / Tech Lead</th></tr></thead><tbody id="tblRows"></tbody></table>
       </div>
-    </div>
+    </details>
 
     <!-- ══ Próximos marcos ══ -->
-    <div class="blk">
-      <div class="blk-h"><div><h2>Próximos marcos</h2><p>Próximo compromisso de cada iniciativa em 14 dias.</p></div><span class="tagn" id="mstTag">14 marco(s)</span></div>
+    <details class="blk-more">
+      <summary><div><h2>Próximos marcos</h2><p>Próximo compromisso de cada iniciativa em 14 dias.</p></div><span class="tagn" id="mstTag">14 marco(s)</span></summary>
       <div class="blk-b rail" id="mstRail"></div>
-    </div>
+    </details>
 
     <div class="foot"><span>Sala Transformação · uso interno</span><span id="footStamp">Semana 2026-W30 · emitido em 26/07/2026, 20:02</span></div>
   </div>
@@ -737,6 +750,10 @@ function diffSnap(prev,cur){
   if(!prev)return[];
   const out=[];
   SNAP_FIELDS.forEach(([k,label,tipo,peso])=>{
+    /* campo inexistente no snapshot anterior (ex.: schema mais novo que a semana salva)
+       não é uma mudança real — é lacuna de dado. Sem isso, toda migração de schema
+       gera um "não informado → valor" falso em 100% das iniciativas. */
+    if(!(k in prev))return;
     const a=prev[k]??'',b=cur[k]??'';
     if(String(a)===String(b))return;
     const fmt=v=>tipo==='d'?(v?fD(v):'sem data'):(String(v||'').trim()||'não informado');
@@ -1113,11 +1130,14 @@ function setModel(m){document.body.dataset.model=m;el('mA').classList.toggle('on
 /* ════════════ exportação ════════════ */
 async function snapCanvas(scale){
   document.body.classList.add('exporting');
+  /* <details> recolhido não é capturado pelo html2canvas — abre para a exportação e devolve ao estado original */
+  const det=[...document.querySelectorAll('details.blk-more')],wasOpen=det.map(d=>d.open);
+  det.forEach(d=>d.open=true);
   await new Promise(r=>setTimeout(r,60));
   try{
     return await html2canvas(el('reportCapture'),{scale,useCORS:true,backgroundColor:'#ffffff',
       windowWidth:1240,scrollX:0,scrollY:-window.scrollY});
-  }finally{document.body.classList.remove('exporting')}
+  }finally{document.body.classList.remove('exporting');det.forEach((d,i)=>d.open=wasOpen[i])}
 }
 async function copyImage(btn){
   const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='🖼 Copiando…';
@@ -1278,6 +1298,10 @@ try{const m=localStorage.getItem('sala_rep_model');if(m)setModel(m)}catch(e){}
 el('squadFilter').addEventListener('change',render);
 el('weekInput').addEventListener('change',generate);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+/* Ctrl+P / impressão nativa também precisa do apêndice aberto para não sumir da folha */
+let __detState=null;
+window.addEventListener('beforeprint',()=>{const det=[...document.querySelectorAll('details.blk-more')];__detState=det.map(d=>d.open);det.forEach(d=>d.open=true)});
+window.addEventListener('afterprint',()=>{if(!__detState)return;[...document.querySelectorAll('details.blk-more')].forEach((d,i)=>d.open=__detState[i]);__detState=null});
 generate();
 </script>
 
