@@ -4,7 +4,7 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>Report Semanal Executivo — Discovery</title>
+<title>Overview DS / Planejamento 2026 / Report Semanal</title>
 <script src="./vendor/html-to-image.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
@@ -81,6 +81,8 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;position:relative;z-index:1}
 .eyebrow{font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;font-weight:800;color:rgba(255,255,255,.7)}
 .hero h1{font-size:25px;line-height:1.12;letter-spacing:-.7px;margin:6px 0 5px}
+.hero h1 .title-report{display:inline-block;padding:1px 6px 2px;border-radius:4px;background:#fff;color:#111827}
+.hero h1 .title-semanal{color:#fff}
 .hero .sub{font-size:12px;color:rgba(255,255,255,.82);margin:0}
 .hero-week{text-align:right;flex:none}
 .hero-week b{display:block;font-size:20px;letter-spacing:-.4px}
@@ -369,13 +371,12 @@ body[data-model="B"] .only-a{display:none}
 <body data-model="A">
 
 <div class="app-tools" data-html2canvas-ignore="true">
-  <div class="app-brand"><b>Report Semanal · Discovery</b><span>Dados herdados automaticamente do Discovery PMO Tracker</span></div>
+  <div class="app-brand"><b>Overview DS / Planejamento 2026 / Report Semanal</b><span>Dados herdados automaticamente do Discovery PMO Tracker</span></div>
   <label class="week-field"><span>Semana</span><div class="wk"><button type="button" onclick="shiftWeek(-1)">‹</button><input type="week" id="weekInput"><button type="button" onclick="shiftWeek(1)">›</button></div></label>
   <select class="sel" id="squadFilter"><option value="">Todas as squads</option></select>
   <button class="tb primary" id="genBtn" onclick="generate()">⟳ Atualizar dados</button>
   <button class="tb" onclick="openComplement()" title="Inclui complementos sem substituir os demais registros">✎ Complementos</button>
-  <button class="tb ok" onclick="capturePng(this)" title="Gera uma imagem PNG real do report inteiro">▣ PNG completo</button>
-  <button class="tb" onclick="captureEmailPng(this)" title="Gera um resumo com texto maior, próprio para Teams e e-mail">✉ PNG p/ e-mail</button>
+  <button class="tb ok" onclick="capturePng(this)" title="Gera uma imagem PNG real do report inteiro">▣ Capturar PNG</button>
   <button class="tb" onclick="exportPdf(this)">⇩ Exportar PDF</button>
   <button class="tb" onclick="returnToTracker()">← Voltar ao Discovery</button>
   <div class="tstatus"><b id="srcLabel">Servidor Discovery PMO</b><span id="srcDetail">Carregando iniciativas…</span></div>
@@ -387,8 +388,8 @@ body[data-model="B"] .only-a{display:none}
   <header class="hero">
     <div class="hero-row">
       <div>
-        <div class="eyebrow">Sala Transformação · Discovery → Delivery</div>
-        <h1>Report Semanal Executivo</h1>
+        <div class="eyebrow">Overview DS / Planejamento 2026 / Report Semanal</div>
+        <h1><span class="title-report">Report</span> <span class="title-semanal">Semanal</span></h1>
         <p class="sub" id="heroSub">14 iniciativas acompanhadas · maturidade média de 31%</p>
       </div>
       <div class="hero-week">
@@ -2113,33 +2114,6 @@ async function capturePng(btn){
     toast('Não foi possível gerar uma imagem válida. Tente novamente ou exporte o PDF.','err');
   }finally{btn.disabled=false;btn.innerHTML=old}
 }
-function emailShareRows(rows,empty){
-  return rows.length?rows.map(row=>`<div style="padding:10px 0;border-top:1px solid #e6ebf2"><b style="display:block;color:#1c2430;font-size:15px;line-height:1.25">${esc(row.title)}</b><span style="display:block;margin-top:3px;color:#5f6d80;font-size:12px;line-height:1.4">${esc(row.detail)}</span></div>`).join(''):`<div style="padding:11px 0;color:#69778b;font-size:13px">${esc(empty)}</div>`;
-}
-function createEmailCaptureNode(){
-  const c=lastCtx;if(!c)throw new Error('report-not-generated');
-  const squad=selectedSquadName(c.squad)||'Todas as squads';
-  const points=(c.ins||[]).slice(0,5).map(i=>({title:`${i.a.p.initiativeNumber||'—'} · ${cut(i.a.p.name,62)}`,detail:`${i.a.p.squad||'Sem squad'} — ${i.d||i.t||'Em acompanhamento'}`}));
-  const commitments=(c.mst||[]).slice(0,5).map(m=>({title:`${fD(m.date)} · ${m.a.p.initiativeNumber||'—'} ${cut(m.a.p.name,52)}`,detail:cut(m.label||'Compromisso do período',120)}));
-  const next=(c.disc||[]).slice(0,4).map(a=>({title:`${fBadge(a.p.discoveryDate)} · ${a.p.initiativeNumber||'—'} ${cut(a.p.name,52)}`,detail:`${a.p.squad||'Sem squad'} · PO: ${nome2(a.p.po)} · TL: ${nome2(a.p.techLead)}`}));
-  const box=(title,subtitle,rows,empty)=>`<section style="margin-top:14px;border:1px solid #dde5ee;border-radius:12px;background:#fff;overflow:hidden"><div style="padding:12px 16px;background:#f7f9fc;border-bottom:1px solid #e3e9f0"><b style="font-size:16px;color:#1c2430">${title}</b><span style="display:block;margin-top:2px;font-size:11px;color:#69778b">${subtitle}</span></div><div style="padding:2px 16px">${emailShareRows(rows,empty)}</div></section>`;
-  const root=document.createElement('section');
-  root.id='emailCapture';root.setAttribute('data-html2canvas-ignore','true');
-  root.style.cssText='position:fixed;left:0;top:0;z-index:-1;pointer-events:none;width:760px;padding:22px;box-sizing:border-box;background:#f4f7fb;color:#1c2430;font-family:Inter,Segoe UI,Arial,sans-serif';
-  root.innerHTML=`<header style="padding:22px;border-radius:14px;background:#bf1830;color:#fff"><div style="font-size:11px;font-weight:800;letter-spacing:1.2px;opacity:.82">SALA TRANSFORMAÇÃO · DISCOVERY → DELIVERY</div><h1 style="margin:7px 0 4px;font-size:28px;line-height:1.1">Report Semanal Executivo</h1><div style="font-size:15px;opacity:.93">${fDM(c.start)} a ${fDM(new Date(c.end))} · ${esc(squad)}</div><div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(0,0,0,.18)"><b style="font-size:17px">${esc(c.vT||'Resumo da semana')}</b><span style="display:block;margin-top:3px;font-size:13px;line-height:1.4">${esc(c.vX||'Acompanhe os principais movimentos e compromissos do período.')}</span></div></header><section style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">${[['Iniciativas',c.scoped.length],['Em Discovery',c.startedDisc],['Prontas p/ desenvolvimento',c.readyDev],['Travas',c.weeklyLocks],['Histórias Jira',c.jiraStories],['Atenção preventiva',c.preventive]].map(([l,v])=>`<div style="padding:12px 8px;border-radius:10px;background:#fff;border:1px solid #dde5ee;text-align:center"><div style="font-size:10px;font-weight:800;color:#687587;text-transform:uppercase;line-height:1.25">${l}</div><b style="display:block;margin-top:4px;font-size:23px;color:#1c2430">${v??0}</b></div>`).join('')}</section>${box('Pontos para gestão','Movimentos relevantes do período',points,'Sem movimento relevante no período.')}${box('Compromissos da semana','Marcos e retornos previstos',commitments,'Sem compromisso registrado no período.')}${box(`Próximos Discoveries — ${c.alvoM?MESL[+c.alvoM.slice(5,7)-1]:''}`,'Iniciativas com início no próximo ciclo',next,'Sem novo Discovery previsto.')}<footer style="padding:14px 2px 0;font-size:11px;color:#69778b">Sala Transformação · uso interno · gerado em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}</footer>`;
-  document.body.appendChild(root);return root;
-}
-async function captureEmailPng(btn){
-  const old=btn.innerHTML;let node=null;btn.disabled=true;btn.innerHTML='✉ Gerando…';
-  try{
-    node=createEmailCaptureNode();await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,80)));
-    const canvas=await renderPngNode(node,2,760),blob=await canvasBlob(canvas);
-    if(canvas.width<1200||canvas.height<800||blob.size<=50000||!canvasHasVisibleReport(canvas))throw new Error(`email-capture-invalid:${canvas.width}x${canvas.height}:${blob.size}`);
-    openCapturePreview(canvas,blob,'Resumo otimizado para e-mail e Teams, com texto maior.');
-    toast('PNG para e-mail gerado. Use Copiar imagem ou Salvar PNG.');
-  }catch(e){console.error('Falha ao gerar PNG para e-mail:',e);toast('Não foi possível gerar o PNG para e-mail. Tente novamente.','err')}
-  finally{node?.remove();btn.disabled=false;btn.innerHTML=old}
-}
 function returnToTracker(){
   if(openedFromTracker){window.close();setTimeout(()=>{if(!window.closed)window.location.href='./';},180);return;}
   window.location.href='./';
@@ -2356,8 +2330,8 @@ function buildRichHtml(){
   const kpi=(l,v,s)=>`<td width="16.6%" style="padding:8px;border:1px solid #e5e9f2;border-radius:6px;text-align:center"><div style="font-size:10px;color:#687587;text-transform:uppercase;font-weight:700">${l}</div><div style="font-size:20px;font-weight:800;color:#1c2430">${v}</div><div style="font-size:10px;color:#687587">${s}</div></td>`;
   return `<div style="${F};max-width:820px">
     <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#bf1830;color:#fff;padding:14px 16px;border-radius:8px">
-      <div style="font-size:10px;letter-spacing:2px;opacity:.8">SALA TRANSFORMAÇÃO · DISCOVERY → DELIVERY</div>
-      <div style="font-size:19px;font-weight:800;margin:4px 0">Report Semanal Executivo</div>
+      <div style="font-size:10px;letter-spacing:2px;opacity:.8">OVERVIEW DS / PLANEJAMENTO 2026 / REPORT SEMANAL</div>
+      <div style="font-size:19px;font-weight:800;margin:4px 0">Report Semanal</div>
       <div style="font-size:12px;opacity:.9">Semana ${fDM(c.start)} – ${fDM(new Date(c.end))} · ${c.squad||'todas as squads'} · ${c.scoped.length} iniciativas</div>
       <div style="margin-top:10px;background:rgba(0,0,0,.2);padding:8px 10px;border-radius:6px">
         <b style="font-size:13px">${esc(c.vT)}</b><br><span style="font-size:11px;opacity:.9">${esc(c.vX)}</span></div>
@@ -2382,7 +2356,7 @@ function buildRichHtml(){
 }
 function buildPlainText(){
   const c=lastCtx;if(!c)return'';
-  const L=[`REPORT SEMANAL EXECUTIVO — ${fDM(c.start)} a ${fDM(new Date(c.end))} — ${c.squad||'todas as squads'}`,'',
+  const L=[`OVERVIEW DS / PLANEJAMENTO 2026 / REPORT SEMANAL — ${fDM(c.start)} a ${fDM(new Date(c.end))} — ${c.squad||'todas as squads'}`,'',
     `${c.vT}: ${c.vX}`,'',
     `Iniciativas ${c.scoped.length} | Em Discovery ${c.startedDisc} | Prontas p/ Desenvolvimento ${c.readyDev} | Travas semanal ${c.weeklyLocks} | Histórias no Jira ${c.jiraStories} | Atenção preventiva ${c.preventive}`,'',
     `Riscos do Roadmap: ${c.roadRiskInit||0} iniciativa(s) com risco | ${c.overdueMilestones||0} marco(s) vencido(s) | Saúde ${c.roadHealth??100}%`,'',
