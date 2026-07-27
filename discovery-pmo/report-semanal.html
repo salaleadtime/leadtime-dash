@@ -94,19 +94,19 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .verdict-main>b{display:block;font-size:14px;margin-bottom:8px}
 .verdict-main>small{color:rgba(255,255,255,.78);font-size:10.5px}
 .lock-summary{display:grid;gap:6px}
-.lock-row{display:grid;grid-template-columns:82px minmax(200px,1.25fr) 115px 125px minmax(230px,1.55fr);gap:10px;align-items:center;padding:7px 9px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);border-radius:10px}
+.lock-row{display:grid;grid-template-columns:76px minmax(175px,1.18fr) 88px 115px 125px minmax(220px,1.5fr);gap:10px;align-items:center;padding:7px 9px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);border-radius:10px}
 .lock-state{display:inline-flex;align-items:center;justify-content:center;padding:4px 7px;border-radius:999px;font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 .lock-state.done{background:rgba(108,226,178,.18);color:#bdf5dc;border:1px solid rgba(108,226,178,.28)}
 .lock-state.open{background:rgba(255,191,89,.17);color:#ffe1a6;border:1px solid rgba(255,191,89,.27)}
 .lock-init{min-width:0}
 .lock-init strong{display:block;font-size:10.5px;line-height:1.3;color:#fff}
-.lock-area{min-width:0}
-.lock-init span,.lock-area span,.lock-owner span,.lock-occurrence span{display:block;color:rgba(255,255,255,.67);font-size:8.5px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;font-weight:750}
-.lock-area strong,.lock-owner strong,.lock-occurrence strong{display:block;font-size:9.7px;line-height:1.35;color:#fff;font-weight:700}
+.lock-squad,.lock-area{min-width:0}
+.lock-init span,.lock-squad span,.lock-area span,.lock-owner span,.lock-occurrence span{display:block;color:rgba(255,255,255,.67);font-size:8.5px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;font-weight:750}
+.lock-squad strong,.lock-area strong,.lock-owner strong,.lock-occurrence strong{display:block;font-size:9.7px;line-height:1.35;color:#fff;font-weight:700}
 .lock-empty{padding:7px 9px;border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:rgba(255,255,255,.78);font-size:10.5px}
 .lock-more{font-size:9px;color:rgba(255,255,255,.7);padding-left:4px}
-@media(max-width:1200px){.lock-row{grid-template-columns:78px minmax(180px,1fr) 120px 125px}.lock-occurrence{grid-column:2/-1}}
-@media(max-width:1050px){.lock-row{grid-template-columns:78px minmax(150px,1fr) 110px}.lock-owner{grid-column:2}.lock-occurrence{grid-column:2/-1}}
+@media(max-width:1200px){.lock-row{grid-template-columns:76px minmax(170px,1fr) 90px 115px 125px}.lock-occurrence{grid-column:2/-1}}
+@media(max-width:1050px){.lock-row{grid-template-columns:76px minmax(145px,1fr) 105px}.lock-area{grid-column:2}.lock-owner{grid-column:3}.lock-occurrence{grid-column:2/-1}}
 
 .body{padding:18px 22px 22px}
 .grid-kpi{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}
@@ -1027,10 +1027,10 @@ function jiraQtd(p){
   }
   return 0;
 }
-/* ── Área responsável (item obrigatório na exposição de risco) ──
-   1º o campo vindo da carga; 2º inferência pelo texto; 3º a squad da iniciativa. */
+/* ── Área responsável: nunca usar a squad como substituta ──
+   1º campo específico vindo da carga; 2º inferência pelo texto; 3º não informada. */
 const AREAS=[
-  [/arquitet|solution design|desenho de solu|dati/, 'Arquitetura'],
+  [/arquitet|solution design|desenho de solu|dati|boletador/, 'Arquitetura'],
   [/desenvolv|\bdev\b/,                  'Desenvolvimento'],
   [/seguran|ciber|complian|lgpd/,          'Segurança e Compliance'],
   [/jurid|contrat|legal/,                  'Jurídico'],
@@ -1041,12 +1041,14 @@ const AREAS=[
   [/squad|capacidade|aloca|time/,          'Alocação / RTE']
 ].map(([re,nome])=>({re:new RegExp(re.source||re,'i'),nome}));
 function areaOf(item,p){
-  const dado=[item?.area,item?.responsibleArea,item?.areaResponsavel,item?.department].map(v=>String(v??'').trim()).find(Boolean);
+  const squad=norm(p?.squad||'');
+  const dado=[item?.responsibleArea,item?.areaResponsavel,item?.department,item?.area]
+    .map(v=>String(v??'').trim()).find(v=>v&&norm(v)!==squad);
   if(dado)return{nome:dado,inferida:false};
   const txt=norm((item?.text||'')+' '+(item?.owner||''));
   const hit=AREAS.find(a=>a.re.test(txt));
   if(hit)return{nome:hit.nome,inferida:true};
-  return{nome:p?.squad||'Não informada',inferida:true};
+  return{nome:'Não informada',inferida:true};
 }
 function toast(m,k){const t=el('toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(window.__t);window.__t=setTimeout(()=>t.className='toast',3200)}
 
@@ -1113,8 +1115,8 @@ function selectedSquadName(value){
 /* ════════════ modelo do tracker ════════════ */
 function tlOf(p){const i=Array.isArray(p.timelineItems)?p.timelineItems.slice():[];i.forEach(x=>{if(!x.status)x.status=x.done?'done':'notstarted'});TL_TEMPLATE.forEach(t=>{if(!i.some(x=>x.id===t.id))i.push({id:t.id,stageId:t.stageId,status:'notstarted',updatedAt:''})});return i}
 function raidsOf(p){const s=p.raids||{},o={};['risks','assumptions','issues','dependencies'].forEach(g=>{o[g]=(s[g]||[]).map(i=>{if(typeof i==='string')return{text:i,done:false,owner:'',updatedAt:''};const d=i.done===true||String(i.status||'').toLowerCase().includes('concl');return{text:i.text||i.description||'',owner:i.owner||'',due:i.due||'',done:d,updatedAt:i.updatedAt||'',
-    /* preserva a área quando a carga informa — areaOf só infere se vier vazia */
-    area:i.area||i.responsibleArea||i.areaResponsavel||i.department||''}})});
+    /* preserva todos os campos: `area` pode, indevidamente, conter a squad */
+    area:i.area||'',responsibleArea:i.responsibleArea||'',areaResponsavel:i.areaResponsavel||'',department:i.department||''}})});
   const lg=a=>(Array.isArray(a)?a:[]).filter(i=>i&&typeof i==='object').map(i=>({text:i.text||i.title||'Item',owner:i.owner||'',done:i.done===true,updatedAt:i.updatedAt||''}));
   o.risks=o.risks.concat(lg(p.risks));o.issues=o.issues.concat(lg(p.alerts));return o}
 const cdOf=p=>Array.isArray(p.cards)?p.cards:[];
@@ -1524,7 +1526,8 @@ function render(){
     const p=m.a.p,s=lockStatus(m);
     return `<div class="lock-row">
       <span class="lock-state ${s.cls}">${s.label}</span>
-      <div class="lock-init"><strong>${esc(p.initiativeNumber||'—')} · ${esc(p.name||'Iniciativa sem nome')}</strong><span>Squad: ${esc(p.squad||'Não informada')}</span></div>
+      <div class="lock-init"><strong>${esc(p.initiativeNumber||'—')} · ${esc(p.name||'Iniciativa sem nome')}</strong></div>
+      <div class="lock-squad"><span>Squad</span><strong>${esc(p.squad||'Não informada')}</strong></div>
       <div class="lock-area"><span>Área</span><strong>${esc(areaOfMove(m))}</strong></div>
       <div class="lock-owner"><span>Responsável</span><strong>${esc(ownerOfMove(m))}</strong></div>
       <div class="lock-occurrence"><span>Ocorrido no período</span><strong>${esc(m.occurrence||m.t||'Movimento registrado')}</strong></div>
