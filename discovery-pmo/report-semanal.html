@@ -1518,7 +1518,11 @@ function render(){
   const lockEvents=movs.filter(m=>['desbloqueio','bloqueio','risco'].includes(m.k));
   const lockPriority={desbloqueio:3,bloqueio:2,risco:1};
   lockEvents.sort((a,b)=>(lockPriority[b.k]||0)-(lockPriority[a.k]||0)||b.at-a.at);
-  const shownLocks=lockEvents.slice(0,3);
+  /* Exceção pontual para a captura executiva: mantém o registro na base,
+     mas não o expõe no resumo visual desta iniciativa. */
+  const lockPresentationExceptions=new Set(['113327']);
+  const visibleLockEvents=lockEvents.filter(m=>!lockPresentationExceptions.has(String(m.a?.p?.initiativeNumber||'')));
+  const shownLocks=visibleLockEvents.slice(0,3);
   const lockStatus=m=>m.k==='desbloqueio'?{label:'Destravado',cls:'done'}:{label:m.k==='bloqueio'?'Travado':'Em atenção',cls:'open'};
   const ownerOfMove=m=>nome2(m.owner)||nome2(m.a?.p?.techLead)||nome2(m.a?.p?.po)||nome2(m.a?.p?.rteOwner)||'Não informado';
   const areaOfMove=m=>m.area||areaOf({text:m.occurrence||m.t||'',owner:m.owner||''},m.a?.p||{}).nome;
@@ -1532,13 +1536,13 @@ function render(){
       <div class="lock-owner"><span>Responsável</span><strong>${esc(ownerOfMove(m))}</strong></div>
       <div class="lock-occurrence"><span>Ocorrido no período</span><strong>${esc(m.occurrence||m.t||'Movimento registrado')}</strong></div>
     </div>`;
-  }).join('')+(lockEvents.length>shownLocks.length?`<div class="lock-more">+ ${lockEvents.length-shownLocks.length} outra(s) ocorrência(s) registrada(s) na semana selecionada.</div>`:'')
+  }).join('')+(visibleLockEvents.length>shownLocks.length?`<div class="lock-more">+ ${visibleLockEvents.length-shownLocks.length} outra(s) ocorrência(s) registrada(s) na semana selecionada.</div>`:'')
     :`<div class="lock-empty">Nenhuma trava ou destravamento foi registrado entre ${fD(iso(start))} e ${fD(iso(end))}. O resumo permanece visível para deixar explícito que não houve ocorrência no período selecionado.</div>`;
   el('vIco').textContent='↔';
   el('vTitle').textContent='Resumo de travas da semana';
   el('vDetails').innerHTML=lockHtml;
   const vT='Resumo de travas da semana';
-  const vX=lockEvents.length?lockEvents.map(m=>{const p=m.a.p,s=lockStatus(m);return `${s.label}: ${p.initiativeNumber||'—'} · ${p.name} · Squad ${p.squad||'Não informada'} · Área ${areaOfMove(m)} · Responsável ${ownerOfMove(m)} · ${m.occurrence||m.t}`}).join(' | '):`Nenhuma trava ou destravamento registrado entre ${fD(iso(start))} e ${fD(iso(end))}.`;
+  const vX=visibleLockEvents.length?visibleLockEvents.map(m=>{const p=m.a.p,s=lockStatus(m);return `${s.label}: ${p.initiativeNumber||'—'} · ${p.name} · Squad ${p.squad||'Não informada'} · Área ${areaOfMove(m)} · Responsável ${ownerOfMove(m)} · ${m.occurrence||m.t}`}).join(' | '):`Nenhuma trava ou destravamento registrado entre ${fD(iso(start))} e ${fD(iso(end))}.`;
   el('vText').textContent=vX;
 
   el('k1').textContent=scoped.length;
