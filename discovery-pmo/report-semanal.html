@@ -29,15 +29,15 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 /* ═══ BARRA DE CONTROLE — nunca entra em imagem/PDF ═══ */
 .app-tools{position:sticky;top:0;z-index:900;display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 16px;background:linear-gradient(180deg,var(--sidebar),var(--sidebar-2));color:#fff;box-shadow:0 4px 16px rgba(17,24,39,.28)}
 .app-brand{margin-right:auto;line-height:1.25}
-.app-brand b{display:block;font-size:12px}
+.app-brand b{display:block;font-size:12px;font-weight:650}
 .app-brand span{display:block;color:#8b97a8;font-size:9px}
 .wk{display:flex;align-items:center;gap:4px;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:3px 4px}
 .wk button{background:none;border:0;color:#c2cbd9;font-size:14px;padding:2px 7px;border-radius:6px;line-height:1}
 .wk button:hover{background:rgba(255,255,255,.1);color:#fff}
 .wk input{background:none;border:0;color:#fff;font-size:11px;outline:none;width:132px}
 .wk input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
-.sel{height:32px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:#242b38;color:#fff;padding:0 8px;outline:none;font-size:11px}
-.tb{height:32px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;padding:0 11px;border-radius:9px;font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;gap:5px}
+.sel{height:32px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:#242b38;color:#fff;padding:0 8px;outline:none;font-size:11px;font-weight:500}
+.tb{height:32px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;padding:0 11px;border-radius:9px;font-size:10.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px}
 .tb.primary{background:var(--primary);border-color:#d94545}
 .tb.ok{background:#1f9d75;border-color:#1f9d75}
 .tb:hover{filter:brightness(1.13)}.tb:disabled{opacity:.55;cursor:wait}
@@ -45,7 +45,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .switch button{background:none;border:0;color:#8b97a8;font-size:10px;font-weight:800;padding:0 11px;height:32px}
 .switch button.on{background:var(--primary);color:#fff}
 .tstatus{font-size:9px;color:#8b97a8;line-height:1.3;max-width:190px}
-.tstatus b{color:#fff;display:block;font-size:9.5px}
+.tstatus b{color:#fff;display:block;font-size:9.5px;font-weight:600}
 
 .date-field{display:grid;gap:2px;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:3px 7px}
 .date-field span{font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#8b97a8;font-weight:850}
@@ -54,7 +54,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .week-field{display:grid;gap:2px;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:4px 8px;min-width:190px}
 .week-field span{font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#8b97a8;font-weight:850}
 .week-field .wk{padding:0;background:none;border:0}
-.week-field .wk input{width:132px;font-weight:700}
+.week-field .wk input{width:132px;font-weight:600}
 .kind-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:12px 0 10px}
 .kind-tab{border:1px solid var(--line);background:#f8fafc;color:var(--muted);border-radius:10px;padding:8px 10px;font-size:10px;font-weight:800;text-align:center}
 .kind-tab.on{background:var(--primary-soft);border-color:#f4c7d1;color:var(--primary)}
