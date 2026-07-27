@@ -374,7 +374,8 @@ body[data-model="B"] .only-a{display:none}
   <select class="sel" id="squadFilter"><option value="">Todas as squads</option></select>
   <button class="tb primary" id="genBtn" onclick="generate()">⟳ Atualizar dados</button>
   <button class="tb" onclick="openComplement()" title="Inclui complementos sem substituir os demais registros">✎ Complementos</button>
-  <button class="tb ok" onclick="capturePng(this)" title="Gera uma imagem PNG real do report inteiro">▣ Capturar PNG</button>
+  <button class="tb ok" onclick="capturePng(this)" title="Gera uma imagem PNG real do report inteiro">▣ PNG completo</button>
+  <button class="tb" onclick="captureEmailPng(this)" title="Gera um resumo com texto maior, próprio para Teams e e-mail">✉ PNG p/ e-mail</button>
   <button class="tb" onclick="exportPdf(this)">⇩ Exportar PDF</button>
   <button class="tb" onclick="returnToTracker()">← Voltar ao Discovery</button>
   <div class="tstatus"><b id="srcLabel">Servidor Discovery PMO</b><span id="srcDetail">Carregando iniciativas…</span></div>
@@ -2068,8 +2069,8 @@ let _captureCanvas=null,_captureBlob=null,_captureUrl='';
 function canvasBlob(canvas,type='image/png',quality){
   return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('canvas-blob-null')),type,quality));
 }
-function captureDimensions(node,requestedScale){
-  const width=Math.max(node.scrollWidth,node.offsetWidth,1180);
+function captureDimensions(node,requestedScale,minWidth=1180){
+  const width=Math.max(node.scrollWidth,node.offsetWidth,minWidth);
   const height=Math.max(node.scrollHeight,node.offsetHeight,1);
   const maxSide=15400,maxPixels=52000000;
   const safeBySide=Math.min(maxSide/width,maxSide/height);
@@ -2090,7 +2091,7 @@ function canvasHasVisibleReport(canvas){
     for(let i=0;i<data.length;i+=64){if(data[i]<238||data[i+1]<238||data[i+2]<238){ink++;if(ink>24)return true;}}
     return false;
   };
-  return scan(0,.18)&&scan(.78,1);
+  return scan(0,.18)&&scan(.62,1);
 }
 async function capturePng(btn){
   const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='▣ Capturando…';
@@ -2111,6 +2112,33 @@ async function capturePng(btn){
     console.error('Falha ao gerar captura PNG:',e);
     toast('Não foi possível gerar uma imagem válida. Tente novamente ou exporte o PDF.','err');
   }finally{btn.disabled=false;btn.innerHTML=old}
+}
+function emailShareRows(rows,empty){
+  return rows.length?rows.map(row=>`<div style="padding:10px 0;border-top:1px solid #e6ebf2"><b style="display:block;color:#1c2430;font-size:15px;line-height:1.25">${esc(row.title)}</b><span style="display:block;margin-top:3px;color:#5f6d80;font-size:12px;line-height:1.4">${esc(row.detail)}</span></div>`).join(''):`<div style="padding:11px 0;color:#69778b;font-size:13px">${esc(empty)}</div>`;
+}
+function createEmailCaptureNode(){
+  const c=lastCtx;if(!c)throw new Error('report-not-generated');
+  const squad=selectedSquadName(c.squad)||'Todas as squads';
+  const points=(c.ins||[]).slice(0,5).map(i=>({title:`${i.a.p.initiativeNumber||'—'} · ${cut(i.a.p.name,62)}`,detail:`${i.a.p.squad||'Sem squad'} — ${i.d||i.t||'Em acompanhamento'}`}));
+  const commitments=(c.mst||[]).slice(0,5).map(m=>({title:`${fD(m.date)} · ${m.a.p.initiativeNumber||'—'} ${cut(m.a.p.name,52)}`,detail:cut(m.label||'Compromisso do período',120)}));
+  const next=(c.disc||[]).slice(0,4).map(a=>({title:`${fBadge(a.p.discoveryDate)} · ${a.p.initiativeNumber||'—'} ${cut(a.p.name,52)}`,detail:`${a.p.squad||'Sem squad'} · PO: ${nome2(a.p.po)} · TL: ${nome2(a.p.techLead)}`}));
+  const box=(title,subtitle,rows,empty)=>`<section style="margin-top:14px;border:1px solid #dde5ee;border-radius:12px;background:#fff;overflow:hidden"><div style="padding:12px 16px;background:#f7f9fc;border-bottom:1px solid #e3e9f0"><b style="font-size:16px;color:#1c2430">${title}</b><span style="display:block;margin-top:2px;font-size:11px;color:#69778b">${subtitle}</span></div><div style="padding:2px 16px">${emailShareRows(rows,empty)}</div></section>`;
+  const root=document.createElement('section');
+  root.id='emailCapture';root.setAttribute('data-html2canvas-ignore','true');
+  root.style.cssText='position:fixed;left:0;top:0;z-index:-1;pointer-events:none;width:760px;padding:22px;box-sizing:border-box;background:#f4f7fb;color:#1c2430;font-family:Inter,Segoe UI,Arial,sans-serif';
+  root.innerHTML=`<header style="padding:22px;border-radius:14px;background:#bf1830;color:#fff"><div style="font-size:11px;font-weight:800;letter-spacing:1.2px;opacity:.82">SALA TRANSFORMAÇÃO · DISCOVERY → DELIVERY</div><h1 style="margin:7px 0 4px;font-size:28px;line-height:1.1">Report Semanal Executivo</h1><div style="font-size:15px;opacity:.93">${fDM(c.start)} a ${fDM(new Date(c.end))} · ${esc(squad)}</div><div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(0,0,0,.18)"><b style="font-size:17px">${esc(c.vT||'Resumo da semana')}</b><span style="display:block;margin-top:3px;font-size:13px;line-height:1.4">${esc(c.vX||'Acompanhe os principais movimentos e compromissos do período.')}</span></div></header><section style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">${[['Iniciativas',c.scoped.length],['Em Discovery',c.startedDisc],['Prontas p/ desenvolvimento',c.readyDev],['Travas',c.weeklyLocks],['Histórias Jira',c.jiraStories],['Atenção preventiva',c.preventive]].map(([l,v])=>`<div style="padding:12px 8px;border-radius:10px;background:#fff;border:1px solid #dde5ee;text-align:center"><div style="font-size:10px;font-weight:800;color:#687587;text-transform:uppercase;line-height:1.25">${l}</div><b style="display:block;margin-top:4px;font-size:23px;color:#1c2430">${v??0}</b></div>`).join('')}</section>${box('Pontos para gestão','Movimentos relevantes do período',points,'Sem movimento relevante no período.')}${box('Compromissos da semana','Marcos e retornos previstos',commitments,'Sem compromisso registrado no período.')}${box(`Próximos Discoveries — ${c.alvoM?MESL[+c.alvoM.slice(5,7)-1]:''}`,'Iniciativas com início no próximo ciclo',next,'Sem novo Discovery previsto.')}<footer style="padding:14px 2px 0;font-size:11px;color:#69778b">Sala Transformação · uso interno · gerado em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}</footer>`;
+  document.body.appendChild(root);return root;
+}
+async function captureEmailPng(btn){
+  const old=btn.innerHTML;let node=null;btn.disabled=true;btn.innerHTML='✉ Gerando…';
+  try{
+    node=createEmailCaptureNode();await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,80)));
+    const canvas=await renderPngNode(node,2,760),blob=await canvasBlob(canvas);
+    if(canvas.width<1200||canvas.height<800||blob.size<=50000||!canvasHasVisibleReport(canvas))throw new Error(`email-capture-invalid:${canvas.width}x${canvas.height}:${blob.size}`);
+    openCapturePreview(canvas,blob,'Resumo otimizado para e-mail e Teams, com texto maior.');
+    toast('PNG para e-mail gerado. Use Copiar imagem ou Salvar PNG.');
+  }catch(e){console.error('Falha ao gerar PNG para e-mail:',e);toast('Não foi possível gerar o PNG para e-mail. Tente novamente.','err')}
+  finally{node?.remove();btn.disabled=false;btn.innerHTML=old}
 }
 function returnToTracker(){
   if(openedFromTracker){window.close();setTimeout(()=>{if(!window.closed)window.location.href='./';},180);return;}
@@ -2193,20 +2221,23 @@ async function snapCanvas(requestedScale){
   const det=[...document.querySelectorAll('details.blk-more')],wasOpen=det.map(d=>d.open);
   det.forEach(d=>d.open=true);
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,120)));
-  const dims=captureDimensions(node,requestedScale);
   try{
-    if(!window.htmlToImage?.toCanvas)throw new Error('renderer-local-indisponivel');
-    const canvas=await window.htmlToImage.toCanvas(node,{
-      backgroundColor:'#ffffff',canvasWidth:Math.round(dims.width*dims.scale),canvasHeight:Math.round(dims.height*dims.scale),
-      width:dims.width,height:dims.height,pixelRatio:1,cacheBust:true,
-      filter:n=>!n.matches?.('.edit-ui,.rm,.rm-inline,.comp-actions,[data-html2canvas-ignore="true"]')
-    });
-    if(!canvasIsValid(canvas))throw new Error(`canvas-invalido:${canvas?.width||0}x${canvas?.height||0}`);
-    return canvas;
+    return await renderPngNode(node,requestedScale);
   }finally{
     document.body.classList.remove('exporting');
     det.forEach((d,i)=>d.open=wasOpen[i]);
   }
+}
+async function renderPngNode(node,requestedScale,minWidth=1180){
+  if(!window.htmlToImage?.toCanvas)throw new Error('renderer-local-indisponivel');
+  const dims=captureDimensions(node,requestedScale,minWidth);
+  const canvas=await window.htmlToImage.toCanvas(node,{
+    backgroundColor:'#ffffff',canvasWidth:Math.round(dims.width*dims.scale),canvasHeight:Math.round(dims.height*dims.scale),
+    width:dims.width,height:dims.height,pixelRatio:1,cacheBust:true,
+    filter:n=>!n.matches?.('.edit-ui,.rm,.rm-inline,.comp-actions,[data-html2canvas-ignore="true"]')
+  });
+  if(!canvasIsValid(canvas))throw new Error(`canvas-invalido:${canvas?.width||0}x${canvas?.height||0}`);
+  return canvas;
 }
 async function clipboardCopyBlob(blob){
   if(!navigator.clipboard||!window.ClipboardItem)throw new Error('clipboard-api-unavailable');
