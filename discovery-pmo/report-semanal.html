@@ -2095,9 +2095,16 @@ function canvasHasVisibleReport(canvas){
 async function capturePng(btn){
   const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='▣ Capturando…';
   try{
-    let canvas=await snapCanvas(1.35);
-    let blob=await canvasBlob(canvas);
-    if(canvas.width<1000||canvas.height<800||blob.size<=50000||!canvasHasVisibleReport(canvas))throw new Error('captura inválida');
+    let canvas=null,blob=null,lastError=null;
+    for(const scale of [1.35,1.05]){
+      try{
+        canvas=await snapCanvas(scale);
+        blob=await canvasBlob(canvas);
+        if(canvas.width<1000||canvas.height<800||blob.size<=50000||!canvasHasVisibleReport(canvas))throw new Error('captura inválida');
+        break;
+      }catch(error){lastError=error;canvas=null;blob=null;await new Promise(r=>setTimeout(r,220));}
+    }
+    if(!canvas||!blob)throw lastError||new Error('captura inválida');
     openCapturePreview(canvas,blob,'A captura contém o cabeçalho e o rodapé do report.');
     toast('PNG gerado. Revise a prévia, copie ou baixe a imagem.');
   }catch(e){
