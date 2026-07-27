@@ -14389,6 +14389,24 @@ Recomendação PMO: ${d.recommendation}`;
       renderReportsPanel();
     }
 
+    function currentIsoWeek() {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+      const firstThursday = new Date(date.getFullYear(), 0, 4);
+      const week = 1 + Math.round(((date - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+      return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`;
+    }
+
+    function openWeeklyDiscoveryReport() {
+      const params = new URLSearchParams({ week: currentIsoWeek(), source: 'tracker' });
+      const squadId = viewMode === 'project'
+        ? (getProject()?.squadId || '')
+        : (dashboardSquadId || '');
+      if (squadId) params.set('squad', squadId);
+      window.open(`./report-semanal.html?${params.toString()}`, '_blank', 'noopener');
+    }
+
     // ═══════════════════════════════════════
     // TIMELINE EXECUTIVA — visão macro por Squad/iniciativa, 100% derivada do
     // Cronograma (project.schedule via ensureBaseSchedule). Nunca cria cadastro
@@ -15442,6 +15460,7 @@ Recomendação PMO: ${d.recommendation}`;
               <p>Leitura gerencial da Onda 1: squads, iniciativas, alertas e rankings, prontos para exportar em PDF ou Excel e levar ao comitê.</p>
             </div>
             <div class="ux-v6-report-actions">
+              <button type="button" class="ux-v6-report-btn" onclick="openWeeklyDiscoveryReport()">▤ Report semanal</button>
               <button type="button" class="ux-v6-report-btn primary" onclick="exportReportsToXlsx()">⭳ Exportar Excel</button>
               <button type="button" class="ux-v6-report-btn" onclick="printReportsPanel()">⭳ Exportar PDF</button>
               <button type="button" class="ux-v6-report-btn" onclick="closeReportsPanel()">Fechar</button>

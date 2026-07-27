@@ -1,0 +1,2452 @@
+<!DOCTYPE html>
+<!-- saved from url=(0049)file:///C:/Users/adlm/Downloads/index%20(49).html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Report Semanal Executivo — Discovery</title>
+<script src="./vendor/html-to-image.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+:root{
+  /* Tokens espelhados do Discovery PMO Tracker — mesma paleta, mesmos raios */
+  --bg:#f5f7fb;--panel:#fff;--panel-2:#fbfcfe;--ink:#1c2430;--muted:#687587;
+  --line:#e5e9f2;--line-strong:#d6dde9;
+  --primary:#bf1830;--primary-dark:#8e1125;--primary-soft:#fff0f3;
+  --amber:#f4b740;--amber-ink:#9a6a12;--amber-soft:#fff7e6;
+  --green:#1f9d75;--green-ink:#147557;--green-soft:#e9f8f2;
+  --blue:#2d6cdf;--blue-ink:#315d9f;--blue-soft:#eaf1ff;
+  --red:#d94545;--red-soft:#fdeaea;--grey-soft:#eef1f6;
+  --purple:#7b61ff;
+  --sidebar:#151922;--sidebar-2:#1f2530;
+  --shadow:0 18px 45px rgba(17,24,39,.08);
+  --radius:20px;--radius-sm:14px;--radius-xs:10px
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,"Segoe UI",Arial,sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+
+/* ═══ BARRA DE CONTROLE — nunca entra em imagem/PDF ═══ */
+.app-tools{position:sticky;top:0;z-index:900;display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 16px;background:linear-gradient(180deg,var(--sidebar),var(--sidebar-2));color:#fff;box-shadow:0 4px 16px rgba(17,24,39,.28)}
+.app-brand{margin-right:auto;line-height:1.25}
+.app-brand b{display:block;font-size:12px}
+.app-brand span{display:block;color:#8b97a8;font-size:9px}
+.wk{display:flex;align-items:center;gap:4px;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:3px 4px}
+.wk button{background:none;border:0;color:#c2cbd9;font-size:14px;padding:2px 7px;border-radius:6px;line-height:1}
+.wk button:hover{background:rgba(255,255,255,.1);color:#fff}
+.wk input{background:none;border:0;color:#fff;font-size:11px;outline:none;width:132px}
+.wk input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
+.sel{height:32px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:#242b38;color:#fff;padding:0 8px;outline:none;font-size:11px}
+.tb{height:32px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;padding:0 11px;border-radius:9px;font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;gap:5px}
+.tb.primary{background:var(--primary);border-color:#d94545}
+.tb.ok{background:#1f9d75;border-color:#1f9d75}
+.tb:hover{filter:brightness(1.13)}.tb:disabled{opacity:.55;cursor:wait}
+.switch{display:flex;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:9px;overflow:hidden}
+.switch button{background:none;border:0;color:#8b97a8;font-size:10px;font-weight:800;padding:0 11px;height:32px}
+.switch button.on{background:var(--primary);color:#fff}
+.tstatus{font-size:9px;color:#8b97a8;line-height:1.3;max-width:190px}
+.tstatus b{color:#fff;display:block;font-size:9.5px}
+
+.date-field{display:grid;gap:2px;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:3px 7px}
+.date-field span{font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#8b97a8;font-weight:850}
+.date-field input{background:none;border:0;color:#fff;font-size:10.5px;outline:none;width:116px;padding:0}
+.date-field input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.65}
+.week-field{display:grid;gap:2px;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:4px 8px;min-width:190px}
+.week-field span{font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#8b97a8;font-weight:850}
+.week-field .wk{padding:0;background:none;border:0}
+.week-field .wk input{width:132px;font-weight:700}
+.kind-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:12px 0 10px}
+.kind-tab{border:1px solid var(--line);background:#f8fafc;color:var(--muted);border-radius:10px;padding:8px 10px;font-size:10px;font-weight:800;text-align:center}
+.kind-tab.on{background:var(--primary-soft);border-color:#f4c7d1;color:var(--primary)}
+.app-tools .tb{white-space:nowrap}
+.executive-note{font-size:10.5px;line-height:1.45;padding:0;white-space:pre-wrap;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;max-height:46px}
+.summary-pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:10px;align-items:start}
+.compact-summary{margin-bottom:10px}
+.compact-summary .blk-h{padding:8px 12px}
+.compact-summary .blk-h h2{font-size:12.5px}
+.compact-summary .blk-h p{font-size:9px}
+.compact-summary .blk-b{padding:8px 12px}
+.adv-compact .li{padding:5px 0;gap:6px}
+.adv-compact .li b{font-size:10.5px;line-height:1.25}
+.adv-compact .li span{font-size:9px;line-height:1.3}
+.compact-more{padding:5px 0 1px;color:var(--muted);font-size:9px;font-weight:800;text-align:right}
+.complement-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.complement-grid{grid-template-columns:1fr}.date-field input{width:108px}}
+
+/* ═══ REPORT ═══ */
+.stage{padding:18px;display:flex;justify-content:center}
+.report{width:1180px;max-width:100%;background:var(--panel);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.hero{background:linear-gradient(118deg,var(--primary-dark),var(--primary) 58%,#d94545);color:#fff;padding:20px 26px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;width:280px;height:280px;border:1px solid rgba(255,255,255,.13);border-radius:50%;right:-110px;top:-140px}
+.hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;position:relative;z-index:1}
+.eyebrow{font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;font-weight:800;color:rgba(255,255,255,.7)}
+.hero h1{font-size:25px;line-height:1.12;letter-spacing:-.7px;margin:6px 0 5px}
+.hero .sub{font-size:12px;color:rgba(255,255,255,.82);margin:0}
+.hero-week{text-align:right;flex:none}
+.hero-week b{display:block;font-size:20px;letter-spacing:-.4px}
+.hero-week span{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.7);font-weight:800}
+.verdict{margin-top:14px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:12px 14px;position:relative;z-index:1;display:flex;gap:12px;align-items:flex-start}
+.verdict .vico{width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.verdict-main{min-width:0;flex:1}
+.verdict-main>b{display:block;font-size:14px;margin-bottom:8px}
+.verdict-main>small{color:rgba(255,255,255,.78);font-size:10.5px}
+.lock-summary{display:grid;gap:6px}
+.lock-row{display:grid;grid-template-columns:82px minmax(230px,1.35fr) 105px minmax(260px,1.6fr);gap:10px;align-items:center;padding:7px 9px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.07);border-radius:10px}
+.lock-state{display:inline-flex;align-items:center;justify-content:center;padding:4px 7px;border-radius:999px;font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.lock-state.done{background:rgba(108,226,178,.18);color:#bdf5dc;border:1px solid rgba(108,226,178,.28)}
+.lock-state.open{background:rgba(255,191,89,.17);color:#ffe1a6;border:1px solid rgba(255,191,89,.27)}
+.lock-init{min-width:0}
+.lock-init strong{display:block;font-size:10.5px;line-height:1.3;color:#fff}
+.lock-init span,.lock-owner span,.lock-occurrence span{display:block;color:rgba(255,255,255,.67);font-size:8.5px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;font-weight:750}
+.lock-owner strong,.lock-occurrence strong{display:block;font-size:9.7px;line-height:1.35;color:#fff;font-weight:700}
+.lock-empty{padding:7px 9px;border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:rgba(255,255,255,.78);font-size:10.5px}
+.lock-more{font-size:9px;color:rgba(255,255,255,.7);padding-left:4px}
+@media(max-width:1050px){.lock-row{grid-template-columns:78px 1fr 110px}.lock-occurrence{grid-column:2/-1}}
+
+.body{padding:18px 22px 22px}
+.grid-kpi{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:14px;padding:12px 13px;background:#fbfcfe;border-top:3px solid var(--c,var(--blue));min-height:90px;box-shadow:0 8px 18px rgba(17,24,39,.04)}
+.kpi span{display:block;color:#637185;font-size:8.2px;text-transform:uppercase;letter-spacing:.08em;font-weight:900}
+.kpi b{display:block;font-size:22px;margin:6px 0 2px;letter-spacing:-.7px;line-height:1}
+.kpi small{color:var(--muted);font-size:9px;line-height:1.35;display:block;max-width:92%}
+.kpi.preventive{background:linear-gradient(180deg,#f8f5ee,#f4efe1);border-color:#eadfc5;border-top-color:#d9a441;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cpath d='M44 14l24 42H20z' fill='%23d9a441' opacity='.10'/%3E%3Ccircle cx='44' cy='57' r='4' fill='%23b8841e' opacity='.18'/%3E%3Crect x='41' y='32' width='6' height='18' rx='3' fill='%23b8841e' opacity='.18'/%3E%3C/g%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px bottom 8px;background-size:72px 72px}
+@media(max-width:1200px){.grid-kpi{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.grid-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.blk{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;overflow:hidden;background:var(--panel)}
+.blk-h{padding:10px 14px;background:var(--panel-2);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.blk-h h2{margin:0;font-size:13.5px;letter-spacing:-.2px}
+.blk-h p{margin:1px 0 0;font-size:9.5px;color:var(--muted)}
+.blk-b{padding:13px 14px}
+.tagn{font-size:9px;font-weight:850;padding:4px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary);white-space:nowrap}
+/* apêndice recolhível — detalhe granular que já aparece resumido em outro bloco
+   (cards de refinamento, feed de evolução, riscos) não precisa ficar aberto por padrão */
+details.blk-more{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;overflow:hidden;background:var(--panel)}
+details.blk-more>summary{list-style:none;cursor:pointer;padding:10px 14px;background:var(--panel-2);display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.blk-more>summary::-webkit-details-marker{display:none}
+details.blk-more>summary::after{content:"▾ ver detalhe";font-size:9px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+details.blk-more[open]>summary{border-bottom:1px solid var(--line)}
+details.blk-more[open]>summary::after{content:"▴ ocultar"}
+details.blk-more h2{margin:0;font-size:13.5px;letter-spacing:-.2px}
+details.blk-more p{margin:1px 0 0;font-size:9.5px;color:var(--muted)}
+
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cols2{display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
+.li{display:grid;grid-template-columns:16px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:11px;align-items:start}
+.li:first-child{border-top:0}
+.li .bul{width:7px;height:7px;border-radius:50%;margin-top:5px;background:var(--c,var(--muted))}
+.li b{display:block;font-weight:750;line-height:1.35}
+.li span{display:block;color:var(--muted);font-size:9.5px;margin-top:1px}
+.li .rm{opacity:0;border:0;background:none;color:var(--red);font-weight:900;font-size:12px;padding:0 3px}
+.li:hover .rm{opacity:1}
+.rm-inline{border:0;background:none;color:var(--red);font-weight:900;font-size:12px;padding:0 4px;cursor:pointer}
+.obs-actions{display:flex;justify-content:flex-end;margin-top:8px}
+.obs-actions .mb{padding:6px 10px;font-size:10px}
+.insight-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.insight-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px;box-shadow:0 6px 14px rgba(17,24,39,.03)}
+.insight-card h3{margin:0 0 8px;font-size:11px;line-height:1.3;display:flex;align-items:center;gap:7px}
+.insight-card h3 i{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:7px;background:var(--panel-2);color:var(--primary);font-style:normal;font-size:10px}
+.insight-card p{margin:0 0 8px;font-size:9px;color:var(--muted);line-height:1.4}
+.insight-mini{display:grid;gap:7px}
+.insight-item{padding:7px 8px;border:1px solid var(--line);border-radius:9px;background:#fbfcfe}
+.insight-item b{display:block;font-size:10px;line-height:1.35;margin-bottom:2px}
+.insight-item span{display:block;font-size:8.8px;line-height:1.35;color:var(--muted)}
+.insight-empty{padding:10px 8px;border:1px dashed var(--line);border-radius:9px;font-size:9px;color:var(--muted);text-align:center;background:#fbfcfe}
+@media(max-width:1000px){.insight-grid{grid-template-columns:1fr}}
+
+/* situação por iniciativa — lista compacta agrupada por urgência */
+.sit-group{margin-bottom:10px}
+.sit-group:last-child{margin-bottom:0}
+.sit-gh{display:flex;align-items:center;gap:7px;margin-bottom:6px;padding-left:1px}
+.sit-gh .gdot{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.sit-gh b{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:850}
+.sit-row{display:grid;grid-template-columns:56px 1fr 130px 90px 150px;gap:10px;align-items:center;
+  padding:8px 10px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:9px;background:#fff;margin-bottom:5px}
+.sit-row:last-child{margin-bottom:0}
+.sit-num{font-size:10px;font-weight:900;color:var(--primary);white-space:nowrap}
+.sit-name{min-width:0}
+.sit-name b{display:block;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sit-name span{display:block;font-size:9px;color:var(--muted);margin-top:1px}
+.sit-bar-wrap{display:flex;align-items:center;gap:7px}
+.bar{height:6px;background:#e5e9f2;border-radius:99px;overflow:hidden;flex:1}
+.bar i{display:block;height:100%;background:var(--c);border-radius:99px}
+.sit-pct{font-size:10.5px;font-weight:800;white-space:nowrap;min-width:30px;text-align:right}
+.sit-delta{font-size:9px;font-weight:800;white-space:nowrap}
+.sit-delta.up{color:var(--green-ink)}.sit-delta.down{color:var(--red)}.sit-delta.flat{color:var(--muted)}
+.sit-mst{font-size:9.5px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sit-mst b{color:var(--ink);font-weight:700}
+@media(max-width:1080px){.sit-row{grid-template-columns:46px 1fr 90px 60px;}.sit-mst{display:none}}
+
+.tb2{width:100%;border-collapse:collapse}
+.tb2 th{text-align:left;padding:0 8px 7px;font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.tb2 td{padding:8px;border-top:1px solid var(--line);font-size:10.5px;vertical-align:top}
+.sqpill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;border:1px solid transparent;font-size:9.5px;font-weight:800;line-height:1.1;white-space:nowrap}
+.pill{display:inline-flex;padding:3px 7px;border-radius:7px;font-size:8.5px;font-weight:850;white-space:nowrap}
+.pill.g{background:var(--green-soft);color:var(--green-ink)}
+.pill.b{background:var(--blue-soft);color:var(--blue-ink)}
+.pill.a{background:var(--amber-soft);color:var(--amber-ink)}
+.pill.r{background:var(--red-soft);color:var(--red)}
+.pill.n{background:var(--grey-soft);color:var(--muted)}
+.who{font-weight:800;white-space:nowrap}
+.cons{display:block;color:var(--red);font-size:9px;margin-top:3px}
+
+.mst-period{display:grid;gap:6px}
+.mst-period-row{display:grid;grid-template-columns:82px minmax(245px,1.5fr) 105px 125px minmax(210px,1.35fr) 82px;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-left:4px solid var(--c,var(--blue));border-radius:10px;background:#fff}
+.mst-dates{display:flex;gap:4px;flex-wrap:wrap}
+.mst-date{display:inline-flex;padding:3px 6px;border-radius:7px;background:var(--panel-2);border:1px solid var(--line);font-size:8.5px;font-weight:850;color:var(--primary);white-space:nowrap}
+.mst-init{min-width:0}
+.mst-init b{display:block;font-size:10.5px;line-height:1.3}
+.mst-init span{display:block;font-size:8.8px;color:var(--muted);margin-top:2px}
+.mst-owner span,.mst-items span{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:850;margin-bottom:3px}
+.mst-owner b,.mst-items b{display:block;font-size:9.5px;line-height:1.35;font-weight:700}
+.mst-status{text-align:right}
+@media(max-width:1050px){.mst-period-row{grid-template-columns:72px minmax(210px,1.4fr) 100px 120px 1fr}.mst-status{grid-column:5;text-align:left}.mst-items{grid-column:2/5}}
+
+.foot{display:flex;justify-content:space-between;gap:12px;font-size:9px;color:var(--muted);padding:0 2px}
+.empty{padding:14px;text-align:center;color:var(--muted);font-size:10px}
+
+/* ═══ EDIÇÃO INLINE — some na exportação ═══ */
+.edit-ui{display:inline-flex}
+body.exporting .edit-ui,body.exporting .rm,body.exporting .comp-actions{display:none!important}
+.comp-actions{display:inline-flex;align-items:center;gap:3px;margin-left:auto;opacity:.28;transition:opacity .15s}
+.li:hover .comp-actions,.ins:hover .comp-actions,tr:hover .comp-actions,.executive-note-wrap:hover .comp-actions{opacity:1}
+.comp-btn{width:23px;height:23px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;padding:0}
+.comp-btn:hover{border-color:#cbd4e1;background:#f7f9fc;color:var(--ink)}
+.comp-btn.delete:hover{border-color:#f2b7c1;background:#fff4f6;color:var(--red)}
+.executive-note-wrap{position:relative}.executive-note-wrap>.comp-actions{position:absolute;right:0;top:-4px}
+.ins{grid-template-columns:24px minmax(0,1fr) auto}
+
+.addbtn{border:1px dashed #d6dde9;background:#fff;color:var(--muted);border-radius:9px;padding:6px 10px;font-size:10px;font-weight:800;width:100%;margin-top:8px}
+.addbtn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+.capture-preview{position:fixed;inset:0;z-index:1800;background:rgba(9,17,30,.72);display:none;align-items:center;justify-content:center;padding:22px}
+.capture-preview.on{display:flex}
+.capture-preview-card{width:min(1120px,96vw);max-height:94vh;background:#fff;border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.3);display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden}
+.capture-preview-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:14px;background:#fbfcfe}
+.capture-preview-head h3{margin:0;font-size:14px}
+.capture-preview-head p{margin:4px 0 0;color:var(--muted);font-size:10.5px;line-height:1.4}
+.capture-preview-close{border:0;background:#eef1f6;color:var(--ink);width:30px;height:30px;border-radius:9px;font-size:18px;cursor:pointer}
+.capture-preview-body{padding:14px;background:#edf1f7;overflow:auto;text-align:center}
+.capture-preview-body img{display:block;max-width:100%;height:auto;margin:0 auto;background:#fff;box-shadow:0 8px 22px rgba(17,24,39,.16);user-select:auto;-webkit-user-drag:auto}
+.capture-copy-help{margin:0 16px 10px;padding:9px 11px;border:1px solid #dce4f0;border-radius:10px;background:#f7f9fc;color:#46556b;font-size:11px;line-height:1.45}
+.capture-preview-actions{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;background:#fff}
+.capture-preview-actions button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 12px;font-size:10.5px;font-weight:800;cursor:pointer}
+.capture-preview-actions button.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.capture-preview-actions button.ok{background:var(--green);border-color:var(--green);color:#fff}
+/* modo nativo de seleção/cópia do report — não depende de geração de imagem */
+.report-selected{outline:3px solid #2d6cdf!important;outline-offset:5px;box-shadow:0 0 0 9999px rgba(15,23,42,.14),0 18px 48px rgba(17,24,39,.18)!important;position:relative;z-index:1450;background:#fff}
+body.select-copy-mode .edit-ui,body.select-copy-mode .rm,body.select-copy-mode .rm-inline,body.select-copy-mode .comp-actions{display:none!important}
+.select-copy-toolbar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:1700;width:min(760px,calc(100vw - 28px));background:#172033;color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.32);padding:12px 14px;display:none;align-items:center;gap:12px}
+.select-copy-toolbar.on{display:flex}
+.select-copy-toolbar .sel-copy-icon{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:17px;flex:none}
+.select-copy-toolbar .sel-copy-text{min-width:0;flex:1}
+.select-copy-toolbar .sel-copy-text b{display:block;font-size:11.5px;margin-bottom:2px}
+.select-copy-toolbar .sel-copy-text span{display:block;font-size:9.5px;line-height:1.35;color:#bcc6d6}
+.select-copy-toolbar .sel-copy-actions{display:flex;gap:7px;flex:none}
+.select-copy-toolbar button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;border-radius:9px;padding:8px 11px;font-size:10px;font-weight:850;cursor:pointer}
+.select-copy-toolbar button.primary{background:#159467;border-color:#159467}
+@media(max-width:720px){.select-copy-toolbar{align-items:flex-start;flex-wrap:wrap}.select-copy-toolbar .sel-copy-actions{width:100%;justify-content:flex-end}}
+.inp{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px;outline:none;background:#fff;margin-bottom:6px}
+.inp:focus{border-color:#ffb6c0;box-shadow:0 0 0 3px rgba(181,18,43,.08)}
+.editable{outline:none;border-radius:8px;transition:background .15s}
+body:not(.exporting) .editable:hover{background:#fffbf0;box-shadow:inset 0 0 0 1px #f4d79a}
+.editable:focus{background:#fffdf5;box-shadow:inset 0 0 0 2px #f4b740}
+.editable:empty::before{content:attr(data-ph);color:#9aa6ba;font-style:italic}
+.modal-bd{position:fixed;inset:0;background:rgba(10,18,32,.62);z-index:1200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bd.on{display:flex}
+.modal{background:#fff;border-radius:16px;padding:18px;width:520px;max-width:100%;max-height:88vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,.3)}
+.modal h3{margin:0 0 4px;font-size:15px}
+.modal p.hint{margin:0 0 12px;font-size:10.5px;color:var(--muted)}
+.modal .row{display:grid;gap:6px;margin-bottom:9px}
+.modal label{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:850}
+.modal-act{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.mb{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 13px;font-size:11px;font-weight:800}
+.mb.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.toast{position:fixed;right:20px;bottom:20px;z-index:1400;background:#1f9d75;color:#fff;padding:11px 15px;border-radius:10px;font-size:11px;font-weight:800;display:none;box-shadow:0 14px 34px rgba(0,0,0,.24);max-width:330px}
+.toast.show{display:block}.toast.err{background:var(--red)}.toast.warn{background:#9a6a12}
+
+
+/* ── resumo executivo de riscos do roadmap ── */
+.roadmap-card{border:1px solid var(--line);border-radius:16px;background:#fcfcfd;padding:12px 14px}
+.roadmap-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 0 10px;border-bottom:1px solid var(--line)}
+.roadmap-head h3{margin:0;font-size:13px;line-height:1.2;letter-spacing:-.01em}
+.roadmap-head p{margin:4px 0 0;font-size:10px;color:var(--muted);max-width:460px;line-height:1.45}
+.roadmap-title{display:flex;align-items:flex-start;gap:10px}
+.roadmap-dot{width:10px;height:10px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 4px rgba(191,24,48,.08);flex:none;margin-top:3px}
+.roadmap-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#f5f6fa;color:#5f6e81;font-size:10px;font-weight:800;border:1px solid var(--line);white-space:nowrap}
+.roadmap-body{padding:12px 0 0;background:transparent}
+.roadmap-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.roadmap-metric{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 8px;min-height:auto;display:grid;align-content:center;justify-items:center;text-align:center}
+.roadmap-metric b{display:block;font-size:20px;line-height:1;font-weight:900;color:var(--ink);letter-spacing:-.03em}
+.roadmap-metric span{display:block;font-size:9.5px;color:var(--muted);margin-top:5px;line-height:1.35}
+.roadmap-update{margin-top:10px;border-left:3px solid var(--green);background:#f6faf8;border-radius:0 10px 10px 0;padding:10px 12px}
+.roadmap-update h4{margin:0;font-size:9px;color:var(--green-ink);letter-spacing:.08em;text-transform:uppercase}
+.roadmap-update p{margin:5px 0 0;font-size:10.5px;line-height:1.5;color:var(--ink)}
+.rf-table-wrap,.acc-table-wrap{overflow:auto}
+
+/* ── cards de janela de refinamento técnico (item do Cronograma) ── */
+.rfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.rfc{border:1px solid var(--line);border-top:4px solid var(--c,var(--blue));border-radius:18px;padding:14px;background:#fff;box-shadow:0 8px 22px rgba(17,24,39,.04)}
+.rfc-top{display:flex;align-items:flex-start;gap:10px;justify-content:space-between}
+.rfc-id{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rfc-num{font-size:11px;font-weight:900;color:var(--primary);padding:5px 8px;border-radius:999px;background:var(--primary-soft)}
+.rfc h4{margin:9px 0 0;font-size:12.5px;line-height:1.34;font-weight:800;letter-spacing:-.01em}
+.rfc-sub{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rchip{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-size:9px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rchip b{font-size:10px;color:var(--ink);text-transform:none;letter-spacing:0}
+.rfc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.rfc-f{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--panel-2)}
+.rfc-f.span2{grid-column:1/-1}
+.rfc-f span{display:block;font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:850}
+.rfc-f b{display:block;font-size:11px;margin-top:4px;font-weight:800;line-height:1.35}
+.rfc-f b.jira{color:var(--primary);font-weight:900;font-size:14px}
+.rfc-week{margin-top:12px;border-left:4px solid var(--blue);background:#f5f8ff;border-radius:0 14px 14px 0;padding:11px 12px}
+.rfc-week h5{margin:0;font-size:10px;color:var(--blue-ink);text-transform:uppercase;letter-spacing:.06em}
+.rfc-week p{margin:6px 0 0;font-size:10.5px;color:var(--ink);line-height:1.5}
+/* aviso de previsão — datas de desenvolvimento não são compromisso firme */
+.note{margin:9px 0 0;font-size:9.5px;color:var(--amber-ink);background:var(--amber-soft);
+  border:1px solid #f0dcb0;border-radius:var(--radius-xs);padding:7px 10px}
+
+/* próximos Discoveries */
+.disc{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.dc{border:1px solid var(--line);border-top:4px solid var(--blue);border-radius:var(--radius-xs);padding:10px;background:#fff}
+.dc .dt{font-size:10px;font-weight:900;color:var(--blue);letter-spacing:.05em}
+.dc b{display:block;font-size:11px;line-height:1.32;margin:5px 0 6px}
+.dc small{display:block;font-size:9.5px;color:var(--muted);line-height:1.5}
+.dc .dev{display:block;margin-top:5px;font-size:9.5px;color:var(--ink);font-weight:650}
+/* evolução em dois painéis (modelo aprovado) */
+.evo{display:grid;grid-template-columns:1.15fr 1fr;gap:12px}
+.evo-left{border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius-sm);padding:13px}
+.evo-top{display:flex;align-items:center;gap:8px;font-weight:850;font-size:13px}
+.evo-top .dot{width:10px;height:10px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 5px rgba(191,24,48,.12);flex:none}
+.evo-left p{margin:7px 0 0;font-size:11px;color:var(--muted)}
+.evo-feed{margin-top:10px;display:grid;gap:6px;max-height:268px;overflow:auto}
+/* cada linha é um fato de gestão, colorido pelo sinal */
+.ins{display:grid;grid-template-columns:22px 1fr;gap:9px;background:#fff;border:1px solid var(--line);
+  border-left:4px solid var(--c,var(--blue));border-radius:var(--radius-xs);padding:8px 10px}
+.ins i{font-style:normal;font-size:11px;font-weight:900;color:var(--c);text-align:center;line-height:1.35}
+.ins b{display:block;font-size:10.5px;line-height:1.35}
+.ins span{display:block;font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.ins em{font-style:normal;font-weight:850;color:var(--primary)}
+.ins.pos{--c:var(--green)} .ins.neg{--c:var(--red)} .ins.neu{--c:var(--blue)}
+.evo-right{display:grid;gap:8px;align-content:start}
+.evo-card{display:grid;grid-template-columns:26px 1fr;gap:9px;border:1px solid var(--line);border-radius:var(--radius-xs);padding:10px 11px}
+.evo-n{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--amber-soft);color:var(--amber-ink);font-weight:900;font-size:10.5px}
+.evo-n.rte{background:var(--blue-soft);color:var(--blue-ink)}
+.evo-card b{display:block;font-size:11px}
+.evo-card span{display:block;font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+/* mudanças semana a semana */
+.chg{display:grid;gap:7px}
+.chg-row{border:1px solid var(--line);border-left:4px solid var(--c,var(--blue));border-radius:var(--radius-xs);padding:9px 11px}
+.chg-row b{font-size:11px}
+.chg-row .who2{font-size:9.5px;color:var(--muted);margin-left:5px}
+.chg-list{margin:5px 0 0;padding:0;list-style:none;display:grid;gap:3px}
+.chg-list li{font-size:10px;color:var(--ink)}
+.chg-list .de{color:var(--muted);text-decoration:line-through}
+.chg-list .para{color:var(--primary);font-weight:750}
+.chg-list .nota{font-size:9px;font-weight:850;padding:1px 6px;border-radius:6px;margin-left:4px}
+.chg-list .nota.atraso{background:var(--red-soft);color:var(--red)}
+.chg-list .nota.antecipacao,.chg-list .nota.avanco{background:var(--green-soft);color:var(--green-ink)}
+.nofill{color:#a9b3c4;font-style:italic}
+.hide{display:none!important}
+
+/* alternância de modelos */
+body[data-model="A"] .only-b{display:none}
+body[data-model="B"] .only-a{display:none}
+
+@media print{
+  .app-tools,.edit-ui,.rm,.rm-inline,.comp-actions{display:none!important}
+  body{background:#fff}.stage{padding:0}.report{box-shadow:none;border-radius:0;width:auto}
+  .blk,.kpi{break-inside:avoid}
+  details.blk-more{break-inside:avoid}
+  details.blk-more>summary::after{display:none}
+}
+
+.screen-capture-mode .app-tools,.screen-capture-mode .edit-ui,.screen-capture-mode .rm,.screen-capture-mode .rm-inline,.screen-capture-mode .comp-actions{display:none!important}
+.screen-capture-mode .report{width:calc(100vw - 24px)!important;max-width:none!important;margin:8px 12px!important;box-shadow:none!important}
+.screen-capture-mode{background:#fff!important}
+</style>
+</head>
+<body data-model="A">
+
+<div class="app-tools" data-html2canvas-ignore="true">
+  <div class="app-brand"><b>Report Semanal · Discovery</b><span>Dados herdados automaticamente do Discovery PMO Tracker</span></div>
+  <label class="week-field"><span>Semana</span><div class="wk"><button type="button" onclick="shiftWeek(-1)">‹</button><input type="week" id="weekInput"><button type="button" onclick="shiftWeek(1)">›</button></div></label>
+  <select class="sel" id="squadFilter"><option value="">Todas as squads</option></select>
+  <button class="tb primary" id="genBtn" onclick="generate()">⟳ Atualizar dados</button>
+  <button class="tb" onclick="openComplement()" title="Inclui complementos sem substituir os demais registros">✎ Complementos</button>
+  <button class="tb ok" onclick="capturePng(this)" title="Gera uma imagem PNG real do report inteiro">▣ Capturar PNG</button>
+  <button class="tb" onclick="exportPdf(this)">⇩ Exportar PDF</button>
+  <button class="tb" onclick="returnToTracker()">← Voltar ao Discovery</button>
+  <div class="tstatus"><b id="srcLabel">Servidor Discovery PMO</b><span id="srcDetail">Carregando iniciativas…</span></div>
+</div>
+
+<div class="stage">
+<div class="report" id="reportCapture">
+
+  <header class="hero">
+    <div class="hero-row">
+      <div>
+        <div class="eyebrow">Sala Transformação · Discovery → Delivery</div>
+        <h1>Report Semanal Executivo</h1>
+        <p class="sub" id="heroSub">14 iniciativas acompanhadas · maturidade média de 31%</p>
+      </div>
+      <div class="hero-week">
+        <span>Período</span>
+        <b id="heroWeek">—</b>
+        <span id="heroScope">todas as squads</span>
+      </div>
+    </div>
+    <div class="verdict">
+      <div class="vico" id="vIco">↔</div>
+      <div class="verdict-main">
+        <b id="vTitle">Resumo de travas da semana</b>
+        <small id="vText" class="hide">—</small>
+        <div class="lock-summary" id="vDetails"><div class="lock-empty">Carregando ocorrências da semana selecionada…</div></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- KPIs -->
+    <div class="grid-kpi">
+      <div class="kpi" style="--c:var(--blue)"><span>Iniciativas</span><b id="k1">14</b><small>no escopo</small></div>
+      <div class="kpi" style="--c:#4f7cff"><span>Em Discovery</span><b id="k2">5</b><small id="k2s">já iniciadas</small></div>
+      <div class="kpi" style="--c:var(--green)"><span>Prontas para Entrar em Desenvolvimento</span><b id="k3">0</b><small id="k3s">com prontidão para avanço</small></div>
+      <div class="kpi" style="--c:#f0b04b"><span>Travas semanal</span><b id="k4">0</b><small id="k4s">iniciativas com trava ativa</small></div>
+      <div class="kpi" style="--c:#7b61ff"><span>Histórias no Jira</span><b id="k5">0</b><small id="k5s">volume evidenciado no período</small></div>
+      <div class="kpi preventive" style="--c:#d9a441"><span>Atenção preventiva</span><b id="k6">0</b><small id="k6s">sem histórias e sem próximo marco</small></div>
+    </div>
+
+    <!-- ══ MODELO B: faixa visual de portfólio ══ -->
+    <div class="blk only-b">
+      <div class="blk-h"><div><h2>Panorama do portfólio</h2><p>Distribuição de prontidão e maturidade por iniciativa.</p></div><span class="tagn" id="avgTag">31% maturidade média</span></div>
+      <div class="blk-b cols2">
+        <div id="chartBars"><svg viewBox="0 0 420 228" width="100%" height="228" font-family="Inter,Segoe UI,Arial">
+    
+      <text x="0" y="15" font-size="9" fill="#687587">113286</text>
+      <rect x="34" y="7" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="7" width="158.4" height="10" rx="5" fill="#1f9d75"></rect>
+      <text x="262" y="16" font-size="9" font-weight="700" fill="#1c2430">72%</text>
+      <text x="288" y="16" font-size="8.5" fill="#687587">Consórcio Cobrança - …</text>
+      <text x="0" y="37" font-size="9" fill="#687587">113345</text>
+      <rect x="34" y="29" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="29" width="158.4" height="10" rx="5" fill="#1f9d75"></rect>
+      <text x="262" y="38" font-size="9" font-weight="700" fill="#1c2430">72%</text>
+      <text x="288" y="38" font-size="8.5" fill="#687587">Cartões - Não Monetár…</text>
+      <text x="0" y="59" font-size="9" fill="#687587">98434</text>
+      <rect x="34" y="51" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="51" width="121.00000000000001" height="10" rx="5" fill="#2d6cdf"></rect>
+      <text x="262" y="60" font-size="9" font-weight="700" fill="#1c2430">55%</text>
+      <text x="288" y="60" font-size="8.5" fill="#687587">Automação Câmbio Trad…</text>
+      <text x="0" y="81" font-size="9" fill="#687587">113319</text>
+      <rect x="34" y="73" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="73" width="74.80000000000001" height="10" rx="5" fill="#f4b740"></rect>
+      <text x="262" y="82" font-size="9" font-weight="700" fill="#1c2430">34%</text>
+      <text x="288" y="82" font-size="8.5" fill="#687587">Conciliação e Portabi…</text>
+      <text x="0" y="103" font-size="9" fill="#687587">113327</text>
+      <rect x="34" y="95" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="95" width="74.80000000000001" height="10" rx="5" fill="#f4b740"></rect>
+      <text x="262" y="104" font-size="9" font-weight="700" fill="#1c2430">34%</text>
+      <text x="288" y="104" font-size="8.5" fill="#687587">FIRP / Abono / Mtoken…</text>
+      <text x="0" y="125" font-size="9" fill="#687587">113260</text>
+      <rect x="34" y="117" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="117" width="70.4" height="10" rx="5" fill="#f4b740"></rect>
+      <text x="262" y="126" font-size="9" font-weight="700" fill="#1c2430">32%</text>
+      <text x="288" y="126" font-size="8.5" fill="#687587">API EXTRATO - 2ª via …</text>
+      <text x="0" y="147" font-size="9" fill="#687587">113292</text>
+      <rect x="34" y="139" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="139" width="63.800000000000004" height="10" rx="5" fill="#f4b740"></rect>
+      <text x="262" y="148" font-size="9" font-weight="700" fill="#1c2430">29%</text>
+      <text x="288" y="148" font-size="8.5" fill="#687587">Garantias - Registro …</text>
+      <text x="0" y="169" font-size="9" fill="#687587">113309</text>
+      <rect x="34" y="161" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="161" width="50.6" height="10" rx="5" fill="#f4b740"></rect>
+      <text x="262" y="170" font-size="9" font-weight="700" fill="#1c2430">23%</text>
+      <text x="288" y="170" font-size="8.5" fill="#687587">Recepção Doc. Físicos…</text>
+      <text x="0" y="191" font-size="9" fill="#687587">113359</text>
+      <rect x="34" y="183" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="183" width="39.6" height="10" rx="5" fill="#f4b740"></rect>
+      <text x="262" y="192" font-size="9" font-weight="700" fill="#1c2430">18%</text>
+      <text x="288" y="192" font-size="8.5" fill="#687587">Compensação de Cheques</text>
+      <text x="0" y="213" font-size="9" fill="#687587">116596</text>
+      <rect x="34" y="205" width="220" height="10" rx="5" fill="#e5e9f2"></rect>
+      <rect x="34" y="205" width="39.6" height="10" rx="5" fill="#f4b740"></rect>
+      <text x="262" y="214" font-size="9" font-weight="700" fill="#1c2430">18%</text>
+      <text x="288" y="214" font-size="8.5" fill="#687587">Jornada de Automação:…</text>
+  </svg></div>
+        <div id="chartDonut"><svg viewBox="0 0 320 145" width="100%" height="145" font-family="Inter,Segoe UI,Arial">
+    <circle cx="70" cy="70" r="52" fill="none" stroke="#eef1f6" stroke-width="20"></circle>
+    <circle cx="70" cy="70" r="52" fill="none" stroke="#1f9d75" stroke-width="20" stroke-dasharray="0 326.7256359733385" stroke-dashoffset="0" transform="rotate(-90 70 70)"></circle><circle cx="70" cy="70" r="52" fill="none" stroke="#2d6cdf" stroke-width="20" stroke-dasharray="46.67509085333407 280.0505451200045" stroke-dashoffset="0" transform="rotate(-90 70 70)"></circle><circle cx="70" cy="70" r="52" fill="none" stroke="#9a6a12" stroke-width="20" stroke-dasharray="280.0505451200044 46.6750908533341" stroke-dashoffset="-46.67509085333407" transform="rotate(-90 70 70)"></circle>
+    <text x="70" y="66" text-anchor="middle" font-size="22" font-weight="800" fill="#1c2430">14</text>
+    <text x="70" y="82" text-anchor="middle" font-size="8.5" fill="#687587">INICIATIVAS</text>
+    
+      <rect x="150" y="34" width="9" height="9" rx="2.5" fill="#1f9d75"></rect>
+      <text x="165" y="42" font-size="10" fill="#1c2430" font-weight="600">0</text>
+      <text x="182" y="42" font-size="9.5" fill="#687587">Alta prontidão</text>
+      <rect x="150" y="60" width="9" height="9" rx="2.5" fill="#2d6cdf"></rect>
+      <text x="165" y="68" font-size="10" fill="#1c2430" font-weight="600">2</text>
+      <text x="182" y="68" font-size="9.5" fill="#687587">Em amadurecimento</text>
+      <rect x="150" y="86" width="9" height="9" rx="2.5" fill="#9a6a12"></rect>
+      <text x="165" y="94" font-size="10" fill="#1c2430" font-weight="600">12</text>
+      <text x="182" y="94" font-size="9.5" fill="#687587">Atenção de prontidão</text>
+  </svg></div>
+      </div>
+    </div>
+
+    <!-- ══ MODELO B: régua do período ══ -->
+    <div class="blk only-b">
+      <div class="blk-h"><div><h2>Linha do tempo do período</h2><p>Quando cada movimento foi registrado no painel.</p></div><span class="tagn" id="railTag">0 movimento(s)</span></div>
+      <div class="blk-b" id="weekRail"><svg viewBox="0 0 1100 132" width="100%" height="132" font-family="Inter,Segoe UI,Arial">
+    <line x1="40" y1="96" x2="1060" y2="96" stroke="#d6dde9" stroke-width="2"></line>
+    
+      <rect x="84" y="94" width="52" height="2" rx="5" fill="#1f9d75" opacity=".9"></rect>
+      <text x="110" y="88" text-anchor="middle" font-size="12" font-weight="800" fill="#1c2430"></text>
+      <circle cx="110" cy="96" r="5" fill="#d6dde9"></circle>
+      <text x="110" y="115" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1c2430">Seg</text>
+      <text x="110" y="127" text-anchor="middle" font-size="9" fill="#687587">27/07</text>
+      <rect x="319" y="94" width="52" height="2" rx="5" fill="#1f9d75" opacity=".9"></rect>
+      <text x="345" y="88" text-anchor="middle" font-size="12" font-weight="800" fill="#1c2430"></text>
+      <circle cx="345" cy="96" r="5" fill="#d6dde9"></circle>
+      <text x="345" y="115" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1c2430">Ter</text>
+      <text x="345" y="127" text-anchor="middle" font-size="9" fill="#687587">28/07</text>
+      <rect x="554" y="94" width="52" height="2" rx="5" fill="#1f9d75" opacity=".9"></rect>
+      <text x="580" y="88" text-anchor="middle" font-size="12" font-weight="800" fill="#1c2430"></text>
+      <circle cx="580" cy="96" r="5" fill="#d6dde9"></circle>
+      <text x="580" y="115" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1c2430">Qua</text>
+      <text x="580" y="127" text-anchor="middle" font-size="9" fill="#687587">29/07</text>
+      <rect x="789" y="94" width="52" height="2" rx="5" fill="#1f9d75" opacity=".9"></rect>
+      <text x="815" y="88" text-anchor="middle" font-size="12" font-weight="800" fill="#1c2430"></text>
+      <circle cx="815" cy="96" r="5" fill="#d6dde9"></circle>
+      <text x="815" y="115" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1c2430">Qui</text>
+      <text x="815" y="127" text-anchor="middle" font-size="9" fill="#687587">30/07</text>
+      <rect x="1024" y="94" width="52" height="2" rx="5" fill="#1f9d75" opacity=".9"></rect>
+      <text x="1050" y="88" text-anchor="middle" font-size="12" font-weight="800" fill="#1c2430"></text>
+      <circle cx="1050" cy="96" r="5" fill="#d6dde9"></circle>
+      <text x="1050" y="115" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1c2430">Sex</text>
+      <text x="1050" y="127" text-anchor="middle" font-size="9" fill="#687587">31/07</text>
+  </svg></div>
+    </div>
+
+    <!-- ══ Evolução do período (modelo aprovado) ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Evolução do período</h2><p>Somente movimentos relevantes identificados no Cronograma, no RAID ou complementados pelo RTE.</p></div><span class="tagn" id="evoTag">14 fato(s)</span></div>
+      <div class="blk-b evo">
+        <div class="evo-left">
+          <div class="evo-top"><span class="dot"></span><span id="evoTitle">0 avanço(s) e 14 ponto(s) de atenção na semana</span></div>
+          <p id="evoSummary">Comparado à semana anterior em 14 iniciativa(s): fase do Cronograma, janela de refinamento, histórias no Jira e RAID.</p>
+          <div class="evo-feed" id="evoFeed"><div class="ins neg"><i>—</i><div><b>Não evoluiu de uma semana para a outra</b>
+      <span><em>113327</em> · FIRP / Abono / Mtoken / APP RM · Inception<br>Prontidão parada em 34% · sem registro há 2 dias.</span></div></div><div class="ins neg"><i>—</i><div><b>Não evoluiu de uma semana para a outra</b>
+      <span><em>113308</em> · Gestão de Fornecedores e Indexação Legado · MadMax<br>Prontidão parada em 14% · sem registro há 2 dias.</span></div></div><div class="ins neg"><i>—</i><div><b>Não evoluiu de uma semana para a outra</b>
+      <span><em>113260</em> · API EXTRATO - 2ª via de extrato Bancário · Inception<br>Prontidão parada em 32% · sem registro há 3 dias.</span></div></div><div class="ins neu"><i>+</i><div><b>Mais 11 fato(s) do mesmo tipo</b><span>11× Não evoluiu de uma semana para a outra — detalhe nas tabelas de risco e refinamento.</span></div></div></div>
+        </div>
+        <div class="evo-right" id="evoCards"><div class="evo-card"><div class="evo-n ">1</div><div><b>Exigem ação da gestão</b><span>14 ponto(s) de atenção: riscos parados, marcos vencidos ou iniciativas sem evolução.</span></div></div><div class="evo-card"><div class="evo-n ">2</div><div><b>Marcos no período</b><span>25 marco(s): Entrega para o Delivery -… (113286); Escrita das histórias (113286); Refinamento Técnico (113286)</span></div></div></div>
+      </div>
+    </div>
+
+    <!-- ══ Avanços e observação executiva — visão compacta ══ -->
+    <div class="summary-pair">
+      <div class="blk compact-summary">
+        <div class="blk-h"><div><h2>Avanços confirmados</h2><p>Principais movimentos positivos do período</p></div><span class="tagn" id="advTag">0</span></div>
+        <div class="blk-b adv-compact">
+          <div id="advList"><div class="empty">Sem avanço registrado no período.</div></div>
+          <button class="addbtn edit-ui" onclick="openAdd('avancos')">+ acrescentar avanço</button>
+        </div>
+      </div>
+      <div class="blk compact-summary hide" id="obsBlk">
+        <div class="blk-h"><div><h2>Observação executiva</h2><p>Contexto complementar do período</p></div><span class="tagn">opcional</span></div>
+        <div class="blk-b">
+          <div class="executive-note-wrap">
+            <div class="executive-note" id="obsBox"></div>
+            <div class="comp-actions edit-ui">
+              <button class="comp-btn" onclick="openEdit('obs')" title="Editar observação" aria-label="Editar observação">✎</button>
+              <button class="comp-btn delete" onclick="rmObs()" title="Excluir observação" aria-label="Excluir observação">×</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="blk hide" id="alignBlk">
+      <div class="blk-h"><div><h2>Alinhamentos realizados</h2><p>Acordos e direcionamentos relevantes realizados no período.</p></div><span class="tagn" id="alignTag">0</span></div>
+      <div class="blk-b complement-grid" id="alignList"></div>
+    </div>
+
+    <!-- ══ Riscos do Roadmap ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Riscos do roadmap</h2><p>Resumo executivo do portfólio com foco em exposição e estabilidade do planejamento.</p></div><span class="tagn" id="roadTag">—</span></div>
+      <div class="blk-b">
+        <div class="roadmap-card">
+          <div class="roadmap-head">
+            <div>
+              <div class="roadmap-title"><span class="roadmap-dot"></span><div><h3>Riscos do Roadmap</h3><p>Leitura automática dos riscos, dependências e marcos registrados no Discovery PMO Tracker.</p></div></div>
+            </div>
+            <div class="roadmap-chip" id="roadChip">Acompanhamento do período</div>
+          </div>
+          <div class="roadmap-body">
+            <div class="roadmap-metrics">
+              <div class="roadmap-metric"><b id="roadRiskInit">0</b><span>Iniciativas com risco</span></div>
+              <div class="roadmap-metric"><b id="roadLateMilestones">0</b><span>Marcos vencidos</span></div>
+              <div class="roadmap-metric"><b id="roadHealth">100%</b><span>Saúde do roadmap</span></div>
+            </div>
+            <div class="roadmap-update hide" id="roadUpdateBlk">
+              <h4>Atualização da semana</h4>
+              <p id="roadUpdateText">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Riscos e impedimentos abertos ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Riscos e impedimentos abertos</h2><p>RAID do Discovery: risco, impedimento e dependência sem tratativa concluída.</p></div><span class="tagn" id="rkTag">4 aberto(s)</span></div>
+      <div class="blk-b">
+        <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th></tr></thead><tbody id="rkRows"><tr><td><b style="color:var(--primary)">98434</b><br><span style="color:var(--ink)">Automação Câmbio Trade Finance QuickWin</span></td>
+      <td>Contact</td>
+      <td><span class="pill r">Risco</span></td>
+      <td>Atraso na ação: Desenho de Arquitetura</td>
+      <td>Arquitetura<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
+      <td>Eduardo Paiva</td><td>24/07/2026</td><td><span class="pill r">vencido há 3d</span></td></tr><tr><td><b style="color:var(--primary)">113315</b><br><span style="color:var(--ink)">Consignado, Conciliação e Portabilidade</span></td>
+      <td>Interstelar</td>
+      <td><span class="pill a">Impedimento</span></td>
+      <td>Squad principal não informada na planilha; classificada temporariamente como A valida…</td>
+      <td>Alocação / RTE<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
+      <td>Helen Da</td><td>10/08/2026</td><td><span class="pill g">no prazo</span></td></tr><tr><td><b style="color:var(--primary)">113315</b><br><span style="color:var(--ink)">Consignado, Conciliação e Portabilidade</span></td>
+      <td>Interstelar</td>
+      <td><span class="pill a">Impedimento</span></td>
+      <td>Filha 113318 está na Squad TopGun, diferente da mãe 113315 (A validar).</td>
+      <td>Alocação / RTE<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
+      <td>Helen Da</td><td>10/08/2026</td><td><span class="pill g">no prazo</span></td></tr><tr><td><b style="color:var(--primary)">113315</b><br><span style="color:var(--ink)">Consignado, Conciliação e Portabilidade</span></td>
+      <td>Interstelar</td>
+      <td><span class="pill a">Impedimento</span></td>
+      <td>1 filha(s) sem Squad informada na planilha.</td>
+      <td>Alocação / RTE<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
+      <td>Helen Da</td><td>10/08/2026</td><td><span class="pill g">no prazo</span></td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ══ Janelas de refinamento técnico ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Janelas de refinamento técnico</h2><p>Somente iniciativas com refinamento técnico em andamento no Cronograma.</p></div><span class="tagn" id="rfTag">—</span></div>
+      <div class="blk-b rf-table-wrap">
+        <table class="tb2">
+          <thead><tr><th>Nº</th><th>Iniciativa</th><th>Início</th><th>Fim</th><th>Squad</th><th>Tech Lead</th><th>Histórias no Jira</th></tr></thead>
+          <tbody id="rfRows"><tr><td colspan="7" class="empty">Sem iniciativa em refinamento técnico no período.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ Mudanças semana a semana — só aparece quando existe mudança ══ -->
+    <div class="blk hide" id="chgBlk">
+      <div class="blk-h"><div><h2>Mudanças desde a semana anterior</h2><p id="chgSummary">—</p></div><span class="tagn" id="chgTag">—</span></div>
+      <div class="blk-b chg" id="chgList"></div>
+    </div>
+
+    <!-- ══ Acompanhamento das iniciativas ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Acompanhamento das iniciativas</h2><p>Visão consolidada do estágio atual e do próximo passo de cada iniciativa.</p></div><span class="tagn" id="accTag">—</span></div>
+      <div class="blk-b acc-table-wrap">
+        <table class="tb2">
+          <thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Fase atual</th><th>Prontidão</th><th>Próximo marco</th><th>PO / Tech Lead</th></tr></thead>
+          <tbody id="accRows"><tr><td colspan="7" class="empty">Sem iniciativas no escopo selecionado.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ Detalhe granular por iniciativa — recolhido por padrão: já resumido
+         nos cards de refinamento, no feed de evolução e na tabela de riscos ══ -->
+    <details class="blk-more only-a hide">
+      <summary><div><h2>Situação por iniciativa</h2><p>Agrupado por urgência — maturidade, variação semanal e próximo marco.</p></div><span class="tagn" id="semaTag">14 iniciativas</span></summary>
+      <div class="blk-b" id="semaGrid"><div class="sit-group">
+    <div class="sit-gh"><span class="gdot" style="background:#d94545"></span><b>Crítica — 10</b></div>
+    <div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113286</div>
+      <div class="sit-name"><b>Consórcio Cobrança - Atendimentos demandas</b><span>Expresso</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:72%;background:#d94545"></i></div><span class="sit-pct">72%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>30/07/2026</b><br>Entrega para o Delivery…</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113345</div>
+      <div class="sit-name"><b>Cartões - Não Monetário - Tratar base PCCF</b><span>Interstelar</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:72%;background:#d94545"></i></div><span class="sit-pct">72%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>30/07/2026</b><br>Entrega para o Delivery</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">98434</div>
+      <div class="sit-name"><b>Automação Câmbio Trade Finance QuickWin</b><span>Contact</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:55%;background:#d94545"></i></div><span class="sit-pct">55%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>31/07/2026</b><br>Data-alvo</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113319</div>
+      <div class="sit-name"><b>Conciliação e Portabilidade Notificação Suspe…</b><span>Terminator</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:34%;background:#d94545"></i></div><span class="sit-pct">34%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>30/07/2026</b><br>Escrita das histórias</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113327</div>
+      <div class="sit-name"><b>FIRP / Abono / Mtoken / APP RM</b><span>Inception</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:34%;background:#d94545"></i></div><span class="sit-pct">34%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>31/07/2026</b><br>Discovery</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113260</div>
+      <div class="sit-name"><b>API EXTRATO - 2ª via de extrato Bancário</b><span>Inception</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:32%;background:#d94545"></i></div><span class="sit-pct">32%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>31/07/2026</b><br>Data-alvo</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113309</div>
+      <div class="sit-name"><b>Recepção Doc. Físicos, Ofícios e Ctrl Pendênc…</b><span>MadMax</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:23%;background:#d94545"></i></div><span class="sit-pct">23%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>27/07/2026</b><br>Escrita da história</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">116596</div>
+      <div class="sit-name"><b>Jornada de Automação: Conversão Robôs em RPA</b><span>Terminator</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:18%;background:#d94545"></i></div><span class="sit-pct">18%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>30/07/2026</b><br>Refinamento Técnico</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113315</div>
+      <div class="sit-name"><b>Consignado, Conciliação e Portabilidade</b><span>Interstelar</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:14%;background:#d94545"></i></div><span class="sit-pct">14%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>10/08/2026</b><br>Início do Discovery</div>
+    </div><div class="sit-row" style="--c:#d94545">
+      <div class="sit-num">113308</div>
+      <div class="sit-name"><b>Gestão de Fornecedores e Indexação Legado</b><span>MadMax</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:14%;background:#d94545"></i></div><span class="sit-pct">14%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>31/07/2026</b><br>Data-alvo</div>
+    </div></div><div class="sit-group">
+    <div class="sit-gh"><span class="gdot" style="background:#1f9d75"></span><b>Sem atenção aberta — 4</b></div>
+    <div class="sit-row" style="--c:#2d6cdf">
+      <div class="sit-num">113292</div>
+      <div class="sit-name"><b>Garantias - Registro em Cartório Op de Crédio</b><span>Expresso</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:29%;background:#2d6cdf"></i></div><span class="sit-pct">29%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>03/08/2026</b><br>Início do Discovery</div>
+    </div><div class="sit-row" style="--c:#2d6cdf">
+      <div class="sit-num">113359</div>
+      <div class="sit-name"><b>Compensação de Cheques</b><span>Interstelar</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:18%;background:#2d6cdf"></i></div><span class="sit-pct">18%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>03/08/2026</b><br>Início do Discovery</div>
+    </div><div class="sit-row" style="--c:#2d6cdf">
+      <div class="sit-num">113317</div>
+      <div class="sit-name"><b>Automatização Fluxo Pagamento Veículos</b><span>Interstelar</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:14%;background:#2d6cdf"></i></div><span class="sit-pct">14%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>03/08/2026</b><br>Início do Discovery</div>
+    </div><div class="sit-row" style="--c:#2d6cdf">
+      <div class="sit-num">113301</div>
+      <div class="sit-name"><b>Consórcio - Termo</b><span>Expresso</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:5%;background:#2d6cdf"></i></div><span class="sit-pct">5%</span></div>
+      <div class="sit-delta flat">— 0pp</div>
+      <div class="sit-mst"><b>10/08/2026</b><br>Início do Discovery</div>
+    </div></div></div>
+    </details>
+
+    <!-- ══ MODELO B: tabela detalhada ══ -->
+    <details class="blk-more only-b hide">
+      <summary><div><h2>Acompanhamento das iniciativas</h2><p>Visão consolidada do portfólio.</p></div><span class="tagn" id="tblTag">14 iniciativas</span></summary>
+      <div class="blk-b" style="overflow:auto">
+        <table class="tb2"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Prontidão</th><th>Semana</th><th>Próximo marco</th><th>PO / Tech Lead</th></tr></thead><tbody id="tblRows"><tr><td style="font-weight:900;color:var(--primary)">113286</td>
+      <td>Consórcio Cobrança - Atendimentos demandas</td><td>Expresso</td>
+      <td><span class="pill b">Média · 72%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>30/07/2026<br><small style="color:var(--muted)">Entrega para o Delivery…</small></td>
+      <td>Daniel Lima<br><small style="color:var(--muted)">Moseas Souza</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113345</td>
+      <td>Cartões - Não Monetário - Tratar base PCCF</td><td>Interstelar</td>
+      <td><span class="pill b">Média · 72%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>30/07/2026<br><small style="color:var(--muted)">Entrega para o Delivery</small></td>
+      <td>Sandra Souza<br><small style="color:var(--muted)">Silmara Rosalem</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">98434</td>
+      <td>Automação Câmbio Trade Finance QuickWin</td><td>Contact</td>
+      <td><span class="pill a">Baixa · 55%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>31/07/2026<br><small style="color:var(--muted)">Data-alvo</small></td>
+      <td>André Dias<br><small style="color:var(--muted)">Rodrigo D'avila</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113319</td>
+      <td>Conciliação e Portabilidade Notificação Suspe…</td><td>Terminator</td>
+      <td><span class="pill a">Baixa · 34%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>30/07/2026<br><small style="color:var(--muted)">Escrita das histórias</small></td>
+      <td>Jane Silva<br><small style="color:var(--muted)">Juliana Ribeiro</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113327</td>
+      <td>FIRP / Abono / Mtoken / APP RM</td><td>Inception</td>
+      <td><span class="pill a">Baixa · 34%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>31/07/2026<br><small style="color:var(--muted)">Discovery</small></td>
+      <td>Paulo Nascimento<br><small style="color:var(--muted)">Victor Fortunato</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113260</td>
+      <td>API EXTRATO - 2ª via de extrato Bancário</td><td>Inception</td>
+      <td><span class="pill a">Baixa · 32%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>31/07/2026<br><small style="color:var(--muted)">Data-alvo</small></td>
+      <td>Sandra Souza<br><small style="color:var(--muted)">ASD</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113309</td>
+      <td>Recepção Doc. Físicos, Ofícios e Ctrl Pendênc…</td><td>MadMax</td>
+      <td><span class="pill a">Baixa · 23%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>27/07/2026<br><small style="color:var(--muted)">Escrita da história</small></td>
+      <td>Sérgio Cartapatti<br><small style="color:var(--muted)">Rennan Gustavo</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">116596</td>
+      <td>Jornada de Automação: Conversão Robôs em RPA</td><td>Terminator</td>
+      <td><span class="pill a">Baixa · 18%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>30/07/2026<br><small style="color:var(--muted)">Refinamento Técnico</small></td>
+      <td>Beatriz Miranda<br><small style="color:var(--muted)">Juliana Ribeiro</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113315</td>
+      <td>Consignado, Conciliação e Portabilidade</td><td>Interstelar</td>
+      <td><span class="pill a">Baixa · 14%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>10/08/2026<br><small style="color:var(--muted)">Início do Discovery</small></td>
+      <td>Daniel Lima<br><small style="color:var(--muted)">Silmara Rosalem</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113308</td>
+      <td>Gestão de Fornecedores e Indexação Legado</td><td>MadMax</td>
+      <td><span class="pill a">Baixa · 14%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>31/07/2026<br><small style="color:var(--muted)">Data-alvo</small></td>
+      <td>Vinicius Barbosa<br><small style="color:var(--muted)">Rennan Gustavo</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113292</td>
+      <td>Garantias - Registro em Cartório Op de Crédio</td><td>Expresso</td>
+      <td><span class="pill a">Baixa · 29%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>03/08/2026<br><small style="color:var(--muted)">Início do Discovery</small></td>
+      <td>Fernanda Rocha<br><small style="color:var(--muted)">Moseas Souza</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113359</td>
+      <td>Compensação de Cheques</td><td>Interstelar</td>
+      <td><span class="pill a">Baixa · 18%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>03/08/2026<br><small style="color:var(--muted)">Início do Discovery</small></td>
+      <td>Mariana Nakaya<br><small style="color:var(--muted)">Silmara Rosalem</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113317</td>
+      <td>Automatização Fluxo Pagamento Veículos</td><td>Interstelar</td>
+      <td><span class="pill a">Baixa · 14%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>03/08/2026<br><small style="color:var(--muted)">Início do Discovery</small></td>
+      <td>Rodrigo Santos<br><small style="color:var(--muted)">Silmara Rosalem</small></td></tr><tr><td style="font-weight:900;color:var(--primary)">113301</td>
+      <td>Consórcio - Termo</td><td>Expresso</td>
+      <td><span class="pill a">Baixa · 5%</span></td>
+      <td><span class="pill n">parada</span></td>
+      <td>10/08/2026<br><small style="color:var(--muted)">Início do Discovery</small></td>
+      <td>Vinicius Barbosa<br><small style="color:var(--muted)">Moseas Souza</small></td></tr></tbody></table>
+      </div>
+    </details>
+
+    <!-- ══ Compromissos da semana selecionada ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Compromissos da semana</h2><p>Somente compromissos com data dentro da semana selecionada, inclusive ao consultar semanas anteriores.</p></div><span class="tagn" id="mstTag">—</span></div>
+      <div class="blk-b mst-period" id="mstRail"><div class="empty">Carregando compromissos da semana…</div></div>
+    </div>
+
+    <!-- ══ Próximos Discoveries — sempre o mês subsequente ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2 id="discTitle">Próximos Discoveries — agosto</h2><p>Discoveries que iniciam no mês seguinte ao desta semana.</p></div><span class="tagn" id="discTag">5 iniciativas</span></div>
+      <div class="blk-b">
+        <div class="disc" id="discGrid"><div class="dc">
+      <div class="dt">03 AGO.</div>
+      <b>113292 · Garantias - Registro em Cartório Op de Crédio</b>
+      <small>Expresso · Dono: Mara Denise de Freitas Bologn…</small>
+      <small>PO: Fernanda Rocha · TL: Moseas Souza</small>
+      <span class="dev">Desenvolvimento previsto: 01 set. – 01 out.</span>
+    </div><div class="dc">
+      <div class="dt">03 AGO.</div>
+      <b>113359 · Compensação de Cheques</b>
+      <small>Interstelar · Dono: Henrique Augusto Pasquim</small>
+      <small>PO: Mariana Nakaya · TL: Silmara Rosalem</small>
+      <span class="dev">Desenvolvimento previsto: 01 out. – 01 nov.</span>
+    </div><div class="dc">
+      <div class="dt">03 AGO.</div>
+      <b>113317 · Automatização Fluxo Pagamento Veículos</b>
+      <small>Interstelar · Dono: Milena Bento Gomes</small>
+      <small>PO: Rodrigo Santos · TL: Silmara Rosalem</small>
+      <span class="dev">Desenvolvimento previsto: 01 out. – 01 nov.</span>
+    </div><div class="dc">
+      <div class="dt">10 AGO.</div>
+      <b>113315 · Consignado, Conciliação e Portabilidade</b>
+      <small>Interstelar · Dono: Helen Da Silva Martins</small>
+      <small>PO: Daniel Lima · TL: Silmara Rosalem</small>
+      <span class="dev">Desenvolvimento previsto: 01 out. – 01 nov.</span>
+    </div><div class="dc">
+      <div class="dt">10 AGO.</div>
+      <b>113301 · Consórcio - Termo</b>
+      <small>Expresso · Dono: Tarsio Redigulo</small>
+      <small>PO: Vinicius Barbosa · TL: Moseas Souza</small>
+      <span class="dev">Desenvolvimento previsto: 01 nov. – 01 dez.</span>
+    </div></div>
+        <p class="note" id="discNote">A janela de desenvolvimento é <b>previsão</b> derivada do planejamento e pode mudar conforme o resultado do Discovery e a capacidade da squad.</p>
+      </div>
+    </div>
+
+
+    <div class="foot"><span>Sala Transformação · uso interno</span><span id="footStamp">Semana 2026-W31 · emitido em 27/07/2026, 03:10</span></div>
+  </div>
+</div>
+</div>
+
+<!-- modal de inclusão -->
+<div class="modal-bd" id="modal">
+  <div class="modal">
+    <h3 id="mTitle">Complementar report</h3>
+    <p class="hint" id="mHint">Inclua somente informações que ainda não estejam cadastradas no Discovery PMO Tracker.</p>
+    <select class="inp hide" id="mKindSelect" onchange="selectComplement(this.value)"></select>
+    <div class="kind-tabs" id="kindTabs"></div>
+    <div id="mFields"></div>
+    <div class="modal-act">
+      <button class="mb" onclick="closeModal()">Cancelar</button>
+      <button class="mb primary" id="mSaveBtn" onclick="saveModal()">Salvar complemento</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">Report gerado para a semana 2026-W31</div>
+
+<script>
+/* ════════════ CONFIG ════════════ */
+const CFG={
+  gasUrl:'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec',
+  gasKey:'discoveryPmo',
+  trackerKey:'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3',
+  cacheKey:'sala_rep_cache_v3', editKey:'sala_rep_edit_v4', snapKey:'sala_rep_snap_v4',
+  horizon:14, staleDays:10
+};
+const TL_STAGES=[{id:'entendimento',title:'Entendimento do Problema'},{id:'analise',title:'Levantamento e Análise'},{id:'desenho',title:'Desenho da Solução'},{id:'validacao',title:'Validação e Prontidão'}];
+const TL_TEMPLATE=[['ti-objetivo','entendimento','Objetivo do discovery'],['ti-dor','entendimento','Dor do usuário e do negócio'],['ti-escopo','entendimento','Escopo inicial'],['ti-stakeholders','entendimento','Stakeholders envolvidos'],['ti-asis','analise','Mapeamento AS IS'],['ti-dados','analise','Dados e evidências'],['ti-riscosdeps','analise','Riscos e dependências'],['ti-requisitos','analise','Requisitos iniciais'],['ti-solucao','desenho','Solução proposta'],['ti-hipoteses','desenho','Hipóteses e alternativas'],['ti-priorizacao','desenho','Priorização'],['ti-criterios','desenho','Critérios de sucesso'],['ti-viabilidade','validacao','Viabilidade técnica'],['ti-validacaonegocio','validacao','Validação com negócio'],['ti-proximos','validacao','Próximos passos'],['ti-ready','validacao','Ready para épico e histórias']].map(([id,stageId,label])=>({id,stageId,label}));
+const TL_LABEL=Object.fromEntries(TL_TEMPLATE.map(t=>[t.id,t.label]));
+const TL_W={done:1,progress:.55,'waiting-arch':.55,'waiting-business':.55,blocked:.15};
+const CARD_W={backlog:.1,doing:.45,validation:.7,done:1};
+const ARCH_RE=/arquitet|solution design|dati|desenho de solu/i;
+
+let base={projects:[],squads:[]}, source='—', scoped=[], edits={}, curWeek='', lastCtx=null;
+const initialParams=new URLSearchParams(window.location.search);
+const initialWeek=initialParams.get('week');
+const initialSquad=initialParams.get('squad');
+const openedFromTracker=initialParams.get('source')==='tracker';
+
+/* ════════════ utils ════════════ */
+const el=id=>document.getElementById(id);
+const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const iso=d=>!d||Number.isNaN(d.getTime())?'':`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const pDate=v=>{if(!v)return null;const d=new Date(String(v).slice(0,10)+'T12:00:00');return Number.isNaN(d.getTime())?null:d};
+const pTs=v=>{if(!v)return null;const d=new Date(v);return Number.isNaN(d.getTime())?null:d};
+const fD=v=>{const d=pDate(v);return d?new Intl.DateTimeFormat('pt-BR').format(d):'—'};
+const fDM=d=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit'}).format(d);
+const dias=(a,b)=>Math.round((b-a)/864e5);
+const cut=(s,n)=>{s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s};
+const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MESL=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const fShort=v=>{const d=pDate(v);return d?`${String(d.getDate()).padStart(2,'0')} ${MES[d.getMonth()]}.`:'—'};
+const fBadge=v=>{const d=pDate(v);return d?`${String(d.getDate()).padStart(2,'0')} ${MES[d.getMonth()].toUpperCase()}.`:'—'};
+const nome2=v=>String(v||'').trim().split(/\s+/).slice(0,2).join(' ')||'—';
+/* ════════════ REGRAS DO CRONOGRAMA ════════════
+   A aba "Cronograma" do Discovery PMO Tracker é a fonte oficial dos marcos.
+   Tudo que o report afirma sobre fase, janela, atraso e próximo marco sai
+   daqui — os campos soltos da iniciativa só entram como último recurso. */
+const CRONO=[
+  {key:'kickoff', re:/kick ?off/,                                    label:'Kickoff',                 fase:'Discovery'},
+  {key:'disc',    re:/^discovery|inicio do discovery/,               label:'Discovery',               fase:'Discovery'},
+  {key:'asis',    re:/as ?is|mapeamento/,                            label:'AS IS',                   fase:'Discovery'},
+  {key:'sol',     re:/desenho de solu|solution design/,              label:'Desenho de solução',      fase:'Desenho da solução'},
+  {key:'arq',     re:/arquitetura/,                                  label:'Arquitetura',             fase:'Desenho da solução'},
+  {key:'escrita', re:/escrita (das|de|da) hist/,                     label:'Escrita das histórias',   fase:'Refinamento técnico'},
+  {key:'refino',  re:/refinamento/,                                  label:'Refinamento Técnico',     fase:'Refinamento técnico'},
+  {key:'jira',    re:/qtd de hist|historias no jira/,                label:'Histórias no Jira',       fase:'Refinamento técnico', metric:true},
+  {key:'entrega', re:/entrega para o delivery|entrada.*delivery/,    label:'Entrega para o Delivery', fase:'Delivery'},
+  {key:'alvo',    re:/data-?alvo/,                                   label:'Data-alvo',               fase:'Delivery'}
+];
+const FASES=['Discovery','Desenho da solução','Refinamento técnico','Delivery'];
+function schedBy(p,re){return (Array.isArray(p.schedule)?p.schedule:[]).find(i=>re.test(norm(i.item||'')))||null}
+const RE_REFINO=/refinamento/, RE_ESCRITA=/escrita das historias|escrita de historias/, RE_JIRA=/qtd de historias|historias no jira/;
+/* indexa os itens do Cronograma pela regra canônica correspondente */
+function cronoOf(p){
+  const o={};
+  (Array.isArray(p.schedule)?p.schedule:[]).forEach(i=>{
+    const n=norm(i.item||'');
+    const r=CRONO.find(c=>c.re.test(n));
+    if(r&&!o[r.key])o[r.key]={...i,rule:r};
+  });
+  return o;
+}
+/* fase corrente = último marco concluído no Cronograma, olhando na ordem oficial */
+function faseCrono(p){
+  const c=cronoOf(p);
+  let atual='Discovery',prox=null;
+  CRONO.filter(r=>!r.metric).forEach(r=>{
+    const i=c[r.key];if(!i)return;
+    if(schDone(i)){if(FASES.indexOf(r.fase)>=FASES.indexOf(atual))atual=r.fase}
+    else if(!prox&&(i.start||i.end))prox={label:r.label,fase:r.fase,item:i};
+  });
+  return{atual,prox,itens:c};
+}
+function janela(i){return i&&(i.start||i.end)?`${fShort(i.start)} – ${fShort(i.end)}`:''}
+function squadBadge(s){
+  const k=norm(s||'');
+  const tones={
+    'terminator':['#fdf1f3','#f7cfd8','#b61c3e'],
+    'expresso':['#eef4ff','#cfe0ff','#2458b8'],
+    'interstelar':['#effaf5','#cceedd','#137252'],
+    'contact':['#fff7eb','#ffe4bb','#9a6a12'],
+    'madmax':['#f3f0ff','#ddd4ff','#5b46c5'],
+    'inception':['#edf9fb','#cbeef4','#0f6e80'],
+    'topgun':['#fff1f1','#ffd7d7','#b63b3b'],
+    'ainda sem definicao':['#f5f7fb','#e3e8f2','#526173'],
+    'asd':['#f5f7fb','#e3e8f2','#526173']
+  };
+  const t=tones[k]||['#f5f7fb','#e3e8f2','#526173'];
+  return `<span class="sqpill" style="background:${t[0]};border-color:${t[1]};color:${t[2]}">${esc(s||'—')}</span>`;
+}
+function jiraQtd(p){
+  /* Fonte oficial da importação “Épicos & Histórias (Jira)”.
+     O Discovery PMO Tracker normaliza esse conteúdo em project.jiraStories. */
+  if(Array.isArray(p?.jiraStories)){
+    const rows=p.jiraStories.filter(Boolean);
+    const stories=rows.filter(r=>{
+      const tipo=norm(r?.issueType||r?.issue_type||r?.type||r?.tipo||r?.itemType||r?.tipoItem||r?.['Tipo de item']||r?.['Tipo']||'');
+      return !tipo||!/epic|epico|epicos/.test(tipo);
+    });
+    /* Se os tipos vierem identificados, exclui épicos. Quando a carga não traz
+       o tipo, a lista já é a coleção de histórias vinculadas à iniciativa. */
+    return stories.length || (rows.length && !rows.some(r=>/epic|epico|epicos/.test(norm(r?.issueType||r?.issue_type||r?.type||r?.tipo||r?.itemType||''))) ? rows.length : 0);
+  }
+
+  /* Compatibilidade com versões que salvaram a contagem diretamente no projeto. */
+  const direto=[p?.jiraStoryCount,p?.jiraStoriesCount,p?.storyCount,p?.qtdHistoriasJira,p?.jiraCount]
+    .map(v=>Number(v)).find(Number.isFinite);
+  if(direto!==undefined)return Math.max(0,direto);
+
+  /* Fallback legado: item automático do Cronograma. */
+  const sch=Array.isArray(p?.schedule)?p.schedule:[];
+  const i=sch.find(x=>x?.jira||RE_JIRA.test(norm(x?.item||''))||(/epic|epico|epicos/.test(norm(x?.item||''))&&/histor|jira/.test(norm(x?.item||''))));
+  if(!i)return null;
+  const fontes=[i.observations,i.value,i.qtd,i.quantity,i.total,i.text,i.note,i.notes,i.progress]
+    .map(v=>String(v??'').trim()).filter(Boolean);
+  for(const bruto of fontes){
+    const histMatch=bruto.match(/(?:hist[oó]rias?|stories?)\D{0,12}(\d+)/i)||bruto.match(/(\d+)\D{0,12}(?:hist[oó]rias?|stories?)/i);
+    if(histMatch)return Number(histMatch[1]);
+    const nums=bruto.match(/\d+/g)||[];
+    if(nums.length)return Number(nums[nums.length-1]);
+  }
+  return 0;
+}
+/* ── Área responsável (item obrigatório na exposição de risco) ──
+   1º o campo vindo da carga; 2º inferência pelo texto; 3º a squad da iniciativa. */
+const AREAS=[
+  [/arquitet|solution design|dati/,        'Arquitetura'],
+  [/seguran|ciber|complian|lgpd/,          'Segurança e Compliance'],
+  [/jurid|contrat|legal/,                  'Jurídico'],
+  [/infra|ambiente|servidor|rede|deploy/,  'Infraestrutura'],
+  [/dados|base |integra|api|legado|newcon/,'Dados e Integrações'],
+  [/fornecedor|terceir|parceir/,           'Fornecedor / Terceiro'],
+  [/negocio|produto|comercial|cliente/,    'Negócio'],
+  [/squad|capacidade|aloca|time/,          'Alocação / RTE']
+].map(([re,nome])=>({re:new RegExp(re.source||re,'i'),nome}));
+function areaOf(item,p){
+  const dado=[item?.area,item?.responsibleArea,item?.areaResponsavel,item?.department].map(v=>String(v??'').trim()).find(Boolean);
+  if(dado)return{nome:dado,inferida:false};
+  const txt=norm((item?.text||'')+' '+(item?.owner||''));
+  const hit=AREAS.find(a=>a.re.test(txt));
+  if(hit)return{nome:hit.nome,inferida:true};
+  return{nome:p?.squad||'Não informada',inferida:true};
+}
+function toast(m,k){const t=el('toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(window.__t);window.__t=setTimeout(()=>t.className='toast',3200)}
+
+/* período do report */
+function isoWeekOf(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()+3-((d.getDay()+6)%7));const y=d.getFullYear();const j=new Date(y,0,4);const w=1+Math.round(((d-j)/864e5-3+((j.getDay()+6)%7))/7);return `${y}-W${String(w).padStart(2,'0')}`}
+function weekStrOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()+3-((x.getDay()+6)%7));const firstThu=new Date(x.getFullYear(),0,4);const week=1+Math.round(((x-firstThu)/864e5-3+((firstThu.getDay()+6)%7))/7);return `${x.getFullYear()}-W${String(week).padStart(2,'0')}`;}
+function boundsFromWeekStr(v){if(!v||!/^(\d{4})-W(\d{2})$/.test(v))return currentWeekBounds();const[,y,w]=v.match(/^(\d{4})-W(\d{2})$/);const simple=new Date(Number(y),0,1+(Number(w)-1)*7);const dow=(simple.getDay()+6)%7;const start=new Date(simple);start.setDate(simple.getDate()-dow);start.setHours(0,0,0,0);const end=new Date(start);end.setDate(start.getDate()+4);end.setHours(23,59,59,999);return{start,end,mon:start};}
+function currentWeekBounds(){const now=new Date(),day=(now.getDay()+6)%7;const start=new Date(now);start.setDate(now.getDate()-day);start.setHours(0,0,0,0);const end=new Date(start);end.setDate(start.getDate()+4);end.setHours(23,59,59,999);return{start,end,mon:start}}
+function periodBounds(){return boundsFromWeekStr(el('weekInput').value||weekStrOf(new Date()))}
+function shiftWeek(n){const cur=boundsFromWeekStr(el('weekInput').value||weekStrOf(new Date()));const next=new Date(cur.start);next.setDate(next.getDate()+7*n);el('weekInput').value=weekStrOf(next);generate()}
+
+/* ════════════ carga ════════════ */
+function jsonp(url,ms=18000){return new Promise((res,rej)=>{const cb='__r'+Date.now()+Math.random().toString(36).slice(2);const s=document.createElement('script');const t=setTimeout(()=>{cl();rej(new Error('timeout'))},ms);function cl(){clearTimeout(t);delete window[cb];s.remove()}window[cb]=p=>{cl();res(p)};s.onerror=()=>{cl();rej(new Error('rede'))};s.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();document.head.appendChild(s)})}
+function normPayload(raw){let c=raw;if(c&&c.ok&&c.data!==undefined)c=c.data;if(c&&c.data&&!c.projects&&c.data.projects)c=c.data;if(Array.isArray(c))c={projects:c,squads:[]};if(!c||typeof c!=='object')throw new Error('formato');return{...c,projects:Array.isArray(c.projects)?c.projects:[],squads:Array.isArray(c.squads)?c.squads:[]}}
+function loadLocal(){for(const [k,l] of [[CFG.trackerKey,'Painel local'],[CFG.cacheKey,'Cache do report']]){try{const r=localStorage.getItem(k);if(r){const p=normPayload(JSON.parse(r));if(p.projects.length)return{data:p,source:l}}}catch(e){}}return null}
+async function generate(){
+  const b=el('genBtn');b.disabled=true;b.textContent='⟳ Atualizando dados…';
+  const local=loadLocal();
+  try{
+    const live=normPayload(await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.gasKey}`));
+    if(!live.projects.length)throw new Error('vazio');
+    base=live;source='Servidor Discovery PMO';
+    try{localStorage.setItem(CFG.cacheKey,JSON.stringify(live))}catch(e){}
+  }catch(e){
+    if(local){
+      base=local.data;source=local.source+' · dados reais em cache';
+      toast('Servidor indisponível: usando o último dado real salvo','warn');
+    }else{
+      base={projects:[],squads:[]};source='Falha ao carregar o Discovery PMO';
+      toast('Não foi possível carregar dados reais do Discovery PMO','err');
+    }
+    console.warn('[report]',e);
+  }finally{
+    fillSquads();render();b.disabled=false;b.textContent='⟳ Atualizar dados';
+    if(base.projects.length)toast('Dados reais atualizados para a semana selecionada');
+  }
+}
+function squadOptionRows(){
+  const byId=new Map();
+  (base.squads||[]).forEach(s=>{
+    const name=typeof s==='string'?s:String(s?.name||'').trim();
+    const id=typeof s==='string'?'':String(s?.id||'').trim();
+    if(name)byId.set(id||`name:${norm(name)}`,{id,name});
+  });
+  (base.projects||[]).forEach(p=>{
+    const name=String(p?.squad||'Ainda Sem Definição').trim();
+    const id=String(p?.squadId||'').trim();
+    if(name)byId.set(id||`name:${norm(name)}`,{id,name});
+  });
+  return [...byId.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+}
+function fillSquads(){
+  const cur=el('squadFilter').value||initialSquad||'';
+  const rows=squadOptionRows();
+  el('squadFilter').innerHTML='<option value="">Todas as squads</option>'+rows.map(x=>`<option value="${esc(x.id||x.name)}">${esc(x.name)}</option>`).join('');
+  const matched=rows.find(x=>x.id===cur||norm(x.name)===norm(cur));
+  if(matched)el('squadFilter').value=matched.id||matched.name;
+}
+function selectedSquadName(value){
+  if(!value)return '';
+  return squadOptionRows().find(x=>x.id===value||norm(x.name)===norm(value))?.name||value;
+}
+
+/* ════════════ modelo do tracker ════════════ */
+function tlOf(p){const i=Array.isArray(p.timelineItems)?p.timelineItems.slice():[];i.forEach(x=>{if(!x.status)x.status=x.done?'done':'notstarted'});TL_TEMPLATE.forEach(t=>{if(!i.some(x=>x.id===t.id))i.push({id:t.id,stageId:t.stageId,status:'notstarted',updatedAt:''})});return i}
+function raidsOf(p){const s=p.raids||{},o={};['risks','assumptions','issues','dependencies'].forEach(g=>{o[g]=(s[g]||[]).map(i=>{if(typeof i==='string')return{text:i,done:false,owner:'',updatedAt:''};const d=i.done===true||String(i.status||'').toLowerCase().includes('concl');return{text:i.text||i.description||'',owner:i.owner||'',due:i.due||'',done:d,updatedAt:i.updatedAt||'',
+    /* preserva a área quando a carga informa — areaOf só infere se vier vazia */
+    area:i.area||i.responsibleArea||i.areaResponsavel||i.department||''}})});
+  const lg=a=>(Array.isArray(a)?a:[]).filter(i=>i&&typeof i==='object').map(i=>({text:i.text||i.title||'Item',owner:i.owner||'',done:i.done===true,updatedAt:i.updatedAt||''}));
+  o.risks=o.risks.concat(lg(p.risks));o.issues=o.issues.concat(lg(p.alerts));return o}
+const cdOf=p=>Array.isArray(p.cards)?p.cards:[];
+const scOf=p=>Array.isArray(p.schedule)?p.schedule:[];
+const clOf=p=>Array.isArray(p.checklist)?p.checklist:[];
+const schDone=i=>i.done===true||i.progress===100||String(i.status||'').toLowerCase().includes('concl');
+function schState(i){const s=pDate(i.start),e=pDate(i.end),t=pDate(iso(new Date()));if(schDone(i))return'done';if(!s||!e)return'nodate';if(e<s)return'review';if(t<s)return'planned';if(t>e)return'late';return dias(t,e)<=2?'attention':'ontrack'}
+function progressOf(p){const cl=clOf(p),tl=tlOf(p),cd=cdOf(p);
+  const a=cl.length?(cl.filter(c=>c.done).length/cl.length)*45:0;
+  const b=tl.length?(tl.reduce((s,i)=>s+(TL_W[i.status]||0),0)/tl.length)*35:0;
+  const c=cd.length?(cd.reduce((s,x)=>s+(CARD_W[x.status]||0),0)/cd.length)*20:0;
+  return Math.round(a+b+c)}
+function clDone(p,id,R,tl){if(id==='asis')return tl.find(i=>i.id==='ti-asis')?.status==='done';if(id==='gono')return tl.find(i=>i.id==='ti-ready')?.status==='done';if(id==='dependencies')return R.dependencies.length>0;if(id==='risks')return R.risks.length+R.issues.length>0;return Boolean(clOf(p).find(c=>c.id===id&&c.done))}
+
+function analyze(p,ws,we){
+  const R=raidsOf(p),tl=tlOf(p),cd=cdOf(p),sc=scOf(p),progress=progressOf(p);
+  const risksOpen=R.risks.filter(i=>!i.done).length+R.issues.filter(i=>!i.done).length;
+  const critCards=cd.filter(c=>c.priority==='Crítica'&&c.status!=='done').length;
+  const blockedTl=tl.filter(i=>i.status==='blocked');
+  const pdca=sc.filter(i=>['late','attention','review'].includes(schState(i)));
+  const blocked=blockedTl.length+critCards;
+  const arch=[...tl.filter(i=>i.status==='waiting-arch').map(i=>TL_LABEL[i.id]),
+    ...cd.filter(c=>c.status!=='done'&&ARCH_RE.test((c.title||'')+' '+(c.description||''))).map(c=>c.title),
+    ...['risks','issues','dependencies'].flatMap(g=>R[g].filter(i=>!i.done&&ARCH_RE.test(i.text||'')).map(i=>i.text))];
+  const archOwner=[...cd.filter(c=>ARCH_RE.test(c.title||'')),...R.dependencies,...R.risks].map(x=>x.owner).find(Boolean)||'';
+  const st=(d,pt)=>d?2:(pt?1:0);
+  const score=st(clDone(p,'scope',R,tl),tl.some(i=>i.id==='ti-escopo'&&i.status!=='notstarted'))
+    +st(clDone(p,'stories',R,tl),tl.some(i=>['ti-requisitos','ti-criterios'].includes(i.id)&&i.status!=='notstarted'))
+    +st(clDone(p,'dependencies',R,tl)&&!critCards&&!pdca.length,R.dependencies.length>0)
+    +st(clDone(p,'stories',R,tl)&&clDone(p,'estimates',R,tl),clDone(p,'stories',R,tl)||clDone(p,'estimates',R,tl))
+    +st(risksOpen===0&&blocked===0&&!pdca.length,risksOpen>0||blocked>0||pdca.length>0);
+  const level=(score>=8&&progress>=70)?'Alta':(score>=5&&progress>=45)?'Média':'Baixa';
+
+  const miles=[];const push=(d,l,k,owner='',done=null,source='Cadastro')=>{if(d)miles.push({date:String(d).slice(0,10),label:l,kind:k,p,owner,done,source})};
+  push(p.discoveryDate,'Início do Discovery','discovery',p.po||p.initiativeOwner||'',null,'Iniciativa');
+  push(p.startDev,'Entrada prevista no Delivery','delivery',p.techLead||p.frontLeader||'',null,'Iniciativa');
+  push(p.endDev,'Fim previsto do Delivery','delivery',p.techLead||p.frontLeader||'',null,'Iniciativa');
+  if(p.target&&p.target!==p.endDev)push(p.target,'Data-alvo','target',p.po||p.initiativeOwner||'',null,'Iniciativa');
+  /* Inclui marcos concluídos e pendentes: ao selecionar uma semana anterior, o marco
+     continua visível pelo período planejado, enquanto o status mostra a situação atual. */
+  sc.forEach(i=>{if(!i.jira)push(i.end||i.start,i.item||'Marco','schedule',i.owner||p.techLead||p.po||'',schDone(i),'Cronograma')});
+  const ms=miles.filter((m,i,a)=>a.findIndex(x=>x.date===m.date&&x.label===m.label)===i).sort((a,b)=>a.date.localeCompare(b.date));
+
+  const movs=[];const win=t=>{const d=pTs(t);return d&&d>=ws&&d<=we?d:null};
+  tl.forEach(i=>{const d=win(i.updatedAt);if(!d)return;const L=TL_LABEL[i.id]||i.id;
+    if(i.status==='done')movs.push({at:d,k:'avanco',t:`Etapa concluída: ${L}`,owner:p.techLead||p.po||'',occurrence:`Etapa concluída: ${L}`});
+    else if(i.status==='blocked')movs.push({at:d,k:'bloqueio',t:`Etapa bloqueada: ${L}`,owner:p.techLead||p.po||'',occurrence:`Etapa bloqueada: ${L}`});
+    else if(i.status==='waiting-arch')movs.push({at:d,k:'bloqueio',t:`Aguardando arquitetura: ${L}`,owner:p.techLead||p.po||'',occurrence:`Aguardando arquitetura: ${L}`});
+    else if(i.status==='waiting-business')movs.push({at:d,k:'bloqueio',t:`Aguardando negócio: ${L}`,owner:p.po||p.initiativeOwner||'',occurrence:`Aguardando negócio: ${L}`});
+    else movs.push({at:d,k:'avanco',t:`Etapa em andamento: ${L}`,owner:p.techLead||p.po||'',occurrence:`Etapa em andamento: ${L}`})});
+  cd.forEach(c=>{(c.movementHistory||[]).forEach(h=>{const d=win(h.at);if(d)movs.push({at:d,k:'avanco',t:`Ação "${cut(c.title,36)}" → ${h.to}`,owner:c.owner||p.techLead||p.po||'',occurrence:`Ação "${c.title||'sem título'}" movimentada para ${h.to}`})});
+    const d=win(c.updatedAt);if(d&&!(c.movementHistory||[]).some(h=>win(h.at)))movs.push({at:d,k:'acao',t:`Ação atualizada: ${cut(c.title||'sem título',36)}`,owner:c.owner||p.techLead||p.po||'',occurrence:`Ação atualizada: ${c.title||'sem título'}`})});
+  ['risks','issues','dependencies'].forEach(g=>R[g].forEach(i=>{const d=win(i.updatedAt);if(!d)return;
+    const n=g==='dependencies'?'Dependência':g==='issues'?'Impedimento':'Risco';
+    movs.push({at:d,k:i.done?'desbloqueio':'risco',t:`${n} ${i.done?'resolvido':'aberto/atualizado'}: ${cut(i.text,34)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`${n} ${i.done?'resolvido':'aberto ou atualizado'}: ${i.text||'Sem descrição'}`})}));
+  sc.forEach(i=>{(i.replanHistory||[]).forEach(h=>{const d=win(h.at);if(d)movs.push({at:d,k:'replan',t:`Marco replanejado: ${cut(i.item,30)} → ${fD(h.to)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`Marco replanejado: ${i.item||'Marco'} para ${fD(h.to)}`})});
+    const d=win(i.updatedAt);if(d&&schDone(i))movs.push({at:d,k:'avanco',t:`Marco concluído: ${cut(i.item,34)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`Marco concluído: ${i.item||'Marco'}`});
+    else if(d&&(i.start||i.end)&&!i.jira)movs.push({at:d,k:'marco',t:`Marco incluído/atualizado: ${cut(i.item,34)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`Marco incluído ou atualizado: ${i.item||'Marco'}`})});
+  movs.sort((a,b)=>b.at-a.at);
+  const ts=[...tl,...cd,...R.risks,...R.issues,...R.dependencies,...sc].map(x=>pTs(x.updatedAt)).filter(Boolean).sort((a,b)=>b-a);
+
+  return{p,R,tl,cd,sc,progress,level,score,risksOpen,blocked,blockedTl,critCards,pdca,arch,archOwner,miles:ms,movs,
+    fase:faseCrono(p),
+    lastMove:ts[0]||pTs(p.updatedAt)||null,
+    stage:(TL_STAGES.find(s=>tl.some(i=>i.stageId===s.id&&i.status!=='done'))||TL_STAGES[3]).title,
+    stories:clDone(p,'stories',R,tl),estimates:clDone(p,'estimates',R,tl),gono:clDone(p,'gono',R,tl)}
+}
+
+function attsOf(a,we){
+  const p=a.p,o=[];
+  const tec=p.techLead&&p.techLead!=='A definir'?p.techLead:(p.frontLeader||'Tech Lead a definir');
+  const neg=p.po||p.initiativeOwner||'PO a definir';
+  const rte=p.rteOwner&&p.rteOwner!=='A definir'?p.rteOwner:'RTE';
+  if(a.arch.length)o.push({lvl:'red',cat:'Arquitetura',r:`Solution Design pendente: ${cut(a.arch[0],40)}${a.arch.length>1?` (+${a.arch.length-1})`:''}`,d:'Escalar priorização do Solution Design',w:a.archOwner||tec,dl:'No período',c:'Histórias e estimativas não fecham; entrada em Delivery escorrega'});
+  if(a.blocked)o.push({lvl:'red',cat:'Bloqueio',r:`${a.blocked} bloqueio(s) ativo(s)`,d:'Confirmar plano de destrave',w:tec,dl:'Imediato',c:'Discovery trava e o marco seguinte vence sem entrega'});
+  if(a.risksOpen)o.push({lvl:'red',cat:'Risco',r:`${a.risksOpen} risco(s)/impedimento(s) aberto(s)`,d:'Validar mitigação, aceitar ou escalar',w:neg,dl:'No período',c:'Risco não tratado pode bloquear a entrada no Delivery'});
+  const alvo=pDate(p.target||p.endDev);
+  if(alvo&&we&&alvo<we&&!/conclu|entreg|finaliz/.test(norm(p.status)))o.push({lvl:'red',cat:'Prazo',r:`Data-alvo vencida em ${fD(p.target||p.endDev)}`,d:'Decidir replanejamento formal da data-alvo',w:neg,dl:'No período',c:'Compromisso vencido sem repactuação com o negócio'});
+  if(a.pdca.length)o.push({lvl:'amber',cat:'Cronograma',r:`${a.pdca.length} marco(s) vencido(s) ou no limite`,d:'Aprovar replanejamento ou reforço',w:tec,dl:'No período',c:'Cronograma perde confiabilidade no comitê'});
+  if(!p.squadId||p.squadId==='squad-asd'||/sem definicao|^asd$/.test(norm(p.squad)))o.push({lvl:'amber',cat:'Alocação',r:'Squad não definida',d:'Alocar squad e Tech Lead',w:rte,dl:'Antes do próximo marco',c:'Sem capacidade reservada para a data planejada'});
+  if(a.level==='Baixa'&&/discovery/.test(norm(p.status)))o.push({lvl:'amber',cat:'Prontidão',r:`Prontidão baixa (${a.progress}%) — ${a.stage}`,d:'Decidir Go/No-Go ou adiar entrada em Delivery',w:neg,dl:'Próxima semana',c:'Delivery inicia sem backlog estimável'});
+  const dd=a.lastMove?dias(a.lastMove,new Date()):null;
+  if(dd===null||dd>CFG.staleDays)o.push({lvl:'amber',cat:'Estagnação',r:dd===null?'Sem avanço registrado':`Sem avanço há ${dd} dias`,d:'Confirmar se segue ativa ou repriorizar',w:rte,dl:'No período',c:'Portfólio carrega iniciativa parada consumindo capacidade'});
+  if(!a.miles.some(m=>pDate(m.date)>=(we||new Date())))o.push({lvl:'blue',cat:'Governança',r:'Sem próximo marco com data',d:'Registrar próximo marco, dono e data',w:rte,dl:'Próxima atualização',c:'Iniciativa sem previsibilidade sai do radar'});
+  o.forEach(x=>x.a=a);return o
+}
+
+/* ════════════ LEITURA DA SEMANA ════════════
+   Traduz o log bruto de movimentos em fatos de gestão. Cada fato responde
+   "o que mudou de uma semana para a outra e por que isso importa".
+   Regras de marco vêm do Cronograma; a comparação vem do snapshot anterior. */
+function insightsOf(a,prev,ws,we,week){
+  const p=a.p,out=[],C=a.fase.itens,hoje=pDate(iso(new Date()));
+  /* 'tipo' agrupa fatos da mesma natureza para o feed não ser dominado por um só */
+  const add=(sev,ico,t,d,peso,tipo)=>out.push({sev,ico,t,d,peso,tipo:tipo||t,a});
+  const noPer=v=>{const d=pTs(v)||pDate(v);return d&&d>=ws&&d<=we};
+
+  /* 1. avanço de fase no Cronograma — o sinal mais forte de progresso real */
+  if(prev&&prev.fs&&prev.fs!==a.fase.atual){
+    const subiu=FASES.indexOf(a.fase.atual)>FASES.indexOf(prev.fs);
+    add(subiu?'pos':'neg',subiu?'▲':'▼',
+      subiu?`Avançou de ${prev.fs} para ${a.fase.atual}`:`Retrocedeu de ${prev.fs} para ${a.fase.atual}`,
+      subiu?'Marco concluído no Cronograma move a iniciativa de fase.':'Marco reaberto no Cronograma.',10);
+  }
+  /* 2. janela de refinamento técnico abrindo ou fechando dentro do período */
+  if(C.refino){
+    const fim=pDate(C.refino.end), vencido=fim&&!schDone(C.refino)&&fim<hoje;
+    if(schDone(C.refino)&&noPer(C.refino.updatedAt))
+      add('pos','✓','Refinamento Técnico concluído','Backlog tecnicamente pronto para entrar em Delivery.',10,'refino-fim');
+    else if(vencido)  /* vencido prevalece sobre "iniciou": é o fato que exige ação */
+      add('neg','!',`Refinamento Técnico vencido há ${dias(fim,hoje)}d`,`Janela terminava em ${fD(C.refino.end)} e segue aberta.`,9,'refino-vencido');
+    else if(noPer(C.refino.start)&&!schDone(C.refino))
+      add('pos','▶','Iniciou o Refinamento Técnico',`Janela ${janela(C.refino)} · dono ${nome2(C.refino.owner||p.techLead)}.`,9,'refino-inicio');
+  }
+  /* 3. escrita das histórias — antecede o refinamento */
+  if(C.escrita&&noPer(C.escrita.start)&&!schDone(C.escrita))
+    add('pos','▶','Iniciou a escrita das histórias',`Janela ${janela(C.escrita)}.`,7);
+  /* 4. volume de histórias no Jira (vem da carga do sistema) */
+  if(prev){
+    const na=+prev.jq||0,nb=+jiraQtd(p)||0;
+    if(nb>na)add('pos','↑',`Histórias no Jira: ${na} → ${nb}`,'Backlog ganhou evidência objetiva no Jira.',8,'jira');
+    else if(nb<na)add('neg','↓',`Histórias no Jira caíram de ${na} para ${nb}`,'Verificar recorte ou remoção indevida.',7,'jira');
+  }else{
+    const nb=+jiraQtd(p)||0,ji=C.jira;if(nb&&ji&&noPer(ji.updatedAt))add('pos','↑',`${nb} história(s) registradas no Jira`,'Volume informado no Cronograma durante o período.',8,'jira');
+  }
+  /* 5. riscos abertos e resolvidos dentro do período */
+  const db=a.movs.filter(m=>m.k==='desbloqueio').length, nv=a.movs.filter(m=>m.k==='risco').length;
+  if(db)add('pos','✓',`${db} item(ns) desbloqueado(s)`,'Risco, impedimento ou dependência encerrado no período.',8);
+  if(nv)add('neg','▲',`${nv} risco(s) aberto(s) ou atualizado(s)`,'Entrou no RAID durante a semana.',8);
+  /* 7. replanejamento de marco — compromisso mudou de data */
+  const rp=a.movs.filter(m=>m.k==='replan');
+  if(rp.length)add('neg','⇄',`${rp.length} marco(s) replanejado(s)`,cut(rp[0].t.replace('Marco replanejado: ',''),70)+'.',9);
+  return out;
+}
+
+
+function diasConclusao(ini,fim,sit,hoje){
+  if(!ini&&!fim)return {rotulo:'Dias para concluir',valor:'—'};
+  if(sit.cls==='g')return {rotulo:'Duração',valor:`${Math.max(1,dias(ini,fim)+1)} dia(s)`};
+  if(sit.cls==='r'&&fim)return {rotulo:'Atraso',valor:`${Math.max(1,dias(fim,hoje))} dia(s)`};
+  if(fim)return {rotulo:'Dias para concluir',valor:`${Math.max(0,dias(hoje,fim))+1} dia(s)`};
+  return {rotulo:'Dias para concluir',valor:'—'};
+}
+function narrativaRefino(a,prevSnap){
+  const partes=[],agora=new Date(),faseAtual=a.fase?.atual||'andamento';
+  let houveMudanca=false;
+  if(prevSnap&&prevSnap.fs&&prevSnap.fs!==faseAtual){
+    const subiu=FASES.indexOf(faseAtual)>FASES.indexOf(prevSnap.fs);
+    partes.push(subiu
+      ?`No período, a iniciativa avançou de ${prevSnap.fs} para ${faseAtual}.`
+      :`No período, a iniciativa teve ajuste de fase de ${prevSnap.fs} para ${faseAtual}.`);
+    houveMudanca=true;
+  }
+  const rf=a.fase?.itens?.refino||schedBy(a.p,RE_REFINO);
+  const temInsightRefino=(a.insights||[]).some(i=>['refino-inicio','refino-fim','refino-vencido'].includes(i.tipo));
+  if(prevSnap&&('jq' in prevSnap)){
+    const antes=+prevSnap.jq||0,agoraJ=+jiraQtd(a.p)||0;
+    if(agoraJ>antes){partes.push(`O backlog técnico passou de ${antes} para ${agoraJ} história(s) registradas no Jira.`);houveMudanca=true;}
+  }
+  if(a.movs.some(m=>m.k==='desbloqueio')){partes.push('Também houve desbloqueio de item(ns) relevante(s) no período, reduzindo risco para a continuidade do plano.');houveMudanca=true;}
+  if(temInsightRefino)houveMudanca=true;
+  if(!houveMudanca)return '';
+  if(rf){
+    const ini=pDate(rf.start),fim=pDate(rf.end),dono=nome2(rf.owner||a.p.techLead||'');
+    if(schDone(rf))partes.push('Neste momento, o refinamento técnico está concluído e a iniciativa segue preparada para a transição ao Delivery.');
+    else if(ini&&fim&&ini<=agora&&fim>=agora)partes.push(`Neste momento, o refinamento técnico segue em andamento${dono?`, com condução de ${dono}`:''}, dentro da janela prevista de ${fD(rf.start)} a ${fD(rf.end)}.`);
+    else if(ini&&ini>agora)partes.push(`A próxima janela de refinamento está prevista para ${fD(rf.start)} a ${fD(rf.end)}.`);
+    else if(fim&&fim<agora)partes.push(`A janela de refinamento encerrou em ${fD(rf.end)} e requer atualização do Cronograma para refletir o andamento real.`);
+  }
+  return partes.join(' ');
+}
+function prioridadeNarrativa(a,prevSnap){
+  let s=0;
+  if(prevSnap&&prevSnap.fs&&prevSnap.fs!==a.fase.atual)s+=5;
+  s+=a.movs.filter(m=>['desbloqueio','replan','risco','avanco'].includes(m.k)).length*2;
+  if(a.changes?.length)s+=a.changes.length;
+  if(a.fase?.itens?.refino)s+=2;
+  return s;
+}
+
+/* ════════════ complementos executivos (por período) ════════════ */
+function loadEdits(){try{edits=JSON.parse(localStorage.getItem(CFG.editKey)||'{}')}catch(e){edits={}}}
+const EMPTY_EDIT=()=>({obs:'',evolucao:[],avancos:[],alinhamentos:[],itens:[],riscos:[],dependencias:[]});
+function weekEdit(){const atual=edits[curWeek]||{};edits[curWeek]={...EMPTY_EDIT(),...atual};return edits[curWeek]}
+function saveEdits(){try{localStorage.setItem(CFG.editKey,JSON.stringify(edits))}catch(e){toast('Não consegui salvar no navegador',' err')}}
+let modalKind=null;
+let modalEdit=null;
+const MODAL_DEF={
+  evolucao:{t:'Evolução relevante',h:'Movimento ocorrido no período que ainda não está registrado no Discovery.',f:[['texto','O que mudou','textarea'],['detalhe','Iniciativa, squad ou contexto','text']]},
+  alinhamentos:{t:'Alinhamento realizado',h:'Acordo, reunião ou direcionamento concluído no período.',f:[['texto','Alinhamento realizado','textarea'],['detalhe','Participantes ou iniciativa','text']]},
+  itens:{t:'Pendência adicional',h:'Ponto de atenção que ainda não está cadastrado no Discovery.',f:[['texto','Pendência','textarea'],['detalhe','Iniciativa / contexto','text']]},
+  riscos:{t:'Risco adicional',h:'Risco ainda não cadastrado no RAID do Discovery.',f:[['iniciativa','Nº da iniciativa','text'],['nome','Nome da iniciativa','text'],['squad','Squad','text'],['texto','Descrição do risco','textarea'],['area','Área responsável','text'],['resp','Dono','text'],['prazo','Prazo','date']]},
+  dependencias:{t:'Dependência adicional',h:'Dependência ainda não cadastrada no RAID do Discovery.',f:[['iniciativa','Nº da iniciativa','text'],['nome','Nome da iniciativa','text'],['squad','Squad','text'],['texto','Descrição da dependência','textarea'],['area','Área responsável','text'],['resp','Dono','text'],['prazo','Prazo','date']]},
+  obs:{t:'Observação executiva',h:'Síntese opcional para contextualizar a leitura da gestão.',f:[['texto','Observação executiva','textarea']]},
+  avancos:{t:'Avanço confirmado',h:'Avanço adicional do período que ainda não foi identificado automaticamente.',f:[['texto','Avanço confirmado','textarea'],['detalhe','Iniciativa / contexto','text']]}
+};
+function fieldHtml([id,lb,type]){const tag=type==='textarea'?`<textarea class="inp" id="f_${id}" rows="3"></textarea>`:`<input class="inp" id="f_${id}" type="${type||'text'}">`;return `<div class="row"><label>${esc(lb)}</label>${tag}</div>`}
+function renderKindTabs(sel){el('kindTabs').innerHTML=Object.entries(MODAL_DEF).map(([k,d])=>`<button type="button" class="kind-tab ${k===sel?'on':''}" onclick="selectComplement('${k}')">${esc(d.t)}</button>`).join('')}
+function fillModalValues(kind,index=null){
+  const E=weekEdit();
+  const item=kind==='obs'?{texto:E.obs||''}:E[kind]?.[index];
+  if(!item)return;
+  MODAL_DEF[kind].f.forEach(([id])=>{const node=el('f_'+id);if(node)node.value=item[id]||''});
+}
+function selectComplement(k){
+  modalKind=k;
+  el('mKindSelect').value=k;
+  const d=MODAL_DEF[k];
+  el('mTitle').textContent=modalEdit?`Editar · ${d.t}`:d.t;
+  el('mHint').textContent=modalEdit?'Altere somente o registro selecionado. Os demais complementos serão preservados.':d.h;
+  el('kindTabs').classList.toggle('hide',!!modalEdit);
+  if(!modalEdit)renderKindTabs(k);
+  el('mFields').innerHTML=d.f.map(fieldHtml).join('');
+  el('mSaveBtn').textContent=modalEdit?'Salvar alterações':'Salvar complemento';
+  if(modalEdit)fillModalValues(k,modalEdit.index);
+  setTimeout(()=>el('f_texto')?.focus()||el('f_iniciativa')?.focus(),40)
+}
+function openComplement(def='evolucao'){
+  modalEdit=null;
+  el('mKindSelect').innerHTML=Object.entries(MODAL_DEF).map(([k,d])=>`<option value="${k}">${esc(d.t)}</option>`).join('');
+  el('modal').classList.add('on');
+  selectComplement(def)
+}
+function openAdd(k){openComplement(k)}
+function openEdit(kind,index=null){
+  modalEdit={kind,index};
+  el('mKindSelect').innerHTML=Object.entries(MODAL_DEF).map(([k,d])=>`<option value="${k}">${esc(d.t)}</option>`).join('');
+  el('modal').classList.add('on');
+  selectComplement(kind)
+}
+function closeModal(){el('modal').classList.remove('on');modalKind=null;modalEdit=null;el('kindTabs').classList.remove('hide')}
+function saveModal(){
+  const d=MODAL_DEF[modalKind],o={};
+  d.f.forEach(([id])=>o[id]=(el('f_'+id)?.value||'').trim());
+  if(!o.texto){toast('Preencha o texto principal','err');return}
+  const E=weekEdit();
+  if(modalKind==='obs')E.obs=o.texto;
+  else if(modalEdit&&Number.isInteger(modalEdit.index)&&E[modalKind]?.[modalEdit.index])E[modalKind][modalEdit.index]=o;
+  else E[modalKind].push(o);
+  const edited=!!modalEdit;
+  saveEdits();closeModal();render();
+  toast(edited?'Complemento atualizado':'Complemento incluído no report')
+}
+function removeComplement(kind,index,label='este complemento'){
+  if(!confirm(`Excluir ${label}? Esta ação remove somente o registro selecionado da semana ${curWeek}.`))return;
+  const E=weekEdit();
+  if(!Array.isArray(E[kind])||!E[kind][index])return;
+  E[kind].splice(index,1);
+  saveEdits();render();toast('Complemento removido')
+}
+function rmItem(k,i){removeComplement(k,i,'este complemento')}
+function rmObs(){
+  if(!confirm(`Excluir a observação executiva da semana ${curWeek}? Os complementos das outras semanas serão preservados.`))return;
+  weekEdit().obs='';saveEdits();render();toast('Observação removida')
+}
+function compActions(kind,index,label='complemento'){
+  return `<div class="comp-actions edit-ui"><button class="comp-btn" onclick="openEdit('${kind}',${index})" title="Editar ${label}" aria-label="Editar ${label}">✎</button><button class="comp-btn delete" onclick="removeComplement('${kind}',${index},'${label.replace(/'/g,"\\'")}')" title="Excluir ${label}" aria-label="Excluir ${label}">×</button></div>`
+}
+
+/* ════════════ snapshots ════════════ */
+function snaps(){try{return JSON.parse(localStorage.getItem(CFG.snapKey)||'{}')}catch(e){return{}}}
+/* assinatura estável de um risco, para reconhecê-lo de uma semana para outra */
+const rkSig=i=>norm(i.text).slice(0,60)+'|'+(i.due||'');
+function snapOf(a){const p=a.p;return{pg:a.progress,lv:a.level,st:p.status,sq:p.squad,po:p.po,tl:p.techLead,
+  dd:p.discoveryDate,sd:p.startDev,ed:p.endDev,tg:p.target,rk:a.risksOpen,
+  fs:a.fase.atual,mv:a.movs.length,
+  rks:[...a.R.risks,...a.R.issues,...a.R.dependencies].filter(i=>!i.done).map(rkSig),
+  rf:janela(schedBy(p,RE_REFINO)),eh:janela(schedBy(p,RE_ESCRITA)),jq:jiraQtd(p)||''}}
+/* só entram campos que mudam decisão de gestão — 'peso' ordena o bloco de mudanças */
+const SNAP_FIELDS=[
+  ['tg','Data-alvo','d',3],['ed','Fim do Delivery','d',3],['sd','Início do Delivery','d',3],
+  ['rf','Janela de refinamento','',3],['eh','Escrita das histórias','',2],['dd','Data de Discovery','d',2],
+  ['fs','Fase no Cronograma','',3],['st','Status','',2],['sq','Squad','',2],
+  ['po','PO','',1],['tl','Tech Lead','',1],['jq','Histórias no Jira','',2],
+  ['lv','Prontidão','',1],['rk','Riscos abertos','',2]];
+function diffSnap(prev,cur){
+  if(!prev)return[];
+  const out=[];
+  SNAP_FIELDS.forEach(([k,label,tipo,peso])=>{
+    /* campo inexistente no snapshot anterior (ex.: schema mais novo que a semana salva)
+       não é uma mudança real — é lacuna de dado. Sem isso, toda migração de schema
+       gera um "não informado → valor" falso em 100% das iniciativas. */
+    if(!(k in prev))return;
+    const a=prev[k]??'',b=cur[k]??'';
+    if(String(a)===String(b))return;
+    const fmt=v=>tipo==='d'?(v?fD(v):'sem data'):(String(v||'').trim()||'não informado');
+    const o={label,de:fmt(a),para:fmt(b),peso:peso||1,tipo:'troca'};
+    /* datas ganham o deslocamento em dias — é o que o gestor precisa ler */
+    if(tipo==='d'&&a&&b){
+      const d=dias(pDate(a),pDate(b));
+      if(d>0){o.tipo='atraso';o.nota=`adiada ${d} dia${d===1?'':'s'}`;o.peso=(peso||1)+1}
+      else if(d<0){o.tipo='antecipacao';o.nota=`antecipada ${-d} dia${d===-1?'':'s'}`}
+    }
+    if(k==='jq'){const na=+a||0,nb=+b||0;if(nb>na){o.tipo='avanco';o.nota=`+${nb-na} história${nb-na===1?'':'s'}`}}
+    if(k==='rk'){const na=+a||0,nb=+b||0;o.tipo=nb>na?'atraso':'avanco';o.nota=nb>na?`+${nb-na} aberto(s)`:`${na-nb} resolvido(s)`}
+    if(k==='fs'&&FASES.indexOf(b)>FASES.indexOf(a))o.tipo='avanco';
+    out.push(o);
+  });
+  return out.sort((x,y)=>y.peso-x.peso);
+}
+/* há quantas semanas consecutivas este risco aparece sem mudar? */
+function riskStreak(pid,sig,week){
+  const a=snaps(),ks=Object.keys(a).filter(k=>k<week).sort().reverse();
+  let n=0;
+  for(const k of ks){const s=a[k]?.[pid];if(!s||!Array.isArray(s.rks)||!s.rks.includes(sig))break;n++}
+  return n;
+}
+function saveSnap(k,l){const a=snaps();a[k]=Object.fromEntries(l.map(x=>[x.p.id,snapOf(x)]));const ks=Object.keys(a).sort().slice(-14);try{localStorage.setItem(CFG.snapKey,JSON.stringify(Object.fromEntries(ks.map(x=>[x,a[x]]))))}catch(e){}}
+function prevSnap(k){const a=snaps(),ks=Object.keys(a).filter(x=>x<k).sort();return ks.length?a[ks[ks.length-1]]:null}
+
+/* ════════════ gráficos SVG ════════════ */
+function svgBars(list){
+  const rows=list.slice(0,10);const H=rows.length*22+8;
+  const col=v=>v>=70?'#1f9d75':v>=45?'#2d6cdf':'#f4b740';  // hex literal: var() não resolve em atributo SVG na captura
+  return `<svg viewBox="0 0 420 ${H}" width="100%" height="${H}" font-family="Inter,Segoe UI,Arial">
+    ${rows.map((a,i)=>{const y=i*22+4;const w=Math.max(2,a.progress*2.2);return`
+      <text x="0" y="${y+11}" font-size="9" fill="#687587">${esc(a.p.initiativeNumber||'—')}</text>
+      <rect x="34" y="${y+3}" width="220" height="10" rx="5" fill="#e5e9f2"/>
+      <rect x="34" y="${y+3}" width="${w}" height="10" rx="5" fill="${col(a.progress)}"/>
+      <text x="262" y="${y+12}" font-size="9" font-weight="700" fill="#1c2430">${a.progress}%</text>
+      <text x="288" y="${y+12}" font-size="8.5" fill="#687587">${esc(cut(a.p.name,22))}</text>`}).join('')}
+  </svg>`;
+}
+function svgDonut(h,m,l){
+  const tot=h+m+l||1,R=52,C=2*Math.PI*R;let off=0;
+  const seg=(v,c)=>{const len=v/tot*C,s=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${c}" stroke-width="20" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`;off+=len;return s};
+  return `<svg viewBox="0 0 320 145" width="100%" height="145" font-family="Inter,Segoe UI,Arial">
+    <circle cx="70" cy="70" r="52" fill="none" stroke="#eef1f6" stroke-width="20"/>
+    ${seg(h,'#1f9d75')}${seg(m,'#2d6cdf')}${seg(l,'#9a6a12')}
+    <text x="70" y="66" text-anchor="middle" font-size="22" font-weight="800" fill="#1c2430">${tot}</text>
+    <text x="70" y="82" text-anchor="middle" font-size="8.5" fill="#687587">INICIATIVAS</text>
+    ${[['Alta prontidão',h,'#1f9d75'],['Em amadurecimento',m,'#2d6cdf'],['Atenção de prontidão',l,'#9a6a12']].map((r,i)=>`
+      <rect x="150" y="${34+i*26}" width="9" height="9" rx="2.5" fill="${r[2]}"/>
+      <text x="165" y="${42+i*26}" font-size="10" fill="#1c2430" font-weight="600">${r[1]}</text>
+      <text x="182" y="${42+i*26}" font-size="9.5" fill="#687587">${r[0]}</text>`).join('')}
+  </svg>`;
+}
+function svgRail(movs,mon){
+  const dias5=['Seg','Ter','Qua','Qui','Sex'];
+  const per=dias5.map((d,i)=>{const day=new Date(mon);day.setDate(mon.getDate()+i);
+    const list=movs.filter(m=>m.at.toDateString()===day.toDateString());
+    return{d,day,n:list.length,av:list.filter(x=>x.k==='avanco').length,rk:list.filter(x=>['risco','bloqueio','replan'].includes(x.k)).length,list}});
+  const max=Math.max(1,...per.map(x=>x.n));
+  return `<svg viewBox="0 0 1100 132" width="100%" height="132" font-family="Inter,Segoe UI,Arial">
+    <line x1="40" y1="96" x2="1060" y2="96" stroke="#d6dde9" stroke-width="2"/>
+    ${per.map((x,i)=>{const cx=110+i*235;const h=Math.round(x.n/max*54);return`
+      <rect x="${cx-26}" y="${94-h}" width="52" height="${h||2}" rx="5" fill="${x.rk>x.av?'#f4b740':'#1f9d75'}" opacity=".9"/>
+      <text x="${cx}" y="${88-h}" text-anchor="middle" font-size="12" font-weight="800" fill="#1c2430">${x.n||''}</text>
+      <circle cx="${cx}" cy="96" r="5" fill="${x.n?'#bf1830':'#d6dde9'}"/>
+      <text x="${cx}" y="115" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1c2430">${x.d}</text>
+      <text x="${cx}" y="127" text-anchor="middle" font-size="9" fill="#687587">${fDM(x.day)}</text>`}).join('')}
+  </svg>`;
+}
+
+/* ════════════ render ════════════ */
+function render(){
+  const {start,end,mon}=periodBounds();
+  curWeek=`${iso(start)}__${iso(end)}`;
+  const squad=el('squadFilter').value;
+  scoped=(base.projects||[]).filter(p=>!squad||p.squadId===squad||norm(p.squad||'Ainda Sem Definição')===norm(squad)).map(p=>analyze(p,start,end));
+  const prev=prevSnap(curWeek);
+  scoped.forEach(a=>{const b=prev?.[a.p.id];a.delta=b?a.progress-b.pg:null;a.changes=diffSnap(b,snapOf(a));
+    a.insights=insightsOf(a,b,start,end,curWeek)});
+  const temBase=!!prev;
+  saveSnap(curWeek,scoped);
+
+  const E=weekEdit();
+  el('obsBox').innerText=E.obs||'';
+  const inDisc=scoped.filter(a=>/discovery/.test(norm(a.p.status))).length;
+  const high=scoped.filter(a=>a.level==='Alta'),mid=scoped.filter(a=>a.level==='Média'),low=scoped.filter(a=>a.level==='Baixa');
+  const avg=scoped.length?Math.round(scoped.reduce((t,a)=>t+a.progress,0)/scoped.length):0;
+  const movs=scoped.flatMap(a=>a.movs.map(m=>({...m,a}))).sort((x,y)=>y.at-x.at);
+  const atts=scoped.flatMap(a=>attsOf(a,end));
+  const rank={red:3,amber:2,blue:1},cr={'Arquitetura':4,'Bloqueio':3,'Prazo':2,'Risco':2};
+  atts.sort((x,y)=>rank[y.lvl]-rank[x.lvl]||(cr[y.cat]||0)-(cr[x.cat]||0)||x.a.progress-y.a.progress);
+  const critInit=new Set(atts.filter(x=>x.lvl==='red').map(x=>x.a.p.id));
+  const horizon=new Date(end);horizon.setDate(horizon.getDate()+CFG.horizon);
+  const allM=scoped.flatMap(a=>a.miles.map(m=>({...m,a})));
+  const periodM=allM.filter(m=>{const d=pDate(m.date);return d>=start&&d<=end});
+  const seen=new Set();
+  const futM=allM.filter(m=>{const d=pDate(m.date);return d>end&&d<=horizon}).sort((a,b)=>a.date.localeCompare(b.date))
+    .filter(m=>{if(seen.has(m.a.p.id))return false;seen.add(m.a.p.id);return true});
+
+  // cabeçalho
+  el('srcLabel').textContent=source;el('srcDetail').textContent=`${scoped.length} iniciativa(s) · atualizado ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}`;
+  el('heroWeek').textContent=`${fDM(start)} – ${fDM(new Date(end))}`;
+  el('heroScope').textContent=selectedSquadName(squad)||'todas as squads';
+  el('heroSub').textContent=`${scoped.length} iniciativas acompanhadas · maturidade média de ${avg}%`;
+  el('footStamp').textContent=`Período ${fD(iso(start))} a ${fD(iso(end))} · emitido em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}`;
+
+  /* ── Resumo de travas: usa somente ocorrências registradas dentro da semana selecionada.
+     Assim, ao navegar para uma semana anterior, o cabeçalho reconstrói aquela semana —
+     sem misturar travas atuais que não tiveram movimento no período escolhido. ── */
+  const startedDisc=scoped.filter(a=>{const d=pDate(a.p.discoveryDate);return d&&d<=end}).length;
+  const readyDev=high.length;
+  const jiraStories=scoped.reduce((t,a)=>t+(+jiraQtd(a.p)||0),0);
+  const weeklyLocks=new Set(atts.filter(x=>x.lvl==='red'||x.cat==='Arquitetura'||x.cat==='Bloqueio').map(x=>x.a.p.id)).size;
+  const preventive=scoped.filter(a=>!(+jiraQtd(a.p)||0)&&!a.miles.find(m=>pDate(m.date)>=end)).length;
+  const lockEvents=movs.filter(m=>['desbloqueio','bloqueio','risco'].includes(m.k));
+  const lockPriority={desbloqueio:3,bloqueio:2,risco:1};
+  lockEvents.sort((a,b)=>(lockPriority[b.k]||0)-(lockPriority[a.k]||0)||b.at-a.at);
+  const shownLocks=lockEvents.slice(0,3);
+  const lockStatus=m=>m.k==='desbloqueio'?{label:'Destravado',cls:'done'}:{label:m.k==='bloqueio'?'Travado':'Em atenção',cls:'open'};
+  const ownerOfMove=m=>nome2(m.owner)||nome2(m.a?.p?.techLead)||nome2(m.a?.p?.po)||nome2(m.a?.p?.rteOwner)||'Não informado';
+  const lockHtml=shownLocks.length?shownLocks.map(m=>{
+    const p=m.a.p,s=lockStatus(m);
+    return `<div class="lock-row">
+      <span class="lock-state ${s.cls}">${s.label}</span>
+      <div class="lock-init"><strong>${esc(p.initiativeNumber||'—')} · ${esc(p.name||'Iniciativa sem nome')}</strong><span>Squad: ${esc(p.squad||'Não informada')}</span></div>
+      <div class="lock-owner"><span>Dono do ocorrido</span><strong>${esc(ownerOfMove(m))}</strong></div>
+      <div class="lock-occurrence"><span>Ocorrido no período</span><strong>${esc(m.occurrence||m.t||'Movimento registrado')}</strong></div>
+    </div>`;
+  }).join('')+(lockEvents.length>shownLocks.length?`<div class="lock-more">+ ${lockEvents.length-shownLocks.length} outra(s) ocorrência(s) registrada(s) na semana selecionada.</div>`:'')
+    :`<div class="lock-empty">Nenhuma trava ou destravamento foi registrado entre ${fD(iso(start))} e ${fD(iso(end))}. O resumo permanece visível para deixar explícito que não houve ocorrência no período selecionado.</div>`;
+  el('vIco').textContent='↔';
+  el('vTitle').textContent='Resumo de travas da semana';
+  el('vDetails').innerHTML=lockHtml;
+  const vT='Resumo de travas da semana';
+  const vX=lockEvents.length?lockEvents.map(m=>{const p=m.a.p,s=lockStatus(m);return `${s.label}: ${p.initiativeNumber||'—'} · ${p.name} · Squad ${p.squad||'Não informada'} · Dono ${ownerOfMove(m)} · ${m.occurrence||m.t}`}).join(' | '):`Nenhuma trava ou destravamento registrado entre ${fD(iso(start))} e ${fD(iso(end))}.`;
+  el('vText').textContent=vX;
+
+  el('k1').textContent=scoped.length;
+  el('k2').textContent=startedDisc;el('k2s').textContent=`${Math.max(scoped.length-startedDisc,0)} ainda não iniciadas`;
+  el('k3').textContent=readyDev;el('k3s').textContent='com prontidão para avanço';
+  el('k4').textContent=weeklyLocks;el('k4s').textContent='iniciativas com trava ativa';
+  el('k5').textContent=jiraStories;el('k5s').textContent='histórias registradas no Jira';
+  el('k6').textContent=preventive;el('k6s').textContent='sem histórias e sem próximo marco';
+
+  // painéis visuais (modelo B)
+  el('avgTag').textContent=`${avg}% maturidade média`;
+  el('chartBars').innerHTML=svgBars([...scoped].sort((a,b)=>b.progress-a.progress));
+  el('chartDonut').innerHTML=svgDonut(high.length,mid.length,low.length);
+  el('railTag').textContent=`${movs.length} movimento(s)`;
+  el('weekRail').innerHTML=svgRail(movs,mon);
+
+  // ── Evolução do período: somente movimentos relevantes ──
+  const db=movs.filter(m=>m.k==='desbloqueio').length, rp=movs.filter(m=>m.k==='replan').length;
+  const totalChg=scoped.reduce((t,a)=>t+a.changes.length,0);
+  const ins=scoped.flatMap(a=>a.insights).sort((x,y)=>y.peso-x.peso||(x.sev==='neg'?-1:1));
+  const manualEvo=E.evolucao||[];
+  const nPos=ins.filter(i=>i.sev==='pos').length, nNeg=ins.filter(i=>i.sev==='neg').length;
+  const porTipo={},insTop=[],ocultos={};
+  ins.forEach(i=>{const n=(porTipo[i.tipo]=(porTipo[i.tipo]||0)+1);if(n<=3&&insTop.length<14)insTop.push(i);else ocultos[i.tipo]=(ocultos[i.tipo]||0)+1});
+  const resto=Object.entries(ocultos).map(([t,n])=>`${n}× ${t}`).join(' · ');
+  const totalFacts=ins.length+manualEvo.length;
+  el('evoTag').textContent=totalFacts?`${totalFacts} fato(s)`:'sem movimentos';
+  el('evoTitle').textContent=totalFacts?`${nPos} avanço(s), ${nNeg} atenção(ões) e ${manualEvo.length} complemento(s)`:'Nenhum movimento relevante no período';
+  el('evoSummary').textContent=totalFacts
+    ? `Movimentos identificados entre ${fD(iso(start))} e ${fD(iso(end))}: mudança de fase, novos marcos, desbloqueios, refinamento e histórias no Jira.`
+    : 'Não houve mudança de fase, marco, risco, refinamento ou volume de histórias registrada dentro do período selecionado.';
+  const autoHtml=insTop.map(i=>`<div class="ins ${i.sev}"><i>${esc(i.ico)}</i><div><b>${esc(i.t)}</b><span><em>${esc(i.a.p.initiativeNumber||'—')}</em> · ${esc(cut(i.a.p.name,42))} · ${esc(i.a.p.squad||'sem squad')}<br>${esc(i.d)}</span></div></div>`).join('');
+  const manualHtml=manualEvo.map((i,idx)=>`<div class="ins neu"><i>R</i><div><b>${esc(i.texto)}</b><span>${esc(i.detalhe||'Complemento executivo')}</span></div>${compActions('evolucao',idx,'evolução relevante')}</div>`).join('');
+  el('evoFeed').innerHTML=(autoHtml+manualHtml)+(resto?`<div class="ins neu"><i>+</i><div><b>Mais ${ins.length-insTop.length} fato(s) do mesmo tipo</b><span>${esc(resto)} — detalhe nos blocos correspondentes.</span></div></div>`:'')||'<div class="empty">Sem movimento relevante identificado no período.</div>';
+  const nextWeekStart=new Date(start);nextWeekStart.setDate(nextWeekStart.getDate()+7);nextWeekStart.setHours(0,0,0,0);
+  const nextWeekEnd=new Date(end);nextWeekEnd.setDate(nextWeekEnd.getDate()+7);nextWeekEnd.setHours(23,59,59,999);
+  const devEntries=scoped.map(a=>{
+    const e=schedBy(a.p,/entrega para o delivery|entrada.*delivery/);
+    const d=pDate(e?.start||e?.end||a.p.startDev);
+    return {a,e,d,owner:nome2(e?.owner||a.p.techLead||a.p.po||a.p.initiativeOwner||'—')};
+  }).filter(x=>x.d&&x.d>=start).sort((x,y)=>x.d-y.d).slice(0,4);
+  const depRows=scoped.flatMap(a=>(a.R.dependencies||[]).filter(i=>!i.done).map(i=>{
+    const squads=[...new Set(scoped.map(s=>s.p.squad).filter(Boolean))];
+    const other=squads.find(s=>s!==a.p.squad&&norm(i.text||'').includes(norm(s)));
+    return {a,i,other,owner:nome2(i.owner)||nome2(a.p.techLead)||nome2(a.p.po)||'—'};
+  })).slice(0,4);
+  const nextWeekMilestones=allM.filter(m=>{const d=pDate(m.date);return d&&d>=nextWeekStart&&d<=nextWeekEnd}).sort((a,b)=>a.date.localeCompare(b.date));
+  const nextWeekRefs=scoped.map(a=>({a,rf:schedBy(a.p,RE_REFINO)})).filter(x=>{const d=pDate(x.rf?.end||x.rf?.start);return d&&d>=nextWeekStart&&d<=nextWeekEnd}).slice(0,3);
+  const agendaLines=[];
+  if(nextWeekMilestones.length)agendaLines.push(`${nextWeekMilestones.length} marco(s) previsto(s) entre ${fD(iso(nextWeekStart))} e ${fD(iso(nextWeekEnd))}.`);
+  if(nextWeekRefs.length)agendaLines.push(`${nextWeekRefs.length} janela(s) de refinamento com mudança prevista na próxima semana.`);
+  const nextWeekRisks=scoped.flatMap(a=>['risks','issues','dependencies'].flatMap(g=>(a.R[g]||[]).filter(i=>!i.done&&pDate(i.due)&&pDate(i.due)>=nextWeekStart&&pDate(i.due)<=nextWeekEnd).map(i=>({a,i}))));
+  if(nextWeekRisks.length)agendaLines.push(`${nextWeekRisks.length} item(ns) RAID vencem ou exigem retorno na próxima semana.`);
+  const insightHtml=`<div class="insight-grid">
+    <div class="insight-card">
+      <h3><i>1</i>Entradas previstas em Desenvolvimento</h3>
+      <p>Iniciativas com janela mais próxima para avançar ao Delivery.</p>
+      <div class="insight-mini">${devEntries.length?devEntries.map(x=>`<div class="insight-item"><b>${esc(x.a.p.initiativeNumber||'—')} · ${esc(cut(x.a.p.name,38))}</b><span>${esc(x.a.p.squad||'Sem squad')} · Previsto: ${esc(fD(iso(x.d)))} · Dono: ${esc(x.owner)}</span></div>`).join(''):`<div class="insight-empty">Nenhuma entrada prevista em Desenvolvimento a partir do período selecionado.</div>`}</div>
+    </div>
+    <div class="insight-card">
+      <h3><i>2</i>Dependências entre Squads</h3>
+      <p>Dependências em aberto com impacto no avanço das iniciativas.</p>
+      <div class="insight-mini">${depRows.length?depRows.map(x=>`<div class="insight-item"><b>${esc(x.a.p.initiativeNumber||'—')} · ${esc(cut(x.a.p.name,34))}</b><span>${esc(x.a.p.squad||'Sem squad')}${x.other?` → ${esc(x.other)}`:''} · Dono: ${esc(x.owner)}<br>${esc(cut(x.i.text||'Dependência registrada',78))}</span></div>`).join(''):`<div class="insight-empty">Nenhuma dependência entre squads em aberto no período selecionado.</div>`}</div>
+    </div>
+    <div class="insight-card">
+      <h3><i>3</i>Agenda executiva da próxima semana</h3>
+      <p>Leitura antecipada da semana seguinte ao período selecionado.</p>
+      <div class="insight-mini">${agendaLines.length?agendaLines.map(t=>`<div class="insight-item"><span>${esc(t)}</span></div>`).join(''):`<div class="insight-empty">Sem compromisso executivo relevante na semana seguinte ao período selecionado.</div>`}</div>
+    </div>
+  </div>`;
+  el('evoCards').innerHTML=insightHtml;
+
+  // ── Riscos e impedimentos abertos + resumo do roadmap ──
+  const TIPO={risks:'Risco',issues:'Impedimento',dependencies:'Dependência'};
+  const hoje=pDate(iso(new Date()));
+  const rk=[];
+  scoped.forEach(a=>['risks','issues','dependencies'].forEach(g=>a.R[g].filter(i=>!i.done).forEach(i=>rk.push({a,g,i}))));
+  /* Complementos manuais continuam visíveis na tabela detalhada, mas NÃO alteram
+     os indicadores do Roadmap. Os três números abaixo usam somente a base real
+     recebida do Discovery PMO Tracker. */
+  const trackerRk=rk.slice();
+  const manualRaid=[...(E.riscos||[]).map((i,idx)=>({g:'risks',i,rm:idx})),...(E.dependencias||[]).map((i,idx)=>({g:'dependencies',i,rm:idx}))];
+  manualRaid.forEach((x)=>{const p={id:`manual-${x.g}-${x.rm}`,initiativeNumber:x.i.iniciativa||'Adicional',name:x.i.nome||'Registro complementar',squad:x.i.squad||'Não informada'};rk.push({a:{p},g:x.g,i:{text:x.i.texto,owner:x.i.resp,due:x.i.prazo,area:x.i.area,done:false},manual:true,rm:x.rm,kind:x.g==='risks'?'riscos':'dependencias'})});
+  rk.sort((x,y)=>{const dx=pDate(x.i.due),dy=pDate(y.i.due);return (dx?dx.getTime():9e15)-(dy?dy.getTime():9e15)});
+
+  const overdueSchedule=scoped.flatMap(a=>scOf(a.p)
+    .filter(i=>!i.jira&&!schDone(i))
+    .map(i=>({a,i,d:pDate(i.end||i.start)}))
+    .filter(x=>x.d&&x.d<hoje));
+  const riskProjectIds=new Set([
+    ...trackerRk.map(x=>x.a.p.id),
+    ...overdueSchedule.map(x=>x.a.p.id)
+  ]);
+  const roadRiskInit=riskProjectIds.size;
+  const overdueMilestones=overdueSchedule.length;
+  const roadHealth=scoped.length?Math.max(0,Math.round(((scoped.length-roadRiskInit)/scoped.length)*100)):100;
+
+  el('roadRiskInit').textContent=roadRiskInit;
+  el('roadLateMilestones').textContent=overdueMilestones;
+  el('roadHealth').textContent=`${roadHealth}%`;
+  el('roadTag').textContent=roadRiskInit?`${roadRiskInit} iniciativa(s) requerem acompanhamento`:'Roadmap sem risco registrado';
+  el('roadChip').textContent='Dados do Discovery PMO';
+
+  const roadResolved=movs.filter(m=>m.k==='desbloqueio');
+  const roadOpened=movs.filter(m=>m.k==='risco');
+  const roadReplanned=movs.filter(m=>m.k==='replan');
+  const roadParts=[];
+  if(roadResolved.length){
+    const ids=[...new Set(roadResolved.map(m=>m.a.p.initiativeNumber||m.a.p.name))].slice(0,4);
+    roadParts.push(`${roadResolved.length} item(ns) foram destravado(s) na semana, envolvendo ${ids.join(', ')}.`);
+  }
+  if(roadOpened.length){
+    const ids=[...new Set(roadOpened.map(m=>m.a.p.initiativeNumber||m.a.p.name))].slice(0,4);
+    roadParts.push(`${roadOpened.length} risco(s) ou dependência(s) foram aberto(s) ou atualizado(s), envolvendo ${ids.join(', ')}.`);
+  }
+  if(roadReplanned.length)roadParts.push(`${roadReplanned.length} marco(s) tiveram replanejamento registrado no Cronograma.`);
+  if((roadResolved.length||roadOpened.length||roadReplanned.length)&&roadRiskInit)
+    roadParts.push(`Ao final da semana, ${roadRiskInit} iniciativa(s) permanecem com risco registrado ou marco vencido.`);
+  const roadTxt=roadParts.join(' ');
+  el('roadUpdateBlk').classList.toggle('hide',!roadTxt);
+  if(roadTxt)el('roadUpdateText').textContent=roadTxt;
+
+  /* risco exposto sempre com iniciativa (nome completo), squad, área responsável e dono */
+  el('rkTag').textContent=`${rk.length} aberto(s)`;
+  el('rkRows').innerHTML=rk.length?rk.map(({a,g,i,manual,kind,rm})=>{
+    const d=pDate(i.due), ar=areaOf(i,a.p);
+    const sit=!d?'<span class="pill n">sem prazo</span>':d<hoje?`<span class="pill r">vencido há ${dias(d,hoje)}d</span>`
+      :dias(hoje,d)===0?'<span class="pill a">vence hoje</span>'
+      :dias(hoje,d)<=7?`<span class="pill a">vence em ${dias(hoje,d)}d</span>`:'<span class="pill g">no prazo</span>';
+    const streak=riskStreak(a.p.id,rkSig(i),curWeek);
+    return `<tr><td><b style="color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</b><br><span style="color:var(--ink)">${esc(a.p.name)}</span></td>
+      <td>${esc(a.p.squad||'Sem squad')}</td>
+      <td><span class="pill ${g==='risks'?'r':g==='issues'?'a':'b'}">${TIPO[g]}</span></td>
+      <td>${esc(cut(i.text,86))}${streak>=1?`<span class="cons">Sem evolução há ${streak+1} semanas</span>`:''}${manual?compActions(kind,rm,kind==='riscos'?'risco adicional':'dependência adicional'):''}</td>
+      <td>${esc(ar.nome)}${ar.inferida?'<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span>':''}</td>
+      <td>${esc(nome2(i.owner)||'—')}</td><td>${i.due?fD(i.due):'—'}</td><td>${sit}</td></tr>`}).join('')
+    :'<tr><td colspan="8" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
+
+  // ── Janelas de refinamento técnico (tabela) — somente em curso ──
+  const rfList=scoped.map(a=>{
+    const C=a.fase.itens, rf=C.refino||schedBy(a.p,RE_REFINO), q=jiraQtd(a.p);
+    const ini=pDate(rf?.start), fim=pDate(rf?.end);
+    let sit={t:'sem janela',cls:'n',c:'var(--muted)'};
+    if(rf&&schDone(rf))sit={t:'concluído',cls:'g',c:'var(--green)'};
+    else if(fim&&fim<hoje)sit={t:`atrasado ${dias(fim,hoje)}d`,cls:'r',c:'var(--red)'};
+    else if(ini&&fim&&ini<=hoje&&fim>=hoje)sit={t:'em curso',cls:'a',c:'var(--amber)'};
+    else if(ini&&ini>hoje)sit={t:`inicia em ${dias(hoje,ini)}d`,cls:'b',c:'var(--blue)'};
+    return{a,rf,q,ini,fim,sit};
+  }).sort((x,y)=>(x.ini?x.ini-0:9e15)-(y.ini?y.ini-0:9e15));
+  const rfCursoList=rfList.filter(x=>x.sit.cls==='a');
+  el('rfTag').textContent=`${rfCursoList.length} em refinamento`;
+  el('rfRows').innerHTML=rfCursoList.length?rfCursoList.map(({a,rf,q})=>`<tr>
+      <td style="font-weight:900;color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</td>
+      <td>${esc(cut(a.p.name,52))}</td>
+      <td>${rf?.start?fD(rf.start):'—'}</td>
+      <td>${rf?.end?fD(rf.end):'—'}</td>
+      <td>${squadBadge(a.p.squad||'—')}</td>
+      <td>${esc(nome2(a.p.techLead)||'—')}</td>
+      <td><b style="color:var(--ink)">${esc(q??0)}</b><small style="display:block;color:var(--muted);font-size:8.5px;margin-top:2px">importação Jira</small></td>
+    </tr>`).join('')
+    : '<tr><td colspan="7" class="empty">Sem iniciativa em refinamento técnico no período.</td></tr>';
+
+  // ── Mudanças desde a semana anterior — condicional: sem mudança, o bloco some ──
+  const chg=scoped.filter(a=>a.changes.length).sort((x,y)=>y.changes.length-x.changes.length);
+  const temChg=temBase&&chg.length>0;
+  el('chgBlk').classList.toggle('hide',!temChg);
+  if(temChg){
+    const todas=chg.flatMap(a=>a.changes);
+    const nAtraso=todas.filter(c=>c.tipo==='atraso').length, nAnt=todas.filter(c=>c.tipo==='antecipacao').length,
+          nAv=todas.filter(c=>c.tipo==='avanco').length, nTr=todas.filter(c=>c.tipo==='troca').length;
+    /* leitura macro antes do detalhe: o gestor lê a frase, não a lista */
+    const macro=[nAtraso&&`${nAtraso} data(s) adiada(s)`,nAnt&&`${nAnt} antecipada(s)`,
+                 nAv&&`${nAv} avanço(s) de backlog ou fase`,nTr&&`${nTr} troca(s) de responsável, squad ou status`]
+                .filter(Boolean).join(' · ');
+    el('chgTag').textContent=`${chg.length} iniciativa(s)`;
+    el('chgSummary').textContent=macro;
+    el('chgList').innerHTML=chg.map(a=>{
+      const pior=a.changes.some(c=>c.tipo==='atraso')?'var(--red)':a.changes.some(c=>c.tipo==='troca')?'var(--blue)':'var(--green)';
+      return `<div class="chg-row" style="--c:${pior}"><b style="color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</b> ${esc(a.p.name)}<span class="who2">${esc(a.p.squad||'—')}</span>
+        <ul class="chg-list">${a.changes.map(c=>`<li>${esc(c.label)}: <span class="de">${esc(c.de)}</span> → <span class="para">${esc(c.para)}</span>${c.nota?` <span class="nota ${esc(c.tipo)}">${esc(c.nota)}</span>`:''}</li>`).join('')}</ul></div>`}).join('');
+  }
+
+  // ── Próximos Discoveries: sempre o mês subsequente ao do período do report ──
+  const refD=new Date(end), prox=new Date(refD.getFullYear(),refD.getMonth()+1,1);
+  const alvoM=`${prox.getFullYear()}-${String(prox.getMonth()+1).padStart(2,'0')}`;
+  const disc=scoped.filter(a=>(a.p.discoveryDate||'').slice(0,7)===alvoM).sort((x,y)=>(x.p.discoveryDate||'').localeCompare(y.p.discoveryDate||''));
+  const nomeM=MESL[+alvoM.slice(5,7)-1];
+  el('discTitle').textContent=`Próximos Discoveries — ${nomeM}`;
+  el('discTag').textContent=`${disc.length} iniciativa${disc.length===1?'':'s'}`;
+  /* quando o mês subsequente está vazio, apontar o próximo mês que tem Discovery */
+  const futuroM=[...new Set(scoped.map(a=>(a.p.discoveryDate||'').slice(0,7)).filter(m=>m>alvoM))].sort()[0];
+  el('discGrid').innerHTML=disc.length?disc.slice(0,10).map(a=>`<div class="dc">
+      <div class="dt">${fBadge(a.p.discoveryDate)}</div>
+      <b>${esc(a.p.initiativeNumber||'—')} · ${esc(cut(a.p.name,52))}</b>
+      <small>${esc(a.p.squad||'Sem squad')} · Dono: ${esc(cut(a.p.initiativeOwner||a.p.owner||'—',30))}</small>
+      <small>PO: ${esc(cut(a.p.po||'—',24))} · TL: ${esc(cut(a.p.techLead||'—',24))}</small>
+      <span class="dev">Desenvolvimento previsto: ${fShort(a.p.startDev)} – ${fShort(a.p.endDev)}</span>
+    </div>`).join('')
+    :`<div class="empty">Nenhum Discovery programado para ${nomeM}.${futuroM?` O próximo é em ${MESL[+futuroM.slice(5,7)-1]}.`:''}</div>`;
+  el('discNote').classList.toggle('hide',!disc.length);
+
+  // avanços
+  const advAuto=movs.filter(m=>['avanco','desbloqueio'].includes(m.k)).slice(0,7)
+    .map(m=>({b:m.t,s:`${m.a.p.initiativeNumber||'—'} · ${m.a.p.squad||'—'} · ${fDM(m.at)}`,c:'var(--green)'}));
+  const advMan=(E.avancos||[]).map((x,i)=>({b:x.texto,s:(x.detalhe||'Registro do RTE'),c:'var(--blue)',rm:i}));
+  const adv=[...advAuto,...advMan];
+  const advVisiveis=adv.slice(0,3);
+  el('advTag').textContent=adv.length;
+  el('advList').innerHTML=adv.length
+    ?advVisiveis.map(x=>liHtml(x,'avancos')).join('')+(adv.length>3?`<div class="compact-more">+ ${adv.length-3} outro(s) avanço(s)</div>`:'')
+    :'<div class="empty">Sem avanço registrado no período.</div>';
+
+  // atenções permanecem apenas como dado de apoio para decisões e riscos/dependências
+  const attAuto=[];const per={};
+  atts.forEach(x=>{const k=x.a.p.id;per[k]=(per[k]||0)+1;if(per[k]<=2&&attAuto.length<7)
+    attAuto.push({b:`${x.a.p.initiativeNumber||'—'} · ${x.cat}`,s:x.r,c:x.lvl==='red'?'var(--red)':x.lvl==='amber'?'var(--amber)':'var(--blue)'})});
+  const attMan=(E.itens||[]).map((x,i)=>({b:x.texto,s:x.detalhe||'Registro do RTE',c:'var(--blue)',rm:i}));
+  const att=[...attAuto,...attMan];
+
+  // observação executiva só aparece quando preenchida e ocupa no máximo três linhas
+  el('obsBlk').classList.toggle('hide',!E.obs);
+  el('obsBox').innerHTML=E.obs?esc(E.obs).replace(/\n/g,'<br>'):'';
+  const aligns=E.alinhamentos||[];el('alignBlk').classList.toggle('hide',!aligns.length);el('alignTag').textContent=aligns.length;el('alignList').innerHTML=aligns.map((x,i)=>`<div class="li"><span class="bul" style="--c:var(--blue)"></span><div><b>${esc(x.texto)}</b><span>${esc(x.detalhe||'Alinhamento do período')}</span></div>${compActions('alinhamentos',i,'alinhamento')}</div>`).join('');
+
+  // situação por iniciativa (modelo A) — lista agrupada por urgência
+  const flag=new Map();atts.forEach(x=>{if(!flag.has(x.a.p.id))flag.set(x.a.p.id,x.lvl)});
+  const ord=[...scoped].sort((a,b)=>(flag.get(b.p.id)==='red'?1:0)-(flag.get(a.p.id)==='red'?1:0)||b.progress-a.progress);
+  el('semaTag').textContent=`${scoped.length} iniciativas`;
+  const sitRow=a=>{
+    const lv=flag.get(a.p.id),c=lv==='red'?'#d94545':lv==='amber'?'#f4b740':a.level==='Alta'?'#1f9d75':'#2d6cdf';
+    const n=a.miles.find(m=>pDate(m.date)>=new Date());
+    const dv=a.delta===null?'':a.delta>0?`▲ ${a.delta}pp`:a.delta<0?`▼ ${Math.abs(a.delta)}pp`:'— 0pp';
+    const dc=a.delta===null?'flat':a.delta>0?'up':a.delta<0?'down':'flat';
+    return `<div class="sit-row" style="--c:${c}">
+      <div class="sit-num">${esc(a.p.initiativeNumber||'—')}</div>
+      <div class="sit-name"><b>${esc(cut(a.p.name,46))}</b><span>${esc(a.p.squad||'Sem squad')}</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:${a.progress}%;background:${c}"></i></div><span class="sit-pct">${a.progress}%</span></div>
+      <div class="sit-delta ${dc}">${dv}</div>
+      <div class="sit-mst">${n?`<b>${esc(fD(n.date))}</b><br>${esc(cut(n.label,24))}`:'sem marco'}</div>
+    </div>`};
+  const grpRed=ord.filter(a=>flag.get(a.p.id)==='red');
+  const grpAmb=ord.filter(a=>flag.get(a.p.id)==='amber');
+  const grpOk=ord.filter(a=>!flag.has(a.p.id));
+  const grupos=[
+    grpRed.length&&{c:'#d94545',t:`Crítica — ${grpRed.length}`,l:grpRed},
+    grpAmb.length&&{c:'#f4b740',t:`Atenção — ${grpAmb.length}`,l:grpAmb},
+    grpOk.length&&{c:'#1f9d75',t:`Sem atenção aberta — ${grpOk.length}`,l:grpOk}
+  ].filter(Boolean);
+  el('semaGrid').innerHTML=grupos.map(g=>`<div class="sit-group">
+    <div class="sit-gh"><span class="gdot" style="background:${g.c}"></span><b>${g.t}</b></div>
+    ${g.l.map(sitRow).join('')}</div>`).join('');
+
+  // acompanhamento das iniciativas (bloco visível)
+  el('accTag').textContent=`${scoped.length} iniciativas`;
+  el('accRows').innerHTML=ord.map(a=>{
+    const n=a.miles.find(m=>pDate(m.date)>=new Date());
+    return `<tr><td style="font-weight:900;color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</td>
+      <td>${esc(cut(a.p.name,46))}</td><td>${esc(a.p.squad||'—')}</td>
+      <td>${esc(a.fase.atual||'—')}</td>
+      <td><span class="pill ${a.level==='Alta'?'g':a.level==='Média'?'b':'a'}">${a.level} · ${a.progress}%</span></td>
+      <td>${n?fD(n.date)+'<br><small style="color:var(--muted)">'+esc(cut(n.label,24))+'</small>':'<span class="pill n">sem marco</span>'}</td>
+      <td>${esc(a.p.po||'—')}<br><small style="color:var(--muted)">${esc(a.p.techLead||'—')}</small></td></tr>`}).join('');
+
+  // tabela (modelo B)
+  el('tblTag').textContent=`${scoped.length} iniciativas`;
+  el('tblRows').innerHTML=ord.map(a=>{
+    const n=a.miles.find(m=>pDate(m.date)>=new Date());
+    const w=a.movs.length;
+    return `<tr><td style="font-weight:900;color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</td>
+      <td>${esc(cut(a.p.name,46))}</td><td>${esc(a.p.squad||'—')}</td>
+      <td><span class="pill ${a.level==='Alta'?'g':a.level==='Média'?'b':'a'}">${a.level} · ${a.progress}%</span></td>
+      <td>${w?`<span class="pill g">${w} mov.</span>`:'<span class="pill n">parada</span>'}</td>
+      <td>${n?fD(n.date)+'<br><small style="color:var(--muted)">'+esc(cut(n.label,24))+'</small>':'<span class="pill n">sem marco</span>'}</td>
+      <td>${esc(a.p.po||'—')}<br><small style="color:var(--muted)">${esc(a.p.techLead||'—')}</small></td></tr>`}).join('');
+
+  // Marcos do período — inclusão estritamente pela data selecionada, não por "hoje".
+  // Uma linha por iniciativa agrega todos os compromissos da semana e reduz a altura da captura.
+  const mst=periodM.filter((m,i,a)=>a.findIndex(x=>x.date===m.date&&x.label===m.label&&x.a.p.id===m.a.p.id)===i)
+    .sort((a,b)=>a.date.localeCompare(b.date)||String(a.a.p.initiativeNumber||'').localeCompare(String(b.a.p.initiativeNumber||'')));
+  const mc={discovery:'#2d6cdf',delivery:'#1f9d75',target:'#bf1830',schedule:'#f4b740'};
+  el('mstTag').textContent=`${mst.length} compromisso(s) · ${new Set(mst.map(m=>m.a.p.id)).size} iniciativa(s)`;
+  const byInitiative=[];
+  mst.forEach(m=>{
+    let g=byInitiative.find(x=>x.id===m.a.p.id);
+    if(!g){g={id:m.a.p.id,a:m.a,items:[]};byInitiative.push(g)}
+    g.items.push(m);
+  });
+  el('mstRail').innerHTML=byInitiative.length?byInitiative.map(g=>{
+    const items=g.items.sort((a,b)=>a.date.localeCompare(b.date));
+    const explicit=items.filter(m=>m.done!==null);
+    const overdue=explicit.some(m=>m.done===false&&pDate(m.date)<pDate(iso(new Date())));
+    const allDone=explicit.length&&explicit.every(m=>m.done===true);
+    const status=overdue?{t:'Atrasado',c:'r'}:allDone?{t:'Concluído',c:'g'}:pDate(items[0].date)>pDate(iso(new Date()))?{t:'Planejado',c:'b'}:{t:'Registrado',c:'n'};
+    const owners=[...new Set(items.map(m=>nome2(m.owner)).filter(Boolean))];
+    const owner=owners.join(' / ')||nome2(g.a.p.techLead)||nome2(g.a.p.po)||'Não informado';
+    const dates=[...new Set(items.map(m=>m.date))];
+    const labels=[...new Set(items.map(m=>m.label))];
+    const accent=mc[items.find(m=>m.kind==='target')?.kind||items[0].kind]||'#2d6cdf';
+    return `<div class="mst-period-row" style="--c:${accent}">
+      <div class="mst-dates">${dates.map(d=>`<span class="mst-date">${fBadge(d)}</span>`).join('')}</div>
+      <div class="mst-init"><b>${esc(g.a.p.initiativeNumber||'—')} · ${esc(g.a.p.name||'Iniciativa sem nome')}</b><span>Período selecionado: ${fD(iso(start))} a ${fD(iso(end))}</span></div>
+      <div>${squadBadge(g.a.p.squad||'—')}</div>
+      <div class="mst-owner"><span>Dono</span><b>${esc(owner)}</b></div>
+      <div class="mst-items"><span>Marco(s)</span><b>${esc(labels.join(' · '))}</b></div>
+      <div class="mst-status"><span class="pill ${status.c}">${status.t}</span></div>
+    </div>`;
+  }).join(''):`<div class="empty">Nenhum marco possui data entre ${fD(iso(start))} e ${fD(iso(end))}. Selecione outra semana para consultar períodos anteriores.</div>`;
+
+  lastCtx={scoped,high,mid,low,avg,movs,atts,mst,adv,att,start,end,squad,vT,vX,critInit,periodM,futM,inDisc,rk,chg,disc,alvoM,temBase,ins,temChg,rfList,aligns,manualEvo,startedDisc,readyDev,weeklyLocks,jiraStories,preventive,roadRiskInit,overdueMilestones,roadHealth};
+}
+function liHtml(x,kind){
+  return `<div class="li"><span class="bul" style="--c:${x.c}"></span><div><b>${esc(x.b)}</b><span>${esc(x.s)}</span></div>${
+    x.rm!==undefined?compActions(kind,x.rm,kind==='avancos'?'avanço':'complemento'):''}</div>`;
+}
+function setModel(m='A'){document.body.dataset.model='A';try{localStorage.setItem('sala_rep_model','A')}catch(e){}}
+
+/* ════════════ exportação ════════════ */
+let _reportSelectionRange=null;
+function ensureSelectCopyToolbar(){
+  let bar=el('selectCopyToolbar');
+  if(bar)return bar;
+  bar=document.createElement('div');
+  bar.id='selectCopyToolbar';
+  bar.className='select-copy-toolbar';
+  bar.setAttribute('data-html2canvas-ignore','true');
+  bar.innerHTML=`<div class="sel-copy-icon">▣</div>
+    <div class="sel-copy-text"><b>Report inteiro selecionado</b><span>Use “Copiar seleção” ou pressione Ctrl+C. Depois, cole com Ctrl+V no Teams, Outlook, Word ou apresentação.</span></div>
+    <div class="sel-copy-actions"><button type="button" onclick="cancelReportSelection()">Cancelar</button><button type="button" class="primary" onclick="copySelectedReport(this)">Copiar seleção</button></div>`;
+  document.body.appendChild(bar);
+  return bar;
+}
+function applyReportSelection(){
+  const node=el('reportCapture');
+  if(!node)return false;
+  const range=document.createRange();
+  range.selectNodeContents(node);
+  const selection=window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  _reportSelectionRange=range;
+  return !selection.isCollapsed;
+}
+
+async function captureScreenImage(btn){
+  cancelReportSelection?.();
+  window.getSelection()?.removeAllRanges();
+  const old=btn.innerHTML;
+  let stream=null;
+  const originalScroll={x:window.scrollX,y:window.scrollY};
+  try{
+    if(!navigator.mediaDevices?.getDisplayMedia){
+      toast('Este navegador não oferece captura de aba. Abra no Microsoft Edge ou Chrome.','err');return;
+    }
+    btn.disabled=true;btn.innerHTML='▣ Preparando…';
+    document.body.classList.add('screen-capture-mode');
+    await new Promise(r=>setTimeout(r,180));
+    const report=el('reportCapture');
+    const absTop=report.getBoundingClientRect().top+window.scrollY;
+    const totalHeight=Math.ceil(report.scrollHeight);
+    const reportWidth=Math.ceil(report.getBoundingClientRect().width);
+    stream=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'browser',preferCurrentTab:true},audio:false});
+    const video=document.createElement('video');
+    video.srcObject=stream;video.muted=true;video.playsInline=true;
+    await video.play();
+    await new Promise(r=>setTimeout(r,400));
+    if(!video.videoWidth||!video.videoHeight)throw new Error('Fluxo de captura sem imagem');
+    const scaleX=video.videoWidth/window.innerWidth;
+    const scaleY=video.videoHeight/window.innerHeight;
+    const outScale=Math.min(1.5,scaleX);
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(reportWidth*outScale));
+    canvas.height=Math.max(1,Math.round(totalHeight*outScale));
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    const viewport=window.innerHeight;
+    const overlap=24;
+    let offset=0;
+    btn.innerHTML='▣ Capturando…';
+    while(offset<totalHeight){
+      const scrollY=Math.max(0,Math.round(absTop+offset));
+      window.scrollTo(0,scrollY);
+      await new Promise(r=>setTimeout(r,260));
+      const rect=report.getBoundingClientRect();
+      const visibleTop=Math.max(0,rect.top);
+      const visibleBottom=Math.min(window.innerHeight,rect.bottom);
+      const visibleCss=Math.max(0,visibleBottom-visibleTop);
+      if(visibleCss<2){offset+=Math.max(100,viewport-overlap);continue;}
+      const srcX=Math.max(0,rect.left*scaleX);
+      const srcY=Math.max(0,visibleTop*scaleY);
+      const srcW=Math.min(video.videoWidth-srcX,rect.width*scaleX);
+      const srcH=Math.min(video.videoHeight-srcY,visibleCss*scaleY);
+      const destY=Math.round(offset*outScale);
+      const destH=Math.min(canvas.height-destY,Math.round(visibleCss*outScale));
+      ctx.drawImage(video,srcX,srcY,srcW,srcH,0,destY,canvas.width,destH);
+      offset+=Math.max(1,visibleCss-overlap);
+    }
+    if(canvas.width<100||canvas.height<100)throw new Error('Imagem gerada com tamanho inválido');
+    const blob=await new Promise(res=>canvas.toBlob(res,'image/png',1));
+    if(!blob||blob.size<5000)throw new Error('Arquivo de imagem inválido');
+    showCapturePreview(canvas,blob);
+    toast('Imagem do report gerada. Use Copiar imagem ou Salvar PNG.');
+  }catch(e){
+    console.error(e);
+    const cancelled=e?.name==='NotAllowedError'||e?.name==='AbortError';
+    toast(cancelled?'Captura cancelada. Selecione “Esta guia” quando o navegador solicitar.':'Não foi possível capturar a aba. Selecione a guia atual e tente novamente.','err');
+  }finally{
+    stream?.getTracks().forEach(t=>t.stop());
+    document.body.classList.remove('screen-capture-mode');
+    window.scrollTo(originalScroll.x,originalScroll.y);
+    btn.disabled=false;btn.innerHTML=old;
+  }
+}
+function showCapturePreview(canvas,blob){
+  document.getElementById('nativeCapturePreview')?.remove();
+  const root=document.createElement('div');
+  root.id='nativeCapturePreview';root.className='capture-preview';root.setAttribute('data-html2canvas-ignore','true');
+  const url=URL.createObjectURL(blob);
+  let dataUrl='';
+  try{dataUrl=canvas.toDataURL('image/png')}catch(e){console.warn('Não foi possível gerar data URL',e)}
+  root.innerHTML=`<div class="capture-preview-card">
+    <div class="capture-preview-head">
+      <div><b>Print do report pronto</b><span>${canvas.width} × ${canvas.height}px · a área abaixo é uma imagem PNG, não texto</span></div>
+      <button onclick="closeNativeCapture()">×</button>
+    </div>
+    <div class="capture-copy-help"><b>Para enviar como imagem:</b> clique em “Copiar imagem”. Caso o navegador bloqueie, use “Abrir somente a imagem” e, na nova aba, clique com o botão direito → <b>Copiar imagem</b>.</div>
+    <div class="capture-preview-body"><img id="nativeCaptureImage" src="${url}" alt="Print em imagem do report semanal" draggable="false"></div>
+    <div class="capture-preview-actions">
+      <button class="mb" onclick="openNativeCaptureImage()">Abrir somente a imagem</button>
+      <button class="mb" onclick="saveNativeCapture()">Salvar PNG</button>
+      <button class="mb primary" onclick="copyNativeCapture(this)">Copiar imagem</button>
+    </div>
+  </div>`;
+  root._blob=blob;root._url=url;root._dataUrl=dataUrl;document.body.appendChild(root);
+  window.getSelection()?.removeAllRanges();
+}
+async function copyImageElementOnly(root){
+  const src=root?._dataUrl||root?._url;
+  if(!src)return false;
+  let box=null;
+  try{
+    window.getSelection()?.removeAllRanges();
+    box=document.createElement('div');
+    box.contentEditable='true';
+    box.style.cssText='position:fixed;left:-100000px;top:0;width:auto;height:auto;overflow:visible;background:#fff;line-height:0;user-select:text';
+    box.innerHTML=`<img alt="" src="${src}" style="display:block;max-width:none;width:auto;height:auto">`;
+    document.body.appendChild(box);
+    const img=box.querySelector('img');
+    if(!img.complete)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject});
+    if(typeof img.decode==='function'){try{await img.decode()}catch(e){}}
+    box.focus({preventScroll:true});
+    const range=document.createRange();range.selectNode(img);
+    const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+    const ok=!!(document.execCommand&&document.execCommand('copy'));
+    sel.removeAllRanges();
+    return ok;
+  }catch(e){console.warn('Cópia alternativa de imagem falhou',e);return false}
+  finally{box?.remove();window.getSelection()?.removeAllRanges()}
+}
+async function copyNativeCapture(btn){
+  const root=document.getElementById('nativeCapturePreview');
+  if(!root?._blob)return;
+  const old=btn?.innerHTML;if(btn){btn.disabled=true;btn.innerHTML='Copiando imagem…'}
+  try{
+    window.getSelection()?.removeAllRanges();
+    if(navigator.clipboard&&window.ClipboardItem&&window.isSecureContext){
+      await navigator.clipboard.write([new ClipboardItem({'image/png':root._blob})]);
+      toast('Print copiado como imagem. Agora cole com Ctrl+V.');
+      return;
+    }
+    const ok=await copyImageElementOnly(root);
+    if(ok){toast('Print copiado como imagem. Agora cole com Ctrl+V.');return}
+    openNativeCaptureImage();
+    toast('O navegador bloqueou a cópia automática. Na nova aba, use botão direito → Copiar imagem.','err');
+  }catch(e){
+    console.warn(e);openNativeCaptureImage();
+    toast('Na nova aba, clique com o botão direito no print e escolha “Copiar imagem”.','err');
+  }finally{if(btn){btn.disabled=false;btn.innerHTML=old}}
+}
+function openNativeCaptureImage(){
+  const root=document.getElementById('nativeCapturePreview');
+  if(!root)return;
+  const src=root._dataUrl||root._url;
+  const w=window.open('','_blank','noopener');
+  if(!w){toast('Permita pop-ups para abrir o print. Você também pode usar Salvar PNG.','err');return}
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Print do Report</title><style>html,body{margin:0;background:#eef1f6;text-align:center}body{padding:18px}img{display:block;max-width:100%;height:auto;margin:0 auto;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.12)}.tip{position:sticky;top:0;z-index:2;display:inline-block;margin-bottom:12px;padding:9px 14px;border-radius:10px;background:#172033;color:#fff;font:600 13px Arial} @media print{.tip{display:none}body{padding:0;background:#fff}img{max-width:none;box-shadow:none}}</style></head><body><div class="tip">Clique com o botão direito sobre a imagem → Copiar imagem</div><img src="${src}" alt="Print do report"></body></html>`);
+  w.document.close();
+}
+function saveNativeCapture(){
+  const root=document.getElementById('nativeCapturePreview');if(!root)return;
+  const a=document.createElement('a');a.href=root._url;a.download=`report-discovery-${curWeek||'semanal'}.png`;document.body.appendChild(a);a.click();a.remove();
+}
+function closeNativeCapture(){const root=document.getElementById('nativeCapturePreview');if(root){URL.revokeObjectURL(root._url);root.remove()}}
+
+function selectReportForCopy(btn){
+  const node=el('reportCapture');
+  if(!node){toast('Não encontrei a área do report.','err');return}
+  document.body.classList.add('select-copy-mode');
+  node.classList.add('report-selected');
+  const bar=ensureSelectCopyToolbar();
+  bar.classList.add('on');
+  // A seleção precisa ocorrer dentro do clique do usuário para funcionar também em arquivo local.
+  const ok=applyReportSelection();
+  if(!ok){toast('Não foi possível selecionar automaticamente. Use Ctrl+A dentro do report.','err');return}
+  node.scrollIntoView({behavior:'smooth',block:'start'});
+  toast('Report selecionado. Clique em “Copiar seleção” ou pressione Ctrl+C.');
+}
+function cancelReportSelection(){
+  window.getSelection()?.removeAllRanges();
+  _reportSelectionRange=null;
+  el('reportCapture')?.classList.remove('report-selected');
+  document.body.classList.remove('select-copy-mode');
+  el('selectCopyToolbar')?.classList.remove('on');
+}
+async function copySelectedReport(btn){
+  const old=btn?.innerHTML;
+  if(btn){btn.disabled=true;btn.innerHTML='Copiando…'}
+  try{
+    if(!applyReportSelection())throw new Error('selection-empty');
+    // execCommand preserva o HTML selecionado e funciona melhor quando o arquivo é aberto localmente.
+    const copied=document.execCommand&&document.execCommand('copy');
+    if(!copied)throw new Error('copy-command-blocked');
+    toast('Report copiado. Agora cole com Ctrl+V.');
+    setTimeout(cancelReportSelection,350);
+  }catch(e){
+    console.warn('Cópia automática bloqueada; mantendo a seleção ativa.',e);
+    applyReportSelection();
+    toast('O report continua selecionado. Pressione Ctrl+C para copiar.','err');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML=old}
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&document.body.classList.contains('select-copy-mode'))cancelReportSelection();
+});
+
+let _captureCanvas=null,_captureBlob=null,_captureUrl='';
+function canvasBlob(canvas,type='image/png',quality){
+  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('canvas-blob-null')),type,quality));
+}
+function captureDimensions(node,requestedScale){
+  const width=Math.max(node.scrollWidth,node.offsetWidth,1180);
+  const height=Math.max(node.scrollHeight,node.offsetHeight,1);
+  const maxSide=15400,maxPixels=52000000;
+  const safeBySide=Math.min(maxSide/width,maxSide/height);
+  const safeByPixels=Math.sqrt(maxPixels/(width*height));
+  const scale=Math.max(.42,Math.min(requestedScale||1.15,safeBySide,safeByPixels));
+  return {width,height,scale};
+}
+function canvasIsValid(canvas){
+  return !!canvas&&canvas.width>=300&&canvas.height>=300&&canvas.width*canvas.height>=150000;
+}
+function canvasHasVisibleReport(canvas){
+  if(!canvasIsValid(canvas))return false;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  const scan=(from,to)=>{
+    const h=Math.max(1,Math.floor(canvas.height*(to-from)));
+    const data=ctx.getImageData(0,Math.floor(canvas.height*from),canvas.width,h).data;
+    let ink=0;
+    for(let i=0;i<data.length;i+=64){if(data[i]<238||data[i+1]<238||data[i+2]<238){ink++;if(ink>24)return true;}}
+    return false;
+  };
+  return scan(0,.18)&&scan(.78,1);
+}
+async function capturePng(btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='▣ Capturando…';
+  try{
+    let canvas=await snapCanvas(1.35);
+    let blob=await canvasBlob(canvas);
+    if(canvas.width<1000||canvas.height<800||blob.size<=50000||!canvasHasVisibleReport(canvas))throw new Error('captura inválida');
+    openCapturePreview(canvas,blob,'A captura contém o cabeçalho e o rodapé do report.');
+    toast('PNG gerado. Revise a prévia, copie ou baixe a imagem.');
+  }catch(e){
+    console.error('Falha ao gerar captura PNG:',e);
+    toast('Não foi possível gerar uma imagem válida. Tente novamente ou exporte o PDF.','err');
+  }finally{btn.disabled=false;btn.innerHTML=old}
+}
+function returnToTracker(){
+  if(openedFromTracker){window.close();setTimeout(()=>{if(!window.closed)window.location.href='./';},180);return;}
+  window.location.href='./';
+}
+async function html2canvasWhole(node,dims){
+  const canvas=await html2canvas(node,{
+    scale:dims.scale,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,
+    width:dims.width,height:dims.height,windowWidth:Math.max(1240,dims.width),windowHeight:Math.max(900,dims.height),
+    scrollX:0,scrollY:0,ignoreElements:node=>node.tagName==='svg',onclone:doc=>{doc.documentElement.scrollTop=0;doc.body.scrollTop=0;}
+  });
+  if(!canvasIsValid(canvas))throw new Error(`canvas-whole-invalid:${canvas?.width||0}x${canvas?.height||0}`);
+  return canvas;
+}
+async function html2canvasSections(node,dims){
+  const body=node.querySelector('.body');
+  const sections=[node.querySelector('.hero'),...(body?[...body.children]:[])].filter(section=>{
+    if(!section)return false;
+    const st=getComputedStyle(section);
+    return st.display!=='none'&&st.visibility!=='hidden'&&section.getBoundingClientRect().height>0;
+  });
+  if(!sections.length)throw new Error('capture-sections-empty');
+  const canvases=[];
+  for(const section of sections){
+    const rect=section.getBoundingClientRect();
+    const c=await html2canvas(section,{
+      scale:dims.scale,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,
+      width:Math.ceil(Math.max(section.scrollWidth,rect.width)),height:Math.ceil(Math.max(section.scrollHeight,rect.height)),
+      windowWidth:Math.max(1240,dims.width),windowHeight:Math.max(900,Math.ceil(rect.height)),scrollX:0,scrollY:0,ignoreElements:node=>node.tagName==='svg'
+    });
+    if(canvasIsValid(c)||c.height>=20)canvases.push(c);
+  }
+  if(!canvases.length)throw new Error('capture-sections-invalid');
+  const gap=Math.max(0,Math.round(0*dims.scale));
+  const width=Math.max(...canvases.map(c=>c.width));
+  const height=canvases.reduce((t,c)=>t+c.height,0)+gap*(canvases.length-1);
+  if(width>15800||height>15800||width*height>60000000)throw new Error(`capture-sections-too-large:${width}x${height}`);
+  const final=document.createElement('canvas');final.width=width;final.height=height;
+  const ctx=final.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
+  let y=0;canvases.forEach(c=>{ctx.drawImage(c,0,y);y+=c.height+gap});
+  if(!canvasIsValid(final))throw new Error(`capture-sections-final-invalid:${final.width}x${final.height}`);
+  return final;
+}
+function loadImageFromUrl(url){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const timer=setTimeout(()=>reject(new Error('native-image-timeout')),25000);
+    img.onload=()=>{clearTimeout(timer);resolve(img)};
+    img.onerror=()=>{clearTimeout(timer);reject(new Error('native-image-load-failed'))};
+    img.src=url;
+  });
+}
+async function nativeDomCanvas(node,dims){
+  const clone=node.cloneNode(true);
+  clone.querySelectorAll('.edit-ui,.rm,.rm-inline,.comp-actions,[data-html2canvas-ignore="true"]').forEach(n=>n.remove());
+  clone.style.margin='0';clone.style.boxShadow='none';clone.style.transform='none';
+  const css=[...document.querySelectorAll('style')].map(s=>s.textContent||'').join('\n')+
+    '\n.capture-native-root .edit-ui,.capture-native-root .rm,.capture-native-root .rm-inline,.capture-native-root .comp-actions{display:none!important}.capture-native-root{margin:0!important;padding:0!important;background:#fff!important;}';
+  const serialized=new XMLSerializer().serializeToString(clone);
+  const xhtml=`<div xmlns="http://www.w3.org/1999/xhtml" class="capture-native-root" style="width:${dims.width}px;background:#fff"><style>${css}</style>${serialized}</div>`;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${dims.width}" height="${dims.height}" viewBox="0 0 ${dims.width} ${dims.height}"><foreignObject x="0" y="0" width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+  const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  try{
+    const img=await loadImageFromUrl(url);
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(dims.width*dims.scale));
+    canvas.height=Math.max(1,Math.round(dims.height*dims.scale));
+    if(canvas.width>15800||canvas.height>15800||canvas.width*canvas.height>60000000)throw new Error(`native-canvas-too-large:${canvas.width}x${canvas.height}`);
+    const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    if(!canvasIsValid(canvas))throw new Error(`native-canvas-invalid:${canvas.width}x${canvas.height}`);
+    return canvas;
+  }finally{URL.revokeObjectURL(url)}
+}
+async function snapCanvas(requestedScale){
+  document.body.classList.add('exporting');
+  const node=el('reportCapture');
+  if(!node)throw new Error('report-not-found');
+  const det=[...document.querySelectorAll('details.blk-more')],wasOpen=det.map(d=>d.open);
+  det.forEach(d=>d.open=true);
+  await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,120)));
+  const dims=captureDimensions(node,requestedScale);
+  try{
+    if(!window.htmlToImage?.toCanvas)throw new Error('renderer-local-indisponivel');
+    const canvas=await window.htmlToImage.toCanvas(node,{
+      backgroundColor:'#ffffff',canvasWidth:Math.round(dims.width*dims.scale),canvasHeight:Math.round(dims.height*dims.scale),
+      width:dims.width,height:dims.height,pixelRatio:1,cacheBust:true,
+      filter:n=>!n.matches?.('.edit-ui,.rm,.rm-inline,.comp-actions,[data-html2canvas-ignore="true"]')
+    });
+    if(!canvasIsValid(canvas))throw new Error(`canvas-invalido:${canvas?.width||0}x${canvas?.height||0}`);
+    return canvas;
+  }finally{
+    document.body.classList.remove('exporting');
+    det.forEach((d,i)=>d.open=wasOpen[i]);
+  }
+}
+async function clipboardCopyBlob(blob){
+  if(!navigator.clipboard||!window.ClipboardItem)throw new Error('clipboard-api-unavailable');
+  if(!window.isSecureContext)throw new Error('clipboard-insecure-context');
+  await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+  return true;
+}
+async function legacyCopyImage(dataUrl,expectedWidth=0,expectedHeight=0){
+  let box=null;
+  try{
+    box=document.createElement('div');
+    box.contentEditable='true';box.setAttribute('aria-hidden','true');
+    box.style.cssText='position:fixed;left:-100000px;top:0;background:#fff;padding:0;margin:0;line-height:0';
+    const img=document.createElement('img');
+    img.style.cssText='display:block;max-width:none;width:auto;height:auto';
+    box.appendChild(img);document.body.appendChild(box);
+    const loaded=new Promise((resolve,reject)=>{
+      img.onload=()=>resolve(true);
+      img.onerror=()=>reject(new Error('preview-image-load-failed'));
+    });
+    img.src=dataUrl;
+    if(img.complete&&img.naturalWidth>1){}else await loaded;
+    if(typeof img.decode==='function'){try{await img.decode()}catch(e){}}
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const minW=Math.max(2,Math.floor((expectedWidth||2)*.25));
+    const minH=Math.max(2,Math.floor((expectedHeight||2)*.25));
+    if(img.naturalWidth<minW||img.naturalHeight<minH)throw new Error(`invalid-image-size:${img.naturalWidth}x${img.naturalHeight}`);
+    const range=document.createRange();range.selectNode(img);
+    const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+    const ok=document.execCommand('copy');
+    sel.removeAllRanges();
+    return !!ok;
+  }catch(e){
+    console.warn('Cópia alternativa não concluída:',e);
+    return false;
+  }finally{if(box)box.remove()}
+}
+function ensureCapturePreview(){
+  let root=el('capturePreview');if(root)return root;
+  root=document.createElement('div');root.id='capturePreview';root.className='capture-preview';root.setAttribute('data-html2canvas-ignore','true');
+  root.innerHTML=`<div class="capture-preview-card" onclick="event.stopPropagation()">
+    <div class="capture-preview-head"><div><h3>Captura do report pronta</h3><p id="capturePreviewMsg">Use “Copiar imagem”. Caso o navegador bloqueie, clique com o botão direito sobre a imagem ou salve o PNG.</p></div><button class="capture-preview-close" onclick="closeCapturePreview()">×</button></div>
+    <div class="capture-preview-body"><img id="capturePreviewImg" alt="Captura do report semanal"></div>
+    <div class="capture-preview-actions"><button onclick="closeCapturePreview()">Fechar</button><button class="ok" onclick="downloadCapturePng()">Salvar PNG</button><button class="primary" onclick="copyCaptureFromPreview(this)">Copiar imagem</button></div>
+  </div>`;
+  root.onclick=closeCapturePreview;document.body.appendChild(root);return root;
+}
+function openCapturePreview(canvas,blob,msg){
+  _captureCanvas=canvas;_captureBlob=blob;
+  if(_captureUrl)URL.revokeObjectURL(_captureUrl);
+  _captureUrl=URL.createObjectURL(blob);
+  const root=ensureCapturePreview(),img=el('capturePreviewImg');
+  img.onload=()=>{el('capturePreviewMsg').textContent=`${msg||'A imagem foi gerada.'} Tamanho: ${img.naturalWidth} × ${img.naturalHeight}px.`};
+  img.onerror=()=>{el('capturePreviewMsg').textContent='A prévia não carregou. Use “Salvar PNG” para obter a captura.'};
+  img.src=_captureUrl;
+  el('capturePreviewMsg').textContent='Preparando a prévia da captura…';
+  root.classList.add('on');
+}
+function closeCapturePreview(){el('capturePreview')?.classList.remove('on')}
+function downloadCapturePng(){
+  if(!_captureBlob)return;
+  const a=document.createElement('a');a.href=_captureUrl||URL.createObjectURL(_captureBlob);
+  a.download=`report-semanal-discovery-${curWeek||'captura'}.png`;document.body.appendChild(a);a.click();a.remove();
+  toast('PNG salvo. Você pode anexar ou arrastar a imagem para o Teams.');
+}
+async function copyCaptureFromPreview(btn){
+  if(!_captureBlob||!_captureCanvas)return;
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='Copiando…';
+  try{
+    try{await clipboardCopyBlob(_captureBlob);toast('Imagem copiada. Agora cole com Ctrl+V.');closeCapturePreview();return}catch(e){}
+    const ok=await legacyCopyImage(_captureCanvas.toDataURL('image/png'),_captureCanvas.width,_captureCanvas.height);
+    if(ok){toast('Imagem copiada. Cole com Ctrl+V e confirme se a imagem está completa.');}
+    else toast('O navegador bloqueou a cópia. Use “Salvar PNG” ou clique com o botão direito na prévia e escolha “Copiar imagem”.','warn');
+  }finally{btn.disabled=false;btn.innerHTML=old}
+}
+async function copyImage(btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='📋 Capturando…';
+  try{
+    let scale=document.body.dataset.model==='A'?1.35:1.05;
+    let canvas=await snapCanvas(scale);
+    let blob=await canvasBlob(canvas);
+    if(blob.size<1500)throw new Error(`capture-blob-too-small:${blob.size}`);
+    if(blob.size>4.2e6){canvas=await snapCanvas(Math.max(.7,scale*.78));blob=await canvasBlob(canvas)}
+    if(blob.size<1500)throw new Error(`capture-blob-too-small-after-resize:${blob.size}`);
+    const mb=(blob.size/1048576).toFixed(1);
+    try{
+      await clipboardCopyBlob(blob);
+      toast(`Captura copiada (${mb} MB). Agora é só colar com Ctrl+V.`);
+    }catch(copyError){
+      console.warn('Cópia direta indisponível:',copyError);
+      const legacyOk=await legacyCopyImage(canvas.toDataURL('image/png'),canvas.width,canvas.height);
+      if(legacyOk){
+        openCapturePreview(canvas,blob,'A cópia alternativa foi executada. Confira a prévia abaixo antes de colar; se o navegador copiar uma imagem vazia, use Salvar PNG.');
+        toast(`Captura preparada (${mb} MB). Confira a prévia.`,`warn`);
+      }else{
+        openCapturePreview(canvas,blob,'A imagem foi gerada, mas o navegador bloqueou a cópia automática. Use “Copiar imagem”, clique com o botão direito sobre a prévia ou salve o PNG.');
+        toast('Captura gerada. Escolha Copiar imagem ou Salvar PNG.','warn');
+      }
+    }
+  }catch(e){
+    console.error('Falha ao gerar captura:',e);
+    const detalhe=String(e?.message||e||'erro desconhecido');
+    console.warn('Detalhe técnico da captura:',detalhe);
+    toast('Não foi possível gerar a imagem neste navegador. Use Exportar PDF ou abra o arquivo no Microsoft Edge e tente novamente.','err');
+  }finally{btn.disabled=false;btn.innerHTML=old}
+}
+function showFallback(canvas){
+  canvasBlob(canvas).then(blob=>openCapturePreview(canvas,blob,'A captura está pronta. Use Copiar imagem ou Salvar PNG.')).catch(()=>{});
+}
+/* HTML para colar em Teams/Outlook: tabelas + estilo inline (é o que esses clientes preservam) */
+function buildRichHtml(){
+  const c=lastCtx;if(!c)return'<p>Gere o report primeiro.</p>';
+  const F='font-family:Segoe UI,Arial,sans-serif';
+  const box=(t,inner)=>`<table width="100%" cellpadding="0" cellspacing="0" style="${F};border:1px solid #e5e9f2;border-radius:8px;margin:0 0 12px"><tr><td style="background:#fbfcfe;padding:8px 12px;border-bottom:1px solid #e5e9f2;font-size:13px;font-weight:700;color:#1c2430">${t}</td></tr><tr><td style="padding:10px 12px;font-size:12px;color:#1c2430">${inner}</td></tr></table>`;
+  const li=a=>`<div style="padding:4px 0;border-top:1px solid #eef1f6"><b style="font-weight:600">${esc(a.b)}</b><br><span style="color:#687587;font-size:11px">${esc(a.s)}</span></div>`;
+  const kpi=(l,v,s)=>`<td width="16.6%" style="padding:8px;border:1px solid #e5e9f2;border-radius:6px;text-align:center"><div style="font-size:10px;color:#687587;text-transform:uppercase;font-weight:700">${l}</div><div style="font-size:20px;font-weight:800;color:#1c2430">${v}</div><div style="font-size:10px;color:#687587">${s}</div></td>`;
+  return `<div style="${F};max-width:820px">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#bf1830;color:#fff;padding:14px 16px;border-radius:8px">
+      <div style="font-size:10px;letter-spacing:2px;opacity:.8">SALA TRANSFORMAÇÃO · DISCOVERY → DELIVERY</div>
+      <div style="font-size:19px;font-weight:800;margin:4px 0">Report Semanal Executivo</div>
+      <div style="font-size:12px;opacity:.9">Semana ${fDM(c.start)} – ${fDM(new Date(c.end))} · ${c.squad||'todas as squads'} · ${c.scoped.length} iniciativas</div>
+      <div style="margin-top:10px;background:rgba(0,0,0,.2);padding:8px 10px;border-radius:6px">
+        <b style="font-size:13px">${esc(c.vT)}</b><br><span style="font-size:11px;opacity:.9">${esc(c.vX)}</span></div>
+    </td></tr></table>
+    <table width="100%" cellpadding="0" cellspacing="4" style="margin:12px 0"><tr>
+      ${kpi('Iniciativas',c.scoped.length,'no escopo')}${kpi('Em Discovery',c.startedDisc,'já iniciadas')}${kpi('Prontas p/ Desenvolvimento',c.readyDev,'com prontidão')}
+      ${kpi('Travas semanal',c.weeklyLocks,'com trava ativa')}${kpi('Histórias no Jira',c.jiraStories,'volume registrado')}${kpi('Atenção preventiva',c.preventive,'sem histórias e sem marco')}
+    </tr></table>
+    ${box('Evolução do período',c.ins.length?c.ins.slice(0,12).map(i=>`<div style="padding:5px 0;border-top:1px solid #eef1f6"><b style="color:${i.sev==='pos'?'#147557':i.sev==='neg'?'#d94545':'#315d9f'}">${esc(i.ico)} ${esc(i.t)}</b><br><span style="color:#687587;font-size:11px">${esc(i.a.p.initiativeNumber||'—')} · ${esc(cut(i.a.p.name,44))} · ${esc(i.a.p.squad||'—')} — ${esc(i.d)}</span></div>`).join(''):'<i style="color:#687587">Sem fato relevante no período.</i>')}
+    ${box('Avanços do período',c.adv.length?c.adv.slice(0,3).map(li).join('')+(c.adv.length>3?`<div style="padding-top:5px;color:#687587;font-size:10px;text-align:right">+ ${c.adv.length-3} outro(s) avanço(s)</div>`:''):'<i style="color:#687587">Sem avanço registrado.</i>')}
+    ${c.aligns.length?box('Alinhamentos realizados',c.aligns.map(x=>`<div style="padding:5px 0;border-top:1px solid #eef1f6"><b>${esc(x.texto)}</b><br><span style="color:#687587;font-size:11px">${esc(x.detalhe||'Alinhamento do período')}</span></div>`).join('')):''}
+    ${weekEdit().obs?box('Observação executiva',esc(weekEdit().obs).replace(/\n/g,'<br>')):''}
+    ${box('Riscos do Roadmap',`<b>${c.roadRiskInit||0}</b> iniciativa(s) com risco · <b>${c.overdueMilestones||0}</b> marco(s) vencido(s) · <b>${c.roadHealth??100}%</b> de saúde`)}
+    ${c.rk.length?box('Riscos e impedimentos abertos',`<table width="100%" cellpadding="6" cellspacing="0" style="${F};font-size:12px;border-collapse:collapse">
+      <tr style="background:#fbfcfe"><th align="left" style="font-size:10px;color:#687587">INICIATIVA</th><th align="left" style="font-size:10px;color:#687587">SQUAD</th><th align="left" style="font-size:10px;color:#687587">DESCRIÇÃO</th><th align="left" style="font-size:10px;color:#687587">ÁREA RESPONSÁVEL</th><th align="left" style="font-size:10px;color:#687587">DONO</th><th align="left" style="font-size:10px;color:#687587">PRAZO</th></tr>
+      ${c.rk.map(({a,g,i})=>`<tr><td style="border-top:1px solid #e5e9f2"><b>${esc(a.p.initiativeNumber)}</b><br><span style="font-size:11px">${esc(a.p.name)}</span></td><td style="border-top:1px solid #e5e9f2">${esc(a.p.squad||'—')}</td><td style="border-top:1px solid #e5e9f2">${esc(cut(i.text,70))}</td><td style="border-top:1px solid #e5e9f2">${esc(areaOf(i,a.p).nome)}</td><td style="border-top:1px solid #e5e9f2">${esc(nome2(i.owner)||'—')}</td><td style="border-top:1px solid #e5e9f2">${i.due?fD(i.due):'—'}</td></tr>`).join('')}</table>`):''}
+    ${c.temChg?box('Mudanças desde a semana anterior',c.chg.map(a=>`<div style="padding:5px 0;border-top:1px solid #eef1f6"><b>${esc(a.p.initiativeNumber)}</b> ${esc(a.p.name)}<br>${a.changes.map(x=>`<span style="color:#687587;font-size:11px">${esc(x.label)}: ${esc(x.de)} → <b style="color:#bf1830">${esc(x.para)}</b>${x.nota?` (${esc(x.nota)})`:''}</span>`).join('<br>')}</div>`).join('')):''}
+    ${box('Compromissos da semana',c.mst.map(m=>`<div style="padding:4px 0;border-top:1px solid #eef1f6"><b>${fD(m.date)}</b> · ${esc(m.a.p.initiativeNumber)} ${esc(cut(m.a.p.name,40))}<br><span style="color:#687587;font-size:11px">${esc(cut(m.label,40))}</span></div>`).join('')||'<i style="color:#687587">Sem compromissos na semana selecionada.</i>')}
+    ${c.disc.length?box(`Próximos Discoveries — ${c.alvoM?MESL[+c.alvoM.slice(5,7)-1]:''}`,c.disc.map(a=>`<div style="padding:5px 0;border-top:1px solid #eef1f6"><b>${fBadge(a.p.discoveryDate)}</b> · ${esc(a.p.initiativeNumber)} ${esc(cut(a.p.name,44))}<br><span style="color:#687587;font-size:11px">${esc(a.p.squad||'—')} · PO: ${esc(nome2(a.p.po))} · TL: ${esc(nome2(a.p.techLead))} · Dev previsto: ${fShort(a.p.startDev)} – ${fShort(a.p.endDev)}</span></div>`).join('')+'<div style="margin-top:8px;font-size:11px;color:#9a6a12">A janela de desenvolvimento é previsão e pode mudar conforme o resultado do Discovery e a capacidade da squad.</div>'):''}
+    <div style="font-size:10px;color:#687587">Sala Transformação · uso interno · gerado em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}</div>
+  </div>`;
+}
+function buildPlainText(){
+  const c=lastCtx;if(!c)return'';
+  const L=[`REPORT SEMANAL EXECUTIVO — ${fDM(c.start)} a ${fDM(new Date(c.end))} — ${c.squad||'todas as squads'}`,'',
+    `${c.vT}: ${c.vX}`,'',
+    `Iniciativas ${c.scoped.length} | Em Discovery ${c.startedDisc} | Prontas p/ Desenvolvimento ${c.readyDev} | Travas semanal ${c.weeklyLocks} | Histórias no Jira ${c.jiraStories} | Atenção preventiva ${c.preventive}`,'',
+    `Riscos do Roadmap: ${c.roadRiskInit||0} iniciativa(s) com risco | ${c.overdueMilestones||0} marco(s) vencido(s) | Saúde ${c.roadHealth??100}%`,'',
+    'EVOLUÇÃO DO PERÍODO'];
+  if(c.ins.length)c.ins.slice(0,12).forEach(i=>L.push(`- ${i.t} | ${i.a.p.initiativeNumber} ${cut(i.a.p.name,44)} (${i.a.p.squad||'—'}) — ${i.d}`));
+  else L.push('- Sem fato relevante no período.');
+  L.push('','AVANÇOS DA SEMANA');
+  c.adv.forEach(a=>L.push(`- ${a.b} (${a.s})`));
+  if(c.aligns.length){L.push('','ALINHAMENTOS REALIZADOS');c.aligns.forEach(x=>L.push(`- ${x.texto}${x.detalhe?` (${x.detalhe})`:''}`))}
+  if(weekEdit().obs){L.push('','OBSERVAÇÃO EXECUTIVA',weekEdit().obs)}
+  if(c.rk.length){L.push('','RISCOS E IMPEDIMENTOS ABERTOS');c.rk.forEach(({a,i})=>L.push(`- ${a.p.initiativeNumber} ${a.p.name} | squad ${a.p.squad||'—'} | ${cut(i.text,60)} | área ${areaOf(i,a.p).nome} | dono ${nome2(i.owner)||'—'} | ${i.due?fD(i.due):'sem prazo'}`))}
+  if(c.temChg){L.push('','MUDANÇAS DESDE A SEMANA ANTERIOR');c.chg.forEach(a=>a.changes.forEach(x=>L.push(`- ${a.p.initiativeNumber} ${x.label}: ${x.de} -> ${x.para}${x.nota?` (${x.nota})`:''}`)))}
+  L.push('','COMPROMISSOS DA SEMANA');c.mst.forEach(m=>L.push(`- ${fD(m.date)} ${m.a.p.initiativeNumber} ${cut(m.a.p.name,40)} — ${cut(m.label,40)}`));
+  if(c.disc.length){L.push('',`PRÓXIMOS DISCOVERIES — ${c.alvoM?MESL[+c.alvoM.slice(5,7)-1].toUpperCase():''}`);c.disc.forEach(a=>L.push(`- ${fBadge(a.p.discoveryDate)} ${a.p.initiativeNumber} ${cut(a.p.name,44)} (${a.p.squad}) — Dev previsto ${fShort(a.p.startDev)} a ${fShort(a.p.endDev)}`));L.push('  (janela de desenvolvimento é previsão e pode mudar)')}
+  return L.join('\n');
+}
+async function copyRich(btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='📋 Copiando…';
+  try{
+    const html=buildRichHtml(),txt=buildPlainText();
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]);
+    }else{
+      const d=document.createElement('div');d.innerHTML=html;d.style.position='fixed';d.style.left='-9999px';document.body.appendChild(d);
+      const r=document.createRange();r.selectNode(d);const s=getSelection();s.removeAllRanges();s.addRange(r);
+      document.execCommand('copy');s.removeAllRanges();d.remove();
+    }
+    toast(`Copiado (${Math.round(buildRichHtml().length/1024)} KB). Cole no Teams ou Outlook com Ctrl+V.`);
+  }catch(e){console.error(e);toast('Não consegui copiar o conteúdo formatado. Use o botão Selecionar report.','err')}
+  finally{btn.disabled=false;btn.innerHTML=old}
+}
+async function exportPdf(btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='⇩ Gerando…';
+  try{
+    const jsPDF=window.jspdf?.jsPDF;
+    if(!jsPDF||!window.htmlToImage?.toCanvas){window.print();return}
+    const c=await snapCanvas(1.6);
+    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+    const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=7;
+    const uw=pw-m*2,ih=c.height*uw/c.width,uh=ph-m*2;
+    const img=c.toDataURL('image/jpeg',.92);
+    let left=ih,pos=m;
+    pdf.addImage(img,'JPEG',m,pos,uw,ih,undefined,'FAST');left-=uh;
+    while(left>0){pdf.addPage();pos=m-(ih-left);pdf.addImage(img,'JPEG',m,pos,uw,ih,undefined,'FAST');left-=uh}
+    pdf.save(`report-discovery-${iso(lastCtx.start)}-a-${iso(lastCtx.end)}.pdf`);
+  }catch(e){console.error(e);window.print()}
+  finally{btn.disabled=false;btn.innerHTML=old}
+}
+
+/* ════════════ amostra ════════════ */
+function SAMPLE(){
+  const seed=[['113286','Consórcio Cobrança — Atendimento de demandas','Expresso','squad-expresso','Em Discovery','2026-06-11','2026-07-01','2026-08-01','Daniel Lima','Moseas Souza'],
+  ['113345','Cartões — Não Monetário — Tratar base PCCF','Interstelar','squad-interstelar','Em Discovery','2026-06-11','2026-08-01','2026-09-01','Mariana Nakaya','Silmara Rosalem'],
+  ['98434','Automação Câmbio Trade Finance QuickWin','Contact','squad-contact','Em Discovery','2026-06-11','','','Sandra Souza','A definir'],
+  ['116596','Jornada de Automação — Conversão de Robôs em RPA','Terminator','squad-terminator','Em Discovery','2026-06-11','','','Jane Silva','A definir'],
+  ['113309','Recepção de Documentos Físicos e Ofícios','MadMax','squad-madmax','Em Discovery','2026-07-01','','','Sérgio Cartapatti','A definir'],
+  ['113260','API EXTRATO — 2ª via de extrato bancário','Inception','squad-inception','Em Discovery','2026-07-01','2026-08-10','2026-08-30','Sandra Souza','Victor Cruz'],
+  ['113308','Gestão de Fornecedores e Indexação Legado','MadMax','squad-madmax','Em Discovery','2026-07-01','2026-08-03','2026-08-14','Sérgio Cartapatti','Rennan Gustavo'],
+  ['113327','FIRP / Abono / Mtoken / APP RM','Inception','squad-inception','Em Discovery','2026-07-01','2026-08-10','2026-08-31','Sandra Souza','Victor Fortunato'],
+  ['113292','Garantias — Registro em Cartório','Expresso','squad-expresso','A iniciar','2026-08-03','2026-09-01','2026-10-01','Fernanda Rocha','Moseas Souza'],
+  ['113359','Compensação de Cheques','Interstelar','squad-interstelar','A iniciar','2026-08-03','2026-10-01','2026-11-01','Mariana Nakaya','Silmara Rosalem'],
+  ['113317','Automatização do Pagamento de Veículos','Interstelar','squad-interstelar','A iniciar','2026-08-03','2026-10-01','2026-11-01','Rodrigo Santos','Silmara Rosalem'],
+  ['113315','Consignado, Conciliação e Portabilidade','Ainda Sem Definição','squad-asd','A iniciar','2026-08-10','2026-10-01','2026-11-01','Daniel Lima','ASD']];
+  const rnd=s=>{let x=0;for(const ch of String(s))x=(x*31+ch.charCodeAt(0))%9973;return()=>(x=(x*1103515245+12345)%2147483648)/2147483648};
+  const ago=d=>new Date(Date.now()-d*864e5).toISOString();
+  const CL=['stakeholders','problem','scope','asis','tobe','dependencies','risks','stories','estimates','gono'];
+  return{squads:['Ainda Sem Definição','Contact','Expresso','Inception','Interstelar','MadMax','Terminator'],
+   projects:seed.map(([n,name,sq,sqid,st,disc,sd,ed,po,tl])=>{const r=rnd(n),mat=st==='Em Discovery';
+    return{id:'ini-'+n,initiativeNumber:n,name,squad:sq,squadId:sqid,status:st,discoveryDate:disc,startDev:sd,endDev:ed,target:ed,po,techLead:tl,
+      rteOwner:'Amanda Lima',frontLeader:'Celso Perussi',updatedAt:ago(r()*10),
+      checklist:CL.map(id=>({id,done:mat&&r()>.45})),
+      timelineItems:TL_TEMPLATE.map((t,i)=>({id:t.id,stageId:t.stageId,status:!mat?(i<2?'progress':'notstarted'):(r()>.55?'done':r()>.3?'progress':'notstarted'),updatedAt:r()>.5?ago(r()*7):ago(18+r()*30)})),
+      cards:mat&&r()>.45?[{id:'c'+n,title:'Desenho de Arquitetura',status:r()>.6?'doing':'backlog',priority:r()>.7?'Crítica':'Alta',owner:'Eduardo Paiva',due:iso(new Date(Date.now()+(r()*10-4)*864e5)),updatedAt:ago(r()*6),movementHistory:r()>.5?[{from:'backlog',to:'doing',at:ago(r()*5)}]:[]}]:[],
+      /* aba Cronograma — é dela que saem fase, janelas e volume de histórias */
+      schedule:[
+        {id:'k'+n,item:'Kickoff',owner:po,start:disc,end:disc,done:mat,updatedAt:ago(r()*9)},
+        {id:'d'+n,item:'Discovery',owner:po,start:disc,end:iso(new Date(Date.now()+(r()*20-4)*864e5)),done:mat&&r()>.6,updatedAt:ago(r()*8)},
+        {id:'so'+n,item:'Desenho de solução',owner:'Eduardo Paiva',start:iso(new Date(Date.now()-20*864e5)),end:iso(new Date(Date.now()+(r()*12-5)*864e5)),done:mat&&r()>.5,updatedAt:ago(r()*7)},
+        ...(sd?[{id:'e'+n,item:'Escrita das histórias',owner:po,start:iso(new Date(Date.now()-(4+r()*8)*864e5)),end:iso(new Date(Date.now()+(r()*14-3)*864e5)),done:r()>.75,updatedAt:ago(r()*6)},
+              {id:'s'+n,item:'Refinamento Técnico',owner:tl,start:iso(new Date(Date.now()-(2+r()*10)*864e5)),end:iso(new Date(Date.now()+(r()*16-6)*864e5)),done:r()>.8,updatedAt:ago(r()*7)},
+              {id:'j'+n,item:'Qtd de histórias no Jira',jira:true,observations:r()>.45?String(Math.round(4+r()*26)):'',updatedAt:ago(r()*7)}]:[]),
+        ...(ed?[{id:'en'+n,item:'Entrega para o Delivery',owner:tl,start:ed,end:ed,done:false,updatedAt:ago(r()*10)}]:[])
+      ],
+      raids:{risks:mat&&r()>.55?[{text:'Dependência da área de arquitetura para fechar o Solution Design',owner:'Eduardo Paiva',area:'Arquitetura',due:iso(new Date(Date.now()+(r()*14-7)*864e5)),done:false,updatedAt:ago(6+r()*20)}]:[],
+        issues:mat&&r()>.7?[{text:'Ambiente de homologação indisponível para o time',owner:'Celso Perussi',due:iso(new Date(Date.now()+(r()*12-2)*864e5)),done:false,updatedAt:ago(4+r()*16)}]:[],assumptions:[],
+        dependencies:r()>.6?[{text:'Integração com sistema legado NEWCON e definição de APIs',owner:'Eduardo Paiva',due:iso(new Date(Date.now()+(r()*16-8)*864e5)),done:false,updatedAt:ago(5+r()*18)}]:[]}}})}
+}
+
+/* ════════════ init ════════════ */
+loadEdits();
+const __period=currentWeekBounds();
+el('weekInput').value=/^\d{4}-W\d{2}$/.test(initialWeek||'')?initialWeek:weekStrOf(__period.start);
+try{const m=localStorage.getItem('sala_rep_model');if(m)setModel(m);else setModel('A')}catch(e){setModel('A')}
+el('squadFilter').addEventListener('change',render);
+el('weekInput').addEventListener('change',generate);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+/* Ctrl+P / impressão nativa também precisa do apêndice aberto para não sumir da folha */
+let __detState=null;
+window.addEventListener('beforeprint',()=>{const det=[...document.querySelectorAll('details.blk-more')];__detState=det.map(d=>d.open);det.forEach(d=>d.open=true)});
+window.addEventListener('afterprint',()=>{if(!__detState)return;[...document.querySelectorAll('details.blk-more')].forEach((d,i)=>d.open=__detState[i]);__detState=null});
+generate();
+</script>
+
+
+</body></html>
