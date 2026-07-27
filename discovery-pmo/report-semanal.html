@@ -102,6 +102,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .lock-init strong{display:block;font-size:10.5px;line-height:1.3;color:#fff}
 .lock-init span,.lock-owner span,.lock-occurrence span{display:block;color:rgba(255,255,255,.67);font-size:8.5px;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;font-weight:750}
 .lock-owner strong,.lock-occurrence strong{display:block;font-size:9.7px;line-height:1.35;color:#fff;font-weight:700}
+.lock-area{display:block;margin-top:4px;color:rgba(255,255,255,.78);font-size:8.8px;line-height:1.3}
 .lock-empty{padding:7px 9px;border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:rgba(255,255,255,.78);font-size:10.5px}
 .lock-more{font-size:9px;color:rgba(255,255,255,.7);padding-left:4px}
 @media(max-width:1050px){.lock-row{grid-template-columns:78px 1fr 110px}.lock-occurrence{grid-column:2/-1}}
@@ -1029,6 +1030,7 @@ function jiraQtd(p){
    1º o campo vindo da carga; 2º inferência pelo texto; 3º a squad da iniciativa. */
 const AREAS=[
   [/arquitet|solution design|dati/,        'Arquitetura'],
+  [/eduardo paiva/,                         'Arquitetura'],
   [/seguran|ciber|complian|lgpd/,          'Segurança e Compliance'],
   [/jurid|contrat|legal/,                  'Jurídico'],
   [/infra|ambiente|servidor|rede|deploy/,  'Infraestrutura'],
@@ -1166,7 +1168,7 @@ function analyze(p,ws,we){
     const d=win(c.updatedAt);if(d&&!(c.movementHistory||[]).some(h=>win(h.at)))movs.push({at:d,k:'acao',t:`Ação atualizada: ${cut(c.title||'sem título',36)}`,owner:c.owner||p.techLead||p.po||'',occurrence:`Ação atualizada: ${c.title||'sem título'}`})});
   ['risks','issues','dependencies'].forEach(g=>R[g].forEach(i=>{const d=win(i.updatedAt);if(!d)return;
     const n=g==='dependencies'?'Dependência':g==='issues'?'Impedimento':'Risco';
-    movs.push({at:d,k:i.done?'desbloqueio':'risco',t:`${n} ${i.done?'resolvido':'aberto/atualizado'}: ${cut(i.text,34)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`${n} ${i.done?'resolvido':'aberto ou atualizado'}: ${i.text||'Sem descrição'}`})}));
+    movs.push({at:d,k:i.done?'desbloqueio':'risco',t:`${n} ${i.done?'resolvido':'aberto/atualizado'}: ${cut(i.text,34)}`,owner:i.owner||p.techLead||p.po||'',area:areaOf(i,p).nome,occurrence:`${n} ${i.done?'resolvido':'aberto ou atualizado'}: ${i.text||'Sem descrição'}`})}));
   sc.forEach(i=>{(i.replanHistory||[]).forEach(h=>{const d=win(h.at);if(d)movs.push({at:d,k:'replan',t:`Marco replanejado: ${cut(i.item,30)} → ${fD(h.to)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`Marco replanejado: ${i.item||'Marco'} para ${fD(h.to)}`})});
     const d=win(i.updatedAt);if(d&&schDone(i))movs.push({at:d,k:'avanco',t:`Marco concluído: ${cut(i.item,34)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`Marco concluído: ${i.item||'Marco'}`});
     else if(d&&(i.start||i.end)&&!i.jira)movs.push({at:d,k:'marco',t:`Marco incluído/atualizado: ${cut(i.item,34)}`,owner:i.owner||p.techLead||p.po||'',occurrence:`Marco incluído ou atualizado: ${i.item||'Marco'}`})});
@@ -1516,13 +1518,14 @@ function render(){
   const shownLocks=lockEvents.slice(0,3);
   const lockStatus=m=>m.k==='desbloqueio'?{label:'Destravado',cls:'done'}:{label:m.k==='bloqueio'?'Travado':'Em atenção',cls:'open'};
   const ownerOfMove=m=>nome2(m.owner)||nome2(m.a?.p?.techLead)||nome2(m.a?.p?.po)||nome2(m.a?.p?.rteOwner)||'Não informado';
+  const areaOfMove=m=>m.area||areaOf({text:m.occurrence||m.t||'',owner:m.owner||''},m.a?.p||{}).nome;
   const lockHtml=shownLocks.length?shownLocks.map(m=>{
     const p=m.a.p,s=lockStatus(m);
     return `<div class="lock-row">
       <span class="lock-state ${s.cls}">${s.label}</span>
       <div class="lock-init"><strong>${esc(p.initiativeNumber||'—')} · ${esc(p.name||'Iniciativa sem nome')}</strong><span>Squad: ${esc(p.squad||'Não informada')}</span></div>
       <div class="lock-owner"><span>Dono do ocorrido</span><strong>${esc(ownerOfMove(m))}</strong></div>
-      <div class="lock-occurrence"><span>Ocorrido no período</span><strong>${esc(m.occurrence||m.t||'Movimento registrado')}</strong></div>
+      <div class="lock-occurrence"><span>Ocorrido no período</span><strong>${esc(m.occurrence||m.t||'Movimento registrado')}</strong><small class="lock-area">Área responsável: ${esc(areaOfMove(m))}</small></div>
     </div>`;
   }).join('')+(lockEvents.length>shownLocks.length?`<div class="lock-more">+ ${lockEvents.length-shownLocks.length} outra(s) ocorrência(s) registrada(s) na semana selecionada.</div>`:'')
     :`<div class="lock-empty">Nenhuma trava ou destravamento foi registrado entre ${fD(iso(start))} e ${fD(iso(end))}. O resumo permanece visível para deixar explícito que não houve ocorrência no período selecionado.</div>`;
@@ -1530,7 +1533,7 @@ function render(){
   el('vTitle').textContent='Resumo de travas da semana';
   el('vDetails').innerHTML=lockHtml;
   const vT='Resumo de travas da semana';
-  const vX=lockEvents.length?lockEvents.map(m=>{const p=m.a.p,s=lockStatus(m);return `${s.label}: ${p.initiativeNumber||'—'} · ${p.name} · Squad ${p.squad||'Não informada'} · Dono ${ownerOfMove(m)} · ${m.occurrence||m.t}`}).join(' | '):`Nenhuma trava ou destravamento registrado entre ${fD(iso(start))} e ${fD(iso(end))}.`;
+  const vX=lockEvents.length?lockEvents.map(m=>{const p=m.a.p,s=lockStatus(m);return `${s.label}: ${p.initiativeNumber||'—'} · ${p.name} · Squad ${p.squad||'Não informada'} · Área responsável ${areaOfMove(m)} · Dono ${ownerOfMove(m)} · ${m.occurrence||m.t}`}).join(' | '):`Nenhuma trava ou destravamento registrado entre ${fD(iso(start))} e ${fD(iso(end))}.`;
   el('vText').textContent=vX;
 
   el('k1').textContent=scoped.length;
