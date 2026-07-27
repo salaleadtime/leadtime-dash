@@ -8,7 +8,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-23-backlog-sheet-chunks-v11';
+var BACKLOG_SCRIPT_VERSION = '2026-07-27-discovery-raid-area-v12';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -26,6 +26,20 @@ var VP_SHEET_MAP = {
   emergencyDemand: '_emergency_demand',
   discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
 };
+
+// Valor canônico persistido nos itens RAID da base discoveryPmo. A Squad não
+// é uma área responsável e, por isso, não entra nesta lista.
+var RAID_RESPONSIBLE_AREAS = [
+  'Arquitetura',
+  'Desenvolvimento',
+  'Negócio',
+  'Segurança e Compliance',
+  'Infraestrutura',
+  'Dados e Integrações',
+  'Jurídico',
+  'Fornecedor / Terceiro',
+  'Alocação / RTE'
+];
 
 function getVpSheet_(key) {
   return VP_SHEET_MAP[key] || null;
@@ -189,6 +203,10 @@ function doPost(e) {
           return jsonOut_({ ok: false, error: parsedVp.ok ? 'payload deve ser objeto ou lista' : parsedVp.error });
         }
         var vpData = parsedVp.data;
+        // Mantém a base completa como está, mas consolida a área do RAID no
+        // campo único areaResponsavel quando vier em um alias já conhecido.
+        // Itens legados sem área continuam válidos e não são descartados.
+        if (vpKey === 'discoveryPmo') vpData = normalizeDiscoveryRaidAreas_(vpData);
         withLock_(function() { writeJsonToSheet_(vpSheetName, vpData); });
         return jsonOut_({ ok: true, key: vpKey });
       } catch (vpErr) {
@@ -281,6 +299,35 @@ function writeJsonToSheet_(sheetName, data) {
   range.setNumberFormat('@');
   range.setValues(chunks);
   try { sheet.hideSheet(); } catch (e) {}
+}
+
+function normalizeDiscoveryRaidAreas_(data) {
+  if (!data || typeof data !== 'object' || !Array.isArray(data.projects)) return data;
+  var groups = ['risks', 'assumptions', 'issues', 'dependencies'];
+  data.projects.forEach(function(project) {
+    var raids = project && project.raids;
+    if (!raids || typeof raids !== 'object') return;
+    groups.forEach(function(group) {
+      if (!Array.isArray(raids[group])) return;
+      raids[group].forEach(function(item) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+        var area = canonicalRaidArea_(item.areaResponsavel || item.responsibleArea || item.department || item.area);
+        if (area) item.areaResponsavel = area;
+      });
+    });
+  });
+  return data;
+}
+
+function canonicalRaidArea_(value) {
+  var raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  var normalized = raw.toLocaleLowerCase();
+  for (var i = 0; i < RAID_RESPONSIBLE_AREAS.length; i++) {
+    var candidate = RAID_RESPONSIBLE_AREAS[i];
+    if (candidate.toLocaleLowerCase() === normalized) return candidate;
+  }
+  return '';
 }
 
 function getOrCreateSheet_(sheetName) {
