@@ -915,7 +915,7 @@ const ARCH_RE=/arquitet|solution design|dati|desenho de solu/i;
 let base={projects:[],squads:[]}, source='—', scoped=[], edits={}, curWeek='', lastCtx=null;
 const initialParams=new URLSearchParams(window.location.search);
 const initialWeek=initialParams.get('week');
-const initialSquad=initialParams.get('squad');
+const initialSquad=initialParams.get('squad')==='squad-asd'?'':initialParams.get('squad');
 const openedFromTracker=initialParams.get('source')==='tracker';
 
 /* ════════════ utils ════════════ */
@@ -1085,12 +1085,12 @@ function squadOptionRows(){
   (base.squads||[]).forEach(s=>{
     const name=typeof s==='string'?s:String(s?.name||'').trim();
     const id=typeof s==='string'?'':String(s?.id||'').trim();
-    if(name)byId.set(id||`name:${norm(name)}`,{id,name});
+    if(name&&id!=='squad-asd'&&norm(name)!=='ainda sem definicao')byId.set(id||`name:${norm(name)}`,{id,name});
   });
   (base.projects||[]).forEach(p=>{
     const name=String(p?.squad||'Ainda Sem Definição').trim();
     const id=String(p?.squadId||'').trim();
-    if(name)byId.set(id||`name:${norm(name)}`,{id,name});
+    if(name&&id!=='squad-asd'&&norm(name)!=='ainda sem definicao')byId.set(id||`name:${norm(name)}`,{id,name});
   });
   return [...byId.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
 }

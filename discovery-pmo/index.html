@@ -14403,7 +14403,7 @@ Recomendação PMO: ${d.recommendation}`;
       const squadId = viewMode === 'project'
         ? (getProject()?.squadId || '')
         : (dashboardSquadId || '');
-      if (squadId) params.set('squad', squadId);
+      if (squadId && squadId !== 'squad-asd') params.set('squad', squadId);
       window.open(`./report-semanal.html?${params.toString()}`, '_blank', 'noopener');
     }
 
