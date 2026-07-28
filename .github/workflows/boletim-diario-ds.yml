@@ -1,15 +1,15 @@
 name: Boletim Diário DS
 
-# Disparo automático por horário (cron) fica pendente de aprovação explícita
-# do horário e da configuração dos secrets abaixo — ver
-# boletim-ds/README-BOLETIM-DS.md. Até lá, o pipeline roda somente por
-# acionamento manual (workflow_dispatch), o que permite validar toda a
-# geração (seleção de dados, imagem, e-mail) sem enviar nada sem supervisão.
+# Horário aprovado: todos os dias às 09:00 (America/Sao_Paulo, UTC-3 fixo,
+# sem horário de verão). 09:00 BRT = 12:00 UTC.
 #
-# Quando o horário for aprovado, adicionar aqui, por exemplo:
-#   schedule:
-#     - cron: '0 11 * * 1-5'   # 08:00 America/Sao_Paulo, seg-sex (UTC-3)
+# O envio de e-mail em si continua condicionado aos secrets de SMTP e
+# destinatários (ver boletim-ds/README-BOLETIM-DS.md) — sem eles, esta
+# execução diária gera o boletim normalmente, mas não envia nada e registra
+# o motivo no log, sem declarar sucesso falso.
 on:
+  schedule:
+    - cron: '0 12 * * *'   # 09:00 America/Sao_Paulo, todos os dias
   workflow_dispatch:
     inputs:
       force:

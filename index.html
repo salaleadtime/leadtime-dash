@@ -8503,6 +8503,7 @@ function calSeedExample(){
         <button class="adm-tab on" onclick="admTab('config',this)">⚙️ Configurações</button>
         <button class="adm-tab" onclick="admTab('dados',this)">📊 Dados</button>
         <button class="adm-tab" onclick="admTab('epicos',this)">📋 Épicos</button>
+        <button class="adm-tab" onclick="admTab('boletim',this)">📰 Boletim DS</button>
       </div>
 
       <!-- ABA: Configurações -->
@@ -8582,6 +8583,27 @@ function calSeedExample(){
           <button class="adm-btn primary" onclick="admSalvarEpicos()">💾 Salvar Alterações</button>
         </div>
         <div class="adm-msg" id="admEpMsg"></div>
+      </div>
+
+      <!-- ABA: Boletim Diário DS -->
+      <div class="adm-pane" id="adm-boletim">
+        <div class="adm-sec">Boletim Diário DS</div>
+        <p style="font-size:11px;color:#64748b;line-height:1.5;margin:-4px 0 14px">
+          Página isolada, somente leitura, com os pontos críticos do dia, discoveries em refinamento e
+          homologação fora do prazo — gerada a partir dos mesmos dados já usados neste dashboard e no
+          Discovery PMO. Este painel não edita nem substitui nenhum dado.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          <a class="adm-btn primary" href="./boletim-ds/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">📰 Abrir Boletim Diário DS</a>
+        </div>
+        <div class="adm-sec" style="margin-top:20px">Envio automático</div>
+        <p style="font-size:11px;color:#64748b;line-height:1.5">
+          Geração e envio diário agendados para <strong>09:00 (America/São_Paulo)</strong>, todos os dias,
+          via GitHub Actions (<code>boletim-diario-ds.yml</code>). O e-mail só é enviado de fato quando os
+          secrets de SMTP e destinatários estiverem configurados no repositório — sem eles, o boletim é
+          gerado normalmente, mas o envio fica registrado como pendente, sem falso positivo.
+          Veja <code>boletim-ds/README-BOLETIM-DS.md</code> para configurar.
+        </p>
       </div>
     </div>
   </div>
