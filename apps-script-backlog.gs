@@ -1,14 +1,14 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
- * v11 — doGet aguarda o lock de escrita antes de ler (evita ler planilha a
- * meio de um clearContents()+setValues()) e devolve JSON de erro como o
- * doPost em vez da página de erro padrão do Apps Script. saveBacklog
- * continua mesclando por id/seq (mergeSnaps_); saveStories e saveVpData
- * seguem sendo overwrite puro — quem grava por último decide o conteúdo
- * daquela chave, sem merge.
+ * v13 — saveStories e saveVpData (discoveryPmo) agora mesclam por id em vez
+ * de sobrescrever puro. Antes, dois pontos gravando a mesma chave em
+ * sequência (ex.: uma aba salvando enquanto outra, no ambiente interno do
+ * Bradesco, também sincroniza) faziam a segunda gravação apagar squads/
+ * histórias que só existiam na primeira — mesmo padrão que mergeSnaps_ já
+ * resolvia para saveBacklog. Ver mergeStoriesById_/mergeDiscoveryPmo_.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-27-discovery-raid-area-v12';
+var BACKLOG_SCRIPT_VERSION = '2026-07-28-merge-stories-vp-v13';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -183,8 +183,13 @@ function doPost(e) {
           var existing = withLock_(function() { return readJsonFromSheet_(STORIES_SHEET, []); });
           return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, skipped: 'payload vazio', savedStories: existing.length });
         }
-        withLock_(function() { writeJsonToSheet_(STORIES_SHEET, parsedStories); });
-        return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, savedStories: parsedStories.length });
+        var savedStoriesCount = withLock_(function() {
+          var beforeStories = readJsonFromSheet_(STORIES_SHEET, []);
+          var mergedStories = mergeStoriesById_(beforeStories, parsedStories);
+          writeJsonToSheet_(STORIES_SHEET, mergedStories);
+          return mergedStories.length;
+        });
+        return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, savedStories: savedStoriesCount });
       } catch (err) {
         return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'payload inválido: ' + String(err && err.message || err) });
       }
@@ -207,7 +212,13 @@ function doPost(e) {
         // campo único areaResponsavel quando vier em um alias já conhecido.
         // Itens legados sem área continuam válidos e não são descartados.
         if (vpKey === 'discoveryPmo') vpData = normalizeDiscoveryRaidAreas_(vpData);
-        withLock_(function() { writeJsonToSheet_(vpSheetName, vpData); });
+        withLock_(function() {
+          if (vpKey === 'discoveryPmo') {
+            var beforeVp = readJsonFromSheet_(vpSheetName, null);
+            vpData = mergeDiscoveryPmo_(beforeVp, vpData);
+          }
+          writeJsonToSheet_(vpSheetName, vpData);
+        });
         return jsonOut_({ ok: true, key: vpKey });
       } catch (vpErr) {
         return jsonOut_({ ok: false, error: 'payload inválido: ' + String(vpErr && vpErr.message || vpErr) });
@@ -374,6 +385,96 @@ function mergeSnaps_(base, incoming) {
   var out = Object.keys(byKey).map(function(k) { return byKey[k]; });
   out.sort(compareSnaps_);
   return out;
+}
+
+// Une histórias existentes com as recém-enviadas por id (chave do Jira). Sem
+// isso, salvar de um ponto que ainda não tinha carregado as histórias mais
+// recentes de outro (ex.: aba antiga em cache, ou o ambiente interno do
+// Bradesco sincronizando em paralelo) apagava histórias inteiras que só
+// existiam do outro lado — o payload é sempre a lista completa conhecida
+// por quem salva, nunca um diff.
+function mergeStoriesById_(existing, incoming) {
+  var byId = {};
+  var order = [];
+  (existing || []).forEach(function(s) {
+    if (!s || !s.id) return;
+    if (!(s.id in byId)) order.push(s.id);
+    byId[s.id] = s;
+  });
+  (incoming || []).forEach(function(s) {
+    if (!s || !s.id) return;
+    if (!(s.id in byId)) order.push(s.id);
+    byId[s.id] = s;
+  });
+  return order.map(function(id) { return byId[id]; });
+}
+
+// Une listas por id (ex.: projects/squads do Discovery PMO), preferindo o
+// item com updatedAt mais recente quando o id existe dos dois lados, e
+// removendo ids marcados como excluídos em `deletedIds`. Mesma regra usada
+// no merge client-side (mergeById em discovery-pmo/index.html) — replicada
+// aqui como segunda linha de defesa contra overwrite do servidor.
+function mergeListById_(existingList, incomingList, deletedIds) {
+  var map = {};
+  var order = [];
+  (existingList || []).forEach(function(item) {
+    if (!item || !item.id) return;
+    if (deletedIds && deletedIds[item.id]) return;
+    if (!(item.id in map)) order.push(item.id);
+    map[item.id] = item;
+  });
+  (incomingList || []).forEach(function(item) {
+    if (!item || !item.id) return;
+    if (deletedIds && deletedIds[item.id]) return;
+    var ex = map[item.id];
+    if (!ex) { order.push(item.id); map[item.id] = item; return; }
+    var tNew = Date.parse(item.updatedAt || '') || 0;
+    var tOld = Date.parse(ex.updatedAt || '') || 0;
+    if (tNew >= tOld) map[item.id] = item;
+  });
+  return order.map(function(id) { return map[id]; });
+}
+
+// Mescla a base do Discovery PMO (squads/sprints/projetos) em vez de
+// sobrescrever puro. Réplica, no servidor, do merge por id + tumbas de
+// exclusão que o cliente já faz antes de salvar (mergeRemoteIntoData em
+// discovery-pmo/index.html) — segunda camada de proteção para o caso de
+// duas gravações concorrentes (duas abas, ou dois ambientes/links
+// diferentes apontando para a mesma planilha) se sobreporem no servidor.
+function mergeDiscoveryPmo_(before, incoming) {
+  if (!incoming || typeof incoming !== 'object') return incoming;
+  if (!before || typeof before !== 'object') return incoming;
+  if (!Array.isArray(before.projects) || !before.projects.length) return incoming;
+  if (!Array.isArray(incoming.projects)) return before;
+
+  var tombstonesById = {};
+  (before.tombstones || []).forEach(function(t) { if (t && t.id) tombstonesById[t.id] = t; });
+  (incoming.tombstones || []).forEach(function(t) {
+    if (!t || !t.id) return;
+    var ex = tombstonesById[t.id];
+    if (!ex || (Date.parse(t.deletedAt || '') || 0) > (Date.parse(ex.deletedAt || '') || 0)) tombstonesById[t.id] = t;
+  });
+  var mergedTombstones = Object.keys(tombstonesById).map(function(id) { return tombstonesById[id]; });
+  var deletedIds = {};
+  mergedTombstones.forEach(function(t) { deletedIds[t.id] = true; });
+
+  var mergedProjects = mergeListById_(before.projects, incoming.projects, deletedIds);
+  if (!mergedProjects.length) return incoming; // nunca fica sem nenhuma iniciativa por causa do merge
+
+  var mergedSquads = mergeListById_(before.squads, incoming.squads, deletedIds);
+  var mergedHistory = mergeListById_(before.importHistory, incoming.importHistory, null)
+    .sort(function(a, b) { return (Date.parse((b && b.at) || '') || 0) - (Date.parse((a && a.at) || '') || 0); })
+    .slice(0, 30);
+
+  var merged = incoming; // preserva demais campos (metadados, flags) do payload mais recente
+  merged.tombstones = mergedTombstones;
+  merged.projects = mergedProjects;
+  merged.squads = mergedSquads.length ? mergedSquads : before.squads;
+  merged.importHistory = mergedHistory;
+  merged.cardsResetV1 = before.cardsResetV1 || incoming.cardsResetV1;
+  merged.squadNamesSyncedV1 = before.squadNamesSyncedV1 || incoming.squadNamesSyncedV1;
+  merged.updatedAt = new Date(Math.max(Date.parse(before.updatedAt || '') || 0, Date.parse(incoming.updatedAt || '') || 0)).toISOString();
+  return merged;
 }
 
 function getSafeCallback_(callback) {
