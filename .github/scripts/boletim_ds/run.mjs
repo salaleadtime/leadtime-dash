@@ -182,8 +182,18 @@ function renderStandaloneHtml({ selCrit, selRef, selHom }, generatedAt) {
 function renderTeamsCardHtml(selEntregas, generatedAt) {
   const dateStr = generatedAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  const linhas = !selEntregas.itens.length
+  const temEntregas = !!selEntregas.itens.length;
+
+  const linhasSquad = !temEntregas
     ? '<div class="ds-card-empty">Nenhuma entrega concluída hoje.</div>'
+    : selEntregas.squads.map((s) => `<div class="ds-card-row">
+        <span class="ds-card-squad">${esc(s.squad)}</span>
+        <span class="ds-card-item">${s.qtd} entrega${s.qtd === 1 ? '' : 's'}</span>
+        <span class="ds-card-lt">${s.ltMedio}d</span>
+      </div>`).join('');
+
+  const linhasItens = !temEntregas
+    ? ''
     : selEntregas.itens.map((r) => `<div class="ds-card-row">
         <span class="ds-card-squad">${esc(r.squad)}</span>
         <span class="ds-card-item">${esc(r.nome)}</span>
@@ -213,6 +223,13 @@ function renderTeamsCardHtml(selEntregas, generatedAt) {
   #ds-card-root .ds-card-item{flex:1;color:#e7e9ee}
   #ds-card-root .ds-card-lt{font-weight:800;color:#1f9d75;background:#12281f;padding:2px 8px;border-radius:999px;white-space:nowrap}
   #ds-card-root .ds-card-empty{color:#9aa0ac;font-size:12.5px;padding:18px 0}
+  #ds-card-root .ds-card-stat{
+    width:100%;background:#2a2f38;border-radius:12px;padding:16px 18px;margin-bottom:22px;
+    display:flex;align-items:baseline;justify-content:space-between;
+  }
+  #ds-card-root .ds-card-stat-label{font-size:12.5px;font-weight:700;color:#c8ccd4}
+  #ds-card-root .ds-card-stat-value{font-size:26px;font-weight:800;color:#f4b740}
+  #ds-card-root .ds-card-list + .ds-card-section{margin-top:22px}
 </style>
 </head><body>
 <div id="ds-card-root">
@@ -234,8 +251,13 @@ function renderTeamsCardHtml(selEntregas, generatedAt) {
   <p class="ds-card-title">Criado pelo DS</p>
   <p class="ds-card-subtitle">Boletim Diário DS</p>
   <p class="ds-card-date">${dateStr}</p>
-  <p class="ds-card-section">Squad · Lead Time — entregas de hoje</p>
-  <div class="ds-card-list">${linhas}</div>
+  <div class="ds-card-stat">
+    <span class="ds-card-stat-label">Lead Time geral (média de hoje)</span>
+    <span class="ds-card-stat-value">${temEntregas ? `${selEntregas.ltGeral}d` : '—'}</span>
+  </div>
+  <p class="ds-card-section">Lead Time por squad — entregas de hoje</p>
+  <div class="ds-card-list">${linhasSquad}</div>
+  ${temEntregas ? `<p class="ds-card-section">Entregas de hoje</p><div class="ds-card-list">${linhasItens}</div>` : ''}
 </div>
 </body></html>`;
 }

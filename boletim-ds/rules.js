@@ -292,7 +292,22 @@
       });
     });
     out.sort(function (a, b) { return a.squad.localeCompare(b.squad, 'pt-BR'); });
-    return { itens: out, inconsistencias: inconsistencias };
+
+    var porSquad = {};
+    var ordemSquad = [];
+    out.forEach(function (item) {
+      if (!porSquad[item.squad]) { porSquad[item.squad] = { squad: item.squad, somaLt: 0, qtd: 0 }; ordemSquad.push(item.squad); }
+      porSquad[item.squad].somaLt += item.lt;
+      porSquad[item.squad].qtd += 1;
+    });
+    var squads = ordemSquad.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); }).map(function (nomeSquad) {
+      var s = porSquad[nomeSquad];
+      return { squad: s.squad, qtd: s.qtd, ltMedio: Math.round(s.somaLt / s.qtd) };
+    });
+
+    var ltGeral = out.length ? Math.round(out.reduce(function (acc, item) { return acc + item.lt; }, 0) / out.length) : 0;
+
+    return { itens: out, squads: squads, ltGeral: ltGeral, inconsistencias: inconsistencias };
   }
 
   return {
