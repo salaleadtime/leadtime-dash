@@ -5559,6 +5559,10 @@
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Atualizar
         </button>
+        <button class="btn btn-white" type="button" onclick="openOperationalReport()" title="Abrir relatório semanal operacional da squad selecionada">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+          Relatório
+        </button>
         <a class="btn btn-white" href="../" style="text-decoration:none;" title="Voltar para SALA">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           SALA
@@ -6317,6 +6321,11 @@
       setTimeout(function(){
         if(btn){ btn.disabled = false; btn.style.opacity = ''; }
       }, 3000);
+    }
+
+    function openOperationalReport(){
+      var squad = typeof getSelectedSquad === 'function' ? getSelectedSquad() : 'Todas as squads';
+      window.open('./report-semanal-operacional.html#squad=' + encodeURIComponent(squad || 'Todas as squads'), '_blank', 'noopener');
     }
 
     let vpInitialSyncPending = true;
