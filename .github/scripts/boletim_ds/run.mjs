@@ -200,7 +200,7 @@ function renderTeamsCardHtml(selEntregas, generatedAt) {
   }
   #ds-card-root .ds-card-robot{
     width:120px;height:120px;border-radius:28px;background:#bf1830;
-    display:flex;align-items:center;justify-content:center;font-size:64px;margin-bottom:20px;
+    display:flex;align-items:center;justify-content:center;margin-bottom:20px;padding:14px;
   }
   #ds-card-root .ds-card-title{font-size:22px;font-weight:800;margin:0}
   #ds-card-root .ds-card-subtitle{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c8ccd4;margin:6px 0 2px}
@@ -216,7 +216,21 @@ function renderTeamsCardHtml(selEntregas, generatedAt) {
 </style>
 </head><body>
 <div id="ds-card-root">
-  <div class="ds-card-robot" aria-hidden="true">🤖</div>
+  <div class="ds-card-robot" aria-hidden="true">
+    <svg viewBox="0 0 100 100" width="100%" height="100%" role="img" focusable="false">
+      <line x1="50" y1="6" x2="50" y2="20" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="50" cy="6" r="6" fill="#fff"/>
+      <rect x="16" y="20" width="68" height="58" rx="16" fill="#d7dbe2"/>
+      <rect x="24" y="30" width="52" height="38" rx="10" fill="#eef0f4"/>
+      <circle cx="40" cy="49" r="8" fill="#20242c"/>
+      <circle cx="60" cy="49" r="8" fill="#20242c"/>
+      <circle cx="37.5" cy="46.5" r="2.4" fill="#fff"/>
+      <circle cx="57.5" cy="46.5" r="2.4" fill="#fff"/>
+      <rect x="38" y="60" width="24" height="6" rx="3" fill="#bf1830"/>
+      <rect x="6" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
+      <rect x="86" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
+    </svg>
+  </div>
   <p class="ds-card-title">Criado pelo DS</p>
   <p class="ds-card-subtitle">Boletim Diário DS</p>
   <p class="ds-card-date">${dateStr}</p>
