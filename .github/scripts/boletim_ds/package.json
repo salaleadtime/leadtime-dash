@@ -1,0 +1,10 @@
+{
+  "name": "boletim-ds-pipeline",
+  "private": true,
+  "type": "module",
+  "description": "Pipeline isolado de geração e envio do Boletim Diário DS. Não é publicado nem referenciado pelo site estático.",
+  "dependencies": {
+    "nodemailer": "^6.9.14",
+    "playwright": "^1.47.0"
+  }
+}

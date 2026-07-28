@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boletim Diário DS</title>
+<!--
+  Módulo isolado — não deve ser referenciado por CSS/JS globais do index.html
+  principal. Tudo abaixo está escopado ao contêiner #boletim-ds-root com o
+  prefixo de classe "bds-" para não colidir com nenhuma outra página.
+  Somente leitura: este arquivo nunca grava em nenhuma fonte de dados.
+-->
+<style>
+  #boletim-ds-root, #boletim-ds-root *{box-sizing:border-box}
+  #boletim-ds-root{
+    --bds-bg:#f5f7fb;--bds-panel:#fff;--bds-ink:#1c2430;--bds-muted:#687587;
+    --bds-header:#20242c;--bds-primary:#bf1830;--bds-primary-dark:#8e1125;
+    --bds-amber:#f4b740;--bds-amber-ink:#9a6a12;--bds-amber-soft:#fff7e6;
+    --bds-green:#1f9d75;--bds-green-ink:#147557;--bds-green-soft:#e9f8f2;
+    --bds-red-soft:#fdeaea;--bds-line:#e4e8f0;
+    background:var(--bds-bg);color:var(--bds-ink);
+    font:14px/1.5 Inter,"Segoe UI",Arial,sans-serif;
+    max-width:1040px;margin:0 auto;padding:18px;
+  }
+  #boletim-ds-root .bds-header{
+    background:var(--bds-header);color:#fff;border-radius:12px;
+    padding:16px 20px;display:flex;align-items:center;justify-content:space-between;
+    gap:12px;margin-bottom:16px;
+  }
+  #boletim-ds-root .bds-brand{display:flex;align-items:center;gap:10px}
+  #boletim-ds-root .bds-robot{
+    width:30px;height:30px;flex:none;border-radius:8px;background:var(--bds-primary);
+    display:flex;align-items:center;justify-content:center;font-size:15px;
+  }
+  #boletim-ds-root .bds-title{font-size:16px;font-weight:800;margin:0;letter-spacing:.01em}
+  #boletim-ds-root .bds-subtitle{font-size:9px;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:#c8ccd4;margin:2px 0 0}
+  #boletim-ds-root .bds-date{font-size:12px;font-weight:700;color:#e7e9ee;text-align:right;white-space:nowrap}
+  #boletim-ds-root .bds-date small{display:block;font-size:9px;font-weight:600;color:#9aa0ac;margin-top:2px}
+
+  #boletim-ds-root .bds-panel{
+    background:var(--bds-panel);border:1px solid var(--bds-line);border-radius:10px;
+    padding:14px 16px;margin-bottom:14px;
+  }
+  #boletim-ds-root .bds-panel h2{
+    font-size:13px;font-weight:800;margin:0 0 3px;color:var(--bds-ink);
+  }
+  #boletim-ds-root .bds-panel .bds-hint{font-size:10.5px;color:var(--bds-muted);margin:0 0 10px}
+
+  #boletim-ds-root .bds-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:760px){#boletim-ds-root .bds-cols{grid-template-columns:1fr}}
+
+  #boletim-ds-root table{width:100%;border-collapse:collapse;font-size:11.5px}
+  #boletim-ds-root th{
+    text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--bds-muted);font-weight:800;padding:6px 8px;border-bottom:1px solid var(--bds-line);
+  }
+  #boletim-ds-root td{padding:7px 8px;border-bottom:1px solid var(--bds-line);vertical-align:top}
+  #boletim-ds-root tr:last-child td{border-bottom:none}
+
+  #boletim-ds-root .bds-slopc{font-weight:800;color:var(--bds-primary);white-space:nowrap}
+  #boletim-ds-root .bds-pill{
+    display:inline-block;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:999px;
+  }
+  #boletim-ds-root .bds-pill.red{background:var(--bds-red-soft);color:var(--bds-primary-dark)}
+  #boletim-ds-root .bds-pill.amber{background:var(--bds-amber-soft);color:var(--bds-amber-ink)}
+  #boletim-ds-root .bds-pill.green{background:var(--bds-green-soft);color:var(--bds-green-ink)}
+
+  #boletim-ds-root .bds-focal-missing{color:var(--bds-amber-ink);font-weight:700}
+  #boletim-ds-root .bds-empty{padding:14px 6px;color:var(--bds-muted);font-size:11.5px;text-align:center}
+  #boletim-ds-root .bds-footer{font-size:9.5px;color:var(--bds-muted);text-align:center;margin-top:6px}
+  #boletim-ds-root .bds-footer a{color:var(--bds-muted)}
+</style>
+</head>
+<body>
+<div id="boletim-ds-root" data-bds-ready="false">
+  <div class="bds-header">
+    <div class="bds-brand">
+      <div class="bds-robot" aria-hidden="true">🤖</div>
+      <div>
+        <p class="bds-title">Boletim Diário DS</p>
+        <p class="bds-subtitle">Solução criada por DS</p>
+      </div>
+    </div>
+    <div class="bds-date" id="bds-date">—</div>
+  </div>
+
+  <div class="bds-panel">
+    <h2>Pontos críticos do dia</h2>
+    <p class="bds-hint">Itens classificados como críticos pelas regras já existentes do dashboard (meta de Lead Time e impedimentos registrados).</p>
+    <div id="bds-criticos"><div class="bds-empty">Carregando…</div></div>
+  </div>
+
+  <div class="bds-cols">
+    <div class="bds-panel">
+      <h2>Discoveries em refinamento</h2>
+      <p class="bds-hint">Iniciativas atualmente na fase de Refinamento Técnico, conforme o Cronograma do Discovery PMO.</p>
+      <div id="bds-refinamento"><div class="bds-empty">Carregando…</div></div>
+    </div>
+    <div class="bds-panel">
+      <h2>Homologação fora do prazo</h2>
+      <p class="bds-hint">Itens em Homologação com o SLA de dias úteis já vencido.</p>
+      <div id="bds-homologacao"><div class="bds-empty">Carregando…</div></div>
+    </div>
+  </div>
+
+  <p class="bds-footer" id="bds-footer">Consultar o sistema completo: <a href="../index.html">dashboard</a> · <a href="../discovery-pmo/index.html">Discovery PMO</a></p>
+</div>
+
+<script src="./rules.js"></script>
+<script>
+(function () {
+  'use strict';
+  var BK_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+  var R = window.BoletimDSRules;
+  var root = document.getElementById('boletim-ds-root');
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  var _gasSeq = 0;
+  function gasJsonp(url, cb, timeoutMs) {
+    var name = '_bdsGP_' + Date.now() + '_' + (++_gasSeq);
+    var script = document.createElement('script');
+    var done = false;
+    var timer = setTimeout(function () {
+      if (done) return; done = true;
+      delete window[name];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      cb('timeout');
+    }, timeoutMs || 28000);
+    window[name] = function (data) {
+      if (done) return; done = true;
+      clearTimeout(timer);
+      delete window[name];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      cb(null, data);
+    };
+    script.onerror = function () {
+      if (done) return; done = true;
+      clearTimeout(timer);
+      delete window[name];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      cb('erro de rede');
+    };
+    script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + name;
+    document.body.appendChild(script);
+  }
+
+  function fmtDate(d) {
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function renderCriticos(sel) {
+    var el = document.getElementById('bds-criticos');
+    if (!sel.itens.length) { el.innerHTML = '<div class="bds-empty">✅ Nenhum ponto crítico no momento.</div>'; return; }
+    el.innerHTML = '<table><thead><tr><th>SLOPC</th><th>Item</th><th>Ponto focal</th></tr></thead><tbody>' +
+      sel.itens.map(function (r) {
+        var kind = r.lt >= R.META_LEAD_TIME ? 'red' : 'amber';
+        return '<tr><td><span class="bds-slopc">' + esc(r.slopc) + '</span> <span class="bds-pill ' + kind + '">' +
+          (r.lt >= R.META_LEAD_TIME ? r.lt + 'd' : 'impedimento') + '</span></td>' +
+          '<td>' + esc(r.nome) + '</td>' +
+          '<td' + (r.pontoFocalAusente ? ' class="bds-focal-missing"' : '') + '>' + esc(r.pontoFocal) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function renderRefinamento(sel) {
+    var el = document.getElementById('bds-refinamento');
+    if (!sel.itens.length) { el.innerHTML = '<div class="bds-empty">Sem iniciativa em refinamento técnico no momento.</div>'; return; }
+    el.innerHTML = '<table><thead><tr><th>Iniciativa</th><th>Squad</th><th>Ponto focal</th></tr></thead><tbody>' +
+      sel.itens.map(function (r) {
+        return '<tr><td><span class="bds-slopc">' + esc(r.numero) + '</span><br>' + esc(r.nome) + '<br><span class="bds-pill amber">' + esc(r.etapa) + '</span></td>' +
+          '<td>' + esc(r.squad) + '</td>' +
+          '<td' + (r.pontoFocalAusente ? ' class="bds-focal-missing"' : '') + '>' + esc(r.pontoFocal) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function renderHomologacao(sel) {
+    var el = document.getElementById('bds-homologacao');
+    if (!sel.itens.length) { el.innerHTML = '<div class="bds-empty">✅ Nenhum item de homologação fora do prazo.</div>'; return; }
+    el.innerHTML = '<table><thead><tr><th>SLOPC</th><th>Item</th><th>Atraso</th><th>Ponto focal</th></tr></thead><tbody>' +
+      sel.itens.map(function (r) {
+        return '<tr><td><span class="bds-slopc">' + esc(r.slopc) + '</span></td>' +
+          '<td>' + esc(r.nome) + '</td>' +
+          '<td><span class="bds-pill red">' + r.diasAtraso + ' ' + (r.diasAtraso === 1 ? 'dia útil' : 'dias úteis') + '</span></td>' +
+          '<td' + (r.pontoFocalAusente ? ' class="bds-focal-missing"' : '') + '>' + esc(r.pontoFocal) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function fail(msg) {
+    ['bds-criticos', 'bds-refinamento', 'bds-homologacao'].forEach(function (id) {
+      document.getElementById(id).innerHTML = '<div class="bds-empty">Dados indisponíveis no momento (' + esc(msg) + ').</div>';
+    });
+    root.setAttribute('data-bds-ready', 'error');
+  }
+
+  document.getElementById('bds-date').innerHTML = fmtDate(new Date()) + '<small>Gerado automaticamente</small>';
+
+  gasJsonp(BK_GAS_URL + '?action=getBacklog', function (errBacklog, backlogRes) {
+    gasJsonp(BK_GAS_URL + '?action=getStories', function (errStories, storiesRes) {
+      gasJsonp(BK_GAS_URL + '?action=getVpData&key=discoveryPmo', function (errDisc, discRes) {
+        if (errBacklog || errStories || errDisc) { fail(errBacklog || errStories || errDisc); return; }
+        if (!backlogRes || !backlogRes.ok || !storiesRes || !storiesRes.ok || !discRes || !discRes.ok) {
+          fail('resposta inválida do backend'); return;
+        }
+
+        var snaps = Array.isArray(backlogRes.backlog) ? backlogRes.backlog.slice() : [];
+        snaps.sort(function (a, b) { return new Date(a.importedAt || 0) - new Date(b.importedAt || 0); });
+        var currentSnap = snaps.length ? snaps[snaps.length - 1] : null;
+        var epicos = currentSnap && Array.isArray(currentSnap.stories) ? currentSnap.stories : [];
+
+        var stories = Array.isArray(storiesRes.stories) ? storiesRes.stories : [];
+
+        var focalByEpic = {};
+        stories.forEach(function (s) {
+          var epic = String(s.epic || '').trim();
+          if (epic && s.responsavel && !focalByEpic[epic]) focalByEpic[epic] = s.responsavel;
+        });
+
+        var projects = (discRes.data && Array.isArray(discRes.data.projects)) ? discRes.data.projects : [];
+
+        var today = new Date();
+        var selCrit = R.selectCriticos(epicos, focalByEpic);
+        var selRef = R.selectRefinamento(projects, today);
+        var selHom = R.selectHomologacaoAtrasada(stories, today);
+
+        renderCriticos(selCrit);
+        renderRefinamento(selRef);
+        renderHomologacao(selHom);
+
+        root.setAttribute('data-bds-ready', 'true');
+        root.setAttribute('data-bds-inconsistencias',
+          String(selCrit.inconsistencias.length + selRef.inconsistencias.length + selHom.inconsistencias.length));
+
+        if (window.console && (selCrit.inconsistencias.length || selRef.inconsistencias.length || selHom.inconsistencias.length)) {
+          console.warn('[Boletim DS] Inconsistências detectadas (registradas, não corrigidas automaticamente):',
+            selCrit.inconsistencias.concat(selRef.inconsistencias, selHom.inconsistencias));
+        }
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
