@@ -1935,6 +1935,11 @@
       transform: translateY(-1px);
     }
 
+    .gantt-row.pending-focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px rgba(244, 183, 64, .22), 0 10px 22px rgba(17, 24, 39, .08);
+    }
+
     .gantt-title {
       min-width: 0;
       display: grid;
@@ -3050,6 +3055,24 @@
       position: relative;
       overflow: hidden;
       box-shadow: 0 10px 22px rgba(17, 24, 39, .035);
+    }
+
+    button.exec-indicator-card {
+      width: 100%;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    button.exec-indicator-card:hover {
+      border-color: var(--indicator-color, var(--blue));
+      box-shadow: 0 12px 26px rgba(17, 24, 39, .09);
+    }
+
+    button.exec-indicator-card:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--indicator-color, var(--blue)) 30%, transparent);
+      outline-offset: 2px;
     }
 
     .exec-indicator-card::before {
@@ -4926,7 +4949,7 @@
     .plan-source-strip span { color: #667085; }
 
     .exec-hero-indicators.pmo-people-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .project-subline {
@@ -6419,6 +6442,9 @@
     .ux-v6-status-chip.start { color: #475569; background: #f8fafc; border-color: #dbe3ee; }
     .ux-v6-status-chip.warn { color: #b77900; background: #fff8e1; border-color: #ffe3a3; }
     .ux-v6-status-chip.good { color: #1f8f55; background: #effaf4; border-color: #ccefdc; }
+    button.ux-v6-status-chip { font: inherit; cursor: pointer; }
+    button.ux-v6-status-chip:hover { filter: brightness(.97); transform: translateY(-1px); }
+    button.ux-v6-status-chip:focus-visible { outline: 3px solid rgba(32, 79, 153, .25); outline-offset: 2px; }
 
     .ux-v6-next-row {
       display: flex;
@@ -7571,7 +7597,6 @@
           <div class="tabs">
             <button type="button" class="tab" data-tab="schedule">Cronograma <span id="scheduleTabBadge" class="tab-badge hidden"></span></button>
             <button type="button" class="tab active" data-tab="kanban">Ações</button>
-            <button type="button" class="tab" data-tab="timeline">Timeline</button>
             <button type="button" class="tab" data-tab="raid">Riscos e Dependências</button>
             <button type="button" class="tab" data-tab="attachments">Anexos <span id="attachmentTabBadge" class="tab-badge hidden"></span></button>
           </div>
@@ -7580,7 +7605,7 @@
             <div id="kanban" class="kanban"></div>
           </div>
 
-          <div id="tab-timeline" class="tab-panel">
+          <div id="tab-timeline" class="tab-panel" hidden>
             <div id="timeline" class="timeline"></div>
           </div>
 
@@ -10981,6 +11006,118 @@
       return { label: 'No prazo', cls: 'ontrack' };
     }
 
+    // O cronograma e a fonte operacional da fase da iniciativa.
+    function schedulePhaseSummary(project) {
+      const phaseLabels = {
+        kickoff: 'Em kickoff',
+        discovery: 'Em discovery',
+        desenho: 'Em desenho de solução',
+        historias: 'Em escrita das histórias',
+        refino: 'Em refinamento técnico'
+      };
+      const orderedKeys = ['kickoff', 'discovery', 'desenho', 'historias', 'refino'];
+      const items = (project.schedule || []).filter(item => !item.jira && !item.deleted);
+
+      if (!items.length) {
+        return {
+          value: 'Cronograma pendente',
+          note: 'Cadastre os marcos para calcular a fase',
+          color: 'var(--amber)'
+        };
+      }
+
+      const pending = orderedKeys
+        .map(key => items.find(item => item.baseKey === key))
+        .find(item => item && !scheduleCompleted(item));
+      const fallback = items
+        .filter(item => !scheduleCompleted(item))
+        .sort((a, b) => String(a.start || a.end || '').localeCompare(String(b.start || b.end || '')))[0];
+      const current = pending || fallback;
+
+      if (!current) {
+        return {
+          value: 'Discovery concluído',
+          note: 'Todos os marcos do cronograma foram concluídos',
+          color: 'var(--green)'
+        };
+      }
+
+      const status = scheduleStatus(current);
+      if (status.label === 'Sem data') {
+        return {
+          value: 'Cronograma em preenchimento',
+          note: `Informe as datas de ${current.item || 'marco atual'} e valide OK ao concluir`,
+          color: 'var(--amber)'
+        };
+      }
+      const color = status.cls === 'late'
+        ? 'var(--red)'
+        : status.cls === 'attention'
+          ? 'var(--amber)'
+          : 'var(--blue)';
+      return {
+        value: phaseLabels[current.baseKey] || `Em ${current.item || 'andamento'}`,
+        note: `${current.item || 'Marco atual'} · ${status.label} · Avance ao validar OK`,
+        color
+      };
+    }
+
+    function schedulePendingItems(project) {
+      return (project.schedule || []).filter(item => {
+        if (item.jira || item.deleted || scheduleCompleted(item)) return false;
+        const status = scheduleStatus(item);
+        return status.cls === 'late'
+          || status.cls === 'attention'
+          || status.label === 'Sem data'
+          || status.label === 'Revisar datas';
+      });
+    }
+
+    // Status executivo calculado apenas pelos marcos e validacoes do Cronograma.
+    function automaticProjectStatus(project) {
+      const items = (project.schedule || []).filter(item => !item.jira && !item.deleted);
+      if (!items.length) return 'A iniciar';
+      const open = items.filter(item => !scheduleCompleted(item));
+      if (!open.length) return 'Concluído';
+
+      const statuses = open.map(scheduleStatus);
+      if (statuses.some(status => status.cls === 'late')) return 'Crítico';
+      if (statuses.some(status => status.cls === 'attention' || status.label === 'Revisar datas')) return 'Atenção';
+
+      const today = parseISODate(fmtDate(new Date()));
+      const hasStarted = open.some(item => {
+        const start = parseISODate(item.start);
+        return start && today && start <= today;
+      });
+      return hasStarted ? 'Saudável' : 'A iniciar';
+    }
+
+    function schedulePendingSummary(project) {
+      const items = schedulePendingItems(project);
+      const late = items.filter(item => scheduleStatus(item).cls === 'late').length;
+      const withoutDate = items.filter(item => scheduleStatus(item).label === 'Sem data').length;
+      const note = !items.length
+        ? 'Nenhum marco exige ação agora'
+        : `${late} atrasado(s) · ${withoutDate} sem data · Clique para abrir`;
+      return {
+        count: items.length,
+        note,
+        color: late ? 'var(--red)' : items.length ? 'var(--amber)' : 'var(--green)'
+      };
+    }
+
+    function openSchedulePendingItems() {
+      const project = getProject();
+      const pending = schedulePendingItems(project);
+      document.querySelector('.tab[data-tab="schedule"]')?.click();
+      document.getElementById('discoveryWorkspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        const rows = Array.from(document.querySelectorAll('.gantt-row[data-schedule-id]'));
+        rows.forEach(row => row.classList.toggle('pending-focus', pending.some(item => item.id === row.dataset.scheduleId)));
+        rows.find(row => row.classList.contains('pending-focus'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 0);
+    }
+
 
     function scheduleNeedsPdca(item) {
       const st = scheduleStatus(item);
@@ -11858,7 +11995,6 @@
       dedupeBaseSchedule(project);
       const missing = SCHEDULE_BASE_TEMPLATE.filter(tpl => !project.schedule.some(s => s.baseKey === tpl.baseKey) && !baseScheduleWasDeleted(project, tpl.baseKey));
       if (!missing.length) return project.schedule;
-      const dates = estimateBaseScheduleDates(project);
       missing.forEach(tpl => {
         // id determinístico (não uid()): toda sessão gera o MESMO id pro mesmo
         // baseKey, então o merge entre navegadores reconhece como o mesmo marco
@@ -11868,8 +12004,7 @@
           project.schedule.push({ id: baseId, baseKey: tpl.baseKey, item: tpl.item, jira: true, owner: '', start: '', end: '', done: false, observations: '' });
           return;
         }
-        const d = dates[tpl.baseKey] || {};
-        project.schedule.push({ id: baseId, baseKey: tpl.baseKey, item: tpl.item, owner: '', start: d.start || '', end: d.end || '', done: false, observations: '' });
+        project.schedule.push({ id: baseId, baseKey: tpl.baseKey, item: tpl.item, owner: '', start: '', end: '', done: false, observations: '' });
       });
       return project.schedule;
     }
@@ -11931,7 +12066,7 @@
               <button type="button" class="delete" onclick="confirmDeleteSchedule('${s.id}')">Excluir</button>
             </div>
           </div>` : '';
-        return `<div class="gantt-row" data-status="${st.cls}">
+        return `<div class="gantt-row" data-schedule-id="${escapeAttr(s.id)}" data-status="${st.cls}">
           <div class="gantt-title">
             <strong title="${escapeAttr(s.item)}">${escapeHtml(s.item || 'Marco sem nome')}</strong> ${baseBadge}
             <span>${formatBR(s.start)} até ${formatBR(s.end)}</span>
@@ -12470,7 +12605,7 @@
     }
 
     function statusColor(status) {
-      return { 'Crítico': 'var(--red)', 'Atenção': 'var(--amber)', 'Em Discovery': 'var(--blue)', 'No prazo': 'var(--green)', 'Concluído': 'var(--green)', 'A iniciar': 'var(--blue)' }[status] || 'var(--primary)';
+      return { 'Crítico': 'var(--red)', 'Atenção': 'var(--amber)', 'Em Discovery': 'var(--blue)', 'No prazo': 'var(--green)', 'Saudável': 'var(--green)', 'Concluído': 'var(--green)', 'A iniciar': 'var(--blue)' }[status] || 'var(--primary)';
     }
 
     function managementActionText(project, ctx) {
@@ -13657,7 +13792,7 @@ Recomendação PMO: ${d.recommendation}`;
       const avgProgress = totalProjects
         ? Math.round(allProjects.reduce((acc, project) => acc + calculateProgress(project), 0) / totalProjects)
         : 0;
-      const activeDiscoveries = allProjects.filter(p => ['Em Discovery', 'A iniciar', 'Atenção', 'Crítico', 'No prazo'].includes(p.status)).length;
+      const activeDiscoveries = allProjects.filter(project => automaticProjectStatus(project) !== 'Concluído').length;
       const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
       const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
 
@@ -13765,6 +13900,8 @@ Recomendação PMO: ${d.recommendation}`;
       data = enhanceSquadData(data);
       const progress = calculateProgress(project);
       const readiness = deliveryReadinessDetails(project);
+      const schedulePhase = schedulePhaseSummary(project);
+      const schedulePending = schedulePendingSummary(project);
       const pdca = readiness.pdca;
       const decisionNeeded = readiness.blocked > 0 || readiness.risks > 0 || pdca > 0 || readiness.readiness !== 'Alta';
       const next = nextMilestone(project);
@@ -13896,6 +14033,16 @@ Recomendação PMO: ${d.recommendation}`;
       return dates[0] || '';
     }
 
+    function nextScheduleDateForSquad(squadId) {
+      const dates = squadProjects(squadId)
+        .flatMap(project => (project.schedule || [])
+          .filter(item => !item.jira && !item.deleted && !scheduleCompleted(item))
+          .map(item => item.end || item.start))
+        .filter(Boolean)
+        .sort();
+      return dates[0] || '';
+    }
+
     function missingDataCount(project) {
       const keys = ['squad', 'frontLeader', 'po', 'techLead', 'dataArea', 'discoveryDate'];
       return keys.filter(k => !String(project?.[k] || '').trim() || String(project?.[k]).trim() === 'A validar').length;
@@ -13923,11 +14070,7 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function projectStatusBucket(project) {
-      const text = normalizeSearchText([project?.status, project?.criticality, project?.riskLevel].filter(Boolean).join(' '));
-      if (/(crit|bloque|atras|imped)/.test(text) || projectHasDuplicateChild(project)) return 'crit';
-      if (/(a iniciar|nao inici|planejad|backlog|a validar|sem status)/.test(text)) return 'start';
-      if (/(aten|alta|risco|em discovery|pendente)/.test(text)) return 'warn';
-      return 'good';
+      return ({ 'Crítico': 'crit', 'Atenção': 'warn', 'A iniciar': 'start', 'Concluído': 'good', 'Saudável': 'good' })[automaticProjectStatus(project)] || 'start';
     }
 
     function squadInitiativeStatusSummary(squad) {
@@ -13939,6 +14082,18 @@ Recomendação PMO: ${d.recommendation}`;
       return summary;
     }
 
+    function squadScheduleStatusSummary(squad) {
+      const summary = { crit: 0, warn: 0 };
+      squadProjects(squad.id).forEach(project => {
+        (project.schedule || []).forEach(item => {
+          if (item.jira || item.deleted || scheduleCompleted(item)) return;
+          if (scheduleItemMatchesStatus(item, 'Crítico')) summary.crit += 1;
+          else if (scheduleItemMatchesStatus(item, 'Atenção')) summary.warn += 1;
+        });
+      });
+      return summary;
+    }
+
     function squadStatusAccent(summary, fallback) {
       if (summary.crit > 0) return 'crit';
       if (summary.warn > 0) return 'warn';
@@ -13946,14 +14101,65 @@ Recomendação PMO: ${d.recommendation}`;
       return fallback?.cls || 'good';
     }
 
-    function squadInitiativeStatusHtml(summary) {
+    function scheduleItemMatchesStatus(item, status) {
+      const state = scheduleStatus(item);
+      if (status === 'Crítico') return state.cls === 'late';
+      return state.cls === 'attention' || state.label === 'Revisar datas';
+    }
+
+    function openProjectScheduleItem(projectId, scheduleId) {
+      if (!(data.projects || []).some(project => project.id === projectId)) {
+        toast('Iniciativa não encontrada');
+        return;
+      }
+      closeModal();
+      activeProjectId = projectId;
+      viewMode = 'project';
+      persistViewState();
+      saveData();
+      setTimeout(() => {
+        document.querySelector('.tab[data-tab="schedule"]')?.click();
+        const row = Array.from(document.querySelectorAll('.gantt-row[data-schedule-id]'))
+          .find(item => item.dataset.scheduleId === scheduleId);
+        row?.classList.add('pending-focus');
+        row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 60);
+    }
+
+    function openSquadScheduleStatusModal(squadId, status) {
+      const squad = squadById(squadId);
+      const rows = squadProjects(squadId)
+        .filter(project => automaticProjectStatus(project) === status)
+        .flatMap(project => (project.schedule || [])
+          .filter(item => !item.jira && !item.deleted && !scheduleCompleted(item) && scheduleItemMatchesStatus(item, status))
+          .map(item => ({ project, item })));
+      const body = rows.length
+        ? `<div class="ux-v6-alert-list">${rows.map(({ project, item }) => {
+            const state = scheduleStatus(item);
+            return `<button type="button" class="ux-v6-attention-item" onclick="openProjectScheduleItem('${escapeAttr(project.id)}','${escapeAttr(item.id)}')">
+              <div class="ux-v6-attention-main">
+                <strong>${escapeHtml(item.item || 'Marco sem nome')}</strong>
+                <span>${initiativeCodeHtml(project)} · ${escapeHtml(displayProjectTitle(project))}</span>
+              </div>
+              <span class="ux-v6-attention-meta">${escapeHtml(state.label)}</span>
+            </button>`;
+          }).join('')}</div>`
+        : `<div class="ux-v6-attention-empty">Nenhum marco com este status.</div>`;
+      openModal(
+        `${status} no cronograma`,
+        `${rows.length} marco(s) da Squad ${squad?.name || 'selecionada'} exigem ação. Clique para abrir o item.`,
+        body,
+        [`<button type="button" class="btn" onclick="closeModal()">Fechar</button>`]
+      );
+    }
+
+    function squadInitiativeStatusHtml(summary, squadId) {
       const items = [
         ['crit', 'Crítico'],
-        ['start', 'A iniciar'],
-        ['warn', 'Atenção'],
-        ['good', 'Saudável']
-      ];
-      return items.map(([key, label]) => `<span class="ux-v6-status-chip ${key}">${summary[key] || 0} ${label}</span>`).join('');
+        ['warn', 'Atenção']
+      ].filter(([key]) => summary[key] > 0);
+      if (!items.length) return '<span class="ux-v6-status-chip good">Sem alertas</span>';
+      return items.map(([key, label]) => `<button type="button" class="ux-v6-status-chip ${key}" onclick="event.stopPropagation();openSquadScheduleStatusModal('${escapeAttr(squadId)}','${label}')" title="Ver marcos ${label.toLowerCase()}">${summary[key]} ${label}</button>`).join('');
     }
 
     const SQ_HEALTH_ACCENT = { good: '46, 159, 95', warn: '242, 169, 0', crit: '200, 16, 46', start: '100, 116, 139' };
@@ -16712,6 +16918,9 @@ Recomendação PMO: ${d.recommendation}`;
       data = enhanceSquadData(data);
       const progress = calculateProgress(project);
       const readiness = deliveryReadinessDetails(project);
+      const schedulePhase = schedulePhaseSummary(project);
+      const schedulePending = schedulePendingSummary(project);
+      const automaticStatus = automaticProjectStatus(project);
       const pdca = readiness.pdca;
       const decisionNeeded = readiness.blocked > 0 || readiness.risks > 0 || pdca > 0 || readiness.readiness !== 'Alta';
       const next = nextMilestone(project);
@@ -16734,7 +16943,8 @@ Recomendação PMO: ${d.recommendation}`;
         <span>Tech Lead: <strong>${escapeHtml(peopleValue(project, 'techLead'))}</strong></span>
       `;
       const indicators = [
-        { label: 'Data Discovery', value: formatBR(project.discoveryDate), note: project.status || 'Status a validar', color: statusColor(project.status) },
+        { label: 'Fase do cronograma', value: schedulePhase.value, note: schedulePhase.note, color: schedulePhase.color },
+        { label: 'Data Discovery', value: formatBR(project.discoveryDate), note: 'Data planejada na planilha', color: 'var(--blue)' },
         { label: 'Término Discovery', value: formatBR(project.discoveryEndDate), note: discoveryEndDateNote(project), color: 'var(--blue)' },
         { label: 'Horas 2026', value: formatHours(project.hours2026), note: 'Consumo importado da planilha', color: 'var(--purple)' },
         { label: 'Filhas vinculadas', value: String(subInitiativeCount(project)), note: 'Não contam no dashboard principal', color: 'var(--amber)' }
@@ -16742,17 +16952,21 @@ Recomendação PMO: ${d.recommendation}`;
       const people = [
         { label: 'Dono da iniciativa', value: peopleValue(project, 'initiativeOwner'), note: project.focalPoint ? `Ponto focal: ${project.focalPoint}` : 'Ponto focal a validar', color: 'var(--green)' },
         { label: 'Área de Dados', value: peopleValue(project, 'dataArea'), note: project.aiRpa ? `IA/RPA: ${project.aiRpa}` : 'IA/RPA a validar', color: 'var(--blue)' },
-        { label: 'Processo', value: peopleValue(project, 'processName'), note: project.theme || project.business || 'Tema a validar', color: 'var(--primary)' },
-        { label: 'Prontidão', value: readiness.readiness, note: readiness.readiness === 'Alta' ? 'Pode evoluir com segurança' : 'Ainda exige maturação', color: readiness.readiness === 'Alta' ? 'var(--green)' : readiness.readiness === 'Média' ? 'var(--amber)' : 'var(--primary)' }
+        { label: 'Pendências', value: String(schedulePending.count), note: schedulePending.note, color: schedulePending.color, action: true },
+        { label: 'Status automático', value: automaticStatus, note: 'Calculado pelas datas e validações OK do Cronograma', color: statusColor(automaticStatus) }
       ];
       document.getElementById('executiveHeroIndicators').classList.add('pmo-people-grid');
-      document.getElementById('executiveHeroIndicators').innerHTML = indicators.concat(people).map(i => `
-        <div class="exec-indicator-card" style="--indicator-color:${i.color}">
+      document.getElementById('executiveHeroIndicators').innerHTML = indicators.concat(people).map(i => {
+        const tag = i.action ? 'button' : 'div';
+        const actionAttrs = i.action ? 'type="button" onclick="openSchedulePendingItems()" title="Abrir pendências no Cronograma"' : '';
+        return `
+        <${tag} ${actionAttrs} class="exec-indicator-card" style="--indicator-color:${i.color}">
           <div class="exec-indicator-label">${escapeHtml(i.label)}</div>
           <div class="exec-indicator-value" title="${escapeAttr(i.value)}">${escapeHtml(i.value)}</div>
           <div class="exec-indicator-note">${escapeHtml(i.note)}</div>
-        </div>
-      `).join('');
+        </${tag}>
+      `;
+      }).join('');
       const reading = document.querySelector('.executive-reading');
       if (reading && !document.getElementById('projectIntelligenceGrid')) {
         const grid = document.createElement('div');
@@ -16846,7 +17060,7 @@ Recomendação PMO: ${d.recommendation}`;
         const critical = projects.filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
         const hours = hoursForSquad(squad.id);
         const children = childCountForSquad(squad.id);
-        const nextDisc = nextDiscoveryForSquad(squad.id);
+        const nextScheduleDate = nextScheduleDateForSquad(squad.id);
         const missing = projects.reduce((acc, project) => acc + (missingDataCount(project) > 0 ? 1 : 0), 0);
         const statusCounts = projects.reduce((acc, project) => {
           const key = project.status || 'Sem status';
@@ -17098,7 +17312,7 @@ Recomendação PMO: ${d.recommendation}`;
       const totalProjects = allProjects.length;
       const totalChildren = allProjects.reduce((acc, project) => acc + subInitiativeCount(project), 0);
       const totalHours = allProjects.reduce((acc, project) => acc + Number(project.hours2026 || 0), 0);
-      const activeDiscoveries = allProjects.filter(p => ['Em Discovery', 'A iniciar', 'Atenção', 'Crítico', 'No prazo'].includes(p.status)).length;
+      const activeDiscoveries = allProjects.filter(project => automaticProjectStatus(project) !== 'Concluído').length;
       const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
       const openRaidItems = collectOpenRaidItems(allProjects);
       const openRaidSquadCount = groupOpenRaidItemsBySquad(openRaidItems).length;
@@ -17125,8 +17339,9 @@ Recomendação PMO: ${d.recommendation}`;
         const hours = hoursForSquad(squad.id);
         const nextDisc = nextDiscoveryForSquad(squad.id);
         const health = squadHealthInfo(squad);
-        const statusSummary = squadInitiativeStatusSummary(squad);
-        const accent = squadStatusAccent(statusSummary, health);
+        const initiativeSummary = squadInitiativeStatusSummary(squad);
+        const statusSummary = squadScheduleStatusSummary(squad);
+        const accent = statusSummary.crit ? 'crit' : statusSummary.warn ? 'warn' : squadStatusAccent(initiativeSummary, health);
         const displayName = squadDisplayName(squad);
         const active = squadDrawerOpen && selectedSquad?.id === squad.id ? 'active' : '';
         return `<button type="button" class="ux-v6-squad-card ${active}" style="--sq-accent:${SQ_HEALTH_ACCENT[accent]};--sq-accent-solid:${SQ_HEALTH_ACCENT_SOLID[accent]}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver iniciativas da Squad ${escapeAttr(displayName)}">
@@ -17140,12 +17355,12 @@ Recomendação PMO: ${d.recommendation}`;
             <span class="ux-v6-squad-count-pill">${count} ${count === 1 ? 'iniciativa' : 'iniciativas'}</span>
           </div>
           <div class="ux-v6-status-block">
-            <span class="ux-v6-status-label">Status das iniciativas</span>
-            <div class="ux-v6-status-chips">${squadInitiativeStatusHtml(statusSummary)}</div>
+            <span class="ux-v6-status-label">Status das fases</span>
+            <div class="ux-v6-status-chips">${squadInitiativeStatusHtml(statusSummary, squad.id)}</div>
           </div>
           <div class="ux-v6-next-row">
-            <span>Próximo discovery</span>
-            <strong>${escapeHtml(formatBR(nextDisc))}</strong>
+            <span>Próximo marco</span>
+            <strong>${escapeHtml(formatBR(nextScheduleDate))}</strong>
           </div>
           <div class="ux-v6-card-footer">
             <span class="ux-v6-card-fact"><small>Horas 2026</small><strong>${formatHours(hours)}</strong></span>
@@ -17249,10 +17464,11 @@ Recomendação PMO: ${d.recommendation}`;
         const squad = squadForProject(project);
         const dateLabel = formatBR(project.discoveryDate).slice(0, 5);
         const numLabel = initiativeNumber(project) || '—';
+        const automaticStatus = automaticProjectStatus(project);
         return `<div class="ux-v6-date-row">
           <span class="ux-v6-date">${escapeHtml(dateLabel)}</span>
           <span>
-            <span class="ux-v6-date-title-row"><strong>${escapeHtml(numLabel)}</strong> · ${escapeHtml(squad?.name || project.squad || 'A validar')}<span class="ux-v6-date-status-pill" style="color:${statusColor(project.status)};border-color:${statusColor(project.status)}">${escapeHtml(project.status || 'A iniciar')}</span></span>
+            <span class="ux-v6-date-title-row"><strong>${escapeHtml(numLabel)}</strong> · ${escapeHtml(squad?.name || project.squad || 'A validar')}<span class="ux-v6-date-status-pill" style="color:${statusColor(automaticStatus)};border-color:${statusColor(automaticStatus)}">${escapeHtml(automaticStatus)}</span></span>
             <span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span>
           </span>
         </div>`;
@@ -17267,7 +17483,8 @@ Recomendação PMO: ${d.recommendation}`;
 
       const topInitiativesHtml = topInitiativesByHours(5).map((project, index) => {
         const squad = squadForProject(project);
-        return `<tr><td>${index + 1}</td><td>${initiativeCodeHtml(project)}<br>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td><strong>${formatHours(project.hours2026)}</strong></td><td>${subInitiativeCount(project)}</td><td><span class="ux-v6-pill">${escapeHtml(project.status || 'Sem status')}</span></td></tr>`;
+        const automaticStatus = automaticProjectStatus(project);
+        return `<tr><td>${index + 1}</td><td>${initiativeCodeHtml(project)}<br>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td><strong>${formatHours(project.hours2026)}</strong></td><td>${subInitiativeCount(project)}</td><td><span class="ux-v6-pill">${escapeHtml(automaticStatus)}</span></td></tr>`;
       }).join('') || `<tr><td colspan="6" style="text-align:center;color:#667387;padding:20px">Nenhuma iniciativa cadastrada.</td></tr>`;
 
       const drawerSquad = selectedSquad || { id: '', name: 'Squad', business: '' };
