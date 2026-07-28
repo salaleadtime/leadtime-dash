@@ -1,0 +1,268 @@
+// Harness E2E: planilha falsa em memória, para exercitar commitWrite_,
+// snapshotIfNeeded_, audit_, restaurarBackup e os caminhos completos de doPost/doGet.
+const fs = require('fs');
+const vm = require('vm');
+const SP = require('path').join(__dirname, '..') + '/';
+
+function novoAmbiente() {
+  const SHEETS = new Map();   // nome -> array de linhas (cada linha = array de células)
+  const PROPS = {};
+
+  function makeSheet(name) {
+    const rows = [];
+    const sh = {
+      _name: name, _rows: rows, _hidden: false,
+      getLastRow: () => rows.length,
+      clearContents() { rows.length = 0; },
+      hideSheet() { sh._hidden = true; },
+      appendRow(vals) { rows.push(vals.slice()); },
+      deleteRows(start, howMany) { rows.splice(start - 1, howMany); },
+      getRange(r, c, nr, nc) {
+        return {
+          setNumberFormat() { return this; },
+          setValue(v) { while (rows.length < r) rows.push([]); rows[r - 1][c - 1] = v; },
+          setValues(vals) {
+            for (let i = 0; i < vals.length; i++) {
+              while (rows.length < r - 1 + i + 1) rows.push([]);
+              rows[r - 1 + i] = vals[i].slice();
+            }
+          },
+          getValues() {
+            const out = [];
+            for (let i = 0; i < (nr || 0); i++) {
+              const row = rows[r - 1 + i] || [];
+              out.push(row.slice(c - 1, c - 1 + (nc || 1)));
+            }
+            return out;
+          }
+        };
+      }
+    };
+    return sh;
+  }
+
+  const stub = `
+var PROPS_STORE = __PROPS__;
+var PropertiesService = { getScriptProperties: function(){ return {
+  getProperty: function(k){ return PROPS_STORE[k] === undefined ? null : PROPS_STORE[k]; },
+  setProperty: function(k,v){ PROPS_STORE[k]=String(v); },
+  deleteProperty: function(k){ delete PROPS_STORE[k]; }
+};}};
+var Logger = { log: function(m){ (__LOGS__).push(String(m)); } };
+var LockService = { getScriptLock: function(){ return {
+  tryLock: function(){ return true; }, waitLock: function(){}, releaseLock: function(){}
+};}};
+var SpreadsheetApp = { getActiveSpreadsheet: function(){ return {
+  getSheetByName: function(n){ return __GET__(n); },
+  insertSheet:    function(n){ return __INS__(n); }
+};}};
+var ContentService = {
+  MimeType: { JSON:'application/json', JAVASCRIPT:'text/javascript' },
+  createTextOutput: function(){ var o={_c:'',_m:''};
+    o.setContent=function(c){o._c=c;return o;}; o.setMimeType=function(m){o._m=m;return o;};
+    o.getContent=function(){return o._c;}; return o; }
+};
+`;
+  const LOGS = [];
+  const sandbox = {
+    console,
+    __PROPS__: PROPS,
+    __LOGS__: LOGS,
+    __GET__: (n) => SHEETS.get(n) || null,
+    __INS__: (n) => { const s = makeSheet(n); SHEETS.set(n, s); return s; }
+  };
+  const ctx = vm.createContext(sandbox);
+  vm.runInContext(stub + '\n' + fs.readFileSync(SP + 'apps-script-backlog.gs', 'utf8'), ctx);
+  return { ctx, SHEETS, PROPS, LOGS, makeSheet };
+}
+
+let pass = 0, fail = 0;
+function t(nome, real, esperado) {
+  const ok = JSON.stringify(real) === JSON.stringify(esperado);
+  console.log((ok ? '  ✅ ' : '  ❌ ') + nome + (ok ? '' : `\n       obtido=${JSON.stringify(real)}\n       esperado=${JSON.stringify(esperado)}`));
+  ok ? pass++ : fail++;
+}
+
+// helper: monta o evento de POST como o Apps Script entrega
+const post = (params) => ({ parameter: params });
+const parse = (out) => JSON.parse(out.getContent());
+const lerAba = (SHEETS, nome) => {
+  const s = SHEETS.get(nome);
+  if (!s) return null;
+  const json = s._rows.map(r => r[0] == null ? '' : String(r[0])).join('');
+  return json ? JSON.parse(json) : null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+console.log('\n═══ 1. Escrita normal ponta a ponta (doPost saveVpData) ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const base = { rows: Array.from({length:20}, (_,i)=>({id:i})), importedAt:'2026-07-01T00:00:00Z' };
+  let r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify(base) })));
+  t('primeira carga em base vazia grava', r.ok, true);
+  t('conteúdo gravado confere', lerAba(SHEETS,'_vp_geral').rows.length, 20);
+  t('aba _audit foi criada', !!SHEETS.get('_audit'), true);
+  t('auditoria registrou OK', SHEETS.get('_audit')._rows[1][6], 'OK');
+  t('nenhum snapshot na primeira carga (base estava vazia)', !!SHEETS.get('_vp_geral__bak1'), false);
+}
+
+console.log('\n═══ 2. O ataque: payload vazio contra base cheia ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const base = { rows: Array.from({length:20}, (_,i)=>({id:i})) };
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify(base) }));
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: '{"rows":[]}' })));
+  t('servidor RECUSA', r.ok, false);
+  t('mensagem é acionável', /zeraria 20 registro/.test(r.error), true);
+  t('DADOS INTACTOS após a recusa', lerAba(SHEETS,'_vp_geral').rows.length, 20);
+  const audit = SHEETS.get('_audit')._rows;
+  t('recusa registrada na auditoria', audit[audit.length-1][6], 'RECUSADO');
+}
+
+console.log('\n═══ 3. Snapshot antes de encolher, e restauração ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const mk = n => JSON.stringify({ rows: Array.from({length:n}, (_,i)=>({id:i})) });
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(20) }));
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(16) })));  // -20%, passa
+  t('redução dentro do limite (20→16) grava', r.ok, true);
+  t('snapshot foi criado', !!SHEETS.get('_vp_geral__bak1'), true);
+  t('snapshot guarda o estado ANTERIOR (20)', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 20);
+  t('dado atual é o novo (16)', lerAba(SHEETS,'_vp_geral').rows.length, 16);
+
+  const msg = ctx.restaurarBackup('vpGeral', 1);
+  t('restaurarBackup devolve confirmação', /Restaurado/.test(msg), true);
+  t('base voltou para 20', lerAba(SHEETS,'_vp_geral').rows.length, 20);
+  t('restauração ficou na auditoria', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'RESTAURADO');
+}
+
+console.log('\n═══ 4. Ring buffer de snapshots (3 slots, sem estourar) ═══');
+{
+  const { ctx, SHEETS, PROPS } = novoAmbiente();
+  const mk = n => JSON.stringify({ rows: Array.from({length:n}, (_,i)=>({id:i})) });
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(100) }));
+  [90, 85, 80, 75].forEach(n => ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(n) })));
+  const baks = ['1','2','3','4'].map(i => !!SHEETS.get('_vp_geral__bak'+i));
+  t('exatamente 3 slots existem (bak4 não é criado)', baks, [true,true,true,false]);
+  t('índice do ring buffer circulou', PROPS['bakIdx__vp_geral'], '1');
+}
+
+console.log('\n═══ 5. Modo observação: NÃO pode bloquear nada ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const base = { rows: Array.from({length:20}, (_,i)=>({id:i})) };
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify(base) }));
+  ctx.ativarModoObservacao();
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: '{"rows":[]}' })));
+  t('dry-run DEIXA PASSAR o que bloquearia', r.ok, true);
+  t('dado foi realmente zerado (comportamento igual ao de hoje)', lerAba(SHEETS,'_vp_geral').rows.length, 0);
+  t('auditoria marcou como BLOQUEARIA', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'BLOQUEARIA (dry-run)');
+  t('snapshot foi feito mesmo assim (rede de segurança)', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 20);
+}
+
+console.log('\n═══ 6. Merge das 3 chaves de mapa puro ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  ctx.doPost(post({ action:'saveVpData', key:'vpQuickNotes', payload: JSON.stringify({'s1|contact':'nota do Ana'}) }));
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpQuickNotes', payload: JSON.stringify({'s2|expresso':'nota do Bruno'}) })));
+  t('resposta indica merge', r.merged, true);
+  t('nota do primeiro usuário SOBREVIVEU',
+    lerAba(SHEETS,'_vp_quicknotes'), {'s1|contact':'nota do Ana','s2|expresso':'nota do Bruno'});
+}
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const op = {a:{x:1}, b:{x:2}, c:{x:3}, d:{x:4}, e:{x:5}, f:{x:6}};
+  ctx.doPost(post({ action:'saveVpData', key:'vpOpUpdates', payload: JSON.stringify(op) }));
+  delete op.f;   // cliente faz `delete operationalUpdates[k]`
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpOpUpdates', payload: JSON.stringify(op) })));
+  t('vpOpUpdates NÃO faz merge', r.merged, false);
+  t('exclusão do cliente é RESPEITADA (não ressuscita)',
+    Object.keys(lerAba(SHEETS,'_vp_opupdates')).sort(), ['a','b','c','d','e']);
+}
+
+console.log('\n═══ 7. Regressão v12: normalização RAID via doPost real ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const disc = { activeProjectId:'p1', squads:[], projects: Array.from({length:6},(_,i)=>({
+    id:'p'+i, raids:{ risks:[{text:'r', department:'infraestrutura'}], dependencies:[], issues:[], assumptions:[] }
+  }))};
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'discoveryPmo', payload: JSON.stringify(disc) })));
+  t('gravou', r.ok, true);
+  t('área normalizada para o valor canônico',
+    lerAba(SHEETS,'_discovery_pmo').projects[0].raids.risks[0].areaResponsavel, 'Infraestrutura');
+  t('discoveryPmo NÃO passou por merge', r.merged, false);
+}
+
+console.log('\n═══ 8. vpPlanningConfirmations (ALT-01) via doPost/doGet ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpPlanningConfirmations', payload: JSON.stringify({'2026-08-01|contact':{confirmedAt:'x'}}) })));
+  t('chave agora é aceita', r.ok, true);
+  const g = parse(ctx.doGet(post({ action:'getVpData', key:'vpPlanningConfirmations' })));
+  t('e volta na leitura', g.data, {'2026-08-01|contact':{confirmedAt:'x'}});
+}
+
+console.log('\n═══ 9. Kill switch ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify({rows:[{id:1}]}) }));
+  ctx.desativarEscritas();
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify({rows:[{id:1},{id:2}]}) })));
+  t('escrita recusada com kill switch', r.ok, false);
+  t('base não mudou', lerAba(SHEETS,'_vp_geral').rows.length, 1);
+  ctx.reativarEscritas();
+  t('religa e volta a gravar',
+    parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify({rows:[{id:1},{id:2}]}) }))).ok, true);
+  t('leitura NUNCA é afetada pelo kill switch',
+    parse(ctx.doGet(post({ action:'getVpData', key:'vpGeral' }))).ok, true);
+}
+
+console.log('\n═══ 10. saveStories e saveBacklog ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const st = n => JSON.stringify(Array.from({length:n},(_,i)=>({id:i})));
+  t('primeira carga de stories', parse(ctx.doPost(post({action:'saveStories', payload: st(50)}))).ok, true);
+  t('payload vazio é ignorado (comportamento v11 preservado)',
+    parse(ctx.doPost(post({action:'saveStories', payload:'[]'}))).skipped, 'payload vazio');
+  const r = parse(ctx.doPost(post({action:'saveStories', payload: st(10)})));   // -80%
+  t('corte de 80% em stories é RECUSADO', r.ok, false);
+  t('stories intactas', lerAba(SHEETS,'_stories_chunks').length, 50);
+
+  const snaps = n => JSON.stringify(Array.from({length:n},(_,i)=>({id:'s'+i, seq:i, stories:[], importedAt:'2026-07-0'+(i%9+1)+'T00:00:00Z'})));
+  t('saveBacklog grava', parse(ctx.doPost(post({action:'saveBacklog', payload: snaps(8)}))).ok, true);
+  t('saveBacklog mescla (8 + 3 novos = 11)',
+    parse(ctx.doPost(post({action:'saveBacklog', payload: snaps(3)}))).savedSnapshots, 8);
+}
+
+console.log('\n═══ 11. Janela de redução liberada pelo admin ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const mk = n => JSON.stringify({ rows: Array.from({length:n}, (_,i)=>({id:i})) });
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(50) }));
+  t('limpeza sem liberação → recusa',
+    parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(2) }))).ok, false);
+  ctx.liberarReducaoPor30Min();
+  const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(2) })));
+  t('com liberação → passa', r.ok, true);
+  t('e fica registrado como REDUCAO_LIBERADA',
+    SHEETS.get('_audit')._rows.slice(-1)[0][6], 'REDUCAO_LIBERADA');
+  t('snapshot preservou os 50 anteriores', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 50);
+}
+
+console.log('\n═══ 12. health e chaves inválidas ═══');
+{
+  const { ctx } = novoAmbiente();
+  const h = parse(ctx.doGet(post({ action:'health' })));
+  t('health responde ok', h.ok, true);
+  t('versão correta', h.version, '2026-07-28-guardas-e-snapshots-v13');
+  t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
+  t('chave inválida continua rejeitada',
+    parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
+  t('JSONP: callback malicioso é neutralizado',
+    /^\{/.test(ctx.doGet({parameter:{action:'health', callback:'alert(1)'}}).getContent()), true);
+  t('JSONP: callback válido é usado',
+    /^cb123\(/.test(ctx.doGet({parameter:{action:'health', callback:'cb123'}}).getContent()), true);
+}
+
+console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
+process.exit(fail ? 1 : 0);
