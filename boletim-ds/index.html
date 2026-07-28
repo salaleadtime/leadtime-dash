@@ -70,6 +70,8 @@
   #boletim-ds-root .bds-empty{padding:14px 6px;color:var(--bds-muted);font-size:11.5px;text-align:center}
   #boletim-ds-root .bds-footer{font-size:9.5px;color:var(--bds-muted);text-align:center;margin-top:6px}
   #boletim-ds-root .bds-footer a{color:var(--bds-muted)}
+  #boletim-ds-root .bds-lt-geral{font-size:11.5px;color:var(--bds-ink);margin:0 0 8px}
+  #boletim-ds-root .bds-lt-geral strong{color:var(--bds-primary);font-size:13px}
 </style>
 </head>
 <body>
@@ -116,6 +118,12 @@
       <p class="bds-hint">Itens em Homologação com o SLA de dias úteis já vencido.</p>
       <div id="bds-homologacao"><div class="bds-empty">Carregando…</div></div>
     </div>
+  </div>
+
+  <div class="bds-panel">
+    <h2>Lead Time e entregas do dia</h2>
+    <p class="bds-hint">Squads que concluíram entregas hoje e o Lead Time de cada uma.</p>
+    <div id="bds-entregas"><div class="bds-empty">Carregando…</div></div>
   </div>
 
   <p class="bds-footer" id="bds-footer">Consultar o sistema completo: <a href="../index.html">dashboard</a> · <a href="../discovery-pmo/index.html">Discovery PMO</a></p>
@@ -204,8 +212,20 @@
       }).join('') + '</tbody></table>';
   }
 
+  function renderEntregas(sel) {
+    var el = document.getElementById('bds-entregas');
+    if (!sel.itens.length) { el.innerHTML = '<div class="bds-empty">Nenhuma entrega concluída hoje.</div>'; return; }
+    el.innerHTML = '<p class="bds-lt-geral">Lead Time geral (média de hoje): <strong>' + sel.ltGeral + 'd</strong></p>' +
+      '<table><thead><tr><th>Squad</th><th>Entregas</th><th>Lead Time médio</th></tr></thead><tbody>' +
+      sel.squads.map(function (s) {
+        return '<tr><td><span class="bds-slopc">' + esc(s.squad) + '</span></td>' +
+          '<td>' + s.qtd + '</td>' +
+          '<td><span class="bds-pill green">' + s.ltMedio + 'd</span></td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
   function fail(msg) {
-    ['bds-criticos', 'bds-refinamento', 'bds-homologacao'].forEach(function (id) {
+    ['bds-criticos', 'bds-refinamento', 'bds-homologacao', 'bds-entregas'].forEach(function (id) {
       document.getElementById(id).innerHTML = '<div class="bds-empty">Dados indisponíveis no momento (' + esc(msg) + ').</div>';
     });
     root.setAttribute('data-bds-ready', 'error');
@@ -240,18 +260,20 @@
         var selCrit = R.selectCriticos(epicos, focalByEpic);
         var selRef = R.selectRefinamento(projects, today);
         var selHom = R.selectHomologacaoAtrasada(stories, today);
+        var selEntregas = R.selectEntregasHoje(epicos, today);
 
         renderCriticos(selCrit);
         renderRefinamento(selRef);
         renderHomologacao(selHom);
+        renderEntregas(selEntregas);
 
         root.setAttribute('data-bds-ready', 'true');
         root.setAttribute('data-bds-inconsistencias',
-          String(selCrit.inconsistencias.length + selRef.inconsistencias.length + selHom.inconsistencias.length));
+          String(selCrit.inconsistencias.length + selRef.inconsistencias.length + selHom.inconsistencias.length + selEntregas.inconsistencias.length));
 
-        if (window.console && (selCrit.inconsistencias.length || selRef.inconsistencias.length || selHom.inconsistencias.length)) {
+        if (window.console && (selCrit.inconsistencias.length || selRef.inconsistencias.length || selHom.inconsistencias.length || selEntregas.inconsistencias.length)) {
           console.warn('[Boletim DS] Inconsistências detectadas (registradas, não corrigidas automaticamente):',
-            selCrit.inconsistencias.concat(selRef.inconsistencias, selHom.inconsistencias));
+            selCrit.inconsistencias.concat(selRef.inconsistencias, selHom.inconsistencias, selEntregas.inconsistencias));
         }
       });
     });

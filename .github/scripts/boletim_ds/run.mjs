@@ -76,7 +76,7 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function renderStandaloneHtml({ selCrit, selRef, selHom }, generatedAt) {
+function renderStandaloneHtml({ selCrit, selRef, selHom, selEntregas }, generatedAt) {
   const dateStr = generatedAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   function rowsCriticos() {
@@ -106,6 +106,15 @@ function renderStandaloneHtml({ selCrit, selRef, selHom }, generatedAt) {
         `<td>${esc(r.nome)}</td>` +
         `<td><span class="bds-pill red">${r.diasAtraso} ${r.diasAtraso === 1 ? 'dia útil' : 'dias úteis'}</span></td>` +
         `<td${r.pontoFocalAusente ? ' class="bds-focal-missing"' : ''}>${esc(r.pontoFocal)}</td></tr>`).join('') + '</tbody></table>';
+  }
+
+  function rowsEntregas() {
+    if (!selEntregas.itens.length) return '<div class="bds-empty">Nenhuma entrega concluída hoje.</div>';
+    return `<p class="bds-lt-geral">Lead Time geral (média de hoje): <strong>${selEntregas.ltGeral}d</strong></p>` +
+      '<table><thead><tr><th>Squad</th><th>Entregas</th><th>Lead Time médio</th></tr></thead><tbody>' +
+      selEntregas.squads.map((s) => `<tr><td><span class="bds-slopc">${esc(s.squad)}</span></td>` +
+        `<td>${s.qtd}</td>` +
+        `<td><span class="bds-pill green">${s.ltMedio}d</span></td></tr>`).join('') + '</tbody></table>';
   }
 
   // Reaproveita literalmente o CSS escopado de boletim-ds/index.html (mesma
@@ -147,11 +156,27 @@ function renderStandaloneHtml({ selCrit, selRef, selHom }, generatedAt) {
   #boletim-ds-root .bds-pill.green{background:var(--bds-green-soft);color:var(--bds-green-ink)}
   #boletim-ds-root .bds-focal-missing{color:var(--bds-amber-ink);font-weight:700}
   #boletim-ds-root .bds-empty{padding:14px 6px;color:var(--bds-muted);font-size:11.5px;text-align:center}
+  #boletim-ds-root .bds-lt-geral{font-size:11.5px;color:var(--bds-ink);margin:0 0 8px}
+  #boletim-ds-root .bds-lt-geral strong{color:var(--bds-primary);font-size:13px}
 </style>
 </head><body>
 <div id="boletim-ds-root">
   <div class="bds-header">
-    <div class="bds-brand"><div class="bds-robot" aria-hidden="true">🤖</div>
+    <div class="bds-brand"><div class="bds-robot" aria-hidden="true">
+        <svg viewBox="0 0 100 100" width="100%" height="100%" role="img" focusable="false">
+          <line x1="50" y1="6" x2="50" y2="20" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="50" cy="6" r="6" fill="#fff"/>
+          <rect x="16" y="20" width="68" height="58" rx="16" fill="#d7dbe2"/>
+          <rect x="24" y="30" width="52" height="38" rx="10" fill="#eef0f4"/>
+          <circle cx="40" cy="49" r="8" fill="#20242c"/>
+          <circle cx="60" cy="49" r="8" fill="#20242c"/>
+          <circle cx="37.5" cy="46.5" r="2.4" fill="#fff"/>
+          <circle cx="57.5" cy="46.5" r="2.4" fill="#fff"/>
+          <rect x="38" y="60" width="24" height="6" rx="3" fill="#bf1830"/>
+          <rect x="6" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
+          <rect x="86" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
+        </svg>
+      </div>
       <div><p class="bds-title">Boletim Diário DS</p><p class="bds-subtitle">Solução criada por DS</p></div>
     </div>
     <div class="bds-date">${dateStr}<small>Gerado automaticamente</small></div>
@@ -170,94 +195,10 @@ function renderStandaloneHtml({ selCrit, selRef, selHom }, generatedAt) {
       ${rowsHomologacao()}
     </div>
   </div>
-</div>
-</body></html>`;
-}
-
-// Cartão avulso para compartilhar no Teams — NÃO é um dos três blocos do
-// Boletim oficial (que continua restrito a Críticos/Refinamento/Homologação,
-// com robô pequeno e discreto). Este cartão é gerado à parte, todo dia com
-// dado novo (squads que entregaram hoje + Lead Time de cada entrega), e não
-// substitui nem é embutido no e-mail do Boletim.
-function renderTeamsCardHtml(selEntregas, generatedAt) {
-  const dateStr = generatedAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-  const temEntregas = !!selEntregas.itens.length;
-
-  const linhasSquad = !temEntregas
-    ? '<div class="ds-card-empty">Nenhuma entrega concluída hoje.</div>'
-    : selEntregas.squads.map((s) => `<div class="ds-card-row">
-        <span class="ds-card-squad">${esc(s.squad)}</span>
-        <span class="ds-card-item">${s.qtd} entrega${s.qtd === 1 ? '' : 's'}</span>
-        <span class="ds-card-lt">${s.ltMedio}d</span>
-      </div>`).join('');
-
-  const linhasItens = !temEntregas
-    ? ''
-    : selEntregas.itens.map((r) => `<div class="ds-card-row">
-        <span class="ds-card-squad">${esc(r.squad)}</span>
-        <span class="ds-card-item">${esc(r.nome)}</span>
-        <span class="ds-card-lt">${r.lt}d</span>
-      </div>`).join('');
-
-  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Criado pelo DS</title>
-<style>
-  #ds-card-root, #ds-card-root *{box-sizing:border-box}
-  #ds-card-root{
-    width:640px;background:#20242c;color:#fff;
-    font:14px/1.5 Inter,"Segoe UI",Arial,sans-serif;
-    display:flex;flex-direction:column;align-items:center;padding:48px 40px;
-  }
-  #ds-card-root .ds-card-robot{
-    width:120px;height:120px;border-radius:28px;background:#bf1830;
-    display:flex;align-items:center;justify-content:center;margin-bottom:20px;padding:14px;
-  }
-  #ds-card-root .ds-card-title{font-size:22px;font-weight:800;margin:0}
-  #ds-card-root .ds-card-subtitle{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c8ccd4;margin:6px 0 2px}
-  #ds-card-root .ds-card-date{font-size:12px;color:#9aa0ac;margin-bottom:28px}
-  #ds-card-root .ds-card-section{font-size:13px;font-weight:800;color:#fff;align-self:flex-start;margin-bottom:10px}
-  #ds-card-root .ds-card-list{width:100%;background:#2a2f38;border-radius:12px;padding:6px 18px}
-  #ds-card-root .ds-card-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #383e49;font-size:12.5px}
-  #ds-card-root .ds-card-row:last-child{border-bottom:none}
-  #ds-card-root .ds-card-squad{font-weight:800;color:#f4b740;min-width:90px}
-  #ds-card-root .ds-card-item{flex:1;color:#e7e9ee}
-  #ds-card-root .ds-card-lt{font-weight:800;color:#1f9d75;background:#12281f;padding:2px 8px;border-radius:999px;white-space:nowrap}
-  #ds-card-root .ds-card-empty{color:#9aa0ac;font-size:12.5px;padding:18px 0}
-  #ds-card-root .ds-card-stat{
-    width:100%;background:#2a2f38;border-radius:12px;padding:16px 18px;margin-bottom:22px;
-    display:flex;align-items:baseline;justify-content:space-between;
-  }
-  #ds-card-root .ds-card-stat-label{font-size:12.5px;font-weight:700;color:#c8ccd4}
-  #ds-card-root .ds-card-stat-value{font-size:26px;font-weight:800;color:#f4b740}
-  #ds-card-root .ds-card-list + .ds-card-section{margin-top:22px}
-</style>
-</head><body>
-<div id="ds-card-root">
-  <div class="ds-card-robot" aria-hidden="true">
-    <svg viewBox="0 0 100 100" width="100%" height="100%" role="img" focusable="false">
-      <line x1="50" y1="6" x2="50" y2="20" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-      <circle cx="50" cy="6" r="6" fill="#fff"/>
-      <rect x="16" y="20" width="68" height="58" rx="16" fill="#d7dbe2"/>
-      <rect x="24" y="30" width="52" height="38" rx="10" fill="#eef0f4"/>
-      <circle cx="40" cy="49" r="8" fill="#20242c"/>
-      <circle cx="60" cy="49" r="8" fill="#20242c"/>
-      <circle cx="37.5" cy="46.5" r="2.4" fill="#fff"/>
-      <circle cx="57.5" cy="46.5" r="2.4" fill="#fff"/>
-      <rect x="38" y="60" width="24" height="6" rx="3" fill="#bf1830"/>
-      <rect x="6" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
-      <rect x="86" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
-    </svg>
+  <div class="bds-panel"><h2>Lead Time e entregas do dia</h2>
+    <p class="bds-hint">Squads que concluíram entregas hoje e o Lead Time de cada uma.</p>
+    ${rowsEntregas()}
   </div>
-  <p class="ds-card-title">Criado pelo DS</p>
-  <p class="ds-card-subtitle">Boletim Diário DS</p>
-  <p class="ds-card-date">${dateStr}</p>
-  <div class="ds-card-stat">
-    <span class="ds-card-stat-label">Lead Time geral (média de hoje)</span>
-    <span class="ds-card-stat-value">${temEntregas ? `${selEntregas.ltGeral}d` : '—'}</span>
-  </div>
-  <p class="ds-card-section">Lead Time por squad — entregas de hoje</p>
-  <div class="ds-card-list">${linhasSquad}</div>
-  ${temEntregas ? `<p class="ds-card-section">Entregas de hoje</p><div class="ds-card-list">${linhasItens}</div>` : ''}
 </div>
 </body></html>`;
 }
@@ -386,26 +327,17 @@ async function main() {
     criticos: selCrit.itens.length, refinamento: selRef.itens.length, homologacaoAtrasada: selHom.itens.length
   });
 
-  const html = renderStandaloneHtml({ selCrit, selRef, selHom }, generatedAt);
+  const selEntregas = rules.selectEntregasHoje(source.epicos, generatedAt);
+  log('selecao', 'entregas do dia selecionadas', { entregas: selEntregas.itens.length, ltGeral: selEntregas.ltGeral });
+
+  const html = renderStandaloneHtml({ selCrit, selRef, selHom, selEntregas }, generatedAt);
 
   let pngPath = null;
   try {
     pngPath = await renderPng(html, { htmlName: 'boletim.html', pngName: 'boletim.png', rootSelector: '#boletim-ds-root' });
-    log('imagem', 'PNG gerado com sucesso', { pngPath });
+    log('imagem', 'PNG gerado com sucesso — página única, pronta para copiar/colar em e-mail ou Teams', { pngPath });
   } catch (err) {
     log('imagem', 'falha ao gerar a imagem — mantendo boletim em HTML', { erro: String(err && err.message || err) });
-  }
-
-  const selEntregas = rules.selectEntregasHoje(source.epicos, generatedAt);
-  try {
-    const cardHtml = renderTeamsCardHtml(selEntregas, generatedAt);
-    const cardPath = await renderPng(cardHtml, {
-      htmlName: 'ds-card.html', pngName: 'ds-card-teams.png', rootSelector: '#ds-card-root',
-      viewport: { width: 640, height: 640 }
-    });
-    log('cartao-teams', 'cartão avulso (robô + entregas do dia) gerado com sucesso', { cardPath, entregas: selEntregas.itens.length });
-  } catch (err) {
-    log('cartao-teams', 'falha ao gerar o cartão avulso — não afeta o boletim oficial', { erro: String(err && err.message || err) });
   }
 
   const systemLink = process.env.BOLETIM_DS_SYSTEM_LINK || '';

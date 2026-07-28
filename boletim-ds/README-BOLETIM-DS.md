@@ -22,18 +22,19 @@ Time, SLA de Homologação, classificação de refinamento).
   (Nodemailer), com deduplicação por dia.
 - `.github/workflows/boletim-diario-ds.yml` — workflow do GitHub Actions.
 
-## Cartão avulso para o Teams ("Criado pelo DS")
+## Página única para copiar/colar (e-mail e Teams)
 
-Além do Boletim oficial (3 blocos, robô pequeno), o pipeline gera todo dia
-um cartão à parte — `ds-card-teams.png` — com o robô maior, o texto "Criado
-pelo DS" e a lista de squads que entregaram no dia, com o Lead Time de cada
-entrega. É gerado com dado novo a cada execução (nunca estático) e não
-altera o Boletim oficial nem os três blocos dele — a especificação original
-não permite robô grande nem um 4º bloco no Boletim, então esse conteúdo
-extra vive num artefato separado, pensado para copiar/colar no Teams.
-
-Se não houver nenhuma entrega concluída no dia, o cartão mostra "Nenhuma
-entrega concluída hoje" — nunca inventa dado.
+O Boletim é **uma única imagem** (`boletim.png`), pensada para ser copiada e
+colada tanto no corpo do e-mail quanto no grupo do Teams — não existe mais
+um cartão separado. Além dos três blocos originais (Pontos críticos,
+Discoveries em refinamento, Homologação fora do prazo), a página traz um
+quarto bloco, "Lead Time e entregas do dia": o Lead Time geral (média das
+entregas concluídas hoje) e o Lead Time médio por squad que entregou. Esse
+bloco é gerado com dado novo a cada execução — nunca estático — e some
+sozinho para "Nenhuma entrega concluída hoje" quando não há entrega no dia
+(nunca inventa dado). O mesmo bloco aparece tanto na imagem gerada pelo
+pipeline quanto na página `boletim-ds/index.html`, que busca os dados ao
+vivo no navegador.
 
 ## Horário: aprovado — 09:00 todos os dias
 
