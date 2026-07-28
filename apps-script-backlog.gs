@@ -838,3 +838,14 @@ function jsonOut_(obj, callback) {
   }
   return out;
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// DIAGNÓSTICO TEMPORÁRIO — remover depois de identificar a planilha vinculada.
+// Não é chamada por doGet/doPost nem por nenhuma outra função: só existe para
+// ser rodada manualmente pelo seletor de função do editor.
+// ════════════════════════════════════════════════════════════════════════
+function ondeFicaAPlanilha_() {
+  var url = SpreadsheetApp.getActiveSpreadsheet().getUrl();
+  Logger.log(url);
+  return url;
+}
