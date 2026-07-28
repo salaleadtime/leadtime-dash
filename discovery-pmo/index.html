@@ -6394,53 +6394,56 @@
     }
 
     .ux-v6-status-block {
-      margin: 6px 0 12px;
-      padding: 10px 0 0;
+      margin: 5px 0 10px;
+      padding: 8px 0 0;
       border-top: 1px solid rgba(226, 232, 240, .78);
     }
 
     .ux-v6-status-label {
       display: block;
-      color: #637083;
-      font-size: 10.4px;
-      font-weight: 680;
-      margin-bottom: 7px;
+      color: #7a8799;
+      font-family: inherit;
+      font-size: 9px;
+      font-weight: 650;
+      letter-spacing: .015em;
+      margin-bottom: 5px;
     }
 
     .ux-v6-status-chips {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 5px;
     }
 
     .ux-v6-status-chip {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      min-height: 22px;
-      padding: 3px 7px;
+      gap: 4px;
+      min-height: 19px;
+      padding: 2px 6px;
       border-radius: 999px;
       border: 1px solid rgba(226, 232, 240, .9);
       background: #fff;
       color: #475569;
-      font-size: 10.2px;
-      font-weight: 700;
+      font-family: inherit;
+      font-size: 9px;
+      font-weight: 650;
       white-space: nowrap;
     }
 
     .ux-v6-status-chip::before {
       content: "";
-      width: 6px;
-      height: 6px;
+      width: 4px;
+      height: 4px;
       border-radius: 50%;
       background: currentColor;
       opacity: .88;
     }
 
-    .ux-v6-status-chip.crit { color: #c8102e; background: #fff5f7; border-color: #ffd2dc; }
+    .ux-v6-status-chip.crit { color: #bd2944; background: #fff8fa; border-color: #ffdce4; }
     .ux-v6-status-chip.start { color: #475569; background: #f8fafc; border-color: #dbe3ee; }
-    .ux-v6-status-chip.warn { color: #b77900; background: #fff8e1; border-color: #ffe3a3; }
+    .ux-v6-status-chip.warn { color: #a96f00; background: #fffaeb; border-color: #ffebbd; }
     .ux-v6-status-chip.good { color: #1f8f55; background: #effaf4; border-color: #ccefdc; }
     button.ux-v6-status-chip { font: inherit; cursor: pointer; }
     button.ux-v6-status-chip:hover { filter: brightness(.97); transform: translateY(-1px); }
@@ -6457,8 +6460,26 @@
       font-size: 10.6px;
     }
 
-    .ux-v6-next-row strong {
+    .ux-v6-next-context {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .ux-v6-next-context strong {
+      overflow: hidden;
+      color: #344054;
+      font-family: inherit;
+      font-size: 10.8px;
+      font-weight: 720;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ux-v6-next-date {
+      flex: 0 0 auto;
       color: var(--sq-accent-solid, #24324a);
+      font-family: inherit;
       font-size: 12px;
       font-weight: 760;
       white-space: nowrap;
@@ -14049,6 +14070,16 @@ Recomendação PMO: ${d.recommendation}`;
       return dates[0] || '';
     }
 
+    function nextScheduleMilestoneForSquad(squadId) {
+      const items = squadProjects(squadId)
+        .flatMap(project => (project.schedule || [])
+          .filter(item => !item.jira && !item.deleted && !scheduleCompleted(item))
+          .map(item => ({ project, item, date: item.end || item.start })))
+        .filter(entry => entry.date)
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      return items[0] || null;
+    }
+
     function missingDataCount(project) {
       const keys = ['squad', 'frontLeader', 'po', 'techLead', 'dataArea', 'discoveryDate'];
       return keys.filter(k => !String(project?.[k] || '').trim() || String(project?.[k]).trim() === 'A validar').length;
@@ -17343,7 +17374,7 @@ Recomendação PMO: ${d.recommendation}`;
         const projects = squadProjects(squad.id);
         const count = projects.length;
         const hours = hoursForSquad(squad.id);
-        const nextScheduleDate = nextScheduleDateForSquad(squad.id);
+        const nextSchedule = nextScheduleMilestoneForSquad(squad.id);
         const health = squadHealthInfo(squad);
         const initiativeSummary = squadInitiativeStatusSummary(squad);
         const statusSummary = squadScheduleStatusSummary(squad);
@@ -17365,8 +17396,11 @@ Recomendação PMO: ${d.recommendation}`;
             <div class="ux-v6-status-chips">${squadInitiativeStatusHtml(statusSummary, squad.id)}</div>
           </div>
           <div class="ux-v6-next-row">
-            <span>Próximo marco</span>
-            <strong>${escapeHtml(formatBR(nextScheduleDate))}</strong>
+            <div class="ux-v6-next-context">
+              <span>Próximo prazo</span>
+              <strong title="${escapeAttr(nextSchedule ? `${nextSchedule.item.item || 'Marco sem nome'} · IN ${initiativeNumber(nextSchedule.project) || 'sem número'}` : 'Sem marco com prazo')}">${escapeHtml(nextSchedule ? `${nextSchedule.item.item || 'Marco sem nome'} · IN ${initiativeNumber(nextSchedule.project) || 'sem número'}` : 'Sem marco com prazo')}</strong>
+            </div>
+            <span class="ux-v6-next-date">${escapeHtml(formatBR(nextSchedule?.date))}</span>
           </div>
           <div class="ux-v6-card-footer">
             <span class="ux-v6-card-fact"><small>Horas 2026</small><strong>${formatHours(hours)}</strong></span>
