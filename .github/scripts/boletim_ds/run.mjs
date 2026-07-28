@@ -174,10 +174,62 @@ function renderStandaloneHtml({ selCrit, selRef, selHom }, generatedAt) {
 </body></html>`;
 }
 
-async function renderPng(html) {
+// Cartão avulso para compartilhar no Teams — NÃO é um dos três blocos do
+// Boletim oficial (que continua restrito a Críticos/Refinamento/Homologação,
+// com robô pequeno e discreto). Este cartão é gerado à parte, todo dia com
+// dado novo (squads que entregaram hoje + Lead Time de cada entrega), e não
+// substitui nem é embutido no e-mail do Boletim.
+function renderTeamsCardHtml(selEntregas, generatedAt) {
+  const dateStr = generatedAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const linhas = !selEntregas.itens.length
+    ? '<div class="ds-card-empty">Nenhuma entrega concluída hoje.</div>'
+    : selEntregas.itens.map((r) => `<div class="ds-card-row">
+        <span class="ds-card-squad">${esc(r.squad)}</span>
+        <span class="ds-card-item">${esc(r.nome)}</span>
+        <span class="ds-card-lt">${r.lt}d</span>
+      </div>`).join('');
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Criado pelo DS</title>
+<style>
+  #ds-card-root, #ds-card-root *{box-sizing:border-box}
+  #ds-card-root{
+    width:640px;background:#20242c;color:#fff;
+    font:14px/1.5 Inter,"Segoe UI",Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding:48px 40px;
+  }
+  #ds-card-root .ds-card-robot{
+    width:120px;height:120px;border-radius:28px;background:#bf1830;
+    display:flex;align-items:center;justify-content:center;font-size:64px;margin-bottom:20px;
+  }
+  #ds-card-root .ds-card-title{font-size:22px;font-weight:800;margin:0}
+  #ds-card-root .ds-card-subtitle{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c8ccd4;margin:6px 0 2px}
+  #ds-card-root .ds-card-date{font-size:12px;color:#9aa0ac;margin-bottom:28px}
+  #ds-card-root .ds-card-section{font-size:13px;font-weight:800;color:#fff;align-self:flex-start;margin-bottom:10px}
+  #ds-card-root .ds-card-list{width:100%;background:#2a2f38;border-radius:12px;padding:6px 18px}
+  #ds-card-root .ds-card-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #383e49;font-size:12.5px}
+  #ds-card-root .ds-card-row:last-child{border-bottom:none}
+  #ds-card-root .ds-card-squad{font-weight:800;color:#f4b740;min-width:90px}
+  #ds-card-root .ds-card-item{flex:1;color:#e7e9ee}
+  #ds-card-root .ds-card-lt{font-weight:800;color:#1f9d75;background:#12281f;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  #ds-card-root .ds-card-empty{color:#9aa0ac;font-size:12.5px;padding:18px 0}
+</style>
+</head><body>
+<div id="ds-card-root">
+  <div class="ds-card-robot" aria-hidden="true">🤖</div>
+  <p class="ds-card-title">Criado pelo DS</p>
+  <p class="ds-card-subtitle">Boletim Diário DS</p>
+  <p class="ds-card-date">${dateStr}</p>
+  <p class="ds-card-section">Squad · Lead Time — entregas de hoje</p>
+  <div class="ds-card-list">${linhas}</div>
+</div>
+</body></html>`;
+}
+
+async function renderPng(html, { htmlName, pngName, rootSelector, viewport }) {
   const { chromium } = await import('playwright');
   await fs.mkdir(OUT_DIR, { recursive: true });
-  const htmlPath = path.join(OUT_DIR, 'boletim.html');
+  const htmlPath = path.join(OUT_DIR, htmlName);
   await fs.writeFile(htmlPath, html, 'utf8');
 
   const launchOptions = process.env.BOLETIM_DS_CHROMIUM_PATH
@@ -185,10 +237,10 @@ async function renderPng(html) {
     : {};
   const browser = await chromium.launch(launchOptions);
   try {
-    const page = await browser.newPage({ viewport: { width: 1040, height: 800 } });
+    const page = await browser.newPage({ viewport: viewport || { width: 1040, height: 800 } });
     await page.goto(`file://${htmlPath}`);
-    const el = await page.$('#boletim-ds-root');
-    const pngPath = path.join(OUT_DIR, 'boletim.png');
+    const el = await page.$(rootSelector);
+    const pngPath = path.join(OUT_DIR, pngName);
     await el.screenshot({ path: pngPath });
     return pngPath;
   } finally {
@@ -302,10 +354,22 @@ async function main() {
 
   let pngPath = null;
   try {
-    pngPath = await renderPng(html);
+    pngPath = await renderPng(html, { htmlName: 'boletim.html', pngName: 'boletim.png', rootSelector: '#boletim-ds-root' });
     log('imagem', 'PNG gerado com sucesso', { pngPath });
   } catch (err) {
     log('imagem', 'falha ao gerar a imagem — mantendo boletim em HTML', { erro: String(err && err.message || err) });
+  }
+
+  const selEntregas = rules.selectEntregasHoje(source.epicos, generatedAt);
+  try {
+    const cardHtml = renderTeamsCardHtml(selEntregas, generatedAt);
+    const cardPath = await renderPng(cardHtml, {
+      htmlName: 'ds-card.html', pngName: 'ds-card-teams.png', rootSelector: '#ds-card-root',
+      viewport: { width: 640, height: 640 }
+    });
+    log('cartao-teams', 'cartão avulso (robô + entregas do dia) gerado com sucesso', { cardPath, entregas: selEntregas.itens.length });
+  } catch (err) {
+    log('cartao-teams', 'falha ao gerar o cartão avulso — não afeta o boletim oficial', { erro: String(err && err.message || err) });
   }
 
   const systemLink = process.env.BOLETIM_DS_SYSTEM_LINK || '';

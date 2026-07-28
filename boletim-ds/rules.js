@@ -257,6 +257,44 @@
     return { itens: out, inconsistencias: inconsistencias };
   }
 
+  /**
+   * Entregas do dia — não é um dos três blocos do Boletim (que continua
+   * restrito a Críticos/Refinamento/Homologação). Usado só pelo cartão
+   * avulso de compartilhamento (Teams): épicos cujo status já é concluído
+   * e cuja data de fim (already existing "fim" field) é hoje. Reaplica o
+   * mesmo campo "lt" (Lead Time) já calculado pelo dashboard — não recalcula.
+   */
+  function selectEntregasHoje(epicos, today) {
+    today = today || new Date();
+    var hojeKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    var seen = {};
+    var out = [];
+    var inconsistencias = [];
+
+    (epicos || []).forEach(function (r) {
+      if (!r) return;
+      if (!isConcludedStatus(r.status)) return;
+      var fim = parseLocalDate(r.fim);
+      if (!fim) return;
+      var fimKey = fim.getFullYear() + '-' + String(fim.getMonth() + 1).padStart(2, '0') + '-' + String(fim.getDate()).padStart(2, '0');
+      if (fimKey !== hojeKey) return;
+
+      var slopc = String(r.id || '').trim();
+      if (!slopc) { inconsistencias.push({ tipo: 'slopc_vazio', item: r }); return; }
+      if (seen[slopc]) { inconsistencias.push({ tipo: 'slopc_duplicado', item: r }); return; }
+      seen[slopc] = true;
+
+      out.push({
+        slopc: slopc,
+        nome: String(r.resumo || '').trim() || 'Nome completo não informado na carga',
+        squad: r.squad || 'Squad não informada',
+        lt: Number(r.lt) || 0
+      });
+    });
+    out.sort(function (a, b) { return a.squad.localeCompare(b.squad, 'pt-BR'); });
+    return { itens: out, inconsistencias: inconsistencias };
+  }
+
   return {
     META_LEAD_TIME: META_LEAD_TIME,
     SLA_HOMOLOG_DAYS: SLA_HOMOLOG_DAYS,
@@ -269,6 +307,7 @@
     resolveFocalPoint: resolveFocalPoint,
     selectCriticos: selectCriticos,
     selectRefinamento: selectRefinamento,
-    selectHomologacaoAtrasada: selectHomologacaoAtrasada
+    selectHomologacaoAtrasada: selectHomologacaoAtrasada,
+    selectEntregasHoje: selectEntregasHoje
   };
 });

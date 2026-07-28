@@ -22,6 +22,19 @@ Time, SLA de Homologação, classificação de refinamento).
   (Nodemailer), com deduplicação por dia.
 - `.github/workflows/boletim-diario-ds.yml` — workflow do GitHub Actions.
 
+## Cartão avulso para o Teams ("Criado pelo DS")
+
+Além do Boletim oficial (3 blocos, robô pequeno), o pipeline gera todo dia
+um cartão à parte — `ds-card-teams.png` — com o robô maior, o texto "Criado
+pelo DS" e a lista de squads que entregaram no dia, com o Lead Time de cada
+entrega. É gerado com dado novo a cada execução (nunca estático) e não
+altera o Boletim oficial nem os três blocos dele — a especificação original
+não permite robô grande nem um 4º bloco no Boletim, então esse conteúdo
+extra vive num artefato separado, pensado para copiar/colar no Teams.
+
+Se não houver nenhuma entrega concluída no dia, o cartão mostra "Nenhuma
+entrega concluída hoje" — nunca inventa dado.
+
 ## Horário: aprovado — 09:00 todos os dias
 
 O workflow roda automaticamente **todos os dias às 09:00 (America/Sao_Paulo,

@@ -62,6 +62,8 @@ jobs:
           path: |
             .github/scripts/boletim_ds/out/boletim.html
             .github/scripts/boletim_ds/out/boletim.png
+            .github/scripts/boletim_ds/out/ds-card.html
+            .github/scripts/boletim_ds/out/ds-card-teams.png
           if-no-files-found: ignore
           retention-days: 14
 
