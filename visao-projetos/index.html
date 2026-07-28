@@ -6473,6 +6473,16 @@
       return match ? match[0] : '';
     }
 
+    function epicDisplayName(row){
+      const raw = normalize(row?.epic);
+      const key = extractJiraKey(raw);
+      const suppliedName = normalize(row?.epicName || row?.epicNome || row?.epicSummary || row?.epicTitle);
+      const embeddedName = raw.replace(/[A-Z]+-\d+\s*[-—:]?\s*/i, '').trim();
+      const name = suppliedName || embeddedName;
+      const reference = key || raw || 'Sem épico';
+      return name ? `${reference} — ${name}` : `${reference} — Nome completo do épico não informado na importação`;
+    }
+
     function openJiraIssue(key, event){
       if(event) event.stopPropagation();
       const issueKey = normalize(key).toUpperCase();
@@ -7758,6 +7768,7 @@
     function sprintExecutiveItem(r){
       const key = storyKey(r);
       const epicKey = extractJiraKey(r.epic);
+      const epicText = epicDisplayName(r);
 
       return `<article class="sprint-exec-item" onclick="openJiraIssue('${escapeJs(key)}', event)" title="Abrir ${escapeAttr(key || 'história')} no Jira">
         <div class="sprint-exec-item-top">
@@ -7766,7 +7777,7 @@
         </div>
 
         <div class="sprint-exec-line">
-          <a class="sprint-exec-key epic" href="${escapeAttr(getJiraUrl(epicKey))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir épico">${escapeHtml(epicKey || r.epic || 'Sem épico')}</a>
+          <a class="sprint-exec-key epic" href="${escapeAttr(getJiraUrl(epicKey))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir épico ${escapeAttr(epicText)} no Jira">${escapeHtml(epicText)}</a>
           <span class="epic-key-sep">—</span>
           <a class="sprint-exec-key" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir história">${escapeHtml(r.chave || key)}</a>
         </div>
@@ -7843,12 +7854,13 @@
       $('sprintTable').innerHTML = ordered.length ? ordered.map(r => {
         const key = storyKey(r);
         const epicKey = extractJiraKey(r.epic);
+        const epicText = epicDisplayName(r);
         const labels = (r.rotulos || []).slice(0,3).map(label => `<span class="sprint-label" title="${escapeAttr(label)}">${escapeHtml(label)}</span>`).join('') || '<span class="muted">Sem rótulo</span>';
         const sla = homologationSlaInfo(r);
 
         return `<tr onclick="openJiraIssue('${escapeJs(key)}', event)">
           <td class="epic-key-cell">
-            <a class="jira-key-link epic-link" href="${escapeAttr(getJiraUrl(epicKey))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir épico ${escapeAttr(epicKey || r.epic || 'Sem épico')} no Jira">${escapeHtml(epicKey || r.epic || 'Sem épico')}</a>
+            <a class="jira-key-link epic-link" href="${escapeAttr(getJiraUrl(epicKey))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir épico ${escapeAttr(epicText)} no Jira">${escapeHtml(epicText)}</a>
             <span class="epic-key-sep">—</span>
             <a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir história ${escapeAttr(key)} no Jira">${escapeHtml(r.chave)}</a>
           </td>
@@ -8274,11 +8286,12 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
           r.devedor ? `Ação: ${r.devedor}` : ''
         ].filter(Boolean).join(' / ') || 'Sem alerta';
         const key = storyKey(r);
+        const epicText = epicDisplayName(r);
         const editedBadge = r.updatedByUser ? '<span class="badge gray">Editado</span>' : '';
         const sla = homologationSlaInfo(r);
         return `<tr onclick="openOperationalEditor('${escapeJs(key)}')">
           <td class="epic-key-cell">
-            <a class="jira-key-link epic-link" href="${escapeAttr(getJiraUrl(extractJiraKey(r.epic)))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir épico ${escapeAttr(extractJiraKey(r.epic) || r.epic || 'Sem épico')} no Jira">${escapeHtml(extractJiraKey(r.epic) || r.epic || 'Sem épico')}</a>
+            <a class="jira-key-link epic-link" href="${escapeAttr(getJiraUrl(extractJiraKey(r.epic)))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir épico ${escapeAttr(epicText)} no Jira">${escapeHtml(epicText)}</a>
             <span class="epic-key-sep">—</span>
             <a class="jira-key-link" href="${escapeAttr(getJiraUrl(key))}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Abrir história ${escapeAttr(key)} no Jira">${escapeHtml(r.chave)}</a>
           </td>
@@ -8500,7 +8513,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const slaCls = sla.overdue ? 'red' : sla.dueToday ? 'amber' : sla.missing ? 'gray' : sla.ok ? 'green' : 'gray';
       const cardCls = sla.overdue ? 'sla-overdue' : sla.dueToday ? 'sla-today' : sla.missing ? 'sla-missing' : sla.ok ? 'sla-ok' : '';
       const slaText = sla.applies ? `${sla.label}${sla.detail ? ` · ${sla.detail}` : ''}` : '';
-      const epicText = epicKey || r.epic || 'Sem épico';
+      const epicText = epicDisplayName(r);
       const nextText = normalize(r.proximo) || 'Acompanhar evolução e atualizar status no Jira.';
 
       return `<article class="drawer-story-card ${cardCls}" onclick="openJiraIssue('${escapeJs(key)}', event)" title="Abrir ${escapeAttr(key || 'história')} no Jira">
@@ -9199,6 +9212,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
       const situacao = normalize(get('Situação','Status'));
       const resumo = normalize(get('Resumo','Summary'));
+      const epicName = normalize(get('Nome do épico','Nome do epico','Epic Name','Parent summary','Resumo do item pai','Nome do item pai','Epic summary'));
       const squad = normalize(get('Campo personalizado (Team)','Team','Squad')) || 'Não informado';
       const text = lower([situacao, resumo, ...labels].join(' '));
       const productBacklog = lower(situacao) === 'product backlog';
@@ -9220,6 +9234,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       return {
         tipo: normalize(get('Tipo de Item','Tipo')),
         epic: normalize(get('Campo personalizado (Epic Link)','Epic Link','Epic')),
+        epicName,
         chave: normalize(get('Chave do item','Issue key','Chave')),
         id: normalize(get('ID do item','ID')),
         situacao,
