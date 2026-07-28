@@ -24,12 +24,18 @@ https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_
 Resposta esperada (sinais de que deu certo):
 
 ```json
-{ "ok": true, "version": "2026-07-23-backlog-sheet-chunks-v11", "stories": 0, ... }
+{ "ok": true, "version": "2026-07-28-guardas-e-snapshots-v13", "stories": 0, "writesEnabled": true, "guardDryRun": false, ... }
 ```
 
-- ✅ `"version"` = `2026-07-23-backlog-sheet-chunks-v11` → versão nova no ar
+- ✅ `"version"` = `2026-07-28-guardas-e-snapshots-v13` → versão nova no ar (guarda de redução anômala + snapshot + auditoria em `_audit`)
 - ✅ campo `"stories"` presente → ações de estória ativas
 - ✅ chave `discoveryPmo` disponível → Discovery PMO ativo no Apps Script publicado
+- ✅ `"writesEnabled": true` e `"guardDryRun": false` → guardas ativas de verdade (não só observando)
+
+> Nenhuma planilha nova precisa ser criada manualmente: `_audit` e os backups
+> (`..._bak1/2/3`, por chave) são criados automaticamente pelo próprio script na
+> primeira gravação. Rodar `autorizarPlanilhaUmaVez()` (passo 4 acima) é o único
+> passo manual de configuração.
 
 > Nota: a v10 chegou a exigir um token (`API_TOKEN`) em toda chamada, mas foi
 > revertida — a varredura de segredos do pipeline do Bradesco (GitLeaks) barrava
