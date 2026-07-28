@@ -24,10 +24,10 @@ https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_
 Resposta esperada (sinais de que deu certo):
 
 ```json
-{ "ok": true, "version": "2026-07-23-backlog-sheet-chunks-v11", "stories": 0, ... }
+{ "ok": true, "version": "2026-07-28-merge-stories-vp-v14", "stories": 0, ... }
 ```
 
-- ✅ `"version"` = `2026-07-23-backlog-sheet-chunks-v11` → versão nova no ar
+- ✅ `"version"` = `2026-07-28-merge-stories-vp-v14` → versão nova no ar (com merge em vez de overwrite em saveStories/saveVpData)
 - ✅ campo `"stories"` presente → ações de estória ativas
 - ✅ chave `discoveryPmo` disponível → Discovery PMO ativo no Apps Script publicado
 
