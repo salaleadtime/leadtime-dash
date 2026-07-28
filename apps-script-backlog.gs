@@ -1,14 +1,15 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
- * v13 — saveStories e saveVpData (discoveryPmo) agora mesclam por id em vez
- * de sobrescrever puro. Antes, dois pontos gravando a mesma chave em
- * sequência (ex.: uma aba salvando enquanto outra, no ambiente interno do
- * Bradesco, também sincroniza) faziam a segunda gravação apagar squads/
- * histórias que só existiam na primeira — mesmo padrão que mergeSnaps_ já
- * resolvia para saveBacklog. Ver mergeStoriesById_/mergeDiscoveryPmo_.
+ * v14 — saveStories e saveVpData (todas as chaves) agora mesclam com o que
+ * já está salvo em vez de sobrescrever puro. Causa raiz: index.html,
+ * visao-projetos e discovery-pmo apontam para a MESMA URL de Apps Script —
+ * não existe backend separado de dev/teste. Um ambiente com base mais
+ * antiga (ex.: alguém trabalhando localmente numa melhoria) gravando depois
+ * de o time atualizar algo direto em produção (Bradesco) apagava esse
+ * dado por completo. Ver mergeStoriesById_/mergeDiscoveryPmo_/mergeVpData_.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-28-merge-stories-vp-v13';
+var BACKLOG_SCRIPT_VERSION = '2026-07-28-merge-stories-vp-v14';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -213,10 +214,10 @@ function doPost(e) {
         // Itens legados sem área continuam válidos e não são descartados.
         if (vpKey === 'discoveryPmo') vpData = normalizeDiscoveryRaidAreas_(vpData);
         withLock_(function() {
-          if (vpKey === 'discoveryPmo') {
-            var beforeVp = readJsonFromSheet_(vpSheetName, null);
-            vpData = mergeDiscoveryPmo_(beforeVp, vpData);
-          }
+          var beforeVp = readJsonFromSheet_(vpSheetName, null);
+          vpData = vpKey === 'discoveryPmo'
+            ? mergeDiscoveryPmo_(beforeVp, vpData)
+            : mergeVpData_(beforeVp, vpData);
           writeJsonToSheet_(vpSheetName, vpData);
         });
         return jsonOut_({ ok: true, key: vpKey });
@@ -474,6 +475,44 @@ function mergeDiscoveryPmo_(before, incoming) {
   merged.cardsResetV1 = before.cardsResetV1 || incoming.cardsResetV1;
   merged.squadNamesSyncedV1 = before.squadNamesSyncedV1 || incoming.squadNamesSyncedV1;
   merged.updatedAt = new Date(Math.max(Date.parse(before.updatedAt || '') || 0, Date.parse(incoming.updatedAt || '') || 0)).toISOString();
+  return merged;
+}
+
+// Mescla as demais chaves de saveVpData (vpGeral, vpSprint, vpHomologation,
+// vpDeliveries, vpOpUpdates, vpQuickNotes, emergencyDemand). Sem isso, salvar
+// a partir de um ambiente com base mais antiga — ex.: alguém trabalhando numa
+// melhoria localmente, ainda sem a importação/atualização mais recente feita
+// direto em produção (Bradesco) — sobrescrevia por completo o que o time
+// tinha acabado de salvar, e o dado "sumia" na sincronização seguinte.
+//   - Bases de importação com `importedAt` (vpGeral/vpSprint/vpHomologation):
+//     mantém a importação mais recente por completo (substituição continua
+//     sendo a semântica certa de um novo import, só não deixa uma gravação
+//     mais velha vencer uma mais nova).
+//   - Objetos simples (mapas, ex. vpOpUpdates/vpQuickNotes/emergencyDemand):
+//     merge raso por chave, preservando o que não veio no payload atual.
+//   - Listas (ex. vpDeliveries): une por id quando os itens têm id; sem id
+//     identificável, não há como mesclar com segurança e o payload novo
+//     prevalece (mesmo comportamento de antes).
+function mergeVpData_(before, incoming) {
+  if (before == null || typeof before !== 'object') return incoming;
+  if (incoming == null || typeof incoming !== 'object') return incoming;
+
+  if (Array.isArray(before) && Array.isArray(incoming)) {
+    var hasIds = incoming.every(function(item) { return item && item.id != null; }) &&
+      before.every(function(item) { return item && item.id != null; });
+    return hasIds ? mergeListById_(before, incoming, null) : incoming;
+  }
+  if (Array.isArray(before) !== Array.isArray(incoming)) return incoming;
+
+  if (before.importedAt || incoming.importedAt) {
+    var tBefore = Date.parse(before.importedAt || '') || 0;
+    var tIncoming = Date.parse(incoming.importedAt || '') || 0;
+    return tBefore > tIncoming ? before : incoming;
+  }
+
+  var merged = {};
+  Object.keys(before).forEach(function(k) { merged[k] = before[k]; });
+  Object.keys(incoming).forEach(function(k) { merged[k] = incoming[k]; });
   return merged;
 }
 
