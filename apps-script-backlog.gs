@@ -1,15 +1,56 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
- * v14 — saveStories e saveVpData (todas as chaves) agora mesclam com o que
- * já está salvo em vez de sobrescrever puro. Causa raiz: index.html,
- * visao-projetos e discovery-pmo apontam para a MESMA URL de Apps Script —
- * não existe backend separado de dev/teste. Um ambiente com base mais
- * antiga (ex.: alguém trabalhando localmente numa melhoria) gravando depois
- * de o time atualizar algo direto em produção (Bradesco) apagava esse
- * dado por completo. Ver mergeStoriesById_/mergeDiscoveryPmo_/mergeVpData_.
+ *
+ * v13 — camada de proteção de escrita.
+ *
+ * Construída SOBRE a v12 publicada (2026-07-27-discovery-raid-area-v12).
+ * A normalização de área do RAID (RAID_RESPONSIBLE_AREAS,
+ * normalizeDiscoveryRaidAreas_, canonicalRaidArea_ e a chamada dentro de
+ * saveVpData) foi preservada integralmente — ela NÃO existe no
+ * apps-script-backlog.gs do repositório, que ficou parado na v11.
+ *
+ * O Web App CONTINUA implantado como "qualquer pessoa, mesmo anônima" — o
+ * ambiente do Bradesco consome assim e também GRAVA: flushPendingWrites(),
+ * as migrações de carga e o saveData() do Discovery disparam POST sozinhos,
+ * sem ninguém clicar em nada. Bloquear doPost naquela URL quebraria o outro
+ * ambiente logo no primeiro carregamento — e quebraria em silêncio, porque o
+ * cliente usa fetch com mode:'no-cors' e não enxerga a recusa.
+ *
+ * Como não dá para controlar QUEM chama, esta versão controla O QUE uma
+ * chamada consegue destruir:
+ *
+ *   1. guardWrite_()       recusa payload vazio ou que encolha a base além do
+ *                          limite — "apaga tudo" vira "não faz nada"
+ *   2. snapshotIfNeeded_() guarda as N versões anteriores antes de sobrescrever
+ *   3. mergeMap_()         3 chaves que são mapa puro passam a somar, não trocar
+ *   4. WRITES_ENABLED      desliga toda escrita pela UI, sem republicar
+ *   5. _audit              registra data/hora, chave, tamanho e delta por escrita
+ *
+ * Nada aqui depende de segredo no código-fonte: a varredura de segredos do
+ * pipeline (GitLeaks) não é acionada, ao contrário do que aconteceu na v10.
+ * Nenhuma alteração de HTML nem de URL é exigida do lado do Bradesco.
+ *
+ * Rollout sem adivinhação: publique com ativarModoObservacao() ligado. Nesse
+ * estado a guarda AVALIA e REGISTRA em _audit, mas NÃO bloqueia — o
+ * comportamento fica idêntico ao de hoje. Depois de 48 h, filtre a _audit por
+ * "BLOQUEARIA" e só então rode ativarGuardas().
+ *
+ * As funções administrativas (restaurarBackup, liberarReducaoPor30Min,
+ * desativarEscritas, reativarEscritas, listarBackups, ativarModoObservacao,
+ * ativarGuardas) rodam SOMENTE pelo editor do Apps Script. Elas não têm
+ * 'action' correspondente em doGet/doPost — de propósito, já que o endpoint
+ * é anônimo.
+ *
+ * v12 — consolida a área do RAID no campo areaResponsavel (mantida abaixo).
+ * v11 — doGet aguarda o lock de escrita antes de ler (evita ler planilha a
+ * meio de um clearContents()+setValues()) e devolve JSON de erro como o
+ * doPost em vez da página de erro padrão do Apps Script. saveBacklog
+ * continua mesclando por id/seq (mergeSnaps_); saveStories e saveVpData
+ * seguem sendo overwrite puro — quem grava por último decide o conteúdo
+ * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-28-merge-stories-vp-v14';
+var BACKLOG_SCRIPT_VERSION = '2026-07-28-guardas-e-snapshots-v13';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -24,9 +65,81 @@ var VP_SHEET_MAP = {
   vpOpUpdates:  '_vp_opupdates',
   vpQuickNotes: '_vp_quicknotes',
   vpEpicMeta:   '_vp_epic_meta',
+  // v13: vpPlanningConfirmations estava FALTANDO no mapa. visao-projetos/index.html
+  // chama gasLoadVpData/gasSaveVpData com esta chave (L6391 e L8143), o servidor
+  // respondia {ok:false,'chave inválida'} e o cliente tratava como "sem dados".
+  // Resultado: as confirmações de planejamento de sprint nunca saíam do
+  // navegador de quem clicou. Uma linha resolve.
+  vpPlanningConfirmations: '_vp_planning_confirmations',
   emergencyDemand: '_emergency_demand',
   discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
 };
+
+// ════════════════════════════════════════════════════════════════════════
+// v13 — configuração da camada de proteção
+// ════════════════════════════════════════════════════════════════════════
+
+var AUDIT_SHEET = '_audit';
+var AUDIT_MAX_ROWS = 5000;      // acima disso, as linhas mais antigas são descartadas
+var AUDIT_TRIM_BLOCK = 1000;
+
+var BACKUP_SUFFIX = '__bak';
+var BACKUP_COPIES = 3;          // ring buffer: __bak1, __bak2, __bak3
+var BACKUP_MIN_INTERVAL_MS = 30 * 60 * 1000;  // fora de encolhimento, 1 snapshot a cada 30 min
+
+// Guarda de exclusão em massa. Só age quando já existe base relevante — uma
+// planilha nova (0 registros) precisa poder receber a primeira carga.
+var GUARD_MIN_RECORDS = 5;
+var GUARD_MAX_SHRINK = 0.30;    // recusa se o payload cortar mais de 30% dos registros
+
+// Chaves cujo payload é um MAPA PURO {chave: valor} E que NUNCA removem chave no
+// cliente: somar é sempre correto e resolve "duas pessoas editando, uma perde a
+// nota". As demais ficam fora DE PROPÓSITO:
+//   • vpOpUpdates → o cliente faz `delete operationalUpdates[k]` (visao-projetos
+//     L8593 e L8601). Mesclar RESSUSCITARIA atualização operacional excluída.
+//   • vpGeral/vpSprint/vpHomologation → {rows:[…]}: a substituição pela
+//     importação é intencional; mesclar traria de volta linhas retiradas do Jira.
+//   • vpDeliveries / emergencyDemand → têm exclusão intencional pelo usuário.
+//   • discoveryPmo → o CLIENTE já mescla por registro com tumbas de exclusão
+//     (mergeById/deletedIds). Um segundo merge aqui desfaria essas tumbas.
+// vpQuickNotes entra porque a "limpeza" grava string vazia (L7568), não delete.
+var MERGE_MAP_KEYS = {
+  vpQuickNotes: true,
+  vpPlanningConfirmations: true,
+  vpEpicMeta: true
+};
+
+// Propriedades do Script (Configurações do projeto → Propriedades do script).
+// Nenhuma delas é segredo — são interruptores operacionais.
+var PROP_WRITES_ENABLED = 'WRITES_ENABLED';         // 'false' desliga toda escrita
+var PROP_ALLOW_SHRINK_UNTIL = 'ALLOW_SHRINK_UNTIL'; // timestamp ms: janela para redução legítima
+// GUARD_DRY_RUN='true' → a guarda AVALIA e REGISTRA em _audit, mas NÃO bloqueia.
+// Serve para rodar 48 h em produção e medir, no ambiente real (inclusive o do
+// Bradesco), o que seria recusado — antes de a recusa passar a valer. Como o
+// cliente grava com mode:'no-cors' e não enxerga a resposta, uma recusa hoje é
+// silenciosa: subir direto em modo bloqueante sem medir seria adivinhação.
+var PROP_GUARD_DRY_RUN = 'GUARD_DRY_RUN';
+
+var _propsCache = null;
+function props_() {
+  if (!_propsCache) _propsCache = PropertiesService.getScriptProperties();
+  return _propsCache;
+}
+
+function writesEnabled_() {
+  return String(props_().getProperty(PROP_WRITES_ENABLED) || '') !== 'false';
+}
+
+// Janela em que uma redução grande é aceita de propósito (ex.: limpeza planejada
+// da base). Aberta pelo editor com liberarReducaoPor30Min() — nunca pelo endpoint.
+function shrinkAllowed_() {
+  var until = Number(props_().getProperty(PROP_ALLOW_SHRINK_UNTIL) || 0);
+  return until > 0 && Date.now() < until;
+}
+
+function guardDryRun_() {
+  return String(props_().getProperty(PROP_GUARD_DRY_RUN) || '') === 'true';
+}
 
 // Valor canônico persistido nos itens RAID da base discoveryPmo. A Squad não
 // é uma área responsável e, por isso, não entra nesta lista.
@@ -81,7 +194,14 @@ function doGet(e) {
         snapshots: healthData.backlog.length,
         maxStories: maxStoryCount_(healthData.backlog),
         currentStories: currentSnap_(healthData.backlog) ? storyCount_(currentSnap_(healthData.backlog)) : 0,
-        stories: healthData.stories.length
+        stories: healthData.stories.length,
+        // v13: estado da camada de proteção, visível no mesmo ?action=health que
+        // o DEPLOY_CHECKLIST.md já manda conferir depois de publicar.
+        writesEnabled: writesEnabled_(),
+        guardDryRun: guardDryRun_(),
+        shrinkWindowOpen: shrinkAllowed_(),
+        guard: { minRecords: GUARD_MIN_RECORDS, maxShrink: GUARD_MAX_SHRINK },
+        backupCopies: BACKUP_COPIES
       }, callback);
     }
 
@@ -151,9 +271,14 @@ function doPost(e) {
       var incoming = parsedBacklog.data;
       try {
         var result = withLock_(function() {
-          var before = readBacklogStore_();
+          var chunks = readChunks_(BACKLOG_SHEET);
+          var before = chunksToData_(chunks, []);
+          if (!Array.isArray(before)) before = [];
           var merged = mergeSnaps_(before, incoming);
-          writeBacklogStore_(merged);
+          // saveBacklog já mesclava — a guarda aqui é rede contra um mergeSnaps_
+          // que devolvesse menos do que entrou (payload corrompido, por exemplo).
+          var w = commitWrite_(BACKLOG_SHEET, 'saveBacklog', chunks, before, merged, String(payload || '').length);
+          if (!w.ok) throw new Error(w.error);
           return { before: before, merged: merged };
         });
         return jsonOut_({
@@ -184,13 +309,15 @@ function doPost(e) {
           var existing = withLock_(function() { return readJsonFromSheet_(STORIES_SHEET, []); });
           return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, skipped: 'payload vazio', savedStories: existing.length });
         }
-        var savedStoriesCount = withLock_(function() {
-          var beforeStories = readJsonFromSheet_(STORIES_SHEET, []);
-          var mergedStories = mergeStoriesById_(beforeStories, parsedStories);
-          writeJsonToSheet_(STORIES_SHEET, mergedStories);
-          return mergedStories.length;
+        var storiesWrite = withLock_(function() {
+          var chunks = readChunks_(STORIES_SHEET);
+          var before = chunksToData_(chunks, null);
+          return commitWrite_(STORIES_SHEET, 'saveStories', chunks, before, parsedStories, payloadStories.length);
         });
-        return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, savedStories: savedStoriesCount });
+        if (!storiesWrite.ok) {
+          return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: storiesWrite.error });
+        }
+        return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, savedStories: parsedStories.length });
       } catch (err) {
         return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'payload inválido: ' + String(err && err.message || err) });
       }
@@ -213,14 +340,24 @@ function doPost(e) {
         // campo único areaResponsavel quando vier em um alias já conhecido.
         // Itens legados sem área continuam válidos e não são descartados.
         if (vpKey === 'discoveryPmo') vpData = normalizeDiscoveryRaidAreas_(vpData);
-        withLock_(function() {
-          var beforeVp = readJsonFromSheet_(vpSheetName, null);
-          vpData = vpKey === 'discoveryPmo'
-            ? mergeDiscoveryPmo_(beforeVp, vpData)
-            : mergeVpData_(beforeVp, vpData);
-          writeJsonToSheet_(vpSheetName, vpData);
+        var vpWrite = withLock_(function() {
+          var chunks = readChunks_(vpSheetName);
+          var before = chunksToData_(chunks, null);
+          var toWrite = vpData;
+          var didMerge = false;
+          // Merge apenas para as chaves de MERGE_MAP_KEYS (ver comentário lá).
+          if (MERGE_MAP_KEYS[vpKey] && isPlainObject_(before) && isPlainObject_(toWrite)) {
+            toWrite = mergeMap_(before, toWrite);
+            didMerge = true;
+          }
+          var w = commitWrite_(vpSheetName, 'saveVpData/' + vpKey, chunks, before, toWrite, vpPayload.length);
+          w.merged = didMerge;
+          return w;
         });
-        return jsonOut_({ ok: true, key: vpKey });
+        if (!vpWrite.ok) {
+          return jsonOut_({ ok: false, key: vpKey, error: vpWrite.error });
+        }
+        return jsonOut_({ ok: true, key: vpKey, before: vpWrite.beforeN, after: vpWrite.afterN, merged: !!vpWrite.merged });
       } catch (vpErr) {
         return jsonOut_({ ok: false, error: 'payload inválido: ' + String(vpErr && vpErr.message || vpErr) });
       }
@@ -232,6 +369,283 @@ function doPost(e) {
     return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'falha interna ao processar a solicitação' });
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// v13 — núcleo da proteção de escrita
+// ════════════════════════════════════════════════════════════════════════
+
+// Ponto único por onde TODA escrita passa. Roda sempre dentro de withLock_ e
+// recebe os chunks já lidos, para não pagar uma segunda leitura da planilha.
+function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars) {
+  if (!writesEnabled_()) {
+    var offMsg = 'gravação recusada: escritas desativadas no servidor (' + PROP_WRITES_ENABLED + '=false).';
+    audit_(label, payloadChars, countRecords_(before), countRecords_(incoming), 'DESATIVADO', offMsg);
+    return { ok: false, error: offMsg };
+  }
+
+  var verdict = guardWrite_(label, before, incoming);
+  var dryRun = guardDryRun_();
+
+  // UMA linha de auditoria por gravação. O 'resultado' precisa refletir o que de
+  // fato aconteceu: se registrássemos 'BLOQUEARIA' e depois 'OK' para o mesmo
+  // evento, quem filtrasse pelo resultado final veria 'OK' e perderia o alerta —
+  // exatamente a informação que o modo observação existe para produzir.
+  var resultado = 'OK';
+  var nota = '';
+
+  if (!verdict.ok) {
+    if (dryRun) {
+      // Modo observação: registra o que TERIA sido bloqueado e deixa passar.
+      resultado = 'BLOQUEARIA (dry-run)';
+      nota = verdict.error;
+    } else if (shrinkAllowed_()) {
+      // Janela de redução aberta de propósito pelo editor: segue, mas fica registrado.
+      resultado = 'REDUCAO_LIBERADA';
+      nota = verdict.error;
+    } else {
+      audit_(label, payloadChars, verdict.beforeN, verdict.afterN, 'RECUSADO', verdict.error);
+      return { ok: false, error: verdict.error, beforeN: verdict.beforeN, afterN: verdict.afterN };
+    }
+  }
+
+  var shrinking = verdict.afterN < verdict.beforeN;
+  var snap = snapshotIfNeeded_(sheetName, chunks, shrinking);
+
+  // Se a base vai encolher e o snapshot falhou, não há rede de segurança: é
+  // melhor recusar a escrita do que perder o estado anterior sem cópia.
+  // Exceção: em dry-run nada pode ser bloqueado — é a definição do modo, e
+  // bloquear aqui faria a janela de observação alterar o comportamento que ela
+  // deveria apenas medir.
+  if (shrinking && snap.attempted && !snap.ok && !dryRun) {
+    var snapMsg = 'gravação recusada: não foi possível gerar o snapshot de segurança antes de reduzir "' +
+                  label + '". Detalhe: ' + snap.error;
+    audit_(label, payloadChars, verdict.beforeN, verdict.afterN, 'RECUSADO_SEM_SNAPSHOT', snapMsg);
+    return { ok: false, error: snapMsg, beforeN: verdict.beforeN, afterN: verdict.afterN };
+  }
+
+  writeJsonToSheet_(sheetName, incoming);
+
+  var detalhes = [];
+  if (nota) detalhes.push(nota);
+  if (snap.ok) detalhes.push('snapshot ' + BACKUP_SUFFIX + snap.slot);
+  if (shrinking && snap.attempted && !snap.ok) detalhes.push('ATENÇÃO: snapshot falhou (' + snap.error + ')');
+  audit_(label, payloadChars, verdict.beforeN, verdict.afterN, resultado, detalhes.join(' · '));
+
+  return { ok: true, beforeN: verdict.beforeN, afterN: verdict.afterN };
+}
+
+// Conta "registros" sem depender do formato — cada chave tem uma forma diferente.
+function countRecords_(data) {
+  if (data === null || data === undefined) return 0;
+  if (Array.isArray(data)) return data.length;
+  if (typeof data === 'object') {
+    if (Array.isArray(data.rows)) return data.rows.length;         // vpGeral/vpSprint/vpHomologation
+    if (Array.isArray(data.projects)) return data.projects.length; // discoveryPmo
+    if (Array.isArray(data.rules)) return data.rules.length;       // emergencyDemand
+    return Object.keys(data).length;                               // mapas puros
+  }
+  return 0;
+}
+
+// A guarda propriamente dita: é o que transforma "apaga tudo" em "não faz nada".
+function guardWrite_(label, before, incoming) {
+  var beforeN = countRecords_(before);
+  var afterN = countRecords_(incoming);
+
+  // Base vazia precisa poder receber a primeira carga.
+  if (beforeN === 0) return { ok: true, beforeN: beforeN, afterN: afterN };
+
+  if (afterN === 0) {
+    return {
+      ok: false, beforeN: beforeN, afterN: afterN,
+      error: 'gravação recusada: o payload zeraria ' + beforeN + ' registro(s) em "' + label +
+             '". Se a limpeza for intencional, rode liberarReducaoPor30Min() no editor do Apps Script e repita.'
+    };
+  }
+
+  if (beforeN >= GUARD_MIN_RECORDS && afterN < Math.ceil(beforeN * (1 - GUARD_MAX_SHRINK))) {
+    return {
+      ok: false, beforeN: beforeN, afterN: afterN,
+      error: 'gravação recusada: redução anômala em "' + label + '" (' + beforeN + ' → ' + afterN +
+             ' registros, acima do limite de ' + Math.round(GUARD_MAX_SHRINK * 100) + '%). ' +
+             'Se for intencional, rode liberarReducaoPor30Min() no editor do Apps Script e repita.'
+    };
+  }
+
+  return { ok: true, beforeN: beforeN, afterN: afterN };
+}
+
+// Ring buffer de snapshots: __bak1 → __bak2 → __bak3 → __bak1 … Uma escrita por
+// snapshot, sem cópia em cascata entre as abas.
+// Dispara quando (a) a base vai encolher — o caso perigoso — ou (b) faz mais de
+// BACKUP_MIN_INTERVAL_MS desde o último. Sem (b), o Discovery geraria snapshot a
+// cada tecla salva (saveData → scheduleDiscGasSave tem debounce de 400 ms).
+function snapshotIfNeeded_(sheetName, chunks, shrinking) {
+  if (!chunks || !chunks.length) return { ok: false, attempted: false, error: 'sem conteúdo anterior' };
+
+  var atKey = 'bakAt_' + sheetName;
+  var last = Number(props_().getProperty(atKey) || 0);
+  if (!shrinking && (Date.now() - last) < BACKUP_MIN_INTERVAL_MS) {
+    return { ok: false, attempted: false, error: 'intervalo mínimo não atingido' };
+  }
+
+  try {
+    var idxKey = 'bakIdx_' + sheetName;
+    var slot = (Number(props_().getProperty(idxKey) || 0) % BACKUP_COPIES) + 1;
+    var bak = getOrCreateSheet_(sheetName + BACKUP_SUFFIX + slot);
+    bak.clearContents();
+    var range = bak.getRange(1, 1, chunks.length, 1);
+    range.setNumberFormat('@');
+    range.setValues(chunks);
+    try { bak.hideSheet(); } catch (e) {}
+    props_().setProperty(idxKey, String(slot));
+    props_().setProperty(atKey, String(Date.now()));
+    return { ok: true, attempted: true, slot: slot };
+  } catch (err) {
+    Logger.log('snapshotIfNeeded_ falhou para ' + sheetName + ': ' + (err && err.stack || err));
+    return { ok: false, attempted: true, error: String(err && err.message || err) };
+  }
+}
+
+function isPlainObject_(v) {
+  return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+
+// Merge raso de mapa {chave: valor}. O que chega vence por chave; o que só existe
+// na base é preservado. Só é aplicado às chaves de MERGE_MAP_KEYS — que são,
+// justamente, as que nunca removem chave no cliente.
+function mergeMap_(base, incoming) {
+  var out = {};
+  Object.keys(base || {}).forEach(function(k) { out[k] = base[k]; });
+  Object.keys(incoming || {}).forEach(function(k) { out[k] = incoming[k]; });
+  return out;
+}
+
+// Trilha de auditoria. Nunca derruba a escrita: falha aqui vira log, não erro.
+// Sem isto, uma base zerada não deixava rastro nenhum — não dava para saber nem
+// QUE aconteceu, quanto mais quando ou a partir de qual chave.
+function audit_(label, payloadChars, beforeN, afterN, result, note) {
+  try {
+    var sheet = getOrCreateSheet_(AUDIT_SHEET);
+    if (!sheet.getLastRow()) {
+      sheet.appendRow(['quando', 'operação', 'chars_payload', 'antes', 'depois', 'delta', 'resultado', 'observação']);
+      try { sheet.hideSheet(); } catch (e) {}
+    }
+    sheet.appendRow([
+      new Date(),
+      label,
+      Number(payloadChars) || 0,
+      Number(beforeN) || 0,
+      Number(afterN) || 0,
+      (Number(afterN) || 0) - (Number(beforeN) || 0),
+      result,
+      String(note || '').slice(0, 500)
+    ]);
+    if (sheet.getLastRow() > AUDIT_MAX_ROWS) sheet.deleteRows(2, AUDIT_TRIM_BLOCK);
+  } catch (err) {
+    Logger.log('audit_ falhou: ' + (err && err.stack || err));
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// v13 — funções administrativas (SOMENTE pelo editor do Apps Script)
+// Nenhuma delas tem 'action' em doGet/doPost, de propósito: o endpoint é anônimo.
+// ════════════════════════════════════════════════════════════════════════
+
+// Modo observação: sobe a v13 sem bloquear nada. Durante a janela, a aba _audit
+// registra como "BLOQUEARIA (dry-run)" tudo que a guarda recusaria — inclusive o
+// que vier do ambiente do Bradesco. Rode ativarModoObservacao(), espere 48 h,
+// abra a _audit e filtre por "BLOQUEARIA": se não houver nenhuma linha de uso
+// legítimo, rode ativarGuardas() com segurança.
+function ativarModoObservacao() {
+  props_().setProperty(PROP_GUARD_DRY_RUN, 'true');
+  return 'MODO OBSERVAÇÃO ativo: a guarda avalia e registra em _audit, mas não bloqueia. ' +
+         'Confira a aba _audit em 48 h e depois rode ativarGuardas().';
+}
+
+function ativarGuardas() {
+  props_().setProperty(PROP_GUARD_DRY_RUN, 'false');
+  return 'Guardas ATIVAS: escrita que zere ou reduza demais a base passa a ser recusada.';
+}
+
+// Abre uma janela de 30 min em que a guarda aceita redução grande. Use antes de
+// uma limpeza planejada da base.
+function liberarReducaoPor30Min() {
+  var until = Date.now() + 30 * 60 * 1000;
+  props_().setProperty(PROP_ALLOW_SHRINK_UNTIL, String(until));
+  return 'Redução liberada até ' + new Date(until).toLocaleString('pt-BR') + '. Depois disso a guarda volta sozinha.';
+}
+
+function cancelarLiberacaoDeReducao() {
+  props_().deleteProperty(PROP_ALLOW_SHRINK_UNTIL);
+  return 'Janela de redução fechada. Guarda ativa.';
+}
+
+// Kill switch: desliga/religa toda escrita sem republicar a implantação.
+function desativarEscritas() {
+  props_().setProperty(PROP_WRITES_ENABLED, 'false');
+  return 'ESCRITAS DESATIVADAS. Leituras continuam normais. Rode reativarEscritas() para voltar.';
+}
+
+function reativarEscritas() {
+  props_().setProperty(PROP_WRITES_ENABLED, 'true');
+  return 'Escritas reativadas.';
+}
+
+function listarBackups() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var alvos = [];
+  Object.keys(VP_SHEET_MAP).forEach(function(key) { alvos.push(VP_SHEET_MAP[key]); });
+  alvos.push(BACKLOG_SHEET, STORIES_SHEET);
+
+  var linhas = [];
+  alvos.forEach(function(sheetName) {
+    for (var i = 1; i <= BACKUP_COPIES; i++) {
+      var nome = sheetName + BACKUP_SUFFIX + i;
+      var s = ss.getSheetByName(nome);
+      if (!s || !s.getLastRow()) continue;
+      var chars = 0;
+      s.getRange(1, 1, s.getLastRow(), 1).getValues().forEach(function(r) { chars += String(r[0] || '').length; });
+      linhas.push(nome + '  ·  ' + chars + ' chars  ·  ~' + countRecords_(readJsonFromSheet_(nome, null)) + ' registros');
+    }
+  });
+
+  var texto = linhas.length ? linhas.join('\n') : 'Nenhum snapshot gerado ainda.';
+  Logger.log(texto);
+  return texto;
+}
+
+// Restaura um snapshot por cima da aba de dados.
+// Ex.: restaurarBackup('discoveryPmo', 1)  ou  restaurarBackup('_stories_chunks', 2)
+// Antes de restaurar, guarda o estado atual num slot do ring buffer, para que um
+// restore errado também seja reversível.
+function restaurarBackup(chaveOuAba, copia) {
+  var sheetName = VP_SHEET_MAP[chaveOuAba] || chaveOuAba;
+  var slot = Number(copia) || 1;
+  var bakName = sheetName + BACKUP_SUFFIX + slot;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bak = ss.getSheetByName(bakName);
+  if (!bak || !bak.getLastRow()) throw new Error('snapshot inexistente ou vazio: ' + bakName);
+
+  return withLock_(function() {
+    var atual = readChunks_(sheetName);
+    if (atual.length) snapshotIfNeeded_(sheetName, atual, true);  // força cópia do estado atual
+
+    var chunks = bak.getRange(1, 1, bak.getLastRow(), 1).getValues();
+    var destino = getOrCreateSheet_(sheetName);
+    destino.clearContents();
+    var range = destino.getRange(1, 1, chunks.length, 1);
+    range.setNumberFormat('@');
+    range.setValues(chunks);
+    try { destino.hideSheet(); } catch (e) {}
+
+    var n = countRecords_(chunksToData_(chunks, null));
+    audit_('restaurarBackup/' + sheetName, 0, 0, n, 'RESTAURADO', 'a partir de ' + bakName);
+    return 'Restaurado ' + bakName + ' → ' + sheetName + ' (' + n + ' registros).';
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════
 
 function parsePayload_(payload, requiresArray) {
   var raw = String(payload == null ? '' : payload);
@@ -274,28 +688,47 @@ function readBacklogStore_() {
   return Array.isArray(data) ? data : [];
 }
 
+// v13: saveBacklog passou a gravar via commitWrite_ (guarda + snapshot + auditoria),
+// então esta função deixou de ter call site no caminho de requisição. Mantida por ser
+// um atalho útil ao rodar algo manualmente pelo editor — mas note que ela grava DIRETO,
+// sem passar por nenhuma das proteções.
 function writeBacklogStore_(arr) {
   writeJsonToSheet_(BACKLOG_SHEET, arr || []);
 }
 
-function readJsonFromSheet_(sheetName, fallback) {
+// v13: leitura em duas etapas. Os chunks crus servem para DUAS coisas — parsear
+// o estado anterior (guarda) e alimentar o snapshot — sem reler a planilha.
+function readChunks_(sheetName) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) return fallback;
+    if (!sheet) return [];
     var lastRow = sheet.getLastRow();
-    if (!lastRow) return fallback;
-    var values = sheet.getRange(1, 1, lastRow, 1).getValues();
-    var json = values.map(function(row) { return row[0] == null ? '' : String(row[0]); }).join('');
+    if (!lastRow) return [];
+    return sheet.getRange(1, 1, lastRow, 1).getValues();
+  } catch (err) {
+    Logger.log('readChunks_ falhou para ' + sheetName + ': ' + (err && err.stack || err));
+    return [];
+  }
+}
+
+function chunksToData_(chunks, fallback) {
+  try {
+    if (!chunks || !chunks.length) return fallback;
+    var json = chunks.map(function(row) { return row[0] == null ? '' : String(row[0]); }).join('');
     if (!json) return fallback;
     return JSON.parse(json);
   } catch (err) {
     // Payload corrompido cai no fallback silenciosamente do ponto de vista do usuário
     // (não quebra a resposta), mas fica registrado no Executions do Apps Script em vez
     // de sumir sem rastro — antes não havia log nenhum aqui.
-    Logger.log('readJsonFromSheet_ falhou para ' + sheetName + ': ' + (err && err.stack || err));
+    Logger.log('chunksToData_ falhou: ' + (err && err.stack || err));
     return fallback;
   }
+}
+
+function readJsonFromSheet_(sheetName, fallback) {
+  return chunksToData_(readChunks_(sheetName), fallback);
 }
 
 function writeJsonToSheet_(sheetName, data) {
@@ -386,134 +819,6 @@ function mergeSnaps_(base, incoming) {
   var out = Object.keys(byKey).map(function(k) { return byKey[k]; });
   out.sort(compareSnaps_);
   return out;
-}
-
-// Une histórias existentes com as recém-enviadas por id (chave do Jira). Sem
-// isso, salvar de um ponto que ainda não tinha carregado as histórias mais
-// recentes de outro (ex.: aba antiga em cache, ou o ambiente interno do
-// Bradesco sincronizando em paralelo) apagava histórias inteiras que só
-// existiam do outro lado — o payload é sempre a lista completa conhecida
-// por quem salva, nunca um diff.
-function mergeStoriesById_(existing, incoming) {
-  var byId = {};
-  var order = [];
-  (existing || []).forEach(function(s) {
-    if (!s || !s.id) return;
-    if (!(s.id in byId)) order.push(s.id);
-    byId[s.id] = s;
-  });
-  (incoming || []).forEach(function(s) {
-    if (!s || !s.id) return;
-    if (!(s.id in byId)) order.push(s.id);
-    byId[s.id] = s;
-  });
-  return order.map(function(id) { return byId[id]; });
-}
-
-// Une listas por id (ex.: projects/squads do Discovery PMO), preferindo o
-// item com updatedAt mais recente quando o id existe dos dois lados, e
-// removendo ids marcados como excluídos em `deletedIds`. Mesma regra usada
-// no merge client-side (mergeById em discovery-pmo/index.html) — replicada
-// aqui como segunda linha de defesa contra overwrite do servidor.
-function mergeListById_(existingList, incomingList, deletedIds) {
-  var map = {};
-  var order = [];
-  (existingList || []).forEach(function(item) {
-    if (!item || !item.id) return;
-    if (deletedIds && deletedIds[item.id]) return;
-    if (!(item.id in map)) order.push(item.id);
-    map[item.id] = item;
-  });
-  (incomingList || []).forEach(function(item) {
-    if (!item || !item.id) return;
-    if (deletedIds && deletedIds[item.id]) return;
-    var ex = map[item.id];
-    if (!ex) { order.push(item.id); map[item.id] = item; return; }
-    var tNew = Date.parse(item.updatedAt || '') || 0;
-    var tOld = Date.parse(ex.updatedAt || '') || 0;
-    if (tNew >= tOld) map[item.id] = item;
-  });
-  return order.map(function(id) { return map[id]; });
-}
-
-// Mescla a base do Discovery PMO (squads/sprints/projetos) em vez de
-// sobrescrever puro. Réplica, no servidor, do merge por id + tumbas de
-// exclusão que o cliente já faz antes de salvar (mergeRemoteIntoData em
-// discovery-pmo/index.html) — segunda camada de proteção para o caso de
-// duas gravações concorrentes (duas abas, ou dois ambientes/links
-// diferentes apontando para a mesma planilha) se sobreporem no servidor.
-function mergeDiscoveryPmo_(before, incoming) {
-  if (!incoming || typeof incoming !== 'object') return incoming;
-  if (!before || typeof before !== 'object') return incoming;
-  if (!Array.isArray(before.projects) || !before.projects.length) return incoming;
-  if (!Array.isArray(incoming.projects)) return before;
-
-  var tombstonesById = {};
-  (before.tombstones || []).forEach(function(t) { if (t && t.id) tombstonesById[t.id] = t; });
-  (incoming.tombstones || []).forEach(function(t) {
-    if (!t || !t.id) return;
-    var ex = tombstonesById[t.id];
-    if (!ex || (Date.parse(t.deletedAt || '') || 0) > (Date.parse(ex.deletedAt || '') || 0)) tombstonesById[t.id] = t;
-  });
-  var mergedTombstones = Object.keys(tombstonesById).map(function(id) { return tombstonesById[id]; });
-  var deletedIds = {};
-  mergedTombstones.forEach(function(t) { deletedIds[t.id] = true; });
-
-  var mergedProjects = mergeListById_(before.projects, incoming.projects, deletedIds);
-  if (!mergedProjects.length) return incoming; // nunca fica sem nenhuma iniciativa por causa do merge
-
-  var mergedSquads = mergeListById_(before.squads, incoming.squads, deletedIds);
-  var mergedHistory = mergeListById_(before.importHistory, incoming.importHistory, null)
-    .sort(function(a, b) { return (Date.parse((b && b.at) || '') || 0) - (Date.parse((a && a.at) || '') || 0); })
-    .slice(0, 30);
-
-  var merged = incoming; // preserva demais campos (metadados, flags) do payload mais recente
-  merged.tombstones = mergedTombstones;
-  merged.projects = mergedProjects;
-  merged.squads = mergedSquads.length ? mergedSquads : before.squads;
-  merged.importHistory = mergedHistory;
-  merged.cardsResetV1 = before.cardsResetV1 || incoming.cardsResetV1;
-  merged.squadNamesSyncedV1 = before.squadNamesSyncedV1 || incoming.squadNamesSyncedV1;
-  merged.updatedAt = new Date(Math.max(Date.parse(before.updatedAt || '') || 0, Date.parse(incoming.updatedAt || '') || 0)).toISOString();
-  return merged;
-}
-
-// Mescla as demais chaves de saveVpData (vpGeral, vpSprint, vpHomologation,
-// vpDeliveries, vpOpUpdates, vpQuickNotes, emergencyDemand). Sem isso, salvar
-// a partir de um ambiente com base mais antiga — ex.: alguém trabalhando numa
-// melhoria localmente, ainda sem a importação/atualização mais recente feita
-// direto em produção (Bradesco) — sobrescrevia por completo o que o time
-// tinha acabado de salvar, e o dado "sumia" na sincronização seguinte.
-//   - Bases de importação com `importedAt` (vpGeral/vpSprint/vpHomologation):
-//     mantém a importação mais recente por completo (substituição continua
-//     sendo a semântica certa de um novo import, só não deixa uma gravação
-//     mais velha vencer uma mais nova).
-//   - Objetos simples (mapas, ex. vpOpUpdates/vpQuickNotes/emergencyDemand):
-//     merge raso por chave, preservando o que não veio no payload atual.
-//   - Listas (ex. vpDeliveries): une por id quando os itens têm id; sem id
-//     identificável, não há como mesclar com segurança e o payload novo
-//     prevalece (mesmo comportamento de antes).
-function mergeVpData_(before, incoming) {
-  if (before == null || typeof before !== 'object') return incoming;
-  if (incoming == null || typeof incoming !== 'object') return incoming;
-
-  if (Array.isArray(before) && Array.isArray(incoming)) {
-    var hasIds = incoming.every(function(item) { return item && item.id != null; }) &&
-      before.every(function(item) { return item && item.id != null; });
-    return hasIds ? mergeListById_(before, incoming, null) : incoming;
-  }
-  if (Array.isArray(before) !== Array.isArray(incoming)) return incoming;
-
-  if (before.importedAt || incoming.importedAt) {
-    var tBefore = Date.parse(before.importedAt || '') || 0;
-    var tIncoming = Date.parse(incoming.importedAt || '') || 0;
-    return tBefore > tIncoming ? before : incoming;
-  }
-
-  var merged = {};
-  Object.keys(before).forEach(function(k) { merged[k] = before[k]; });
-  Object.keys(incoming).forEach(function(k) { merged[k] = incoming[k]; });
-  return merged;
 }
 
 function getSafeCallback_(callback) {
