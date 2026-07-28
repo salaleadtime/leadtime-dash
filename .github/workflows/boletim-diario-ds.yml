@@ -1,0 +1,78 @@
+name: Boletim Diário DS
+
+# Disparo automático por horário (cron) fica pendente de aprovação explícita
+# do horário e da configuração dos secrets abaixo — ver
+# boletim-ds/README-BOLETIM-DS.md. Até lá, o pipeline roda somente por
+# acionamento manual (workflow_dispatch), o que permite validar toda a
+# geração (seleção de dados, imagem, e-mail) sem enviar nada sem supervisão.
+#
+# Quando o horário for aprovado, adicionar aqui, por exemplo:
+#   schedule:
+#     - cron: '0 11 * * 1-5'   # 08:00 America/Sao_Paulo, seg-sex (UTC-3)
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Forçar reenvio mesmo se já enviado hoje (BOLETIM_DS_FORCE)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: boletim-diario-ds
+  cancel-in-progress: false
+
+jobs:
+  gerar-e-enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependências do pipeline
+        working-directory: .github/scripts/boletim_ds
+        run: npm install --omit=dev --no-audit --no-fund
+
+      - name: Instalar Chromium (Playwright)
+        working-directory: .github/scripts/boletim_ds
+        run: npx playwright install --with-deps chromium
+
+      - name: Gerar e enviar o Boletim Diário DS
+        working-directory: .github/scripts/boletim_ds
+        env:
+          BOLETIM_DS_FORCE: ${{ github.event.inputs.force == 'true' && '1' || '0' }}
+          BOLETIM_DS_SMTP_HOST: ${{ secrets.BOLETIM_DS_SMTP_HOST }}
+          BOLETIM_DS_SMTP_PORT: ${{ secrets.BOLETIM_DS_SMTP_PORT }}
+          BOLETIM_DS_SMTP_USER: ${{ secrets.BOLETIM_DS_SMTP_USER }}
+          BOLETIM_DS_SMTP_PASS: ${{ secrets.BOLETIM_DS_SMTP_PASS }}
+          BOLETIM_DS_RECIPIENTS: ${{ secrets.BOLETIM_DS_RECIPIENTS }}
+          BOLETIM_DS_SYSTEM_LINK: ${{ vars.BOLETIM_DS_SYSTEM_LINK }}
+        run: node run.mjs
+
+      - name: Publicar artefatos de geração (HTML/PNG) para conferência
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boletim-ds-artefatos
+          path: |
+            .github/scripts/boletim_ds/out/boletim.html
+            .github/scripts/boletim_ds/out/boletim.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Registrar estado de envio (dedupe)
+        run: |
+          if [ -n "$(git status --porcelain .github/scripts/boletim_ds/.state/last-sent.json)" ]; then
+            git config user.name "boletim-ds-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add .github/scripts/boletim_ds/.state/last-sent.json
+            git commit -m "chore(boletim-ds): registrar envio diário"
+            git push
+          else
+            echo "Nenhum envio novo registrado nesta execução."
+          fi
