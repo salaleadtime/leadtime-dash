@@ -841,10 +841,12 @@ function jsonOut_(obj, callback) {
 
 // ════════════════════════════════════════════════════════════════════════
 // DIAGNÓSTICO TEMPORÁRIO — remover depois de identificar a planilha vinculada.
-// Não é chamada por doGet/doPost nem por nenhuma outra função: só existe para
-// ser rodada manualmente pelo seletor de função do editor.
+// Sem "_" no final DE PROPÓSITO: o seletor de função do editor esconde toda
+// função cujo nome termina em "_" (convenção de "privada"). Com "_", esta
+// função nunca apareceria na lista para ser selecionada e executada.
+// Não é chamada por doGet/doPost nem por nenhuma outra função.
 // ════════════════════════════════════════════════════════════════════════
-function ondeFicaAPlanilha_() {
+function ondeFicaAPlanilha() {
   var url = SpreadsheetApp.getActiveSpreadsheet().getUrl();
   Logger.log(url);
   return url;
