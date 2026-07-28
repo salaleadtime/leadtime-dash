@@ -1027,6 +1027,23 @@ function jiraQtd(p){
   }
   return 0;
 }
+function jiraRefKey(r){
+  const raw=String(r?.key||r?.chave||r?.issueKey||r?.issue_key||r?.id||'');
+  const m=raw.match(/\bSLOPC-\d+\b/i);return m?m[0].toUpperCase():'';
+}
+function jiraRefName(r){
+  return String(r?.summary||r?.resumo||r?.title||r?.titulo||r?.name||r?.nome||'').trim()||'Nome completo não informado na carga';
+}
+function jiraReferences(p,limit=2){
+  const rows=Array.isArray(p?.jiraStories)?p.jiraStories.filter(Boolean):[];
+  const refs=rows.map(r=>({r,key:jiraRefKey(r)})).filter(x=>x.key).slice(0,limit);
+  if(!refs.length)return '';
+  return '<div style="display:grid;gap:3px;margin-top:5px">'+refs.map(({r,key})=>{
+    const type=norm(r?.issueType||r?.issue_type||r?.type||r?.tipo||r?.itemType||'');
+    const prefix=/epic|epico/.test(type)?'Épico ':'';
+    return '<span style="font-size:8.5px;line-height:1.35"><a href="https://jira.bradesco.com.br:8443/browse/'+encodeURIComponent(key)+'" target="_blank" rel="noopener" style="color:var(--blue-ink);font-weight:850;text-decoration:none;border-bottom:1px solid #b9caef">'+esc(prefix+key)+'</a> — '+esc(jiraRefName(r))+'</span>';
+  }).join('')+'</div>';
+}
 /* ── Área responsável: nunca usar a squad como substituta ──
    1º campo específico vindo da carga; 2º inferência pelo texto; 3º não informada. */
 const AREAS=[
@@ -1701,7 +1718,7 @@ function render(){
       <td>${rf?.end?fD(rf.end):'—'}</td>
       <td>${squadBadge(a.p.squad||'—')}</td>
       <td>${esc(nome2(a.p.techLead)||'—')}</td>
-      <td><b style="color:var(--ink)">${esc(q??0)}</b><small style="display:block;color:var(--muted);font-size:8.5px;margin-top:2px">importação Jira</small></td>
+      <td><b style="color:var(--ink)">${esc(q??0)}</b><small style="display:block;color:var(--muted);font-size:8.5px;margin-top:2px">importação Jira</small>${jiraReferences(a.p)}</td>
     </tr>`).join('')
     : '<tr><td colspan="7" class="empty">Sem iniciativa em refinamento técnico no período.</td></tr>';
 
