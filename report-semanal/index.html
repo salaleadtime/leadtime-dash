@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Report Semanal Executivo — Discovery</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  /* Tokens espelhados do Discovery PMO Tracker — mesma paleta, mesmos raios */
+  --bg:#f5f7fb;--panel:#fff;--panel-2:#fbfcfe;--ink:#1c2430;--muted:#687587;
+  --line:#e5e9f2;--line-strong:#d6dde9;
+  --primary:#bf1830;--primary-dark:#8e1125;--primary-soft:#fff0f3;
+  --amber:#f4b740;--amber-ink:#9a6a12;--amber-soft:#fff7e6;
+  --green:#1f9d75;--green-ink:#147557;--green-soft:#e9f8f2;
+  --blue:#2d6cdf;--blue-ink:#315d9f;--blue-soft:#eaf1ff;
+  --red:#d94545;--red-soft:#fdeaea;--grey-soft:#eef1f6;
+  --purple:#7b61ff;
+  --sidebar:#151922;--sidebar-2:#1f2530;
+  --shadow:0 18px 45px rgba(17,24,39,.08);
+  --radius:20px;--radius-sm:14px;--radius-xs:10px
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,"Segoe UI",Arial,sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+
+/* ═══ BARRA DE CONTROLE — nunca entra em imagem/PDF ═══ */
+.app-tools{position:sticky;top:0;z-index:900;display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 16px;background:linear-gradient(180deg,var(--sidebar),var(--sidebar-2));color:#fff;box-shadow:0 4px 16px rgba(17,24,39,.28)}
+.app-brand{margin-right:auto;line-height:1.25}
+.app-brand b{display:block;font-size:12px}
+.app-brand span{display:block;color:#8b97a8;font-size:9px}
+.wk{display:flex;align-items:center;gap:4px;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:3px 4px}
+.wk button{background:none;border:0;color:#c2cbd9;font-size:14px;padding:2px 7px;border-radius:6px;line-height:1}
+.wk button:hover{background:rgba(255,255,255,.1);color:#fff}
+.wk input{background:none;border:0;color:#fff;font-size:11px;outline:none;width:132px}
+.wk input::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.6}
+.sel{height:32px;border:1px solid rgba(255,255,255,.14);border-radius:9px;background:#242b38;color:#fff;padding:0 8px;outline:none;font-size:11px}
+.tb{height:32px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;padding:0 11px;border-radius:9px;font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;gap:5px}
+.tb.primary{background:var(--primary);border-color:#d94545}
+.tb.ok{background:#1f9d75;border-color:#1f9d75}
+.tb:hover{filter:brightness(1.13)}.tb:disabled{opacity:.55;cursor:wait}
+.switch{display:flex;background:#242b38;border:1px solid rgba(255,255,255,.14);border-radius:9px;overflow:hidden}
+.switch button{background:none;border:0;color:#8b97a8;font-size:10px;font-weight:800;padding:0 11px;height:32px}
+.switch button.on{background:var(--primary);color:#fff}
+.tstatus{font-size:9px;color:#8b97a8;line-height:1.3;max-width:190px}
+.tstatus b{color:#fff;display:block;font-size:9.5px}
+
+/* ═══ REPORT ═══ */
+.stage{padding:18px;display:flex;justify-content:center}
+.report{width:1180px;max-width:100%;background:var(--panel);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.hero{background:linear-gradient(118deg,var(--primary-dark),var(--primary) 58%,#d94545);color:#fff;padding:20px 26px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;width:280px;height:280px;border:1px solid rgba(255,255,255,.13);border-radius:50%;right:-110px;top:-140px}
+.hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;position:relative;z-index:1}
+.eyebrow{font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;font-weight:800;color:rgba(255,255,255,.7)}
+.hero h1{font-size:25px;line-height:1.12;letter-spacing:-.7px;margin:6px 0 5px}
+.hero .sub{font-size:12px;color:rgba(255,255,255,.82);margin:0}
+.hero-week{text-align:right;flex:none}
+.hero-week b{display:block;font-size:20px;letter-spacing:-.4px}
+.hero-week span{font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.7);font-weight:800}
+.verdict{margin-top:14px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:11px 14px;position:relative;z-index:1;display:flex;gap:12px;align-items:center}
+.verdict .vico{width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.verdict b{display:block;font-size:14px}
+.verdict small{color:rgba(255,255,255,.78);font-size:11px}
+
+.body{padding:18px 22px 22px}
+.grid-kpi{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:var(--radius-xs);padding:11px 12px;background:var(--panel-2);border-top:3px solid var(--c,var(--blue))}
+.kpi span{display:block;color:var(--muted);font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:850}
+.kpi b{display:block;font-size:23px;margin:4px 0 1px;letter-spacing:-.6px}
+.kpi small{color:var(--muted);font-size:9px;line-height:1.3;display:block}
+
+.blk{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;overflow:hidden;background:var(--panel)}
+.blk-h{padding:10px 14px;background:var(--panel-2);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.blk-h h2{margin:0;font-size:13.5px;letter-spacing:-.2px}
+.blk-h p{margin:1px 0 0;font-size:9.5px;color:var(--muted)}
+.blk-b{padding:13px 14px}
+.tagn{font-size:9px;font-weight:850;padding:4px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary);white-space:nowrap}
+/* apêndice recolhível — detalhe granular que já aparece resumido em outro bloco
+   (cards de refinamento, feed de evolução, riscos) não precisa ficar aberto por padrão */
+details.blk-more{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;overflow:hidden;background:var(--panel)}
+details.blk-more>summary{list-style:none;cursor:pointer;padding:10px 14px;background:var(--panel-2);display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.blk-more>summary::-webkit-details-marker{display:none}
+details.blk-more>summary::after{content:"▾ ver detalhe";font-size:9px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+details.blk-more[open]>summary{border-bottom:1px solid var(--line)}
+details.blk-more[open]>summary::after{content:"▴ ocultar"}
+details.blk-more h2{margin:0;font-size:13.5px;letter-spacing:-.2px}
+details.blk-more p{margin:1px 0 0;font-size:9.5px;color:var(--muted)}
+
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cols2{display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
+.li{display:grid;grid-template-columns:16px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:11px;align-items:start}
+.li:first-child{border-top:0}
+.li .bul{width:7px;height:7px;border-radius:50%;margin-top:5px;background:var(--c,var(--muted))}
+.li b{display:block;font-weight:750;line-height:1.35}
+.li span{display:block;color:var(--muted);font-size:9.5px;margin-top:1px}
+.li .rm{opacity:0;border:0;background:none;color:var(--red);font-weight:900;font-size:12px;padding:0 3px}
+.li:hover .rm{opacity:1}
+
+/* situação por iniciativa — lista compacta agrupada por urgência */
+.sit-group{margin-bottom:10px}
+.sit-group:last-child{margin-bottom:0}
+.sit-gh{display:flex;align-items:center;gap:7px;margin-bottom:6px;padding-left:1px}
+.sit-gh .gdot{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.sit-gh b{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:850}
+.sit-row{display:grid;grid-template-columns:56px 1fr 130px 90px 150px;gap:10px;align-items:center;
+  padding:8px 10px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:9px;background:#fff;margin-bottom:5px}
+.sit-row:last-child{margin-bottom:0}
+.sit-num{font-size:10px;font-weight:900;color:var(--primary);white-space:nowrap}
+.sit-name{min-width:0}
+.sit-name b{display:block;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sit-name span{display:block;font-size:9px;color:var(--muted);margin-top:1px}
+.sit-bar-wrap{display:flex;align-items:center;gap:7px}
+.bar{height:6px;background:#e5e9f2;border-radius:99px;overflow:hidden;flex:1}
+.bar i{display:block;height:100%;background:var(--c);border-radius:99px}
+.sit-pct{font-size:10.5px;font-weight:800;white-space:nowrap;min-width:30px;text-align:right}
+.sit-delta{font-size:9px;font-weight:800;white-space:nowrap}
+.sit-delta.up{color:var(--green-ink)}.sit-delta.down{color:var(--red)}.sit-delta.flat{color:var(--muted)}
+.sit-mst{font-size:9.5px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sit-mst b{color:var(--ink);font-weight:700}
+@media(max-width:1080px){.sit-row{grid-template-columns:46px 1fr 90px 60px;}.sit-mst{display:none}}
+
+.tb2{width:100%;border-collapse:collapse}
+.tb2 th{text-align:left;padding:0 8px 7px;font-size:8.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.tb2 td{padding:8px;border-top:1px solid var(--line);font-size:10.5px;vertical-align:top}
+.pill{display:inline-flex;padding:3px 7px;border-radius:7px;font-size:8.5px;font-weight:850;white-space:nowrap}
+.pill.g{background:var(--green-soft);color:var(--green-ink)}
+.pill.b{background:var(--blue-soft);color:var(--blue-ink)}
+.pill.a{background:var(--amber-soft);color:var(--amber-ink)}
+.pill.r{background:var(--red-soft);color:var(--red)}
+.pill.n{background:var(--grey-soft);color:var(--muted)}
+.who{font-weight:800;white-space:nowrap}
+.cons{display:block;color:var(--red);font-size:9px;margin-top:3px}
+
+.rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;align-items:start}
+.rail-day{border:1px solid var(--line);border-radius:var(--radius-xs);overflow:hidden;background:#fff}
+.rail-dh{background:var(--panel-2);border-bottom:1px solid var(--line);padding:7px 10px;display:flex;align-items:baseline;gap:7px}
+.rail-dh b{font-size:12px;font-weight:900;color:var(--primary)}
+.rail-dh span{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.rail-dh small{margin-left:auto;font-size:9px;color:var(--muted);font-weight:700}
+.mst{border-top:1px solid var(--line);padding:8px 10px;border-left:3px solid var(--c,var(--blue))}
+.mst:first-child{border-top:0}
+.mst b{display:block;font-size:10.5px;line-height:1.3}
+.mst small{font-size:9px;color:var(--muted);display:block;margin-top:1px}
+
+.foot{display:flex;justify-content:space-between;gap:12px;font-size:9px;color:var(--muted);padding:0 2px}
+.empty{padding:14px;text-align:center;color:var(--muted);font-size:10px}
+
+/* ═══ EDIÇÃO INLINE — some na exportação ═══ */
+.edit-ui{display:inline-flex}
+body.exporting .edit-ui{display:none!important}
+body.exporting .rm{display:none!important}
+.addbtn{border:1px dashed #d6dde9;background:#fff;color:var(--muted);border-radius:9px;padding:6px 10px;font-size:10px;font-weight:800;width:100%;margin-top:8px}
+.addbtn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-soft)}
+.inp{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:11px;outline:none;background:#fff;margin-bottom:6px}
+.inp:focus{border-color:#ffb6c0;box-shadow:0 0 0 3px rgba(181,18,43,.08)}
+.editable{outline:none;border-radius:8px;transition:background .15s}
+body:not(.exporting) .editable:hover{background:#fffbf0;box-shadow:inset 0 0 0 1px #f4d79a}
+.editable:focus{background:#fffdf5;box-shadow:inset 0 0 0 2px #f4b740}
+.editable:empty::before{content:attr(data-ph);color:#9aa6ba;font-style:italic}
+.modal-bd{position:fixed;inset:0;background:rgba(10,18,32,.62);z-index:1200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bd.on{display:flex}
+.modal{background:#fff;border-radius:16px;padding:18px;width:520px;max-width:100%;max-height:88vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,.3)}
+.modal h3{margin:0 0 4px;font-size:15px}
+.modal p.hint{margin:0 0 12px;font-size:10.5px;color:var(--muted)}
+.modal .row{display:grid;gap:6px;margin-bottom:9px}
+.modal label{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:850}
+.modal-act{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.mb{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 13px;font-size:11px;font-weight:800}
+.mb.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.toast{position:fixed;right:20px;bottom:20px;z-index:1400;background:#1f9d75;color:#fff;padding:11px 15px;border-radius:10px;font-size:11px;font-weight:800;display:none;box-shadow:0 14px 34px rgba(0,0,0,.24);max-width:330px}
+.toast.show{display:block}.toast.err{background:var(--red)}.toast.warn{background:#9a6a12}
+
+
+/* ── cards de janela de refinamento técnico (item do Cronograma) ── */
+.rfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:10px}
+.rfc{border:1px solid var(--line);border-left:4px solid var(--c,var(--blue));border-radius:var(--radius-sm);
+  padding:11px 12px;background:#fff}
+.rfc-top{display:flex;align-items:flex-start;gap:8px;justify-content:space-between}
+.rfc-num{font-size:11px;font-weight:900;color:var(--primary)}
+.rfc h4{margin:4px 0 0;font-size:11.5px;line-height:1.32;font-weight:750}
+.rfc .sq{display:block;font-size:9.5px;color:var(--muted);margin-top:2px}
+.rfc-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+.rfc-f span{display:block;font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:850}
+.rfc-f b{display:block;font-size:10.5px;margin-top:2px;font-weight:750}
+.rfc-f b.jira{color:var(--primary);font-weight:900;font-size:12px}
+/* aviso de previsão — datas de desenvolvimento não são compromisso firme */
+.note{margin:9px 0 0;font-size:9.5px;color:var(--amber-ink);background:var(--amber-soft);
+  border:1px solid #f0dcb0;border-radius:var(--radius-xs);padding:7px 10px}
+
+/* próximos Discoveries */
+.disc{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.dc{border:1px solid var(--line);border-top:4px solid var(--blue);border-radius:var(--radius-xs);padding:10px;background:#fff}
+.dc .dt{font-size:10px;font-weight:900;color:var(--blue);letter-spacing:.05em}
+.dc b{display:block;font-size:11px;line-height:1.32;margin:5px 0 6px}
+.dc small{display:block;font-size:9.5px;color:var(--muted);line-height:1.5}
+.dc .dev{display:block;margin-top:5px;font-size:9.5px;color:var(--ink);font-weight:650}
+/* evolução em dois painéis (modelo aprovado) */
+.evo{display:grid;grid-template-columns:1.15fr 1fr;gap:12px}
+.evo-left{border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius-sm);padding:13px}
+.evo-top{display:flex;align-items:center;gap:8px;font-weight:850;font-size:13px}
+.evo-top .dot{width:10px;height:10px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 5px rgba(191,24,48,.12);flex:none}
+.evo-left p{margin:7px 0 0;font-size:11px;color:var(--muted)}
+.evo-feed{margin-top:10px;display:grid;gap:6px;max-height:268px;overflow:auto}
+/* cada linha é um fato de gestão, colorido pelo sinal */
+.ins{display:grid;grid-template-columns:22px 1fr;gap:9px;background:#fff;border:1px solid var(--line);
+  border-left:4px solid var(--c,var(--blue));border-radius:var(--radius-xs);padding:8px 10px}
+.ins i{font-style:normal;font-size:11px;font-weight:900;color:var(--c);text-align:center;line-height:1.35}
+.ins b{display:block;font-size:10.5px;line-height:1.35}
+.ins span{display:block;font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.ins em{font-style:normal;font-weight:850;color:var(--primary)}
+.ins.pos{--c:var(--green)} .ins.neg{--c:var(--red)} .ins.neu{--c:var(--blue)}
+.evo-right{display:grid;gap:8px;align-content:start}
+.evo-card{display:grid;grid-template-columns:26px 1fr;gap:9px;border:1px solid var(--line);border-radius:var(--radius-xs);padding:10px 11px}
+.evo-n{width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--amber-soft);color:var(--amber-ink);font-weight:900;font-size:10.5px}
+.evo-n.rte{background:var(--blue-soft);color:var(--blue-ink)}
+.evo-card b{display:block;font-size:11px}
+.evo-card span{display:block;font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+/* mudanças semana a semana */
+.chg{display:grid;gap:7px}
+.chg-row{border:1px solid var(--line);border-left:4px solid var(--c,var(--blue));border-radius:var(--radius-xs);padding:9px 11px}
+.chg-row b{font-size:11px}
+.chg-row .who2{font-size:9.5px;color:var(--muted);margin-left:5px}
+.chg-list{margin:5px 0 0;padding:0;list-style:none;display:grid;gap:3px}
+.chg-list li{font-size:10px;color:var(--ink)}
+.chg-list .de{color:var(--muted);text-decoration:line-through}
+.chg-list .para{color:var(--primary);font-weight:750}
+.chg-list .nota{font-size:9px;font-weight:850;padding:1px 6px;border-radius:6px;margin-left:4px}
+.chg-list .nota.atraso{background:var(--red-soft);color:var(--red)}
+.chg-list .nota.antecipacao,.chg-list .nota.avanco{background:var(--green-soft);color:var(--green-ink)}
+.nofill{color:#a9b3c4;font-style:italic}
+.hide{display:none!important}
+
+/* alternância de modelos */
+body[data-model="A"] .only-b{display:none}
+body[data-model="B"] .only-a{display:none}
+
+@media print{
+  .app-tools,.edit-ui,.rm{display:none!important}
+  body{background:#fff}.stage{padding:0}.report{box-shadow:none;border-radius:0;width:auto}
+  .blk,.kpi{break-inside:avoid}
+  details.blk-more{break-inside:avoid}
+  details.blk-more>summary::after{display:none}
+}
+</style>
+</head>
+<body data-model="A">
+
+<div class="app-tools" data-html2canvas-ignore="true">
+  <div class="app-brand"><b>Report Semanal · Discovery</b><span>Dados herdados do Discovery PMO Tracker</span></div>
+  <div class="wk">
+    <button onclick="stepWeek(-1)" title="Semana anterior">‹</button>
+    <input type="week" id="weekInput">
+    <button onclick="stepWeek(1)" title="Próxima semana">›</button>
+  </div>
+  <select class="sel" id="squadFilter"><option value="">Todas as squads</option><option value="Ainda Sem Definição">Ainda Sem Definição</option><option value="Contact">Contact</option><option value="Expresso">Expresso</option><option value="Guardiões">Guardiões</option><option value="Inception">Inception</option><option value="Interstelar">Interstelar</option><option value="MadMax">MadMax</option><option value="Terminator">Terminator</option><option value="TopGun">TopGun</option></select>
+  <button class="tb primary" id="genBtn" onclick="generate()">⟳ Gerar / Atualizar</button>
+  <div class="switch">
+    <button id="mA" class="on" onclick="setModel(&#39;A&#39;)">Modelo A</button>
+    <button id="mB" onclick="setModel(&#39;B&#39;)">Modelo B</button>
+  </div>
+  <button class="tb ok" onclick="copyRich(this)" title="Cola formatado no Teams ou Outlook">📋 Copiar p/ Teams</button>
+  <button class="tb" onclick="copyImage(this)" title="Copia a imagem para a área de transferência">🖼 Copiar imagem</button>
+  <button class="tb" onclick="exportPdf(this)">⇩ PDF</button>
+  <div class="tstatus"><b id="srcLabel">Servidor Discovery PMO</b><span id="srcDetail">14 iniciativa(s)</span></div>
+</div>
+
+<div class="stage">
+<div class="report" id="reportCapture">
+
+  <header class="hero">
+    <div class="hero-row">
+      <div>
+        <div class="eyebrow">Sala Transformação · Discovery → Delivery</div>
+        <h1>Report Semanal Executivo</h1>
+        <p class="sub" id="heroSub">14 iniciativas acompanhadas · maturidade média de 31%</p>
+      </div>
+      <div class="hero-week">
+        <span>Semana</span>
+        <b id="heroWeek">20/07 – 24/07</b>
+        <span id="heroScope">todas as squads</span>
+      </div>
+    </div>
+    <div class="verdict">
+      <div class="vico" id="vIco">🏗</div>
+      <div><b id="vTitle">Destravar arquitetura é a decisão da semana</b><small id="vText">2 iniciativa(s) não avançam para histórias e estimativas sem o Solution Design.</small></div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- KPIs -->
+    <div class="grid-kpi">
+      <div class="kpi" style="--c:var(--blue)"><span>Iniciativas</span><b id="k1">14</b><small>no escopo</small></div>
+      <div class="kpi" style="--c:var(--blue)"><span>Em Discovery</span><b id="k2">5</b><small id="k2s">9 a iniciar</small></div>
+      <div class="kpi" style="--c:var(--green)"><span>Prontas</span><b id="k3">0</b><small>sustentam Delivery</small></div>
+      <div class="kpi" style="--c:var(--amber)"><span>Movimentos</span><b id="k4">29</b><small id="k4s">21 avanços</small></div>
+      <div class="kpi" style="--c:var(--red)"><span>Atenções</span><b id="k5">6</b><small id="k5s">15 pontos</small></div>
+      <div class="kpi" style="--c:var(--amber)"><span>Marcos 14d</span><b id="k6">12</b><small id="k6s">6 nesta semana</small></div>
+    </div>
+
+    <!-- ══ MODELO B: faixa visual de portfólio ══ -->
+    <div class="blk only-b">
+      <div class="blk-h"><div><h2>Panorama do portfólio</h2><p>Distribuição de prontidão e maturidade por iniciativa.</p></div><span class="tagn" id="avgTag">31% maturidade média</span></div>
+      <div class="blk-b cols2">
+        <div id="chartBars"></div>
+        <div id="chartDonut"></div>
+      </div>
+    </div>
+
+    <!-- ══ MODELO B: régua da semana ══ -->
+    <div class="blk only-b">
+      <div class="blk-h"><div><h2>Linha do tempo da semana</h2><p>Quando cada movimento foi registrado no painel.</p></div><span class="tagn" id="railTag">29 movimento(s)</span></div>
+      <div class="blk-b" id="weekRail"></div>
+    </div>
+
+    <!-- ══ Evolução da semana (modelo aprovado) ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Evolução da semana</h2><p>O que mudou de uma semana para a outra, segundo o Cronograma e o RAID.</p></div><span class="tagn" id="evoTag">—</span></div>
+      <div class="blk-b evo">
+        <div class="evo-left">
+          <div class="evo-top"><span class="dot"></span><span id="evoTitle">—</span></div>
+          <p id="evoSummary">—</p>
+          <div class="evo-feed" id="evoFeed"></div>
+        </div>
+        <div class="evo-right" id="evoCards"></div>
+      </div>
+    </div>
+
+    <!-- ══ Avanços · Atenções · Decisões ══ -->
+    <div class="cols3">
+      <div class="blk">
+        <div class="blk-h"><div><h2>Avanços da semana</h2><p>Do painel + registros do RTE</p></div><span class="tagn" id="advTag">7</span></div>
+        <div class="blk-b">
+          <div id="advList"></div>
+          <button class="addbtn edit-ui" onclick="openAdd(&#39;avancos&#39;)">+ acrescentar avanço</button>
+        </div>
+      </div>
+      <div class="blk">
+        <div class="blk-h"><div><h2>Atenções</h2><p>Bloqueios, prazos e riscos</p></div><span class="tagn" id="attTag">15</span></div>
+        <div class="blk-b">
+          <div id="attList"></div>
+          <button class="addbtn edit-ui" onclick="openAdd(&#39;itens&#39;)">+ acrescentar atenção</button>
+        </div>
+      </div>
+      <div class="blk">
+        <div class="blk-h"><div><h2>Observação do RTE</h2><p>Leitura da semana</p></div><span class="tagn edit-ui">editável</span></div>
+        <div class="blk-b">
+          <div class="editable" id="obsBox" contenteditable="true" data-ph="Clique e escreva a leitura da semana…" style="font-size:11.5px;min-height:70px;padding:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Decisões ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Decisões e validações da gestão</h2><p>Somente o que depende de direcionamento.</p></div><span class="tagn" id="decTag">7</span></div>
+      <div class="blk-b">
+        <table class="tb2"><thead><tr><th style="width:52%">Decisão</th><th>Responsável</th><th>Prazo</th></tr></thead><tbody id="decRows"></tbody></table>
+        <button class="addbtn edit-ui" onclick="openAdd(&#39;decisoes&#39;)">+ acrescentar decisão</button>
+      </div>
+    </div>
+
+    <!-- ══ Riscos e impedimentos abertos ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Riscos e impedimentos abertos</h2><p>RAID do Discovery: risco, impedimento e dependência sem tratativa concluída.</p></div><span class="tagn" id="rkTag">6 aberto(s)</span></div>
+      <div class="blk-b">
+        <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th></tr></thead><tbody id="rkRows"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ══ Janelas de refinamento técnico — cards, regras da aba Cronograma ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2>Janelas de refinamento técnico</h2><p>Marco "Refinamento Técnico" da aba Cronograma, com dono e volume de histórias no Jira.</p></div><span class="tagn" id="rfTag">—</span></div>
+      <div class="blk-b">
+        <div class="rfg" id="rfCards"></div>
+      </div>
+    </div>
+
+    <!-- ══ Mudanças semana a semana — só aparece quando existe mudança ══ -->
+    <div class="blk" id="chgBlk">
+      <div class="blk-h"><div><h2>Mudanças desde a semana anterior</h2><p id="chgSummary">—</p></div><span class="tagn" id="chgTag">—</span></div>
+      <div class="blk-b chg" id="chgList"></div>
+    </div>
+
+    <!-- ══ Próximos Discoveries — sempre o mês subsequente ══ -->
+    <div class="blk">
+      <div class="blk-h"><div><h2 id="discTitle">Próximos Discoveries</h2><p>Discoveries que iniciam no mês seguinte ao desta semana.</p></div><span class="tagn" id="discTag">—</span></div>
+      <div class="blk-b">
+        <div class="disc" id="discGrid"></div>
+        <p class="note" id="discNote">A janela de desenvolvimento é <b>previsão</b> derivada do planejamento e pode mudar conforme o resultado do Discovery e a capacidade da squad.</p>
+      </div>
+    </div>
+
+    <!-- ══ Detalhe granular por iniciativa — recolhido por padrão: já resumido
+         nos cards de refinamento, no feed de evolução e na tabela de riscos ══ -->
+    <details class="blk-more only-a">
+      <summary><div><h2>Situação por iniciativa</h2><p>Agrupado por urgência — maturidade, variação semanal e próximo marco.</p></div><span class="tagn" id="semaTag">14 iniciativas</span></summary>
+      <div class="blk-b" id="semaGrid"></div>
+    </details>
+
+    <!-- ══ MODELO B: tabela detalhada ══ -->
+    <details class="blk-more only-b">
+      <summary><div><h2>Acompanhamento das iniciativas</h2><p>Visão consolidada do portfólio.</p></div><span class="tagn" id="tblTag">14 iniciativas</span></summary>
+      <div class="blk-b" style="overflow:auto">
+        <table class="tb2"><thead><tr><th>Nº</th><th>Iniciativa</th><th>Squad</th><th>Prontidão</th><th>Semana</th><th>Próximo marco</th><th>PO / Tech Lead</th></tr></thead><tbody id="tblRows"></tbody></table>
+      </div>
+    </details>
+
+    <!-- ══ Próximos marcos ══ -->
+    <details class="blk-more">
+      <summary><div><h2>Próximos marcos</h2><p>Próximo compromisso de cada iniciativa em 14 dias.</p></div><span class="tagn" id="mstTag">14 marco(s)</span></summary>
+      <div class="blk-b rail" id="mstRail"></div>
+    </details>
+
+    <div class="foot"><span>Sala Transformação · uso interno</span><span id="footStamp">Semana 2026-W30 · emitido em 26/07/2026, 20:02</span></div>
+  </div>
+</div>
+</div>
+
+<!-- modal de inclusão -->
+<div class="modal-bd" id="modal">
+  <div class="modal">
+    <h3 id="mTitle">Acrescentar</h3>
+    <p class="hint" id="mHint">Este item entra no report desta semana e fica salvo no navegador.</p>
+    <div id="mFields"></div>
+    <div class="modal-act">
+      <button class="mb" onclick="closeModal()">Cancelar</button>
+      <button class="mb primary" onclick="saveModal()">Incluir</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">Report gerado para a semana 2026-W30</div>
+
+<script>
+/* ════════════ CONFIG ════════════ */
+const CFG={
+  gasUrl:'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec',
+  gasKey:'discoveryPmo',
+  trackerKey:'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3',
+  cacheKey:'sala_rep_cache_v3', editKey:'sala_rep_edit_v3', snapKey:'sala_rep_snap_v3',
+  horizon:14, staleDays:10
+};
+const TL_STAGES=[{id:'entendimento',title:'Entendimento do Problema'},{id:'analise',title:'Levantamento e Análise'},{id:'desenho',title:'Desenho da Solução'},{id:'validacao',title:'Validação e Prontidão'}];
+const TL_TEMPLATE=[['ti-objetivo','entendimento','Objetivo do discovery'],['ti-dor','entendimento','Dor do usuário e do negócio'],['ti-escopo','entendimento','Escopo inicial'],['ti-stakeholders','entendimento','Stakeholders envolvidos'],['ti-asis','analise','Mapeamento AS IS'],['ti-dados','analise','Dados e evidências'],['ti-riscosdeps','analise','Riscos e dependências'],['ti-requisitos','analise','Requisitos iniciais'],['ti-solucao','desenho','Solução proposta'],['ti-hipoteses','desenho','Hipóteses e alternativas'],['ti-priorizacao','desenho','Priorização'],['ti-criterios','desenho','Critérios de sucesso'],['ti-viabilidade','validacao','Viabilidade técnica'],['ti-validacaonegocio','validacao','Validação com negócio'],['ti-proximos','validacao','Próximos passos'],['ti-ready','validacao','Ready para épico e histórias']].map(([id,stageId,label])=>({id,stageId,label}));
+const TL_LABEL=Object.fromEntries(TL_TEMPLATE.map(t=>[t.id,t.label]));
+const TL_W={done:1,progress:.55,'waiting-arch':.55,'waiting-business':.55,blocked:.15};
+const CARD_W={backlog:.1,doing:.45,validation:.7,done:1};
+const ARCH_RE=/arquitet|solution design|dati|desenho de solu/i;
+
+let base={projects:[],squads:[]}, source='—', scoped=[], edits={}, curWeek='', lastCtx=null;
+
+/* ════════════ utils ════════════ */
+const el=id=>document.getElementById(id);
+const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const iso=d=>!d||Number.isNaN(d.getTime())?'':`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const pDate=v=>{if(!v)return null;const d=new Date(String(v).slice(0,10)+'T12:00:00');return Number.isNaN(d.getTime())?null:d};
+const pTs=v=>{if(!v)return null;const d=new Date(v);return Number.isNaN(d.getTime())?null:d};
+const fD=v=>{const d=pDate(v);return d?new Intl.DateTimeFormat('pt-BR').format(d):'—'};
+const fDM=d=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit'}).format(d);
+const dias=(a,b)=>Math.round((b-a)/864e5);
+const cut=(s,n)=>{s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s};
+const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MESL=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const fShort=v=>{const d=pDate(v);return d?`${String(d.getDate()).padStart(2,'0')} ${MES[d.getMonth()]}.`:'—'};
+const fBadge=v=>{const d=pDate(v);return d?`${String(d.getDate()).padStart(2,'0')} ${MES[d.getMonth()].toUpperCase()}.`:'—'};
+const nome2=v=>String(v||'').trim().split(/\s+/).slice(0,2).join(' ')||'—';
+/* ════════════ REGRAS DO CRONOGRAMA ════════════
+   A aba "Cronograma" do Discovery PMO Tracker é a fonte oficial dos marcos.
+   Tudo que o report afirma sobre fase, janela, atraso e próximo marco sai
+   daqui — os campos soltos da iniciativa só entram como último recurso. */
+const CRONO=[
+  {key:'kickoff', re:/kick ?off/,                                    label:'Kickoff',                 fase:'Discovery'},
+  {key:'disc',    re:/^discovery|inicio do discovery/,               label:'Discovery',               fase:'Discovery'},
+  {key:'asis',    re:/as ?is|mapeamento/,                            label:'AS IS',                   fase:'Discovery'},
+  {key:'sol',     re:/desenho de solu|solution design/,              label:'Desenho de solução',      fase:'Desenho da solução'},
+  {key:'arq',     re:/arquitetura/,                                  label:'Arquitetura',             fase:'Desenho da solução'},
+  {key:'escrita', re:/escrita (das|de|da) hist/,                     label:'Escrita das histórias',   fase:'Refinamento técnico'},
+  {key:'refino',  re:/refinamento/,                                  label:'Refinamento Técnico',     fase:'Refinamento técnico'},
+  {key:'jira',    re:/qtd de hist|historias no jira/,                label:'Histórias no Jira',       fase:'Refinamento técnico', metric:true},
+  {key:'entrega', re:/entrega para o delivery|entrada.*delivery/,    label:'Entrega para o Delivery', fase:'Delivery'},
+  {key:'alvo',    re:/data-?alvo/,                                   label:'Data-alvo',               fase:'Delivery'}
+];
+const FASES=['Discovery','Desenho da solução','Refinamento técnico','Delivery'];
+function schedBy(p,re){return (Array.isArray(p.schedule)?p.schedule:[]).find(i=>re.test(norm(i.item||'')))||null}
+const RE_REFINO=/refinamento/, RE_ESCRITA=/escrita das historias|escrita de historias/, RE_JIRA=/qtd de historias|historias no jira/;
+/* indexa os itens do Cronograma pela regra canônica correspondente */
+function cronoOf(p){
+  const o={};
+  (Array.isArray(p.schedule)?p.schedule:[]).forEach(i=>{
+    const n=norm(i.item||'');
+    const r=CRONO.find(c=>c.re.test(n));
+    if(r&&!o[r.key])o[r.key]={...i,rule:r};
+  });
+  return o;
+}
+/* fase corrente = último marco concluído no Cronograma, olhando na ordem oficial */
+function faseCrono(p){
+  const c=cronoOf(p);
+  let atual='Discovery',prox=null;
+  CRONO.filter(r=>!r.metric).forEach(r=>{
+    const i=c[r.key];if(!i)return;
+    if(schDone(i)){if(FASES.indexOf(r.fase)>=FASES.indexOf(atual))atual=r.fase}
+    else if(!prox&&(i.start||i.end))prox={label:r.label,fase:r.fase,item:i};
+  });
+  return{atual,prox,itens:c};
+}
+function janela(i){return i&&(i.start||i.end)?`${fShort(i.start)} – ${fShort(i.end)}`:''}
+function jiraQtd(p){
+  const i=(Array.isArray(p.schedule)?p.schedule:[]).find(x=>x.jira||RE_JIRA.test(norm(x.item||'')));
+  if(!i)return null;
+  const bruto=[i.observations,i.value,i.qtd,i.progress].map(v=>String(v??'').trim()).find(v=>/\d/.test(v));
+  return bruto?(bruto.match(/\d+/)||[bruto])[0]:null;
+}
+/* ── Área responsável (item obrigatório na exposição de risco) ──
+   1º o campo vindo da carga; 2º inferência pelo texto; 3º a squad da iniciativa. */
+const AREAS=[
+  [/arquitet|solution design|dati/,        'Arquitetura'],
+  [/seguran|ciber|complian|lgpd/,          'Segurança e Compliance'],
+  [/jurid|contrat|legal/,                  'Jurídico'],
+  [/infra|ambiente|servidor|rede|deploy/,  'Infraestrutura'],
+  [/dados|base |integra|api|legado|newcon/,'Dados e Integrações'],
+  [/fornecedor|terceir|parceir/,           'Fornecedor / Terceiro'],
+  [/negocio|produto|comercial|cliente/,    'Negócio'],
+  [/squad|capacidade|aloca|time/,          'Alocação / RTE']
+].map(([re,nome])=>({re:new RegExp(re.source||re,'i'),nome}));
+function areaOf(item,p){
+  const dado=[item?.area,item?.responsibleArea,item?.areaResponsavel,item?.department].map(v=>String(v??'').trim()).find(Boolean);
+  if(dado)return{nome:dado,inferida:false};
+  const txt=norm((item?.text||'')+' '+(item?.owner||''));
+  const hit=AREAS.find(a=>a.re.test(txt));
+  if(hit)return{nome:hit.nome,inferida:true};
+  return{nome:p?.squad||'Não informada',inferida:true};
+}
+function toast(m,k){const t=el('toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(window.__t);window.__t=setTimeout(()=>t.className='toast',3200)}
+
+/* semana ISO */
+function isoWeekOf(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()+3-((d.getDay()+6)%7));const y=d.getFullYear();const j=new Date(y,0,4);const w=1+Math.round(((d-j)/864e5-3+((j.getDay()+6)%7))/7);return `${y}-W${String(w).padStart(2,'0')}`}
+function weekBounds(ws){const [y,w]=ws.split('-W').map(Number);const j=new Date(y,0,4);const mon=new Date(j);mon.setDate(j.getDate()-((j.getDay()+6)%7)+(w-1)*7);const start=new Date(mon);start.setHours(0,0,0,0);const fri=new Date(mon);fri.setDate(mon.getDate()+4);const end=new Date(fri);end.setHours(23,59,59,999);return{start,end,mon}}
+function stepWeek(n){const {mon}=weekBounds(el('weekInput').value||isoWeekOf(new Date()));mon.setDate(mon.getDate()+n*7);el('weekInput').value=isoWeekOf(mon);generate()}
+
+/* ════════════ carga ════════════ */
+function jsonp(url,ms=18000){return new Promise((res,rej)=>{const cb='__r'+Date.now()+Math.random().toString(36).slice(2);const s=document.createElement('script');const t=setTimeout(()=>{cl();rej(new Error('timeout'))},ms);function cl(){clearTimeout(t);delete window[cb];s.remove()}window[cb]=p=>{cl();res(p)};s.onerror=()=>{cl();rej(new Error('rede'))};s.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();document.head.appendChild(s)})}
+function normPayload(raw){let c=raw;if(c&&c.ok&&c.data!==undefined)c=c.data;if(c&&c.data&&!c.projects&&c.data.projects)c=c.data;if(Array.isArray(c))c={projects:c,squads:[]};if(!c||typeof c!=='object')throw new Error('formato');return{...c,projects:Array.isArray(c.projects)?c.projects:[],squads:Array.isArray(c.squads)?c.squads:[]}}
+function loadLocal(){for(const [k,l] of [[CFG.trackerKey,'Painel local'],[CFG.cacheKey,'Cache do report']]){try{const r=localStorage.getItem(k);if(r){const p=normPayload(JSON.parse(r));if(p.projects.length)return{data:p,source:l}}}catch(e){}}return null}
+async function generate(){
+  const b=el('genBtn');b.disabled=true;b.textContent='⟳ Atualizando…';
+  const local=loadLocal();
+  try{
+    const live=normPayload(await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.gasKey}`));
+    if(!live.projects.length)throw new Error('vazio');
+    base=live;source='Servidor Discovery PMO';
+    try{localStorage.setItem(CFG.cacheKey,JSON.stringify(live))}catch(e){}
+  }catch(e){
+    if(local){base=local.data;source=local.source+' (offline)'}else{base=SAMPLE();source='Amostra de demonstração'}
+    console.warn('[report]',e);
+  }finally{
+    fillSquads();render();b.disabled=false;b.textContent='⟳ Gerar / Atualizar';toast('Report gerado para a semana '+curWeek);
+  }
+}
+function fillSquads(){const cur=el('squadFilter').value,n=new Set();(base.squads||[]).forEach(s=>n.add(typeof s==='string'?s:(s.name||'')));(base.projects||[]).forEach(p=>n.add(p.squad||'Ainda Sem Definição'));const l=[...n].filter(Boolean).sort((a,b)=>a.localeCompare(b,'pt-BR'));el('squadFilter').innerHTML='<option value="">Todas as squads</option>'+l.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if(l.includes(cur))el('squadFilter').value=cur}
+
+/* ════════════ modelo do tracker ════════════ */
+function tlOf(p){const i=Array.isArray(p.timelineItems)?p.timelineItems.slice():[];i.forEach(x=>{if(!x.status)x.status=x.done?'done':'notstarted'});TL_TEMPLATE.forEach(t=>{if(!i.some(x=>x.id===t.id))i.push({id:t.id,stageId:t.stageId,status:'notstarted',updatedAt:''})});return i}
+function raidsOf(p){const s=p.raids||{},o={};['risks','assumptions','issues','dependencies'].forEach(g=>{o[g]=(s[g]||[]).map(i=>{if(typeof i==='string')return{text:i,done:false,owner:'',updatedAt:''};const d=i.done===true||String(i.status||'').toLowerCase().includes('concl');return{text:i.text||i.description||'',owner:i.owner||'',due:i.due||'',done:d,updatedAt:i.updatedAt||'',
+    /* preserva a área quando a carga informa — areaOf só infere se vier vazia */
+    area:i.area||i.responsibleArea||i.areaResponsavel||i.department||''}})});
+  const lg=a=>(Array.isArray(a)?a:[]).filter(i=>i&&typeof i==='object').map(i=>({text:i.text||i.title||'Item',owner:i.owner||'',done:i.done===true,updatedAt:i.updatedAt||''}));
+  o.risks=o.risks.concat(lg(p.risks));o.issues=o.issues.concat(lg(p.alerts));return o}
+const cdOf=p=>Array.isArray(p.cards)?p.cards:[];
+const scOf=p=>Array.isArray(p.schedule)?p.schedule:[];
+const clOf=p=>Array.isArray(p.checklist)?p.checklist:[];
+const schDone=i=>i.done===true||i.progress===100||String(i.status||'').toLowerCase().includes('concl');
+function schState(i){const s=pDate(i.start),e=pDate(i.end),t=pDate(iso(new Date()));if(schDone(i))return'done';if(!s||!e)return'nodate';if(e<s)return'review';if(t<s)return'planned';if(t>e)return'late';return dias(t,e)<=2?'attention':'ontrack'}
+function progressOf(p){const cl=clOf(p),tl=tlOf(p),cd=cdOf(p);
+  const a=cl.length?(cl.filter(c=>c.done).length/cl.length)*45:0;
+  const b=tl.length?(tl.reduce((s,i)=>s+(TL_W[i.status]||0),0)/tl.length)*35:0;
+  const c=cd.length?(cd.reduce((s,x)=>s+(CARD_W[x.status]||0),0)/cd.length)*20:0;
+  return Math.round(a+b+c)}
+function clDone(p,id,R,tl){if(id==='asis')return tl.find(i=>i.id==='ti-asis')?.status==='done';if(id==='gono')return tl.find(i=>i.id==='ti-ready')?.status==='done';if(id==='dependencies')return R.dependencies.length>0;if(id==='risks')return R.risks.length+R.issues.length>0;return Boolean(clOf(p).find(c=>c.id===id&&c.done))}
+
+function analyze(p,ws,we){
+  const R=raidsOf(p),tl=tlOf(p),cd=cdOf(p),sc=scOf(p),progress=progressOf(p);
+  const risksOpen=R.risks.filter(i=>!i.done).length+R.issues.filter(i=>!i.done).length;
+  const critCards=cd.filter(c=>c.priority==='Crítica'&&c.status!=='done').length;
+  const blockedTl=tl.filter(i=>i.status==='blocked');
+  const pdca=sc.filter(i=>['late','attention','review'].includes(schState(i)));
+  const blocked=blockedTl.length+critCards;
+  const arch=[...tl.filter(i=>i.status==='waiting-arch').map(i=>TL_LABEL[i.id]),
+    ...cd.filter(c=>c.status!=='done'&&ARCH_RE.test((c.title||'')+' '+(c.description||''))).map(c=>c.title),
+    ...['risks','issues','dependencies'].flatMap(g=>R[g].filter(i=>!i.done&&ARCH_RE.test(i.text||'')).map(i=>i.text))];
+  const archOwner=[...cd.filter(c=>ARCH_RE.test(c.title||'')),...R.dependencies,...R.risks].map(x=>x.owner).find(Boolean)||'';
+  const st=(d,pt)=>d?2:(pt?1:0);
+  const score=st(clDone(p,'scope',R,tl),tl.some(i=>i.id==='ti-escopo'&&i.status!=='notstarted'))
+    +st(clDone(p,'stories',R,tl),tl.some(i=>['ti-requisitos','ti-criterios'].includes(i.id)&&i.status!=='notstarted'))
+    +st(clDone(p,'dependencies',R,tl)&&!critCards&&!pdca.length,R.dependencies.length>0)
+    +st(clDone(p,'stories',R,tl)&&clDone(p,'estimates',R,tl),clDone(p,'stories',R,tl)||clDone(p,'estimates',R,tl))
+    +st(risksOpen===0&&blocked===0&&!pdca.length,risksOpen>0||blocked>0||pdca.length>0);
+  const level=(score>=8&&progress>=70)?'Alta':(score>=5&&progress>=45)?'Média':'Baixa';
+
+  const miles=[];const push=(d,l,k)=>{if(d)miles.push({date:String(d).slice(0,10),label:l,kind:k,p})};
+  push(p.discoveryDate,'Início do Discovery','discovery');push(p.startDev,'Entrada prevista no Delivery','delivery');
+  push(p.endDev,'Fim previsto do Delivery','delivery');if(p.target&&p.target!==p.endDev)push(p.target,'Data-alvo','target');
+  sc.forEach(i=>{if(!schDone(i)&&!i.jira)push(i.end||i.start,i.item||'Marco','schedule')});
+  const ms=miles.filter((m,i,a)=>a.findIndex(x=>x.date===m.date&&x.label===m.label)===i).sort((a,b)=>a.date.localeCompare(b.date));
+
+  const movs=[];const win=t=>{const d=pTs(t);return d&&d>=ws&&d<=we?d:null};
+  tl.forEach(i=>{const d=win(i.updatedAt);if(!d)return;const L=TL_LABEL[i.id]||i.id;
+    if(i.status==='done')movs.push({at:d,k:'avanco',t:`Etapa concluída: ${L}`});
+    else if(i.status==='blocked')movs.push({at:d,k:'bloqueio',t:`Etapa bloqueada: ${L}`});
+    else if(i.status==='waiting-arch')movs.push({at:d,k:'bloqueio',t:`Aguardando arquitetura: ${L}`});
+    else if(i.status==='waiting-business')movs.push({at:d,k:'bloqueio',t:`Aguardando negócio: ${L}`});
+    else movs.push({at:d,k:'avanco',t:`Etapa em andamento: ${L}`})});
+  cd.forEach(c=>{(c.movementHistory||[]).forEach(h=>{const d=win(h.at);if(d)movs.push({at:d,k:'avanco',t:`Ação "${cut(c.title,36)}" → ${h.to}`})});
+    const d=win(c.updatedAt);if(d&&!(c.movementHistory||[]).some(h=>win(h.at)))movs.push({at:d,k:'acao',t:`Ação atualizada: ${cut(c.title||'sem título',36)}`})});
+  ['risks','issues','dependencies'].forEach(g=>R[g].forEach(i=>{const d=win(i.updatedAt);if(!d)return;
+    const n=g==='dependencies'?'Dependência':g==='issues'?'Impedimento':'Risco';
+    movs.push({at:d,k:i.done?'desbloqueio':'risco',t:`${n} ${i.done?'resolvido':'aberto/atualizado'}: ${cut(i.text,34)}`})}));
+  sc.forEach(i=>{(i.replanHistory||[]).forEach(h=>{const d=win(h.at);if(d)movs.push({at:d,k:'replan',t:`Marco replanejado: ${cut(i.item,30)} → ${fD(h.to)}`})});
+    const d=win(i.updatedAt);if(d&&schDone(i))movs.push({at:d,k:'avanco',t:`Marco concluído: ${cut(i.item,34)}`})});
+  movs.sort((a,b)=>b.at-a.at);
+  const ts=[...tl,...cd,...R.risks,...R.issues,...R.dependencies,...sc].map(x=>pTs(x.updatedAt)).filter(Boolean).sort((a,b)=>b-a);
+
+  return{p,R,tl,cd,sc,progress,level,score,risksOpen,blocked,blockedTl,critCards,pdca,arch,archOwner,miles:ms,movs,
+    fase:faseCrono(p),
+    lastMove:ts[0]||pTs(p.updatedAt)||null,
+    stage:(TL_STAGES.find(s=>tl.some(i=>i.stageId===s.id&&i.status!=='done'))||TL_STAGES[3]).title,
+    stories:clDone(p,'stories',R,tl),estimates:clDone(p,'estimates',R,tl),gono:clDone(p,'gono',R,tl)}
+}
+
+function attsOf(a,we){
+  const p=a.p,o=[];
+  const tec=p.techLead&&p.techLead!=='A definir'?p.techLead:(p.frontLeader||'Tech Lead a definir');
+  const neg=p.po||p.initiativeOwner||'PO a definir';
+  const rte=p.rteOwner&&p.rteOwner!=='A definir'?p.rteOwner:'RTE';
+  if(a.arch.length)o.push({lvl:'red',cat:'Arquitetura',r:`Solution Design pendente: ${cut(a.arch[0],40)}${a.arch.length>1?` (+${a.arch.length-1})`:''}`,d:'Escalar priorização do Solution Design',w:a.archOwner||tec,dl:'Nesta semana',c:'Histórias e estimativas não fecham; entrada em Delivery escorrega'});
+  if(a.blocked)o.push({lvl:'red',cat:'Bloqueio',r:`${a.blocked} bloqueio(s) ativo(s)`,d:'Confirmar plano de destrave',w:tec,dl:'Imediato',c:'Discovery trava e o marco seguinte vence sem entrega'});
+  if(a.risksOpen)o.push({lvl:'red',cat:'Risco',r:`${a.risksOpen} risco(s)/impedimento(s) aberto(s)`,d:'Validar mitigação, aceitar ou escalar',w:neg,dl:'Nesta semana',c:'Risco não tratado vira impedimento dentro da sprint'});
+  const alvo=pDate(p.target||p.endDev);
+  if(alvo&&we&&alvo<we&&!/conclu|entreg|finaliz/.test(norm(p.status)))o.push({lvl:'red',cat:'Prazo',r:`Data-alvo vencida em ${fD(p.target||p.endDev)}`,d:'Decidir replanejamento formal da data-alvo',w:neg,dl:'Nesta semana',c:'Compromisso vencido sem repactuação com o negócio'});
+  if(a.pdca.length)o.push({lvl:'amber',cat:'Cronograma',r:`${a.pdca.length} marco(s) vencido(s) ou no limite`,d:'Aprovar replanejamento ou reforço',w:tec,dl:'Nesta semana',c:'Cronograma perde confiabilidade no comitê'});
+  if(!p.squadId||p.squadId==='squad-asd'||/sem definicao|^asd$/.test(norm(p.squad)))o.push({lvl:'amber',cat:'Alocação',r:'Squad não definida',d:'Alocar squad e Tech Lead',w:rte,dl:'Antes do próximo marco',c:'Sem capacidade reservada para a data planejada'});
+  if(a.level==='Baixa'&&/discovery/.test(norm(p.status)))o.push({lvl:'amber',cat:'Prontidão',r:`Prontidão baixa (${a.progress}%) — ${a.stage}`,d:'Decidir Go/No-Go ou adiar entrada em Delivery',w:neg,dl:'Próxima semana',c:'Delivery inicia sem backlog estimável'});
+  const dd=a.lastMove?dias(a.lastMove,new Date()):null;
+  if(dd===null||dd>CFG.staleDays)o.push({lvl:'amber',cat:'Estagnação',r:dd===null?'Sem avanço registrado':`Sem avanço há ${dd} dias`,d:'Confirmar se segue ativa ou repriorizar',w:rte,dl:'Nesta semana',c:'Portfólio carrega iniciativa parada consumindo capacidade'});
+  if(!a.miles.some(m=>pDate(m.date)>=(we||new Date())))o.push({lvl:'blue',cat:'Governança',r:'Sem próximo marco com data',d:'Registrar próximo marco, dono e data',w:rte,dl:'Próxima atualização',c:'Iniciativa sem previsibilidade sai do radar'});
+  o.forEach(x=>x.a=a);return o
+}
+
+/* ════════════ LEITURA DA SEMANA ════════════
+   Traduz o log bruto de movimentos em fatos de gestão. Cada fato responde
+   "o que mudou de uma semana para a outra e por que isso importa".
+   Regras de marco vêm do Cronograma; a comparação vem do snapshot anterior. */
+function insightsOf(a,prev,ws,we,week){
+  const p=a.p,out=[],C=a.fase.itens,hoje=pDate(iso(new Date()));
+  /* 'tipo' agrupa fatos da mesma natureza para o feed não ser dominado por um só */
+  const add=(sev,ico,t,d,peso,tipo)=>out.push({sev,ico,t,d,peso,tipo:tipo||t,a});
+  const noPer=v=>{const d=pTs(v)||pDate(v);return d&&d>=ws&&d<=we};
+
+  /* 1. avanço de fase no Cronograma — o sinal mais forte de progresso real */
+  if(prev&&prev.fs&&prev.fs!==a.fase.atual){
+    const subiu=FASES.indexOf(a.fase.atual)>FASES.indexOf(prev.fs);
+    add(subiu?'pos':'neg',subiu?'▲':'▼',
+      subiu?`Avançou de ${prev.fs} para ${a.fase.atual}`:`Retrocedeu de ${prev.fs} para ${a.fase.atual}`,
+      subiu?'Marco concluído no Cronograma move a iniciativa de fase.':'Marco reaberto no Cronograma.',10);
+  }
+  /* 2. janela de refinamento técnico abrindo ou fechando dentro da semana */
+  if(C.refino){
+    const fim=pDate(C.refino.end), vencido=fim&&!schDone(C.refino)&&fim<hoje;
+    if(schDone(C.refino)&&noPer(C.refino.updatedAt))
+      add('pos','✓','Refinamento Técnico concluído','Backlog tecnicamente pronto para entrar em Delivery.',10,'refino-fim');
+    else if(vencido)  /* vencido prevalece sobre "iniciou": é o fato que exige ação */
+      add('neg','!',`Refinamento Técnico vencido há ${dias(fim,hoje)}d`,`Janela terminava em ${fD(C.refino.end)} e segue aberta.`,9,'refino-vencido');
+    else if(noPer(C.refino.start)&&!schDone(C.refino))
+      add('pos','▶','Iniciou o Refinamento Técnico',`Janela ${janela(C.refino)} · dono ${nome2(C.refino.owner||p.techLead)}.`,9,'refino-inicio');
+  }
+  /* 3. escrita das histórias — antecede o refinamento */
+  if(C.escrita&&noPer(C.escrita.start)&&!schDone(C.escrita))
+    add('pos','▶','Iniciou a escrita das histórias',`Janela ${janela(C.escrita)}.`,7);
+  /* 4. volume de histórias no Jira (vem da carga do sistema) */
+  if(prev){
+    const na=+prev.jq||0,nb=+jiraQtd(p)||0;
+    if(nb>na)add('pos','↑',`Histórias no Jira: ${na} → ${nb}`,'Backlog ganhou evidência objetiva no Jira.',8);
+    else if(nb<na)add('neg','↓',`Histórias no Jira caíram de ${na} para ${nb}`,'Verificar recorte ou remoção indevida.',7);
+  }
+  /* 5. risco que não evolui de uma semana para a outra */
+  [...a.R.risks,...a.R.issues,...a.R.dependencies].filter(i=>!i.done).forEach(i=>{
+    const n=riskStreak(p.id,rkSig(i),week);
+    if(n>=1){
+      const ar=areaOf(i,p);
+      add('neg','⏸',`Risco parado há ${n+1} semana${n?'s':''} sem evolução`,
+        `${cut(i.text,64)} · área ${ar.nome} · dono ${nome2(i.owner)||'não informado'}.`,10+Math.min(n,3),'risco-parado');
+    }
+  });
+  /* 6. riscos abertos e resolvidos dentro da semana */
+  const db=a.movs.filter(m=>m.k==='desbloqueio').length, nv=a.movs.filter(m=>m.k==='risco').length;
+  if(db)add('pos','✓',`${db} item(ns) desbloqueado(s)`,'Risco, impedimento ou dependência encerrado no período.',8);
+  if(nv)add('neg','▲',`${nv} risco(s) aberto(s) ou atualizado(s)`,'Entrou no RAID durante a semana.',8);
+  /* 7. replanejamento de marco — compromisso mudou de data */
+  const rp=a.movs.filter(m=>m.k==='replan');
+  if(rp.length)add('neg','⇄',`${rp.length} marco(s) replanejado(s)`,cut(rp[0].t.replace('Marco replanejado: ',''),70)+'.',9);
+  /* 8. estagnação: nada se moveu e a prontidão não mudou */
+  if(prev&&!a.movs.length&&a.progress===prev.pg){
+    const dd=a.lastMove?dias(a.lastMove,new Date()):null;
+    add('neg','—','Não evoluiu de uma semana para a outra',
+      `Prontidão parada em ${a.progress}%${dd!==null?` · sem registro há ${dd} dias`:' · sem registro de atualização'}.`,9);
+  }
+  return out;
+}
+
+/* ════════════ edição inline (por semana) ════════════ */
+function loadEdits(){try{edits=JSON.parse(localStorage.getItem(CFG.editKey)||'{}')}catch(e){edits={}}}
+function weekEdit(){if(!edits[curWeek])edits[curWeek]={obs:'',avancos:[],itens:[],decisoes:[]};return edits[curWeek]}
+function saveEdits(){try{localStorage.setItem(CFG.editKey,JSON.stringify(edits))}catch(e){toast('Não consegui salvar no navegador',' err')}}
+let modalKind=null;
+const MODAL_DEF={
+  avancos:{t:'Acrescentar avanço',h:'Aparece no bloco "Avanços da semana", junto com o que veio do painel.',f:[['texto','O que avançou','text'],['detalhe','Iniciativa / squad (opcional)','text']]},
+  itens:{t:'Acrescentar atenção',h:'Aparece no bloco "Atenções". Use para o que ainda não está cadastrado no Discovery.',f:[['texto','Ponto de atenção','text'],['detalhe','Iniciativa / contexto (opcional)','text']]},
+  decisoes:{t:'Acrescentar decisão',h:'Entra na tabela de decisões da gestão.',f:[['texto','Decisão necessária','text'],['detalhe','Iniciativa relacionada','text'],['resp','Responsável pela decisão','text'],['prazo','Prazo','text'],['cons','Consequência de não decidir','text']]}
+};
+function openAdd(k){modalKind=k;const d=MODAL_DEF[k];el('mTitle').textContent=d.t;el('mHint').textContent=d.h;
+  el('mFields').innerHTML=d.f.map(([id,lb])=>`<div class="row"><label>${esc(lb)}</label><input class="inp" id="f_${id}"></div>`).join('');
+  el('modal').classList.add('on');setTimeout(()=>el('f_texto')?.focus(),60)}
+function closeModal(){el('modal').classList.remove('on');modalKind=null}
+function saveModal(){
+  const d=MODAL_DEF[modalKind],o={};d.f.forEach(([id])=>o[id]=(el('f_'+id)?.value||'').trim());
+  if(!o.texto){toast('Escreva o texto principal','err');return}
+  weekEdit()[modalKind].push(o);saveEdits();closeModal();render();toast('Item incluído no report')
+}
+function rmItem(k,i){weekEdit()[k].splice(i,1);saveEdits();render()}
+el('obsBox').addEventListener('input',()=>{weekEdit().obs=el('obsBox').innerText.trim();saveEdits()});
+
+/* ════════════ snapshots ════════════ */
+function snaps(){try{return JSON.parse(localStorage.getItem(CFG.snapKey)||'{}')}catch(e){return{}}}
+/* assinatura estável de um risco, para reconhecê-lo de uma semana para outra */
+const rkSig=i=>norm(i.text).slice(0,60)+'|'+(i.due||'');
+function snapOf(a){const p=a.p;return{pg:a.progress,lv:a.level,st:p.status,sq:p.squad,po:p.po,tl:p.techLead,
+  dd:p.discoveryDate,sd:p.startDev,ed:p.endDev,tg:p.target,rk:a.risksOpen,
+  fs:a.fase.atual,mv:a.movs.length,
+  rks:[...a.R.risks,...a.R.issues,...a.R.dependencies].filter(i=>!i.done).map(rkSig),
+  rf:janela(schedBy(p,RE_REFINO)),eh:janela(schedBy(p,RE_ESCRITA)),jq:jiraQtd(p)||''}}
+/* só entram campos que mudam decisão de gestão — 'peso' ordena o bloco de mudanças */
+const SNAP_FIELDS=[
+  ['tg','Data-alvo','d',3],['ed','Fim do Delivery','d',3],['sd','Início do Delivery','d',3],
+  ['rf','Janela de refinamento','',3],['eh','Escrita das histórias','',2],['dd','Data de Discovery','d',2],
+  ['fs','Fase no Cronograma','',3],['st','Status','',2],['sq','Squad','',2],
+  ['po','PO','',1],['tl','Tech Lead','',1],['jq','Histórias no Jira','',2],
+  ['lv','Prontidão','',1],['rk','Riscos abertos','',2]];
+function diffSnap(prev,cur){
+  if(!prev)return[];
+  const out=[];
+  SNAP_FIELDS.forEach(([k,label,tipo,peso])=>{
+    /* campo inexistente no snapshot anterior (ex.: schema mais novo que a semana salva)
+       não é uma mudança real — é lacuna de dado. Sem isso, toda migração de schema
+       gera um "não informado → valor" falso em 100% das iniciativas. */
+    if(!(k in prev))return;
+    const a=prev[k]??'',b=cur[k]??'';
+    if(String(a)===String(b))return;
+    const fmt=v=>tipo==='d'?(v?fD(v):'sem data'):(String(v||'').trim()||'não informado');
+    const o={label,de:fmt(a),para:fmt(b),peso:peso||1,tipo:'troca'};
+    /* datas ganham o deslocamento em dias — é o que o gestor precisa ler */
+    if(tipo==='d'&&a&&b){
+      const d=dias(pDate(a),pDate(b));
+      if(d>0){o.tipo='atraso';o.nota=`adiada ${d} dia${d===1?'':'s'}`;o.peso=(peso||1)+1}
+      else if(d<0){o.tipo='antecipacao';o.nota=`antecipada ${-d} dia${d===-1?'':'s'}`}
+    }
+    if(k==='jq'){const na=+a||0,nb=+b||0;if(nb>na){o.tipo='avanco';o.nota=`+${nb-na} história${nb-na===1?'':'s'}`}}
+    if(k==='rk'){const na=+a||0,nb=+b||0;o.tipo=nb>na?'atraso':'avanco';o.nota=nb>na?`+${nb-na} aberto(s)`:`${na-nb} resolvido(s)`}
+    if(k==='fs'&&FASES.indexOf(b)>FASES.indexOf(a))o.tipo='avanco';
+    out.push(o);
+  });
+  return out.sort((x,y)=>y.peso-x.peso);
+}
+/* há quantas semanas consecutivas este risco aparece sem mudar? */
+function riskStreak(pid,sig,week){
+  const a=snaps(),ks=Object.keys(a).filter(k=>k<week).sort().reverse();
+  let n=0;
+  for(const k of ks){const s=a[k]?.[pid];if(!s||!Array.isArray(s.rks)||!s.rks.includes(sig))break;n++}
+  return n;
+}
+function saveSnap(k,l){const a=snaps();a[k]=Object.fromEntries(l.map(x=>[x.p.id,snapOf(x)]));const ks=Object.keys(a).sort().slice(-14);try{localStorage.setItem(CFG.snapKey,JSON.stringify(Object.fromEntries(ks.map(x=>[x,a[x]]))))}catch(e){}}
+function prevSnap(k){const a=snaps(),ks=Object.keys(a).filter(x=>x<k).sort();return ks.length?a[ks[ks.length-1]]:null}
+
+/* ════════════ gráficos SVG ════════════ */
+function svgBars(list){
+  const rows=list.slice(0,10);const H=rows.length*22+8;
+  const col=v=>v>=70?'#1f9d75':v>=45?'#2d6cdf':'#f4b740';  // hex literal: var() não resolve em atributo SVG na captura
+  return `<svg viewBox="0 0 420 ${H}" width="100%" height="${H}" font-family="Inter,Segoe UI,Arial">
+    ${rows.map((a,i)=>{const y=i*22+4;const w=Math.max(2,a.progress*2.2);return`
+      <text x="0" y="${y+11}" font-size="9" fill="#687587">${esc(a.p.initiativeNumber||'—')}</text>
+      <rect x="34" y="${y+3}" width="220" height="10" rx="5" fill="#e5e9f2"/>
+      <rect x="34" y="${y+3}" width="${w}" height="10" rx="5" fill="${col(a.progress)}"/>
+      <text x="262" y="${y+12}" font-size="9" font-weight="700" fill="#1c2430">${a.progress}%</text>
+      <text x="288" y="${y+12}" font-size="8.5" fill="#687587">${esc(cut(a.p.name,22))}</text>`}).join('')}
+  </svg>`;
+}
+function svgDonut(h,m,l){
+  const tot=h+m+l||1,R=52,C=2*Math.PI*R;let off=0;
+  const seg=(v,c)=>{const len=v/tot*C,s=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${c}" stroke-width="20" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`;off+=len;return s};
+  return `<svg viewBox="0 0 320 145" width="100%" height="145" font-family="Inter,Segoe UI,Arial">
+    <circle cx="70" cy="70" r="52" fill="none" stroke="#eef1f6" stroke-width="20"/>
+    ${seg(h,'#1f9d75')}${seg(m,'#2d6cdf')}${seg(l,'#9a6a12')}
+    <text x="70" y="66" text-anchor="middle" font-size="22" font-weight="800" fill="#1c2430">${tot}</text>
+    <text x="70" y="82" text-anchor="middle" font-size="8.5" fill="#687587">INICIATIVAS</text>
+    ${[['Alta prontidão',h,'#1f9d75'],['Em amadurecimento',m,'#2d6cdf'],['Atenção de prontidão',l,'#9a6a12']].map((r,i)=>`
+      <rect x="150" y="${34+i*26}" width="9" height="9" rx="2.5" fill="${r[2]}"/>
+      <text x="165" y="${42+i*26}" font-size="10" fill="#1c2430" font-weight="600">${r[1]}</text>
+      <text x="182" y="${42+i*26}" font-size="9.5" fill="#687587">${r[0]}</text>`).join('')}
+  </svg>`;
+}
+function svgRail(movs,mon){
+  const dias5=['Seg','Ter','Qua','Qui','Sex'];
+  const per=dias5.map((d,i)=>{const day=new Date(mon);day.setDate(mon.getDate()+i);
+    const list=movs.filter(m=>m.at.toDateString()===day.toDateString());
+    return{d,day,n:list.length,av:list.filter(x=>x.k==='avanco').length,rk:list.filter(x=>['risco','bloqueio','replan'].includes(x.k)).length,list}});
+  const max=Math.max(1,...per.map(x=>x.n));
+  return `<svg viewBox="0 0 1100 132" width="100%" height="132" font-family="Inter,Segoe UI,Arial">
+    <line x1="40" y1="96" x2="1060" y2="96" stroke="#d6dde9" stroke-width="2"/>
+    ${per.map((x,i)=>{const cx=110+i*235;const h=Math.round(x.n/max*54);return`
+      <rect x="${cx-26}" y="${94-h}" width="52" height="${h||2}" rx="5" fill="${x.rk>x.av?'#f4b740':'#1f9d75'}" opacity=".9"/>
+      <text x="${cx}" y="${88-h}" text-anchor="middle" font-size="12" font-weight="800" fill="#1c2430">${x.n||''}</text>
+      <circle cx="${cx}" cy="96" r="5" fill="${x.n?'#bf1830':'#d6dde9'}"/>
+      <text x="${cx}" y="115" text-anchor="middle" font-size="10.5" font-weight="800" fill="#1c2430">${x.d}</text>
+      <text x="${cx}" y="127" text-anchor="middle" font-size="9" fill="#687587">${fDM(x.day)}</text>`}).join('')}
+  </svg>`;
+}
+
+/* ════════════ render ════════════ */
+function render(){
+  curWeek=el('weekInput').value||isoWeekOf(new Date());
+  const {start,end,mon}=weekBounds(curWeek);
+  const squad=el('squadFilter').value;
+  scoped=(base.projects||[]).filter(p=>!squad||(p.squad||'Ainda Sem Definição')===squad).map(p=>analyze(p,start,end));
+  const prev=prevSnap(curWeek);
+  scoped.forEach(a=>{const b=prev?.[a.p.id];a.delta=b?a.progress-b.pg:null;a.changes=diffSnap(b,snapOf(a));
+    a.insights=insightsOf(a,b,start,end,curWeek)});
+  const temBase=!!prev;
+  saveSnap(curWeek,scoped);
+
+  const E=weekEdit();
+  el('obsBox').innerText=E.obs||'';
+  const inDisc=scoped.filter(a=>/discovery/.test(norm(a.p.status))).length;
+  const high=scoped.filter(a=>a.level==='Alta'),mid=scoped.filter(a=>a.level==='Média'),low=scoped.filter(a=>a.level==='Baixa');
+  const avg=scoped.length?Math.round(scoped.reduce((t,a)=>t+a.progress,0)/scoped.length):0;
+  const movs=scoped.flatMap(a=>a.movs.map(m=>({...m,a}))).sort((x,y)=>y.at-x.at);
+  const atts=scoped.flatMap(a=>attsOf(a,end));
+  const rank={red:3,amber:2,blue:1},cr={'Arquitetura':4,'Bloqueio':3,'Prazo':2,'Risco':2};
+  atts.sort((x,y)=>rank[y.lvl]-rank[x.lvl]||(cr[y.cat]||0)-(cr[x.cat]||0)||x.a.progress-y.a.progress);
+  const critInit=new Set(atts.filter(x=>x.lvl==='red').map(x=>x.a.p.id));
+  const horizon=new Date(end);horizon.setDate(horizon.getDate()+CFG.horizon);
+  const allM=scoped.flatMap(a=>a.miles.map(m=>({...m,a})));
+  const periodM=allM.filter(m=>{const d=pDate(m.date);return d>=start&&d<=end});
+  const seen=new Set();
+  const futM=allM.filter(m=>{const d=pDate(m.date);return d>end&&d<=horizon}).sort((a,b)=>a.date.localeCompare(b.date))
+    .filter(m=>{if(seen.has(m.a.p.id))return false;seen.add(m.a.p.id);return true});
+
+  // cabeçalho
+  el('srcLabel').textContent=source;el('srcDetail').textContent=`${scoped.length} iniciativa(s)`;
+  el('heroWeek').textContent=`${fDM(start)} – ${fDM(new Date(end))}`;
+  el('heroScope').textContent=squad||'todas as squads';
+  el('heroSub').textContent=`${scoped.length} iniciativas acompanhadas · maturidade média de ${avg}%`;
+  el('footStamp').textContent=`Semana ${curWeek} · emitido em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}`;
+
+  /* ── veredito da semana: derivado, nomeando iniciativa, squad, área e dono ── */
+  const arch=atts.filter(x=>x.cat==='Arquitetura');
+  const paradas=scoped.filter(a=>a.insights.some(i=>/parado há|Não evoluiu/.test(i.t)));
+  /* cita até duas iniciativas pelo número + nome completo, com squad e responsável */
+  const citar=(lista,dono)=>lista.slice(0,2).map(x=>{
+    const p=x.a?x.a.p:x.p, w=dono&&x.w?` · ${nome2(x.w)}`:'';
+    return `${p.initiativeNumber||'—'} ${p.name} (${p.squad||'sem squad'}${w})`;
+  }).join('; ')+(lista.length>2?` e mais ${lista.length-2}`:'');
+  let vI='◆',vT,vX;
+  if(arch.length){
+    const ar=areaOf({text:arch[0].r},arch[0].a.p);
+    vI='🏗';vT=`Destravar ${ar.nome} é a decisão da semana`;
+    vX=`${arch.length} iniciativa(s) não avançam para histórias e estimativas sem o Solution Design — ${citar(arch,true)}.`;
+  }
+  else if(critInit.size){
+    const cri=atts.filter(x=>x.lvl==='red');
+    vI='⚠';vT=`${critInit.size} iniciativa(s) exigem decisão imediata`;
+    vX=`Riscos, bloqueios ou datas vencidas aguardam direcionamento — ${citar(cri,true)}.`;
+  }
+  else if(paradas.length){
+    vI='⏸';vT=`${paradas.length} iniciativa(s) sem evolução na semana`;
+    vX=`Permanecem na mesma fase do Cronograma desde a semana anterior — ${citar(paradas)}.`;
+  }
+  else if(low.length>high.length){
+    vI='◔';vT='Portfólio ainda imaturo para as datas planejadas';
+    vX=`${low.length} de ${scoped.length} iniciativas não atingem os critérios mínimos de entrada em Delivery.`;
+  }
+  else if(high.length){
+    vI='✓';vT='Portfólio pronto para avançar';
+    vX=`${high.length} iniciativa(s) com critérios atendidos para seguir ao Delivery — ${citar(high)}.`;
+  }
+  else{vI='◆';vT='Acompanhamento preventivo';vX='Sem risco aberto, com critérios de prontidão em evolução.'}
+  el('vIco').textContent=vI;el('vTitle').textContent=vT;el('vText').textContent=vX;
+
+  el('k1').textContent=scoped.length;
+  el('k2').textContent=inDisc;el('k2s').textContent=`${scoped.length-inDisc} a iniciar`;
+  el('k3').textContent=high.length;
+  el('k4').textContent=movs.length+E.avancos.length;el('k4s').textContent=`${movs.filter(m=>m.k==='avanco').length} avanços`;
+  el('k5').textContent=critInit.size||new Set(atts.map(x=>x.a.p.id)).size;el('k5s').textContent=`${atts.length} pontos`;
+  el('k6').textContent=futM.length;el('k6s').textContent=`${periodM.length} nesta semana`;
+
+  // painéis visuais (modelo B)
+  el('avgTag').textContent=`${avg}% maturidade média`;
+  el('chartBars').innerHTML=svgBars([...scoped].sort((a,b)=>b.progress-a.progress));
+  el('chartDonut').innerHTML=svgDonut(high.length,mid.length,low.length);
+  el('railTag').textContent=`${movs.length} movimento(s)`;
+  el('weekRail').innerHTML=svgRail(movs,mon);
+
+  // ── Evolução da semana: fatos derivados, não log bruto ──
+  const db=movs.filter(m=>m.k==='desbloqueio').length, rp=movs.filter(m=>m.k==='replan').length;
+  const totalChg=scoped.reduce((t,a)=>t+a.changes.length,0);
+  /* ordena por peso: o que muda decisão primeiro; empate desempata pelo pior sinal */
+  const ins=scoped.flatMap(a=>a.insights).sort((x,y)=>y.peso-x.peso||(x.sev==='neg'?-1:1));
+  const nPos=ins.filter(i=>i.sev==='pos').length, nNeg=ins.filter(i=>i.sev==='neg').length;
+  /* teto de 3 por natureza: evita que um único tipo ocupe o bloco inteiro */
+  const porTipo={},insTop=[],ocultos={};
+  ins.forEach(i=>{const n=(porTipo[i.tipo]=(porTipo[i.tipo]||0)+1);
+    if(n<=3&&insTop.length<14)insTop.push(i);else ocultos[i.tipo]=(ocultos[i.tipo]||0)+1});
+  const resto=Object.entries(ocultos).map(([t,n])=>`${n}× ${t}`).join(' · ');
+  el('evoTag').textContent=ins.length?`${ins.length} fato(s)`:'sem fatos';
+  el('evoTitle').textContent=ins.length
+    ? `${nPos} avanço(s) e ${nNeg} ponto(s) de atenção na semana`
+    : (temBase?'Semana sem mudança relevante':'Primeira semana registrada');
+  el('evoSummary').textContent=!ins.length
+    ? (temBase
+        ? 'Nenhuma iniciativa mudou de fase, janela, backlog ou risco — o próprio imobilismo é o ponto de atenção da semana.'
+        : 'A leitura comparativa passa a aparecer a partir da próxima geração, quando existir base da semana anterior.')
+    : (temBase
+        ? `Comparado à semana anterior em ${scoped.length} iniciativa(s): fase do Cronograma, janela de refinamento, histórias no Jira e RAID.`
+        : `Leitura do Cronograma e do RAID em ${scoped.length} iniciativa(s). A comparação com a semana anterior entra na próxima geração.`);
+  el('evoFeed').innerHTML=insTop.length?insTop.map(i=>
+    `<div class="ins ${i.sev}"><i>${esc(i.ico)}</i><div><b>${esc(i.t)}</b>
+      <span><em>${esc(i.a.p.initiativeNumber||'—')}</em> · ${esc(cut(i.a.p.name,42))} · ${esc(i.a.p.squad||'sem squad')}<br>${esc(i.d)}</span></div></div>`).join('')
+      +(resto?`<div class="ins neu"><i>+</i><div><b>Mais ${ins.length-insTop.length} fato(s) do mesmo tipo</b><span>${esc(resto)} — detalhe nas tabelas de risco e refinamento.</span></div></div>`:'')
+    :'<div class="empty">Sem fato relevante identificado no período.</div>';
+  const ec=[];
+  if(nNeg)ec.push({t:'Exigem ação da gestão',d:`${nNeg} ponto(s) de atenção: riscos parados, marcos vencidos ou iniciativas sem evolução.`});
+  if(nPos)ec.push({t:'Avanços confirmados',d:`${nPos} movimento(s) positivo(s) — mudança de fase, janela iniciada ou backlog evidenciado.`});
+  if(periodM.length)ec.push({t:'Marcos no período',d:`${periodM.length} marco(s): `+periodM.slice(0,3).map(m=>`${cut(m.label,26)} (${m.a.p.initiativeNumber})`).join('; ')});
+  if(db)ec.push({t:'Desbloqueios',d:`${db} item(ns) resolvido(s) entre riscos, impedimentos e dependências.`});
+  if(rp)ec.push({t:'Replanejamentos',d:`${rp} marco(s) tiveram a data alterada durante a semana.`});
+  if(totalChg)ec.push({t:'Alterações de valor',d:`${totalChg} campo(s) mudaram em ${scoped.filter(a=>a.changes.length).length} iniciativa(s) — detalhe no bloco de mudanças.`});
+  E.avancos.forEach(x=>ec.push({t:'Registro do RTE',d:x.texto+(x.detalhe?` — ${x.detalhe}`:''),rte:true}));
+  el('evoCards').innerHTML=(ec.length?ec:[{t:'Sem movimentação relevante',d:'Nenhum avanço, marco ou desbloqueio identificado.'}])
+    .slice(0,6).map((x,i)=>`<div class="evo-card"><div class="evo-n ${x.rte?'rte':''}">${x.rte?'R':i+1}</div><div><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div></div>`).join('');
+
+  // ── Riscos e impedimentos abertos ──
+  const TIPO={risks:'Risco',issues:'Impedimento',dependencies:'Dependência'};
+  const hoje=pDate(iso(new Date()));
+  const rk=[];
+  scoped.forEach(a=>['risks','issues','dependencies'].forEach(g=>a.R[g].filter(i=>!i.done).forEach(i=>rk.push({a,g,i}))));
+  rk.sort((x,y)=>{const dx=pDate(x.i.due),dy=pDate(y.i.due);return (dx?dx.getTime():9e15)-(dy?dy.getTime():9e15)});
+  /* risco exposto sempre com iniciativa (nome completo), squad, área responsável e dono */
+  el('rkTag').textContent=`${rk.length} aberto(s)`;
+  el('rkRows').innerHTML=rk.length?rk.map(({a,g,i})=>{
+    const d=pDate(i.due), ar=areaOf(i,a.p);
+    const sit=!d?'<span class="pill n">sem prazo</span>':d<hoje?`<span class="pill r">vencido há ${dias(d,hoje)}d</span>`
+      :dias(hoje,d)===0?'<span class="pill a">vence hoje</span>'
+      :dias(hoje,d)<=7?`<span class="pill a">vence em ${dias(hoje,d)}d</span>`:'<span class="pill g">no prazo</span>';
+    const streak=riskStreak(a.p.id,rkSig(i),curWeek);
+    return `<tr><td><b style="color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</b><br><span style="color:var(--ink)">${esc(a.p.name)}</span></td>
+      <td>${esc(a.p.squad||'Sem squad')}</td>
+      <td><span class="pill ${g==='risks'?'r':g==='issues'?'a':'b'}">${TIPO[g]}</span></td>
+      <td>${esc(cut(i.text,86))}${streak>=1?`<span class="cons">Sem evolução há ${streak+1} semanas</span>`:''}</td>
+      <td>${esc(ar.nome)}${ar.inferida?'<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span>':''}</td>
+      <td>${esc(nome2(i.owner)||'—')}</td><td>${i.due?fD(i.due):'—'}</td><td>${sit}</td></tr>`}).join('')
+    :'<tr><td colspan="8" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
+
+  // ── Janelas de refinamento técnico (cards) — marco da aba Cronograma ──
+  const rfList=scoped.map(a=>{
+    const C=a.fase.itens, rf=C.refino||schedBy(a.p,RE_REFINO), eh=C.escrita||schedBy(a.p,RE_ESCRITA), q=jiraQtd(a.p);
+    const ini=pDate(rf?.start), fim=pDate(rf?.end);
+    let sit={t:'sem janela',cls:'n',c:'var(--muted)'};
+    if(rf&&schDone(rf))sit={t:'concluído',cls:'g',c:'var(--green)'};
+    else if(fim&&fim<hoje)sit={t:`atrasado ${dias(fim,hoje)}d`,cls:'r',c:'var(--red)'};
+    else if(ini&&fim&&ini<=hoje&&fim>=hoje)sit={t:'em curso',cls:'a',c:'var(--amber)'};
+    else if(ini&&ini>hoje)sit={t:`inicia em ${dias(hoje,ini)}d`,cls:'b',c:'var(--blue)'};
+    return{a,rf,eh,q,ini,fim,sit};
+  }).sort((x,y)=>{const o={r:0,a:1,b:2,g:3,n:4};return o[x.sit.cls]-o[y.sit.cls]||(x.ini?x.ini-0:9e15)-(y.ini?y.ini-0:9e15)});
+  const rfCurso=rfList.filter(x=>x.sit.cls==='a').length, rfAtraso=rfList.filter(x=>x.sit.cls==='r').length;
+  el('rfTag').textContent=rfAtraso?`${rfAtraso} atrasado(s) · ${rfCurso} em curso`:`${rfCurso} em curso · ${rfList.length} no total`;
+  el('rfCards').innerHTML=rfList.map(({a,rf,eh,q,sit})=>`
+    <div class="rfc" style="--c:${sit.c}">
+      <div class="rfc-top"><span class="rfc-num">${esc(a.p.initiativeNumber||'—')}</span><span class="pill ${sit.cls}">${esc(sit.t)}</span></div>
+      <h4>${esc(a.p.name)}</h4><span class="sq">${esc(a.p.squad||'Sem squad')}</span>
+      <div class="rfc-grid">
+        <div class="rfc-f"><span>Início</span><b>${rf?.start?fD(rf.start):'<span class="nofill">—</span>'}</b></div>
+        <div class="rfc-f"><span>Fim</span><b>${rf?.end?fD(rf.end):'<span class="nofill">—</span>'}</b></div>
+        <div class="rfc-f"><span>Dono</span><b>${esc(nome2(rf?.owner||a.p.techLead)||'—')}</b></div>
+        <div class="rfc-f"><span>Histórias no Jira</span><b class="jira">${q?esc(q):'<span class="nofill">não preenchido</span>'}</b></div>
+        <div class="rfc-f" style="grid-column:1/-1"><span>Escrita das histórias</span><b>${eh?esc(janela(eh)):'<span class="nofill">—</span>'}</b></div>
+      </div>
+    </div>`).join('')||'<div class="empty">Nenhuma janela de refinamento no Cronograma.</div>';
+
+  // ── Mudanças desde a semana anterior — condicional: sem mudança, o bloco some ──
+  const chg=scoped.filter(a=>a.changes.length).sort((x,y)=>y.changes.length-x.changes.length);
+  const temChg=temBase&&chg.length>0;
+  el('chgBlk').classList.toggle('hide',!temChg);
+  if(temChg){
+    const todas=chg.flatMap(a=>a.changes);
+    const nAtraso=todas.filter(c=>c.tipo==='atraso').length, nAnt=todas.filter(c=>c.tipo==='antecipacao').length,
+          nAv=todas.filter(c=>c.tipo==='avanco').length, nTr=todas.filter(c=>c.tipo==='troca').length;
+    /* leitura macro antes do detalhe: o gestor lê a frase, não a lista */
+    const macro=[nAtraso&&`${nAtraso} data(s) adiada(s)`,nAnt&&`${nAnt} antecipada(s)`,
+                 nAv&&`${nAv} avanço(s) de backlog ou fase`,nTr&&`${nTr} troca(s) de responsável, squad ou status`]
+                .filter(Boolean).join(' · ');
+    el('chgTag').textContent=`${chg.length} iniciativa(s)`;
+    el('chgSummary').textContent=macro;
+    el('chgList').innerHTML=chg.map(a=>{
+      const pior=a.changes.some(c=>c.tipo==='atraso')?'var(--red)':a.changes.some(c=>c.tipo==='troca')?'var(--blue)':'var(--green)';
+      return `<div class="chg-row" style="--c:${pior}"><b style="color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</b> ${esc(a.p.name)}<span class="who2">${esc(a.p.squad||'—')}</span>
+        <ul class="chg-list">${a.changes.map(c=>`<li>${esc(c.label)}: <span class="de">${esc(c.de)}</span> → <span class="para">${esc(c.para)}</span>${c.nota?` <span class="nota ${esc(c.tipo)}">${esc(c.nota)}</span>`:''}</li>`).join('')}</ul></div>`}).join('');
+  }
+
+  // ── Próximos Discoveries: sempre o mês subsequente ao da semana do report ──
+  const refD=new Date(end), prox=new Date(refD.getFullYear(),refD.getMonth()+1,1);
+  const alvoM=`${prox.getFullYear()}-${String(prox.getMonth()+1).padStart(2,'0')}`;
+  const disc=scoped.filter(a=>(a.p.discoveryDate||'').slice(0,7)===alvoM).sort((x,y)=>(x.p.discoveryDate||'').localeCompare(y.p.discoveryDate||''));
+  const nomeM=MESL[+alvoM.slice(5,7)-1];
+  el('discTitle').textContent=`Próximos Discoveries — ${nomeM}`;
+  el('discTag').textContent=`${disc.length} iniciativa${disc.length===1?'':'s'}`;
+  /* quando o mês subsequente está vazio, apontar o próximo mês que tem Discovery */
+  const futuroM=[...new Set(scoped.map(a=>(a.p.discoveryDate||'').slice(0,7)).filter(m=>m>alvoM))].sort()[0];
+  el('discGrid').innerHTML=disc.length?disc.slice(0,10).map(a=>`<div class="dc">
+      <div class="dt">${fBadge(a.p.discoveryDate)}</div>
+      <b>${esc(a.p.initiativeNumber||'—')} · ${esc(cut(a.p.name,52))}</b>
+      <small>${esc(a.p.squad||'Sem squad')} · Dono: ${esc(cut(a.p.initiativeOwner||a.p.owner||'—',30))}</small>
+      <small>PO: ${esc(cut(a.p.po||'—',24))} · TL: ${esc(cut(a.p.techLead||'—',24))}</small>
+      <span class="dev">Desenvolvimento previsto: ${fShort(a.p.startDev)} – ${fShort(a.p.endDev)}</span>
+    </div>`).join('')
+    :`<div class="empty">Nenhum Discovery programado para ${nomeM}.${futuroM?` O próximo é em ${MESL[+futuroM.slice(5,7)-1]}.`:''}</div>`;
+  el('discNote').classList.toggle('hide',!disc.length);
+
+  // avanços
+  const advAuto=movs.filter(m=>['avanco','desbloqueio'].includes(m.k)).slice(0,7)
+    .map(m=>({b:m.t,s:`${m.a.p.initiativeNumber||'—'} · ${m.a.p.squad||'—'} · ${fDM(m.at)}`,c:'var(--green)'}));
+  const advMan=E.avancos.map((x,i)=>({b:x.texto,s:(x.detalhe||'Registro do RTE'),c:'var(--blue)',rm:i}));
+  const adv=[...advAuto,...advMan];
+  el('advTag').textContent=adv.length;
+  el('advList').innerHTML=adv.length?adv.map(x=>liHtml(x,'avancos')).join(''):'<div class="empty">Sem avanço registrado nesta semana.</div>';
+
+  // atenções
+  const attAuto=[];const per={};
+  atts.forEach(x=>{const k=x.a.p.id;per[k]=(per[k]||0)+1;if(per[k]<=2&&attAuto.length<7)
+    attAuto.push({b:`${x.a.p.initiativeNumber||'—'} · ${x.cat}`,s:x.r,c:x.lvl==='red'?'var(--red)':x.lvl==='amber'?'var(--amber)':'var(--blue)'})});
+  const attMan=E.itens.map((x,i)=>({b:x.texto,s:x.detalhe||'Registro do RTE',c:'var(--blue)',rm:i}));
+  const att=[...attAuto,...attMan];
+  el('attTag').textContent=atts.length+E.itens.length;
+  el('attList').innerHTML=att.length?att.map(x=>liHtml(x,'itens')).join(''):'<div class="empty">Nenhuma atenção identificada.</div>';
+
+  // decisões
+  const seenD=new Set(),decData=[];
+  atts.forEach(x=>{const k=x.a.p.id+'|'+x.cat;if(seenD.has(k)||decData.length>=7)return;seenD.add(k);
+    decData.push({d:x.d,ctx:`${x.a.p.initiativeNumber||'—'} · ${cut(x.a.p.name,42)} — ${x.r}`,cons:x.c,w:x.w,dl:x.dl})});
+  E.decisoes.forEach((x,i)=>decData.push({d:x.texto,ctx:x.detalhe||'Registro do RTE',cons:x.cons||'',w:x.resp||'Gestão',dl:x.prazo||'A definir',rm:i}));
+  el('decTag').textContent=decData.length;
+  el('decRows').innerHTML=decData.length?decData.map(x=>`<tr><td><b>${esc(x.d)}</b><span style="display:block;color:var(--muted);font-size:9px;margin-top:2px">${esc(x.ctx)}</span>${x.cons?`<span class="cons">Se não decidir: ${esc(x.cons)}</span>`:''}</td><td class="who">${esc(x.w)}</td><td class="who" style="color:var(--primary)">${esc(x.dl)}${x.rm!==undefined?`<button class="rm edit-ui" onclick="rmItem('decisoes',${x.rm})" title="Remover">×</button>`:''}</td></tr>`).join(''):'<tr><td colspan="3" class="empty">Nenhuma decisão pendente de gestão.</td></tr>';
+
+  // situação por iniciativa (modelo A) — lista agrupada por urgência
+  const flag=new Map();atts.forEach(x=>{if(!flag.has(x.a.p.id))flag.set(x.a.p.id,x.lvl)});
+  const ord=[...scoped].sort((a,b)=>(flag.get(b.p.id)==='red'?1:0)-(flag.get(a.p.id)==='red'?1:0)||b.progress-a.progress);
+  el('semaTag').textContent=`${scoped.length} iniciativas`;
+  const sitRow=a=>{
+    const lv=flag.get(a.p.id),c=lv==='red'?'#d94545':lv==='amber'?'#f4b740':a.level==='Alta'?'#1f9d75':'#2d6cdf';
+    const n=a.miles.find(m=>pDate(m.date)>=new Date());
+    const dv=a.delta===null?'':a.delta>0?`▲ ${a.delta}pp`:a.delta<0?`▼ ${Math.abs(a.delta)}pp`:'— 0pp';
+    const dc=a.delta===null?'flat':a.delta>0?'up':a.delta<0?'down':'flat';
+    return `<div class="sit-row" style="--c:${c}">
+      <div class="sit-num">${esc(a.p.initiativeNumber||'—')}</div>
+      <div class="sit-name"><b>${esc(cut(a.p.name,46))}</b><span>${esc(a.p.squad||'Sem squad')}</span></div>
+      <div class="sit-bar-wrap"><div class="bar"><i style="width:${a.progress}%;background:${c}"></i></div><span class="sit-pct">${a.progress}%</span></div>
+      <div class="sit-delta ${dc}">${dv}</div>
+      <div class="sit-mst">${n?`<b>${esc(fD(n.date))}</b><br>${esc(cut(n.label,24))}`:'sem marco'}</div>
+    </div>`};
+  const grpRed=ord.filter(a=>flag.get(a.p.id)==='red');
+  const grpAmb=ord.filter(a=>flag.get(a.p.id)==='amber');
+  const grpOk=ord.filter(a=>!flag.has(a.p.id));
+  const grupos=[
+    grpRed.length&&{c:'#d94545',t:`Crítica — ${grpRed.length}`,l:grpRed},
+    grpAmb.length&&{c:'#f4b740',t:`Atenção — ${grpAmb.length}`,l:grpAmb},
+    grpOk.length&&{c:'#1f9d75',t:`Sem atenção aberta — ${grpOk.length}`,l:grpOk}
+  ].filter(Boolean);
+  el('semaGrid').innerHTML=grupos.map(g=>`<div class="sit-group">
+    <div class="sit-gh"><span class="gdot" style="background:${g.c}"></span><b>${g.t}</b></div>
+    ${g.l.map(sitRow).join('')}</div>`).join('');
+
+  // tabela (modelo B)
+  el('tblTag').textContent=`${scoped.length} iniciativas`;
+  el('tblRows').innerHTML=ord.map(a=>{
+    const n=a.miles.find(m=>pDate(m.date)>=new Date());
+    const w=a.movs.length;
+    return `<tr><td style="font-weight:900;color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</td>
+      <td>${esc(cut(a.p.name,46))}</td><td>${esc(a.p.squad||'—')}</td>
+      <td><span class="pill ${a.level==='Alta'?'g':a.level==='Média'?'b':'a'}">${a.level} · ${a.progress}%</span></td>
+      <td>${w?`<span class="pill g">${w} mov.</span>`:'<span class="pill n">parada</span>'}</td>
+      <td>${n?fD(n.date)+'<br><small style="color:var(--muted)">'+esc(cut(n.label,24))+'</small>':'<span class="pill n">sem marco</span>'}</td>
+      <td>${esc(a.p.po||'—')}<br><small style="color:var(--muted)">${esc(a.p.techLead||'—')}</small></td></tr>`}).join('');
+
+  // próximos marcos — agrupados por data (uma data, todas as iniciativas daquele dia)
+  const mst=[...periodM,...futM].filter((m,i,a)=>a.findIndex(x=>x.date===m.date&&x.label===m.label&&x.a.p.id===m.a.p.id)===i)
+    .sort((a,b)=>a.date.localeCompare(b.date)).slice(0,14);
+  const mc={discovery:'#2d6cdf',delivery:'#1f9d75',target:'#bf1830',schedule:'#f4b740'};
+  el('mstTag').textContent=`${mst.length} marco(s)`;
+  const byDate=[];
+  mst.forEach(m=>{let g=byDate.find(x=>x.date===m.date);if(!g){g={date:m.date,items:[],inPeriod:pDate(m.date)<=end};byDate.push(g)}g.items.push(m)});
+  el('mstRail').innerHTML=byDate.length?byDate.map(g=>{
+    const d=pDate(g.date),hoje=pDate(iso(new Date()));
+    let rel;
+    if(g.inPeriod) rel='nesta semana';
+    else if(d<hoje) rel='atrasado';
+    else rel=dias(hoje,d)===0?'hoje':`em ${dias(hoje,d)}d`;
+    return `<div class="rail-day">
+      <div class="rail-dh"><b>${fBadge(g.date)}</b><span>${g.items.length} iniciativa${g.items.length===1?'':'s'}</span><small>${esc(rel)}</small></div>
+      ${g.items.map(m=>`<div class="mst" style="--c:${mc[m.kind]||'#2d6cdf'}"><b>${esc(m.a.p.initiativeNumber||'—')} · ${esc(cut(m.a.p.name,30))}</b><small>${esc(m.a.p.squad||'—')} · ${esc(cut(m.label,26))}</small></div>`).join('')}
+    </div>`}).join('')
+    : `<div class="empty">Nenhum marco nos próximos ${CFG.horizon} dias.</div>`;
+
+  lastCtx={scoped,high,mid,low,avg,movs,atts,decData,mst,adv,att,start,end,squad,vT,vX,critInit,periodM,futM,inDisc,rk,chg,disc,alvoM,temBase,ins,temChg,rfList};
+}
+function liHtml(x,kind){
+  return `<div class="li"><span class="bul" style="--c:${x.c}"></span><div><b>${esc(x.b)}</b><span>${esc(x.s)}</span></div>${
+    x.rm!==undefined?`<button class="rm edit-ui" onclick="rmItem('${kind}',${x.rm})" title="Remover">×</button>`:''}</div>`;
+}
+function setModel(m){document.body.dataset.model=m;el('mA').classList.toggle('on',m==='A');el('mB').classList.toggle('on',m==='B');
+  try{localStorage.setItem('sala_rep_model',m)}catch(e){}}
+
+/* ════════════ exportação ════════════ */
+async function snapCanvas(scale){
+  document.body.classList.add('exporting');
+  /* <details> recolhido não é capturado pelo html2canvas — abre para a exportação e devolve ao estado original */
+  const det=[...document.querySelectorAll('details.blk-more')],wasOpen=det.map(d=>d.open);
+  det.forEach(d=>d.open=true);
+  await new Promise(r=>setTimeout(r,60));
+  try{
+    return await html2canvas(el('reportCapture'),{scale,useCORS:true,backgroundColor:'#ffffff',
+      windowWidth:1240,scrollX:0,scrollY:-window.scrollY});
+  }finally{document.body.classList.remove('exporting');det.forEach((d,i)=>d.open=wasOpen[i])}
+}
+async function copyImage(btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='🖼 Copiando…';
+  try{
+    if(typeof html2canvas==='undefined')throw new Error('lib');
+    // Modelo A cabe em 1 imagem leve; o B é alto e pesado -> escala menor
+    let scale=document.body.dataset.model==='A'?1.5:1.15;
+    let canvas=await snapCanvas(scale);
+    let blob=await new Promise(r=>canvas.toBlob(r,'image/png'));
+    if(blob.size>3.2e6){canvas=await snapCanvas(scale*0.75);blob=await new Promise(r=>canvas.toBlob(r,'image/png'))}
+    const mb=(blob.size/1048576).toFixed(1);
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      toast(`Imagem copiada (${mb} MB). Cole no Teams com Ctrl+V.`);
+    }else{
+      showFallback(canvas);toast('Seu navegador não permite copiar direto: use o botão direito na imagem','warn');
+    }
+  }catch(e){console.error(e);toast('Não consegui copiar a imagem. Use "Copiar p/ Teams".','err')}
+  finally{btn.disabled=false;btn.innerHTML=old}
+}
+function showFallback(canvas){
+  const w=window.open('');if(!w){toast('Libere pop-ups para usar a alternativa','err');return}
+  w.document.write(`<title>Copiar imagem do report</title><body style="font:14px Segoe UI;padding:16px;background:#eef1f6">
+    <p><b>Clique com o botão direito na imagem → Copiar imagem</b> e cole no Teams ou no e-mail.</p>
+    <img src="${canvas.toDataURL('image/png')}" style="max-width:100%;box-shadow:0 8px 24px rgba(0,0,0,.15)">`);
+}
+/* HTML para colar em Teams/Outlook: tabelas + estilo inline (é o que esses clientes preservam) */
+function buildRichHtml(){
+  const c=lastCtx;if(!c)return'<p>Gere o report primeiro.</p>';
+  const F='font-family:Segoe UI,Arial,sans-serif';
+  const box=(t,inner)=>`<table width="100%" cellpadding="0" cellspacing="0" style="${F};border:1px solid #e5e9f2;border-radius:8px;margin:0 0 12px"><tr><td style="background:#fbfcfe;padding:8px 12px;border-bottom:1px solid #e5e9f2;font-size:13px;font-weight:700;color:#1c2430">${t}</td></tr><tr><td style="padding:10px 12px;font-size:12px;color:#1c2430">${inner}</td></tr></table>`;
+  const li=a=>`<div style="padding:4px 0;border-top:1px solid #eef1f6"><b style="font-weight:600">${esc(a.b)}</b><br><span style="color:#687587;font-size:11px">${esc(a.s)}</span></div>`;
+  const kpi=(l,v,s)=>`<td width="16.6%" style="padding:8px;border:1px solid #e5e9f2;border-radius:6px;text-align:center"><div style="font-size:10px;color:#687587;text-transform:uppercase;font-weight:700">${l}</div><div style="font-size:20px;font-weight:800;color:#1c2430">${v}</div><div style="font-size:10px;color:#687587">${s}</div></td>`;
+  const dec=c.decData.length?`<table width="100%" cellpadding="6" cellspacing="0" style="${F};font-size:12px;border-collapse:collapse">
+    <tr style="background:#fbfcfe"><th align="left" style="font-size:10px;color:#687587">DECISÃO</th><th align="left" style="font-size:10px;color:#687587">RESPONSÁVEL</th><th align="left" style="font-size:10px;color:#687587">PRAZO</th></tr>
+    ${c.decData.map(x=>`<tr><td style="border-top:1px solid #e5e9f2;vertical-align:top"><b>${esc(x.d)}</b><br><span style="color:#687587;font-size:11px">${esc(x.ctx)}</span>${x.cons?`<br><span style="color:#d94545;font-size:11px">Se não decidir: ${esc(x.cons)}</span>`:''}</td><td style="border-top:1px solid #e5e9f2;vertical-align:top;font-weight:600">${esc(x.w)}</td><td style="border-top:1px solid #e5e9f2;vertical-align:top;font-weight:700;color:#bf1830">${esc(x.dl)}</td></tr>`).join('')}</table>`:'<i style="color:#687587">Nenhuma decisão pendente.</i>';
+  return `<div style="${F};max-width:820px">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#bf1830;color:#fff;padding:14px 16px;border-radius:8px">
+      <div style="font-size:10px;letter-spacing:2px;opacity:.8">SALA TRANSFORMAÇÃO · DISCOVERY → DELIVERY</div>
+      <div style="font-size:19px;font-weight:800;margin:4px 0">Report Semanal Executivo</div>
+      <div style="font-size:12px;opacity:.9">Semana ${fDM(c.start)} – ${fDM(new Date(c.end))} · ${c.squad||'todas as squads'} · ${c.scoped.length} iniciativas</div>
+      <div style="margin-top:10px;background:rgba(0,0,0,.2);padding:8px 10px;border-radius:6px">
+        <b style="font-size:13px">${esc(c.vT)}</b><br><span style="font-size:11px;opacity:.9">${esc(c.vX)}</span></div>
+    </td></tr></table>
+    <table width="100%" cellpadding="0" cellspacing="4" style="margin:12px 0"><tr>
+      ${kpi('Iniciativas',c.scoped.length,'no escopo')}${kpi('Em Discovery',c.inDisc,'em preparação')}${kpi('Prontas',c.high.length,'sustentam Delivery')}
+      ${kpi('Movimentos',c.movs.length,'na semana')}${kpi('Atenções',c.critInit.size||c.atts.length,'iniciativas')}${kpi('Marcos 14d',c.futM.length,'próximos')}
+    </tr></table>
+    ${box('Evolução da semana',c.ins.length?c.ins.slice(0,12).map(i=>`<div style="padding:5px 0;border-top:1px solid #eef1f6"><b style="color:${i.sev==='pos'?'#147557':i.sev==='neg'?'#d94545':'#315d9f'}">${esc(i.ico)} ${esc(i.t)}</b><br><span style="color:#687587;font-size:11px">${esc(i.a.p.initiativeNumber||'—')} · ${esc(cut(i.a.p.name,44))} · ${esc(i.a.p.squad||'—')} — ${esc(i.d)}</span></div>`).join(''):'<i style="color:#687587">Sem fato relevante no período.</i>')}
+    ${box('Avanços da semana',c.adv.length?c.adv.map(li).join(''):'<i style="color:#687587">Sem avanço registrado.</i>')}
+    ${box('Atenções',c.att.length?c.att.map(li).join(''):'<i style="color:#687587">Nenhuma atenção identificada.</i>')}
+    ${weekEdit().obs?box('Observação do RTE',esc(weekEdit().obs).replace(/\n/g,'<br>')):''}
+    ${box('Decisões e validações da gestão',dec)}
+    ${c.rk.length?box('Riscos e impedimentos abertos',`<table width="100%" cellpadding="6" cellspacing="0" style="${F};font-size:12px;border-collapse:collapse">
+      <tr style="background:#fbfcfe"><th align="left" style="font-size:10px;color:#687587">INICIATIVA</th><th align="left" style="font-size:10px;color:#687587">SQUAD</th><th align="left" style="font-size:10px;color:#687587">DESCRIÇÃO</th><th align="left" style="font-size:10px;color:#687587">ÁREA RESPONSÁVEL</th><th align="left" style="font-size:10px;color:#687587">DONO</th><th align="left" style="font-size:10px;color:#687587">PRAZO</th></tr>
+      ${c.rk.map(({a,g,i})=>`<tr><td style="border-top:1px solid #e5e9f2"><b>${esc(a.p.initiativeNumber)}</b><br><span style="font-size:11px">${esc(a.p.name)}</span></td><td style="border-top:1px solid #e5e9f2">${esc(a.p.squad||'—')}</td><td style="border-top:1px solid #e5e9f2">${esc(cut(i.text,70))}</td><td style="border-top:1px solid #e5e9f2">${esc(areaOf(i,a.p).nome)}</td><td style="border-top:1px solid #e5e9f2">${esc(nome2(i.owner)||'—')}</td><td style="border-top:1px solid #e5e9f2">${i.due?fD(i.due):'—'}</td></tr>`).join('')}</table>`):''}
+    ${c.disc.length?box(`Próximos Discoveries — ${c.alvoM?MESL[+c.alvoM.slice(5,7)-1]:''}`,c.disc.map(a=>`<div style="padding:5px 0;border-top:1px solid #eef1f6"><b>${fBadge(a.p.discoveryDate)}</b> · ${esc(a.p.initiativeNumber)} ${esc(cut(a.p.name,44))}<br><span style="color:#687587;font-size:11px">${esc(a.p.squad||'—')} · PO: ${esc(nome2(a.p.po))} · TL: ${esc(nome2(a.p.techLead))} · Dev previsto: ${fShort(a.p.startDev)} – ${fShort(a.p.endDev)}</span></div>`).join('')+'<div style="margin-top:8px;font-size:11px;color:#9a6a12">A janela de desenvolvimento é previsão e pode mudar conforme o resultado do Discovery e a capacidade da squad.</div>'):''}
+    ${c.temChg?box('Mudanças desde a semana anterior',c.chg.map(a=>`<div style="padding:5px 0;border-top:1px solid #eef1f6"><b>${esc(a.p.initiativeNumber)}</b> ${esc(a.p.name)}<br>${a.changes.map(x=>`<span style="color:#687587;font-size:11px">${esc(x.label)}: ${esc(x.de)} → <b style="color:#bf1830">${esc(x.para)}</b>${x.nota?` (${esc(x.nota)})`:''}</span>`).join('<br>')}</div>`).join('')):''}
+    ${box('Próximos marcos',c.mst.map(m=>`<div style="padding:4px 0;border-top:1px solid #eef1f6"><b>${fD(m.date)}</b> · ${esc(m.a.p.initiativeNumber)} ${esc(cut(m.a.p.name,40))}<br><span style="color:#687587;font-size:11px">${esc(cut(m.label,40))}</span></div>`).join('')||'<i style="color:#687587">Sem marcos.</i>')}
+    <div style="font-size:10px;color:#687587">Sala Transformação · uso interno · gerado em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}</div>
+  </div>`;
+}
+function buildPlainText(){
+  const c=lastCtx;if(!c)return'';
+  const L=[`REPORT SEMANAL EXECUTIVO — ${fDM(c.start)} a ${fDM(new Date(c.end))} — ${c.squad||'todas as squads'}`,'',
+    `${c.vT}: ${c.vX}`,'',
+    `Iniciativas ${c.scoped.length} | Em Discovery ${c.inDisc} | Prontas ${c.high.length} | Movimentos ${c.movs.length} | Atenções ${c.critInit.size} | Marcos 14d ${c.futM.length}`,'',
+    'EVOLUÇÃO DA SEMANA'];
+  if(c.ins.length)c.ins.slice(0,12).forEach(i=>L.push(`- ${i.t} | ${i.a.p.initiativeNumber} ${cut(i.a.p.name,44)} (${i.a.p.squad||'—'}) — ${i.d}`));
+  else L.push('- Sem fato relevante no período.');
+  L.push('','AVANÇOS DA SEMANA');
+  c.adv.forEach(a=>L.push(`- ${a.b} (${a.s})`));
+  L.push('','ATENÇÕES');c.att.forEach(a=>L.push(`- ${a.b}: ${a.s}`));
+  if(weekEdit().obs){L.push('','OBSERVAÇÃO DO RTE',weekEdit().obs)}
+  L.push('','DECISÕES DA GESTÃO');c.decData.forEach(x=>L.push(`- ${x.d} | ${x.w} | ${x.dl}`));
+  if(c.rk.length){L.push('','RISCOS E IMPEDIMENTOS ABERTOS');c.rk.forEach(({a,i})=>L.push(`- ${a.p.initiativeNumber} ${a.p.name} | squad ${a.p.squad||'—'} | ${cut(i.text,60)} | área ${areaOf(i,a.p).nome} | dono ${nome2(i.owner)||'—'} | ${i.due?fD(i.due):'sem prazo'}`))}
+  if(c.disc.length){L.push('',`PRÓXIMOS DISCOVERIES — ${c.alvoM?MESL[+c.alvoM.slice(5,7)-1].toUpperCase():''}`);c.disc.forEach(a=>L.push(`- ${fBadge(a.p.discoveryDate)} ${a.p.initiativeNumber} ${cut(a.p.name,44)} (${a.p.squad}) — Dev previsto ${fShort(a.p.startDev)} a ${fShort(a.p.endDev)}`));L.push('  (janela de desenvolvimento é previsão e pode mudar)')}
+  if(c.temChg){L.push('','MUDANÇAS DESDE A SEMANA ANTERIOR');c.chg.forEach(a=>a.changes.forEach(x=>L.push(`- ${a.p.initiativeNumber} ${x.label}: ${x.de} -> ${x.para}${x.nota?` (${x.nota})`:''}`)))}
+  L.push('','PRÓXIMOS MARCOS');c.mst.forEach(m=>L.push(`- ${fD(m.date)} ${m.a.p.initiativeNumber} ${cut(m.a.p.name,40)} — ${cut(m.label,40)}`));
+  return L.join('\n');
+}
+async function copyRich(btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='📋 Copiando…';
+  try{
+    const html=buildRichHtml(),txt=buildPlainText();
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]);
+    }else{
+      const d=document.createElement('div');d.innerHTML=html;d.style.position='fixed';d.style.left='-9999px';document.body.appendChild(d);
+      const r=document.createRange();r.selectNode(d);const s=getSelection();s.removeAllRanges();s.addRange(r);
+      document.execCommand('copy');s.removeAllRanges();d.remove();
+    }
+    toast(`Copiado (${Math.round(buildRichHtml().length/1024)} KB). Cole no Teams ou Outlook com Ctrl+V.`);
+  }catch(e){console.error(e);toast('Não consegui copiar. Tente "Copiar imagem".','err')}
+  finally{btn.disabled=false;btn.innerHTML=old}
+}
+async function exportPdf(btn){
+  const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='⇩ Gerando…';
+  try{
+    const jsPDF=window.jspdf?.jsPDF;
+    if(!jsPDF||typeof html2canvas==='undefined'){window.print();return}
+    const c=await snapCanvas(1.6);
+    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+    const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=7;
+    const uw=pw-m*2,ih=c.height*uw/c.width,uh=ph-m*2;
+    const img=c.toDataURL('image/jpeg',.92);
+    let left=ih,pos=m;
+    pdf.addImage(img,'JPEG',m,pos,uw,ih,undefined,'FAST');left-=uh;
+    while(left>0){pdf.addPage();pos=m-(ih-left);pdf.addImage(img,'JPEG',m,pos,uw,ih,undefined,'FAST');left-=uh}
+    pdf.save(`report-semanal-${curWeek}.pdf`);
+  }catch(e){console.error(e);window.print()}
+  finally{btn.disabled=false;btn.innerHTML=old}
+}
+
+/* ════════════ amostra ════════════ */
+function SAMPLE(){
+  const seed=[['113286','Consórcio Cobrança — Atendimento de demandas','Expresso','squad-expresso','Em Discovery','2026-06-11','2026-07-01','2026-08-01','Daniel Lima','Moseas Souza'],
+  ['113345','Cartões — Não Monetário — Tratar base PCCF','Interstelar','squad-interstelar','Em Discovery','2026-06-11','2026-08-01','2026-09-01','Mariana Nakaya','Silmara Rosalem'],
+  ['98434','Automação Câmbio Trade Finance QuickWin','Contact','squad-contact','Em Discovery','2026-06-11','','','Sandra Souza','A definir'],
+  ['116596','Jornada de Automação — Conversão de Robôs em RPA','Terminator','squad-terminator','Em Discovery','2026-06-11','','','Jane Silva','A definir'],
+  ['113309','Recepção de Documentos Físicos e Ofícios','MadMax','squad-madmax','Em Discovery','2026-07-01','','','Sérgio Cartapatti','A definir'],
+  ['113260','API EXTRATO — 2ª via de extrato bancário','Inception','squad-inception','Em Discovery','2026-07-01','2026-08-10','2026-08-30','Sandra Souza','Victor Cruz'],
+  ['113308','Gestão de Fornecedores e Indexação Legado','MadMax','squad-madmax','Em Discovery','2026-07-01','2026-08-03','2026-08-14','Sérgio Cartapatti','Rennan Gustavo'],
+  ['113327','FIRP / Abono / Mtoken / APP RM','Inception','squad-inception','Em Discovery','2026-07-01','2026-08-10','2026-08-31','Sandra Souza','Victor Fortunato'],
+  ['113292','Garantias — Registro em Cartório','Expresso','squad-expresso','A iniciar','2026-08-03','2026-09-01','2026-10-01','Fernanda Rocha','Moseas Souza'],
+  ['113359','Compensação de Cheques','Interstelar','squad-interstelar','A iniciar','2026-08-03','2026-10-01','2026-11-01','Mariana Nakaya','Silmara Rosalem'],
+  ['113317','Automatização do Pagamento de Veículos','Interstelar','squad-interstelar','A iniciar','2026-08-03','2026-10-01','2026-11-01','Rodrigo Santos','Silmara Rosalem'],
+  ['113315','Consignado, Conciliação e Portabilidade','Ainda Sem Definição','squad-asd','A iniciar','2026-08-10','2026-10-01','2026-11-01','Daniel Lima','ASD']];
+  const rnd=s=>{let x=0;for(const ch of String(s))x=(x*31+ch.charCodeAt(0))%9973;return()=>(x=(x*1103515245+12345)%2147483648)/2147483648};
+  const ago=d=>new Date(Date.now()-d*864e5).toISOString();
+  const CL=['stakeholders','problem','scope','asis','tobe','dependencies','risks','stories','estimates','gono'];
+  return{squads:['Ainda Sem Definição','Contact','Expresso','Inception','Interstelar','MadMax','Terminator'],
+   projects:seed.map(([n,name,sq,sqid,st,disc,sd,ed,po,tl])=>{const r=rnd(n),mat=st==='Em Discovery';
+    return{id:'ini-'+n,initiativeNumber:n,name,squad:sq,squadId:sqid,status:st,discoveryDate:disc,startDev:sd,endDev:ed,target:ed,po,techLead:tl,
+      rteOwner:'Amanda Lima',frontLeader:'Celso Perussi',updatedAt:ago(r()*10),
+      checklist:CL.map(id=>({id,done:mat&&r()>.45})),
+      timelineItems:TL_TEMPLATE.map((t,i)=>({id:t.id,stageId:t.stageId,status:!mat?(i<2?'progress':'notstarted'):(r()>.55?'done':r()>.3?'progress':'notstarted'),updatedAt:r()>.5?ago(r()*7):ago(18+r()*30)})),
+      cards:mat&&r()>.45?[{id:'c'+n,title:'Desenho de Arquitetura',status:r()>.6?'doing':'backlog',priority:r()>.7?'Crítica':'Alta',owner:'Eduardo Paiva',due:iso(new Date(Date.now()+(r()*10-4)*864e5)),updatedAt:ago(r()*6),movementHistory:r()>.5?[{from:'backlog',to:'doing',at:ago(r()*5)}]:[]}]:[],
+      /* aba Cronograma — é dela que saem fase, janelas e volume de histórias */
+      schedule:[
+        {id:'k'+n,item:'Kickoff',owner:po,start:disc,end:disc,done:mat,updatedAt:ago(r()*9)},
+        {id:'d'+n,item:'Discovery',owner:po,start:disc,end:iso(new Date(Date.now()+(r()*20-4)*864e5)),done:mat&&r()>.6,updatedAt:ago(r()*8)},
+        {id:'so'+n,item:'Desenho de solução',owner:'Eduardo Paiva',start:iso(new Date(Date.now()-20*864e5)),end:iso(new Date(Date.now()+(r()*12-5)*864e5)),done:mat&&r()>.5,updatedAt:ago(r()*7)},
+        ...(sd?[{id:'e'+n,item:'Escrita das histórias',owner:po,start:iso(new Date(Date.now()-(4+r()*8)*864e5)),end:iso(new Date(Date.now()+(r()*14-3)*864e5)),done:r()>.75,updatedAt:ago(r()*6)},
+              {id:'s'+n,item:'Refinamento Técnico',owner:tl,start:iso(new Date(Date.now()-(2+r()*10)*864e5)),end:iso(new Date(Date.now()+(r()*16-6)*864e5)),done:r()>.8,updatedAt:ago(r()*7)},
+              {id:'j'+n,item:'Qtd de histórias no Jira',jira:true,observations:r()>.45?String(Math.round(4+r()*26)):'',updatedAt:ago(r()*7)}]:[]),
+        ...(ed?[{id:'en'+n,item:'Entrega para o Delivery',owner:tl,start:ed,end:ed,done:false,updatedAt:ago(r()*10)}]:[])
+      ],
+      raids:{risks:mat&&r()>.55?[{text:'Dependência da área de arquitetura para fechar o Solution Design',owner:'Eduardo Paiva',area:'Arquitetura',due:iso(new Date(Date.now()+(r()*14-7)*864e5)),done:false,updatedAt:ago(6+r()*20)}]:[],
+        issues:mat&&r()>.7?[{text:'Ambiente de homologação indisponível para o time',owner:'Celso Perussi',due:iso(new Date(Date.now()+(r()*12-2)*864e5)),done:false,updatedAt:ago(4+r()*16)}]:[],assumptions:[],
+        dependencies:r()>.6?[{text:'Integração com sistema legado NEWCON e definição de APIs',owner:'Eduardo Paiva',due:iso(new Date(Date.now()+(r()*16-8)*864e5)),done:false,updatedAt:ago(5+r()*18)}]:[]}}})}
+}
+
+/* ════════════ init ════════════ */
+loadEdits();
+el('weekInput').value=isoWeekOf(new Date());
+try{const m=localStorage.getItem('sala_rep_model');if(m)setModel(m)}catch(e){}
+el('squadFilter').addEventListener('change',render);
+el('weekInput').addEventListener('change',generate);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+/* Ctrl+P / impressão nativa também precisa do apêndice aberto para não sumir da folha */
+let __detState=null;
+window.addEventListener('beforeprint',()=>{const det=[...document.querySelectorAll('details.blk-more')];__detState=det.map(d=>d.open);det.forEach(d=>d.open=true)});
+window.addEventListener('afterprint',()=>{if(!__detState)return;[...document.querySelectorAll('details.blk-more')].forEach((d,i)=>d.open=__detState[i]);__detState=null});
+generate();
+</script>
+
+
+</body></html>
