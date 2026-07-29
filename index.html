@@ -5910,6 +5910,8 @@ function renderOps4opsView(){
   }
 
   var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,ops4opsSnaps,cur.seq);
+  var notRefined=totalBacklog-totalRefined;
+  var refinementDonut=emDonutCard('Backlog x Refinada','calculado automaticamente',[{label:'Refinada',color:'#22c55e',value:totalRefined},{label:'Não refinada',color:'#f59e0b',value:notRefined}],totalRefined,totalRefined===1?'refinada':'refinadas');
 
   host.innerHTML=
     '<div class="sv-kpi" style="margin-bottom:1rem">'+
@@ -5917,6 +5919,7 @@ function renderOps4opsView(){
       svKpiItem('#3b82f6',squads.length,'Squads com Ops4Ops','grupos ativos')+
       svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo "Refinada" no Jira')+
     '</div>'+
+    '<div class="em-charts" style="margin-bottom:1rem">'+refinementDonut+'</div>'+
     '<div class="bk-delta-bar">'+
       (prev
         ? '<span class="bk-delta-info">vs importação anterior (#'+prev.seq+')</span> '+globalDeltaHtml+
