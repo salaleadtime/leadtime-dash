@@ -71,6 +71,9 @@ var VP_SHEET_MAP = {
   // Resultado: as confirmações de planejamento de sprint nunca saíam do
   // navegador de quem clicou. Uma linha resolve.
   vpPlanningConfirmations: '_vp_planning_confirmations',
+  vpPlanningSnapshots: '_vp_planning_snapshots',
+  vpSprintObjectives: '_vp_sprint_objectives',
+  vpSprintCalendar: '_vp_sprint_calendar',
   emergencyDemand: '_emergency_demand',
   discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
 };
@@ -106,6 +109,8 @@ var GUARD_MAX_SHRINK = 0.30;    // recusa se o payload cortar mais de 30% dos re
 var MERGE_MAP_KEYS = {
   vpQuickNotes: true,
   vpPlanningConfirmations: true,
+  vpPlanningSnapshots: true,
+  vpSprintObjectives: true,
   vpEpicMeta: true
 };
 
@@ -780,6 +785,83 @@ function getOrCreateSheet_(sheetName) {
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) sheet = ss.insertSheet(sheetName);
   return sheet;
+}
+
+// ── Planning automático da sprint ────────────────────────────────────────
+// Execute instalarGatilhoPlanningSprint() uma única vez após publicar esta
+// versão no Apps Script. A rotina roda diariamente à meia-noite e, no dia seguinte ao
+// planning, congela a fotografia do compromisso sem depender do GitHub Pages.
+function instalarGatilhoPlanningSprint() {
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'confirmarPlanningSprintAutomaticamente') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  ScriptApp.newTrigger('confirmarPlanningSprintAutomaticamente').timeBased().atHour(0).everyDays(1).create();
+  return 'Gatilho de confirmação automática instalado (execução diária à meia-noite).';
+}
+
+function confirmarPlanningSprintAutomaticamente() {
+  return withLock_(function() {
+    var calendar = readJsonFromSheet_(getVpSheet_('vpSprintCalendar'), {});
+    var sprints = calendar && Array.isArray(calendar.sprints) ? calendar.sprints : [];
+    var timezone = Session.getScriptTimeZone() || 'America/Fortaleza';
+    var today = Utilities.formatDate(new Date(), timezone, 'yyyy-MM-dd');
+    var target = sprints.find(function(sprint) {
+      if (!sprint || !sprint.start) return false;
+      var nextDay = new Date(String(sprint.start) + 'T12:00:00');
+      nextDay.setDate(nextDay.getDate() + 1);
+      return Utilities.formatDate(nextDay, timezone, 'yyyy-MM-dd') === today;
+    });
+    if (!target) return { ok:true, skipped:'Nenhuma sprint com planning no dia anterior.' };
+
+    var sprintData = readJsonFromSheet_(getVpSheet_('vpSprint'), {});
+    var rows = sprintData && Array.isArray(sprintData.rows) ? sprintData.rows : [];
+    if (!rows.length) return { ok:false, skipped:'Base da sprint indisponível.' };
+
+    var snapshotsSheet = getVpSheet_('vpPlanningSnapshots');
+    var confirmationsSheet = getVpSheet_('vpPlanningConfirmations');
+    var objectives = readJsonFromSheet_(getVpSheet_('vpSprintObjectives'), {});
+    var snapshots = readJsonFromSheet_(snapshotsSheet, {});
+    var confirmations = readJsonFromSheet_(confirmationsSheet, {});
+    var squads = {};
+    rows.forEach(function(row) {
+      var squad = String(row && row.squad || '').trim();
+      if (squad) squads[squad] = true;
+    });
+
+    var created = 0;
+    Object.keys(squads).forEach(function(squad) {
+      var key = String(target.start) + '|' + sprintSquadKey_(squad);
+      if (snapshots[key]) return;
+      var storyKeys = rows.filter(function(row) {
+        return String(row && row.squad || '').trim().toLowerCase() === squad.toLowerCase();
+      }).map(function(row) {
+        return String((row && (row.chave || row.key || row.id)) || '').trim();
+      }).filter(Boolean);
+      snapshots[key] = {
+        createdAt:new Date().toISOString(), mode:'automatic', squad:squad,
+        sprintName:String(target.name || 'Sprint'), sprintStart:target.start,
+        sprintEnd:target.end || '', objective:String(objectives[key] || ''), storyKeys:storyKeys
+      };
+      confirmations[key] = {
+        confirmedAt:new Date().toISOString(), mode:'automatic', squad:squad,
+        sprintStart:target.start, sprintEnd:target.end || ''
+      };
+      created++;
+    });
+    if (created) {
+      writeJsonToSheet_(snapshotsSheet, snapshots);
+      writeJsonToSheet_(confirmationsSheet, confirmations);
+    }
+    return { ok:true, sprint:target.start, snapshotsCreated:created };
+  });
+}
+
+function sprintSquadKey_(value) {
+  return String(value || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, '');
 }
 
 function snapKey_(s) { return s && s.id ? 'id:' + s.id : 'seq:' + (s ? s.seq : ''); }

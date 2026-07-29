@@ -5204,6 +5204,26 @@
 
     .ux-v6-donut.jira-donut::after { content: attr(data-total) '\A histórias'; }
 
+    .jira-overview-card { align-self: start; display: grid; gap: 14px; }
+    .jira-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .jira-summary-metric { padding: 10px 8px; border: 1px solid #e4eaf2; border-radius: 12px; background: #fbfcff; }
+    .jira-summary-metric strong { display: block; color: #102a56; font-size: 19px; line-height: 1; }
+    .jira-summary-metric span { display: block; margin-top: 4px; color: #687587; font-size: 9px; font-weight: 700; }
+    .jira-summary-metric.refined { border-color: #ccefdc; background: #f1fbf5; }
+    .jira-summary-metric.refined strong { color: #18794e; }
+    .jira-summary-metric.pending { border-color: #fde4ad; background: #fffaf0; }
+    .jira-summary-metric.pending strong { color: #a86800; }
+    .jira-refinement-head { display: flex; justify-content: space-between; gap: 10px; color: #526276; font-size: 10px; font-weight: 700; }
+    .jira-refinement-head strong { color: #18794e; }
+    .jira-refinement-track { height: 8px; overflow: hidden; border-radius: 999px; background: #e8edf3; margin-top: 7px; }
+    .jira-refinement-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #24a66a, #67c98f); }
+    .jira-status-track { display: flex; height: 9px; overflow: hidden; border-radius: 999px; background: #e8edf3; }
+    .jira-status-track span { min-width: 0; height: 100%; }
+    .jira-status-legend { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 8px; }
+    .jira-status-legend span { display: inline-flex; align-items: center; gap: 5px; color: #5e6d80; font-size: 10px; }
+    .jira-status-legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--jira-status-color); }
+    .jira-story-refined { flex: 0 0 auto; padding: 2px 5px; border: 1px solid #ccefdc; border-radius: 999px; background: #f1fbf5; color: #18794e; font-size: 8px; font-weight: 800; }
+
     .jira-overview-list {
       display: grid;
       gap: 14px;
@@ -5760,6 +5780,7 @@
     .ux-v6-risk-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
     .ux-v6-risk-card-title { font-size:13px; font-weight:800; color:#bf1830; display:flex; align-items:center; gap:6px; }
     .ux-v6-risk-mini-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:12px; }
+    .ux-v6-risk-mini-kpis.two { grid-template-columns:repeat(2,1fr); }
     .ux-v6-risk-mini-kpi { background:#fff5f5; border:1px solid #f5ddd8; border-radius:10px; padding:8px 6px; text-align:center; }
     .ux-v6-risk-mini-kpi .v { font-size:18px; font-weight:800; color:#bf1830; line-height:1; display:block; }
     .ux-v6-risk-mini-kpi .l { font-size:9px; color:var(--muted); display:block; margin-top:3px; }
@@ -6419,7 +6440,7 @@
     .ux-v6-status-chip {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       min-height: 19px;
       padding: 2px 6px;
       border-radius: 999px;
@@ -6445,7 +6466,8 @@
     .ux-v6-status-chip.start { color: #475569; background: #f8fafc; border-color: #dbe3ee; }
     .ux-v6-status-chip.warn { color: #a96f00; background: #fffaeb; border-color: #ffebbd; }
     .ux-v6-status-chip.good { color: #1f8f55; background: #effaf4; border-color: #ccefdc; }
-    button.ux-v6-status-chip { font: inherit; cursor: pointer; }
+    /* Preserve the compact status typography on clickable chips. */
+    button.ux-v6-status-chip { font-family: inherit; cursor: pointer; }
     button.ux-v6-status-chip:hover { filter: brightness(.97); transform: translateY(-1px); }
     button.ux-v6-status-chip:focus-visible { outline: 3px solid rgba(32, 79, 153, .25); outline-offset: 2px; }
 
@@ -6474,6 +6496,21 @@
       font-weight: 720;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .ux-v6-status-distribution-card { align-self: start; }
+    .ux-v6-top-initiative-compact { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 9px 0; border-bottom: 1px solid #edf0f5; }
+    .ux-v6-top-initiative-compact:last-child { border-bottom: 0; padding-bottom: 0; }
+    .ux-v6-top-initiative-rank { color: #b5122b; font-size: 11px; font-weight: 800; text-align: center; }
+    .ux-v6-top-initiative-main { min-width: 0; }
+    .ux-v6-top-initiative-main strong { display: block; color: #17233a; font-size: 11px; }
+    .ux-v6-top-initiative-main span { display: block; overflow: hidden; color: #667387; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .ux-v6-top-initiative-hours { color: #102a56; font-size: 11px; font-weight: 800; white-space: nowrap; }
+
+    .ux-v6-status-count {
+      font-size: 9px;
+      font-weight: 500;
+      opacity: .82;
     }
 
     .ux-v6-next-date {
@@ -14196,7 +14233,7 @@ Recomendação PMO: ${d.recommendation}`;
         ['warn', 'Atenção']
       ].filter(([key]) => summary[key] > 0);
       if (!items.length) return '<span class="ux-v6-status-chip good">Sem alertas</span>';
-      return items.map(([key, label]) => `<button type="button" class="ux-v6-status-chip ${key}" onclick="event.stopPropagation();openSquadScheduleStatusModal('${escapeAttr(squadId)}','${label}')" title="Ver marcos ${label.toLowerCase()}">${summary[key]} ${label}</button>`).join('');
+      return items.map(([key, label]) => `<button type="button" class="ux-v6-status-chip ${key}" onclick="event.stopPropagation();openSquadScheduleStatusModal('${escapeAttr(squadId)}','${label}')" title="Ver marcos ${label.toLowerCase()}"><span class="ux-v6-status-count">${summary[key]}</span><span>${label}</span></button>`).join('');
     }
 
     const SQ_HEALTH_ACCENT = { good: '46, 159, 95', warn: '242, 169, 0', crit: '200, 16, 46', start: '100, 116, 139' };
@@ -15996,7 +16033,9 @@ Recomendação PMO: ${d.recommendation}`;
       if (workbookRaw && relsRaw) {
         const wbDoc = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(workbookRaw), 'application/xml');
         const relsDoc = new DOMParser().parseFromString(new TextDecoder('utf-8').decode(relsRaw), 'application/xml');
-        const firstSheet = wbDoc.querySelector('sheets sheet');
+        const sheets = Array.from(wbDoc.querySelectorAll('sheets sheet'));
+        // Tracker exports have an executive cover first; import their data tab instead.
+        const firstSheet = sheets.find(sheet => normalizeImportHeader(sheet.getAttribute('name')) === 'base discoveries') || sheets[0];
         if (firstSheet) {
           const rid = firstSheet.getAttribute('r:id');
           const rel = Array.from(relsDoc.querySelectorAll('Relationship')).find(r => r.getAttribute('Id') === rid);
@@ -16081,7 +16120,41 @@ Recomendação PMO: ${d.recommendation}`;
 
     function buildImportRecords(rows) {
       const headerRowIdx = rows.findIndex(r => (r || []).some(cell => normalizeImportHeader(cell) === 'nome da iniciativa'));
-      if (headerRowIdx === -1) throw new Error('Não encontrei a coluna "Nome da Iniciativa". Confirme se é o modelo de planilha Ops4Ops.');
+      const trackerHeaderRowIdx = rows.findIndex(r => {
+        const headers = (r || []).map(normalizeImportHeader);
+        return headers.includes('iniciativa / projeto') && headers.some(header => /^n[ºo]? iniciativa$/.test(header));
+      });
+      if (headerRowIdx === -1 && trackerHeaderRowIdx === -1) throw new Error('Não encontrei uma aba compatível. Use o modelo Ops4Ops ou o relatório exportado pelo Discovery PMO Tracker.');
+      if (headerRowIdx === -1) {
+        const headerRow = rows[trackerHeaderRowIdx];
+        const colIndex = {};
+        const trackerHeaderMap = {
+          'iniciativa / projeto': 'nome', 'squad': 'squad', 'rte resp.': 'rteOwner', 'lider': 'frontLeader',
+          'tech lead': 'techLead', 'po': 'po', 'area de dados': 'dataArea', 'dt. inicial': 'discoveryDate',
+          'data target': 'discoveryEndDate'
+        };
+        headerRow.forEach((header, index) => {
+          const normalized = normalizeImportHeader(header);
+          if (/^n[ºo]? iniciativa$/.test(normalized)) colIndex.motherNumber = index;
+          else if (trackerHeaderMap[normalized]) colIndex[trackerHeaderMap[normalized]] = index;
+        });
+        const records = [];
+        for (let i = trackerHeaderRowIdx + 1; i < rows.length; i++) {
+          const row = rows[i] || [];
+          const get = key => { const index = colIndex[key]; return index === undefined ? '' : String(row[index] ?? '').trim(); };
+          const motherNumber = get('motherNumber');
+          const nome = get('nome');
+          if (!motherNumber || !nome) continue;
+          records.push({
+            motherNumber, tipo: 'Única', childNumber: '', nome, squad: get('squad'), tema: '',
+            rteOwner: get('rteOwner'), frontLeader: get('frontLeader'), initiativeOwner: '', po: get('po'), focalPoint: '',
+            techLead: get('techLead'), dataArea: get('dataArea'), aiRpa: '', processName: '', hours2026: '',
+            discoveryDate: get('discoveryDate'), discoveryEndDate: get('discoveryEndDate'), startDev: '', endDev: '',
+            nota: '', dependencias: '', prazos: '', source: 'tracker-report'
+          });
+        }
+        return records;
+      }
       const headerRow = rows[headerRowIdx];
       const colIndex = {};
       headerRow.forEach((h, i) => { const key = IMPORT_HEADER_MAP[normalizeImportHeader(h)]; if (key) colIndex[key] = i; });
@@ -16097,7 +16170,7 @@ Recomendação PMO: ${d.recommendation}`;
           initiativeOwner: get('initiativeOwner'), po: get('po'), focalPoint: get('focalPoint'),
           techLead: get('techLead'), dataArea: get('dataArea'), aiRpa: get('aiRpa'),
           processName: get('processName'), hours2026: get('hours2026'), discoveryDate: get('discoveryDate'),
-          startDev: get('startDev'), endDev: get('endDev'), nota: get('nota'),
+          discoveryEndDate: '', startDev: get('startDev'), endDev: get('endDev'), nota: get('nota'),
           dependencias: get('dependencias'), prazos: get('prazos')
         });
       }
@@ -16361,6 +16434,7 @@ Recomendação PMO: ${d.recommendation}`;
           apply: (p, value) => { p.theme = value; if (importBlankish(p.business)) p.business = value; }
         }, rec.tema, changed, preserved);
         [
+          ['rteOwner', 'RTE responsável', rec.rteOwner],
           ['frontLeader', 'Líder da frente', rec.frontLeader],
           ['initiativeOwner', 'Dono da iniciativa', rec.initiativeOwner],
           ['po', 'PO', rec.po],
@@ -16373,6 +16447,7 @@ Recomendação PMO: ${d.recommendation}`;
         const hrs = Number(String(rec.hours2026).replace(',', '.'));
         if (Number.isFinite(hrs) && hrs > 0) applyImportedField(project, { key: 'hours2026', label: 'Horas 2026' }, hrs, changed, preserved);
         applyImportedField(project, { key: 'discoveryDate', label: 'Discovery' }, parseFlexibleDate(rec.discoveryDate), changed, preserved);
+        applyImportedField(project, { key: 'discoveryEndDate', label: 'Término Discovery' }, parseFlexibleDate(rec.discoveryEndDate), changed, preserved);
         applyImportedField(project, { key: 'startDev', label: 'Início Dev' }, parseFlexibleDate(rec.startDev), changed, preserved);
         applyImportedField(project, { key: 'endDev', label: 'Término Dev' }, parseFlexibleDate(rec.endDev), changed, preserved);
         if (changed.length || preserved.length) project.importSource.ops4ops.updatedAt = new Date().toISOString();
@@ -16381,6 +16456,7 @@ Recomendação PMO: ${d.recommendation}`;
       }
       function applyDerived(project, rec) {
         const derived = { cards: 0, deps: 0, schedule: 0, timeline: 0, timelineText: 0, timelineDate: 0 };
+        if (rec.source === 'tracker-report') return derived;
         if (rec.dependencias && upsertDependencyText(project, rec.dependencias)) { depsAdded++; derived.deps++; }
         const dueISO = findFirstDateInText(rec.prazos);
         if (rec.nota && upsertActionCardFromNote(project, rec.nota, dueISO)) { cardsAdded++; derived.cards++; }
@@ -16709,7 +16785,7 @@ Recomendação PMO: ${d.recommendation}`;
         let added = 0, updated = 0;
         records.forEach(rec => {
           const existing = project.jiraStories.find(s => s.key === rec.key);
-          const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, created: rec.created, updated: rec.updated };
+          const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated };
           if (existing) { Object.assign(existing, fields); updated++; }
           else { project.jiraStories.push(fields); added++; }
         });
@@ -16756,11 +16832,13 @@ Recomendação PMO: ${d.recommendation}`;
     function openJiraImportPreviewModal(plan) {
       let stories = 0;
       const epicKeys = new Set();
-      plan.groups.forEach(({ records }) => records.forEach(rec => { stories++; if (rec.epicKey) epicKeys.add(rec.epicKey); }));
+      let refinedStories = 0;
+      plan.groups.forEach(({ records }) => records.forEach(rec => { stories++; if (rec.epicKey) epicKeys.add(rec.epicKey); if (isJiraStoryRefined(rec)) refinedStories++; }));
       const rows = [
         ['Iniciativas que serão atualizadas', plan.groups.size],
         ['Épicos identificados', epicKeys.size],
         ['Histórias identificadas', stories],
+        ['Histórias com rótulo Refinada', refinedStories],
         ['Linhas sem rótulo de iniciativa (ignoradas)', plan.untagged]
       ];
       const unmatchedNote = plan.unmatchedTags.length
@@ -16769,7 +16847,7 @@ Recomendação PMO: ${d.recommendation}`;
       const body = `
         <div class="ux-v6-alert-list">${rows.map(([label, value]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('')}</div>
         ${importValidationHtml(plan.validation)}
-        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">O vínculo usa o rótulo "#Nº da iniciativa" de cada história no Jira. Histórias já importadas antes são atualizadas (status, resumo etc.), sem duplicar.</p>
+        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">O vínculo usa o rótulo "#Nº da iniciativa" de cada história no Jira. O rótulo "Refinada" separa automaticamente as histórias já refinadas. Histórias já importadas são atualizadas sem duplicar.</p>
         ${unmatchedNote}
       `;
       openModal('Confirmar importação do Jira', 'Revise antes de aplicar. Isso atualiza a base para todos os usuários.', body, [
@@ -16825,6 +16903,10 @@ Recomendação PMO: ${d.recommendation}`;
       return Array.from(byEpic.entries()).map(([epicKey, epicStories]) => ({ epicKey, stories: epicStories }));
     }
 
+    function isJiraStoryRefined(story) {
+      return (story?.labels || []).some(label => ['refinada', 'refinado'].includes(normalizeImportHeader(label)));
+    }
+
     // Markup do épico expansível (usado no card da iniciativa e no resumo geral do
     // Dashboard) — extraído pra um só lugar pra não divergir quando um dos dois mudar.
     function renderJiraEpicListHtml(epics) {
@@ -16841,6 +16923,7 @@ Recomendação PMO: ${d.recommendation}`;
                 <span class="jira-story-status-dot" data-status="${jiraStatusClass(story.status)}"></span>
                 <span class="jira-story-key">${escapeHtml(story.key)}</span>
                 <span class="jira-story-title">${escapeHtml(truncateText(story.summary, 58))}</span>
+                ${isJiraStoryRefined(story) ? '<span class="jira-story-refined">Refinada</span>' : ''}
               </a>`).join('')}
             </div>
           </details>`).join('')}</div>`;
@@ -16863,49 +16946,49 @@ Recomendação PMO: ${d.recommendation}`;
     function aggregateJiraStats() {
       const counts = { done: 0, progress: 0, backlog: 0, cancelled: 0 };
       const epicKeys = new Set();
-      let stories = 0, projectsWithJira = 0;
+      let stories = 0, refinedStories = 0, projectsWithJira = 0;
       (data.projects || []).forEach(project => {
         const list = Array.isArray(project.jiraStories) ? project.jiraStories : [];
         if (!list.length) return;
         projectsWithJira++;
         list.forEach(story => {
           stories++;
+          if (isJiraStoryRefined(story)) refinedStories++;
           if (story.epicKey) epicKeys.add(story.epicKey);
           counts[jiraStatusClass(story.status)]++;
         });
       });
-      return { epics: epicKeys.size, stories, counts, projectsWithJira };
+      return { epics: epicKeys.size, stories, refinedStories, counts, projectsWithJira };
     }
 
     const JIRA_STATUS_COLORS = { done: '#1f9d75', progress: '#f4b740', backlog: '#2d6cdf', cancelled: '#c3cad6' };
     const JIRA_STATUS_LABELS = { done: 'Concluída', progress: 'Em andamento', backlog: 'Backlog', cancelled: 'Cancelada' };
 
-    function buildJiraStatusDonutGradient(counts, total) {
-      if (!total) return '#e2e8f0';
-      let acc = 0;
-      const stops = [];
-      Object.keys(JIRA_STATUS_COLORS).forEach(key => {
-        const val = counts[key] || 0;
-        if (!val) return;
-        const start = acc;
-        acc += (val / total) * 100;
-        stops.push(`${JIRA_STATUS_COLORS[key]} ${start.toFixed(2)}% ${acc.toFixed(2)}%`);
-      });
-      return stops.length ? `conic-gradient(${stops.join(', ')})` : '#e2e8f0';
-    }
-
     function renderJiraOverviewSideCard() {
       const stats = aggregateJiraStats();
-      const gradient = buildJiraStatusDonutGradient(stats.counts, stats.stories);
-      const legendHtml = Object.keys(JIRA_STATUS_COLORS)
+      const refinedPercent = stats.stories ? Math.round((stats.refinedStories / stats.stories) * 100) : 0;
+      const statusLegendHtml = Object.keys(JIRA_STATUS_COLORS)
         .filter(key => stats.counts[key] > 0)
-        .map(key => `<div class="ux-v6-legend-row"><span class="ux-v6-legend-dot" style="background:${JIRA_STATUS_COLORS[key]}"></span><span>${JIRA_STATUS_LABELS[key]}</span><strong>${stats.counts[key]}</strong></div>`)
-        .join('') || '<div class="ux-v6-legend-row"><span>Nenhuma história importada ainda.</span></div>';
-      return `<section class="ux-v6-side-card">
+        .map(key => `<span><i style="--jira-status-color:${JIRA_STATUS_COLORS[key]}"></i>${JIRA_STATUS_LABELS[key]} <strong>${stats.counts[key]}</strong></span>`)
+        .join('') || '<span>Nenhuma história importada ainda.</span>';
+      const statusTrackHtml = Object.keys(JIRA_STATUS_COLORS)
+        .filter(key => stats.counts[key] > 0)
+        .map(key => `<span style="width:${stats.stories ? (stats.counts[key] / stats.stories) * 100 : 0}%;background:${JIRA_STATUS_COLORS[key]}" title="${escapeAttr(JIRA_STATUS_LABELS[key])}: ${stats.counts[key]}"></span>`)
+        .join('');
+      return `<section class="ux-v6-side-card jira-overview-card">
           <div class="ux-v6-side-title"><strong>Épicos &amp; Histórias (Jira)</strong><span class="ux-v6-side-link" onclick="openJiraOverviewModal()" style="cursor:pointer" title="Ver detalhes por iniciativa">Ver detalhes</span></div>
-          <div class="ux-v6-donut-wrap">
-            <div class="ux-v6-donut jira-donut" data-total="${stats.stories}" style="background:${gradient}"></div>
-            <div class="ux-v6-legend">${legendHtml}</div>
+          <div class="jira-summary-grid">
+            <div class="jira-summary-metric"><strong>${stats.stories}</strong><span>Histórias</span></div>
+            <div class="jira-summary-metric refined"><strong>${stats.refinedStories}</strong><span>Refinadas</span></div>
+            <div class="jira-summary-metric pending"><strong>${Math.max(0, stats.stories - stats.refinedStories)}</strong><span>A refinar</span></div>
+          </div>
+          <div>
+            <div class="jira-refinement-head"><span>Progresso de refinamento</span><strong>${refinedPercent}%</strong></div>
+            <div class="jira-refinement-track"><span style="width:${refinedPercent}%"></span></div>
+          </div>
+          <div>
+            <div class="jira-status-track">${statusTrackHtml}</div>
+            <div class="jira-status-legend">${statusLegendHtml}</div>
           </div>
           <div class="ux-v6-kpi-note" style="margin-top:10px">${stats.epics} épico(s) · ${stats.projectsWithJira} iniciativa(s) com Jira vinculado</div>
         </section>`;
@@ -17414,88 +17497,50 @@ Recomendação PMO: ${d.recommendation}`;
       const attentionActionsHtml = attentionActions.length
         ? attentionActions.slice(0, 5).map(item => attentionActionRowHtml(item)).join('')
         : `<div class="ux-v6-attention-empty">Nenhuma ação acordada atrasada ou a vencer nos próximos ${ATTENTION_DUE_SOON_DAYS} dias.</div>`;
+      const conditionalRaidItems = collectOpenRaidItems(allProjects);
+      const openRaidRowsHtml = conditionalRaidItems.slice(0, 4).map(item => {
+        const projectLabel = [initiativeNumber(item.project), displayProjectTitle(item.project)].filter(Boolean).join(' · ');
+        const lateDays = item.row.due ? Math.max(1, Math.round((parseISODate(fmtDate(new Date())) - parseISODate(item.row.due)) / 86400000)) : 0;
+        const dueLabel = item.row.due ? (item.late ? `${lateDays}d atrasado` : formatBR(item.row.due)) : 'Sem prazo';
+        return `<button type="button" class="ux-v6-attention-item" onclick="goToRaidProject('${escapeAttr(item.project.id)}')" title="Abrir risco ou dependência da iniciativa">
+          <div class="ux-v6-attention-main"><strong>${escapeHtml(item.row.text || 'Item sem descrição')}</strong><span>${escapeHtml(projectLabel || 'Sem iniciativa')} · ${escapeHtml(raidGroupLabel(item.row.group))}</span></div>
+          <span class="ux-v6-attention-badge ${item.late ? 'crit' : 'amber'}">${escapeHtml(dueLabel)}</span>
+        </button>`;
+      }).join('');
+      const openRaidCardHtml = conditionalRaidItems.length ? `<section class="ux-v6-side-card">
+        <div class="ux-v6-side-title"><strong>Riscos e dependências</strong><span class="ux-v6-side-link" onclick="openOpenRaidsOverviewModal()" style="cursor:pointer" title="Ver todos os riscos e dependências em aberto">Ver todos (${conditionalRaidItems.length})</span></div>
+        <div class="ux-v6-alert-list">${openRaidRowsHtml}</div>
+        ${conditionalRaidItems.length > 4 ? `<div style="text-align:center;padding-top:8px;font-size:11px;color:var(--muted)">+${conditionalRaidItems.length - 4} item(ns) em aberto</div>` : ''}
+      </section>` : '';
 
       const lateScheduleItems = collectLateScheduleMarcos(allProjects);
-      const lateScheduleHtml = lateScheduleItems.length
-        ? lateScheduleItems.slice(0, 5).map(item => lateScheduleRowHtml(item)).join('')
-        : `<div class="ux-v6-attention-empty">Nenhum marco de Cronograma atrasado.</div>`;
 
-      // ── Card de Riscos do Roadmap (tela inicial) ─────────────────────────────
-      const _today = parseISODate(fmtDate(new Date()));
-      const DAY_MS = 1000 * 60 * 60 * 24;
+      // ── Card de atenções do Cronograma (tela inicial) ─────────────────────────
+      // The card reflects only overdue milestones. Missing dates stay pending until
+      // the user provides them, and are never treated as an automatic delay.
+      const lateInitiativeCount = new Set(lateScheduleItems.map(entry => entry.project.id)).size;
+      const lateCronogramRows = lateScheduleItems.slice(0, 4).map(lateScheduleRowHtml).join('');
 
-      // Enrich each at-risk project with maxDaysLate and missedCount
-      const riskInitiatives = allProjects.map(p => {
-        const di = ensureBaseSchedule(p).filter(s => !s.jira);
-        const lateItems = di.filter(s => { const e = parseISODate(s.end); return !scheduleCompleted(s) && e && _today && e < _today; });
-        const missingItems = di.filter(s => !s.start && !s.end);
-        const maxDays = lateItems.reduce((m, s) => { const e = parseISODate(s.end); return e ? Math.max(m, Math.round((_today - e) / DAY_MS)) : m; }, 0);
-        const worstMarco = lateItems.sort((a, b) => (parseISODate(a.end) - parseISODate(b.end)))[0];
-        return { p, lateItems, missingItems, maxDays, worstMarco };
-      }).filter(r => r.lateItems.length > 0 || r.missingItems.length > 0)
-        .sort((a, b) => b.maxDays - a.maxDays);
-
-      // Next upcoming deadline at risk (not yet overdue, due in ≤14 days)
-      const upcomingRisk = allProjects.flatMap(p =>
-        ensureBaseSchedule(p).filter(s => !s.jira && !scheduleCompleted(s) && s.end).map(s => {
-          const e = parseISODate(s.end);
-          if (!e || !_today || e < _today) return null;
-          const daysLeft = Math.round((e - _today) / DAY_MS);
-          return daysLeft <= 14 ? { p, s, daysLeft } : null;
-        }).filter(Boolean)
-      ).sort((a, b) => a.daysLeft - b.daysLeft)[0];
-
-      // Health %
-      const totalMarcos = allProjects.reduce((n, p) => n + ensureBaseSchedule(p).filter(s => !s.jira).length, 0);
-      const lateMarcos  = allProjects.reduce((n, p) => {
-        return n + ensureBaseSchedule(p).filter(s => { const e = parseISODate(s.end); return !s.jira && !scheduleCompleted(s) && e && _today && e < _today; }).length;
-      }, 0);
-      const roadmapHealthPct = totalMarcos > 0 ? Math.round(((totalMarcos - lateMarcos) / totalMarcos) * 100) : 100;
+      const lateMarcos = lateScheduleItems.length;
 
       // Total jira stories
       const totalJiraAll = allProjects.reduce((n, p) => n + (scheduleJiraCount(p) || 0), 0);
 
-      // Day-urgency class helper
-      function daysCls(d) { return d === 0 ? 'miss' : d >= 30 ? 'crit' : d >= 14 ? 'high' : 'med'; }
-
-      const riskInitRows = riskInitiatives.slice(0, 4).map(r => {
-        const sq = squadForProject(r.p);
-        const sqColor = squadColorFor(sq?.name || '');
-        const name = [initiativeNumber(r.p), displayProjectTitle(r.p)].filter(Boolean).join(' · ') || 'Sem nome';
-        const daysBadge = r.maxDays > 0
-          ? `<span class="ux-v6-risk-days ${daysCls(r.maxDays)}">${r.maxDays}d</span>`
-          : `<span class="ux-v6-risk-days miss">Sem data</span>`;
-        const worstName = r.worstMarco?.item ? ` · ${escapeHtml(r.worstMarco.item)}` : '';
-        return `<div class="ux-v6-risk-init-row">
-          <div class="ux-v6-risk-squad-dot" style="background:${sqColor}"></div>
-          <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</div><div style="font-size:10.5px;color:var(--muted)">${escapeHtml(sq?.name || 'Sem squad')}${worstName}</div></div>
-          ${daysBadge}
-          <button type="button" class="mini-text-btn" onclick="openMacroTimelinePanel();goToMacroTimelineInitiative('${escapeAttr(r.p.id)}')">→</button>
-        </div>`;
-      }).join('');
-
-      const upcomingHtml = upcomingRisk
-        ? `<div class="ux-v6-risk-next">⏰ <strong>Próximo prazo:</strong> "${escapeHtml(upcomingRisk.s.item)}" em ${upcomingRisk.daysLeft} dia${upcomingRisk.daysLeft !== 1 ? 's' : ''} — ${escapeHtml(displayProjectTitle(upcomingRisk.p) || 'Sem nome')}</div>`
-        : '';
-
       const riskBannerHtml = `<section class="ux-v6-side-card" style="border-color:#f3c6c1;background:linear-gradient(180deg,#fffbfb,#fff)">
         <div class="ux-v6-risk-card-header">
-          <div class="ux-v6-risk-card-title">🔴 Riscos do Roadmap</div>
-          <span class="ux-v6-side-link" onclick="openMacroTimelinePanel();setMacroTimelineView('late')" style="cursor:pointer">Ver Roadmap →</span>
+          <div class="ux-v6-risk-card-title">⚠ Atrasos do cronograma</div>
+          <span class="ux-v6-side-link" onclick="openLateScheduleModal()" style="cursor:pointer">Ver atrasos (${lateScheduleItems.length}) →</span>
         </div>
-        <div class="ux-v6-risk-mini-kpis">
-          <div class="ux-v6-risk-mini-kpi${riskInitiatives.length === 0 ? ' ok' : ''}">
-            <span class="v">${riskInitiatives.length}</span><span class="l">Em risco</span></div>
+        <div class="ux-v6-risk-mini-kpis two">
+          <div class="ux-v6-risk-mini-kpi${lateInitiativeCount === 0 ? ' ok' : ''}">
+            <span class="v">${lateInitiativeCount}</span><span class="l">Iniciativas impactadas</span></div>
           <div class="ux-v6-risk-mini-kpi${lateMarcos === 0 ? ' ok' : ' warn'}">
             <span class="v">${lateMarcos}</span><span class="l">Marcos vencidos</span></div>
-          <div class="ux-v6-risk-mini-kpi${roadmapHealthPct >= 80 ? ' ok' : roadmapHealthPct >= 60 ? ' warn' : ''}">
-            <span class="v">${roadmapHealthPct}%</span><span class="l">Saúde</span></div>
         </div>
-        ${riskInitiatives.length > 0
-          ? `<div class="ux-v6-risk-init-list">${riskInitRows}</div>
-             ${riskInitiatives.length > 4 ? `<div style="text-align:center;padding-top:8px;font-size:11px;color:var(--muted)">+${riskInitiatives.length - 4} iniciativas com risco</div>` : ''}
-             ${upcomingHtml}`
-          : `<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--green)">✓ Nenhuma iniciativa em risco no momento</div>`
+        ${lateScheduleItems.length > 0
+          ? `<div class="ux-v6-alert-list">${lateCronogramRows}</div>
+             ${lateScheduleItems.length > 4 ? `<div style="text-align:center;padding-top:8px;font-size:11px;color:var(--muted)">+${lateScheduleItems.length - 4} marcos atrasados</div>` : ''}`
+          : `<div style="text-align:center;padding:14px 0;font-size:12px;color:var(--green)">✓ Nenhum marco atrasado no momento</div>`
         }
       </section>`;
 
@@ -17521,11 +17566,18 @@ Recomendação PMO: ${d.recommendation}`;
       const maxSquadHours = Math.max(...topSquadsList.map(item => item.hours), 1);
       const topSquadsHtml = topSquadsList.map((item, index) => `<div class="ux-v6-bar-row"><strong>${index + 1}</strong><span>${escapeHtml(item.squad.name)}</span><div class="ux-v6-bar-track"><span style="width:${Math.max(6, (item.hours / maxSquadHours) * 100)}%"></span></div><strong>${formatHours(item.hours)}</strong></div>`).join('') || `<div class="ux-v6-empty"><div><strong>Sem horas cadastradas.</strong></div></div>`;
 
-      const topInitiativesHtml = topInitiativesByHours(5).map((project, index) => {
+      const topInitiativesList = topInitiativesByHours(5);
+      const topInitiativesHtml = topInitiativesList.map((project, index) => {
         const squad = squadForProject(project);
         const automaticStatus = automaticProjectStatus(project);
         return `<tr><td>${index + 1}</td><td>${initiativeCodeHtml(project)}<br>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td><strong>${formatHours(project.hours2026)}</strong></td><td>${subInitiativeCount(project)}</td><td><span class="ux-v6-pill">${escapeHtml(automaticStatus)}</span></td></tr>`;
       }).join('') || `<tr><td colspan="6" style="text-align:center;color:#667387;padding:20px">Nenhuma iniciativa cadastrada.</td></tr>`;
+      const topInitiativesCompactHtml = topInitiativesList.map((project, index) => `
+        <div class="ux-v6-top-initiative-compact" title="${escapeAttr(displayProjectTitle(project))}">
+          <span class="ux-v6-top-initiative-rank">${index + 1}</span>
+          <div class="ux-v6-top-initiative-main"><strong>IN ${escapeHtml(initiativeNumber(project) || '—')}</strong><span>${escapeHtml(displayProjectTitle(project))}</span></div>
+          <span class="ux-v6-top-initiative-hours">${formatHours(project.hours2026)}</span>
+        </div>`).join('') || `<div class="ux-v6-empty"><div><strong>Nenhuma iniciativa cadastrada.</strong></div></div>`;
 
       const drawerSquad = selectedSquad || { id: '', name: 'Squad', business: '' };
       const drawerHours = selectedSquad ? hoursForSquad(selectedSquad.id) : 0;
@@ -17572,38 +17624,35 @@ Recomendação PMO: ${d.recommendation}`;
               </button>` : ''}
             </section>
             <section class="ux-v6-rank-grid" aria-label="Rankings executivos">
-              <div class="ux-v6-rank-card">
-                <div class="ux-v6-side-title"><strong>Top squads por horas</strong><span class="ux-v6-side-link">Ver ranking completo</span></div>
-                ${topSquadsHtml}
-              </div>
-              <div class="ux-v6-rank-card">
-                <div class="ux-v6-side-title"><strong>Top iniciativas por esforço</strong><span class="ux-v6-side-link">Ver ranking completo</span></div>
-                <table class="ux-v6-top-table"><thead><tr><th>#</th><th>Iniciativa</th><th>Squad</th><th>Horas 2026</th><th>Filhas</th><th>Status</th></tr></thead><tbody>${topInitiativesHtml}</tbody></table>
-              </div>
+              ${renderJiraOverviewSideCard()}
+              <section class="ux-v6-side-card ux-v6-status-distribution-card">
+                <div class="ux-v6-side-title"><strong>Distribuição por status</strong></div>
+                <div class="ux-v6-donut-wrap">
+                  <div class="ux-v6-donut" data-total="${squads.length}" style="background:${donutGradient}"></div>
+                  <div class="ux-v6-legend">${legendHtml}</div>
+                </div>
+              </section>
             </section>
           </div>
           <aside class="ux-v6-aside">
-            <section class="ux-v6-side-card">
+            ${attentionActions.length ? `<section class="ux-v6-side-card">
               <div class="ux-v6-side-title"><strong>Ações Acordadas</strong>${attentionActions.length ? `<span class="ux-v6-side-link" onclick="openAttentionActionsModal()" style="cursor:pointer" title="Ver todas as ações acordadas atrasadas ou a vencer">Ver todas (${attentionActions.length})</span>` : ''}</div>
               <div class="ux-v6-alert-list">${attentionActionsHtml}</div>
-            </section>
+            </section>` : ''}
+            ${openRaidCardHtml}
             ${riskBannerHtml}
-            <section class="ux-v6-side-card">
-              <div class="ux-v6-side-title"><strong>⚠ Marcos em atraso</strong>${lateScheduleItems.length ? `<span class="ux-v6-side-link" onclick="openLateScheduleModal()" style="cursor:pointer" title="Ver todos os marcos de Cronograma atrasados">Ver todos (${lateScheduleItems.length})</span>` : ''}</div>
-              <div class="ux-v6-alert-list">${lateScheduleHtml}</div>
-            </section>
             <section class="ux-v6-side-card" id="uxV6NextDiscoveriesCard">
               <div class="ux-v6-side-title"><div class="ux-v6-side-title-label"><strong>Próximos Discoveries</strong><span class="ux-v6-side-month">Mês atual: ${escapeHtml(currentDiscoveryMonthLabel)}</span></div><span class="ux-v6-side-link" onclick="openCalendarModal()" style="cursor:pointer" title="Abrir calendário de Discoveries">📅 Ver calendário</span></div>
               <div class="ux-v6-date-list">${nextDiscoveriesHtml}</div>
             </section>
             <section class="ux-v6-side-card">
-              <div class="ux-v6-side-title"><strong>Distribuição por status</strong></div>
-              <div class="ux-v6-donut-wrap">
-                <div class="ux-v6-donut" data-total="${squads.length}" style="background:${donutGradient}"></div>
-                <div class="ux-v6-legend">${legendHtml}</div>
-              </div>
+              <div class="ux-v6-side-title"><strong>Top iniciativas por esforço</strong><span class="ux-v6-side-link">Ver ranking completo</span></div>
+              ${topInitiativesCompactHtml}
             </section>
-            ${renderJiraOverviewSideCard()}
+            <section class="ux-v6-side-card">
+              <div class="ux-v6-side-title"><strong>Top squads por horas</strong><span class="ux-v6-side-link">Ver ranking completo</span></div>
+              ${topSquadsHtml}
+            </section>
           </aside>
         </section>
         <div class="ux-v6-footer-note">Discovery PMO Tracker · Dashboard Oficial O4O — Onda 1 2026 · Dados importados da planilha enviada.</div>

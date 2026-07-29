@@ -3084,6 +3084,104 @@
       line-height:1.55;
     }
 
+    .sprint-outcome{
+      border-color:#D6E4F7;
+      background:linear-gradient(135deg,#F8FBFF 0%,#FFFFFF 58%);
+    }
+
+    .sprint-outcome-objective{
+      margin:2px 0 12px;
+      padding:9px 10px;
+      border:1px solid #E1EAF7;
+      border-radius:10px;
+      background:#FFFFFF;
+      color:#3D4C61;
+      font-size:11.2px;
+      line-height:1.4;
+    }
+
+    .sprint-outcome-objective small{
+      display:block;
+      margin-bottom:3px;
+      color:#667085;
+      font-size:9.5px;
+      font-weight:750;
+      letter-spacing:.045em;
+      text-transform:uppercase;
+    }
+
+    .sprint-outcome-objective textarea{
+      display:block;
+      width:100%;
+      min-height:35px;
+      padding:0;
+      border:0;
+      outline:0;
+      resize:vertical;
+      background:transparent;
+      color:#3D4C61;
+      font:600 11.2px/1.4 inherit;
+    }
+
+    .sprint-outcome-objective textarea::placeholder{color:#98A2B3;font-weight:500}
+    .sprint-outcome-objective textarea:disabled{cursor:not-allowed;color:#98A2B3}
+
+    .sprint-outcome-metrics{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+    }
+
+    .sprint-outcome-metric{
+      min-width:0;
+      padding:8px 9px;
+      border:1px solid #E4EAF2;
+      border-radius:10px;
+      background:#FFFFFF;
+    }
+
+    .sprint-outcome-metric span{
+      display:block;
+      overflow:hidden;
+      color:#667085;
+      font-size:9.4px;
+      font-weight:700;
+      text-overflow:ellipsis;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .sprint-outcome-metric strong{
+      display:block;
+      margin-top:4px;
+      color:#173A5E;
+      font-size:20px;
+      font-weight:760;
+      letter-spacing:-.04em;
+      line-height:1;
+    }
+
+    .sprint-outcome-metric.is-risk strong{color:#B54708}
+    .sprint-outcome-metric.is-done strong{color:#16834D}
+
+    .sprint-outcome-reason{
+      margin:11px 0 0;
+      padding:9px 10px;
+      border-left:3px solid #F5A623;
+      border-radius:0 9px 9px 0;
+      background:#FFF9EB;
+      color:#6B4A0E;
+      font-size:10.7px;
+      line-height:1.4;
+    }
+
+    .sprint-outcome-note{
+      margin:8px 0 0;
+      color:#667085;
+      font-size:10px;
+      line-height:1.35;
+    }
+
     .sprint-status-card{
       min-height:132px;
     }
@@ -3256,6 +3354,8 @@
       .sprint-actions{
         justify-content:flex-start;
       }
+
+      .sprint-outcome-metrics{grid-template-columns:1fr}
 
       .sprint-quick-grid{
         grid-template-columns:repeat(2,minmax(0,1fr));
@@ -5916,59 +6016,22 @@
         </div>
 
         <div class="sprint-insight-grid">
-          <div class="sprint-card sprint-reading ai-sprint-analysis">
+          <div class="sprint-card sprint-outcome">
             <div class="sprint-card-title">
-              <h3>Leitura inteligente da sprint <span id="geminiSourceBadge" class="gemini-source-badge" style="display:none">Gemini AI</span></h3>
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                <span class="badge blue" id="sprintAnalysisBadge">Regras automáticas</span>
-                <button class="gemini-btn" id="geminiAnalyzeBtn" onclick="geminiAnalyzeSprint()" title="Gerar análise com Google Gemini AI (gratuito)">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-                  Analisar com IA
-                </button>
-              </div>
+              <h3>Resultado da sprint</h3>
+              <span class="badge blue" id="sprintOutcomeBadge">Planejamento pendente</span>
             </div>
-
-            <div id="geminiConfigRow" class="gemini-config-row" style="display:none">
-              <label>Chave Gemini API</label>
-              <input class="gemini-key-input" id="geminiKeyInput" type="text" placeholder="AIzaSy..." autocomplete="off" style="font-family:monospace;font-size:11px"/>
-              <button class="gemini-save-btn" onclick="geminiSaveKey()">Salvar e analisar</button>
-              <button class="gemini-save-btn" style="background:#687083" onclick="geminiClearKey()" title="Limpar chave salva e inserir nova">Limpar chave</button>
+            <div class="sprint-outcome-objective">
+              <small>Objetivo da sprint</small>
+              <textarea id="sprintOutcomeObjective" rows="2" maxlength="360" oninput="saveSprintObjective()" placeholder="Descreva o resultado de negócio que a squad deve alcançar nesta sprint."></textarea>
             </div>
-            <div id="geminiError" class="gemini-error" style="display:none">
-              <div id="geminiErrorText"></div>
-              <button onclick="geminiClearKey()" style="margin-top:8px;border:0;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:800;background:var(--red-dark);color:#fff;cursor:pointer">
-                Trocar chave API
-              </button>
+            <div class="sprint-outcome-metrics">
+              <div class="sprint-outcome-metric"><span>Compromisso</span><strong id="sprintOutcomeCommitment">—</strong></div>
+              <div class="sprint-outcome-metric is-done"><span>Entregue</span><strong id="sprintOutcomeDelivered">—</strong></div>
+              <div class="sprint-outcome-metric is-risk"><span id="sprintOutcomeCarryLabel">Transbordo</span><strong id="sprintOutcomeCarry">—</strong></div>
             </div>
-
-            <div class="ai-analysis-hero">
-              <div>
-                <small>Diagnóstico da sprint</small>
-                <strong id="sprintAiDiagnosis">Carregando análise...</strong>
-              </div>
-              <span id="sprintAiTone" class="ai-tone neutral">Monitorar</span>
-            </div>
-
-            <div class="ai-analysis-grid">
-              <div class="ai-analysis-item">
-                <small>Principal atenção</small>
-                <span id="sprintAiAttention">—</span>
-              </div>
-              <div class="ai-analysis-item">
-                <small>Recomendação</small>
-                <span id="sprintAiRecommendation">—</span>
-              </div>
-              <div class="ai-analysis-item">
-                <small>Próxima ação</small>
-                <span id="sprintAiNextAction">—</span>
-              </div>
-              <div class="ai-analysis-item">
-                <small>Mensagem para gestão</small>
-                <span id="sprintAiManagementMessage">—</span>
-              </div>
-            </div>
-
-            <p id="sprintExecutiveText" class="ai-analysis-note">Carregando leitura da sprint...</p>
+            <p id="sprintOutcomeReason" class="sprint-outcome-reason">Confirme o planning para congelar o compromisso da sprint.</p>
+            <p id="sprintOutcomeNote" class="sprint-outcome-note">O resultado é atualizado automaticamente com os status importados do Jira.</p>
           </div>
 
           <div class="sprint-card sprint-status-card">
@@ -6237,15 +6300,31 @@
       ];
     }
 
-    function detectActiveSprint(){
+    function calendarSprints(){
       try {
         const raw = storageGet('leadtime_sala_calendar_v2');
         const cal = raw ? JSON.parse(raw) : [];
-        const sprints = (Array.isArray(cal) && cal.length
+        return (Array.isArray(cal) && cal.length
           ? cal.flatMap(tri => Array.isArray(tri.sprints) ? tri.sprints : [])
           : _defaultCalendarSprints()
         ).map(sp => ({...sp, startDate:parseIsoDateLocal(sp.start), endDate:parseIsoDateLocal(sp.end)}))
-         .filter(sp => sp.startDate && sp.endDate);
+         .filter(sp => sp.startDate && sp.endDate)
+         .sort((a,b) => a.startDate - b.startDate);
+      } catch(e){ return []; }
+    }
+
+    let sprintCalendarSyncSignature = '';
+    function syncSprintCalendarToServer(){
+      const sprints = calendarSprints().map(sprint => ({ name:sprint.name || 'Sprint', start:sprint.start, end:sprint.end }));
+      const signature = JSON.stringify(sprints);
+      if(!sprints.length || signature === sprintCalendarSyncSignature) return;
+      sprintCalendarSyncSignature = signature;
+      gasSaveVpData('vpSprintCalendar', { sprints, syncedAt:new Date().toISOString() });
+    }
+
+    function detectActiveSprint(){
+      try {
+        const sprints = calendarSprints();
         if(!sprints.length) return null;
         const today = new Date(); today.setHours(0,0,0,0);
         // 1ª passagem: sprint cujo intervalo inclui hoje
@@ -6255,6 +6334,10 @@
         return sprints.filter(sp => sp.startDate <= today)
           .sort((a,b) => b.startDate - a.startDate)[0] || null;
       } catch(e){ return null; }
+    }
+
+    function isSameCalendarDay(left, right){
+      return left && right && left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
     }
 
     function applyActiveSprint(){
@@ -6403,6 +6486,18 @@
         storageSet('vpPlanningConfirmations', JSON.stringify(planningConfirmations));
         try{ renderAll(); }catch(e){}
       });
+      gasLoadVpData('vpPlanningSnapshots', function(err, serverData){
+        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
+        planningSnapshots = serverData;
+        storageSet('vpPlanningSnapshots', JSON.stringify(planningSnapshots));
+        try{ renderAll(); }catch(e){}
+      });
+      gasLoadVpData('vpSprintObjectives', function(err, serverData){
+        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
+        sprintObjectives = serverData;
+        storageSet('vpSprintObjectives', JSON.stringify(sprintObjectives));
+        try{ renderAll(); }catch(e){}
+      });
       gasLoadVpData('vpDeliveries', function(err, serverData){
         if(err || !Array.isArray(serverData) || !serverData.length) return;
         // Se o usuário já salvou algo localmente (deliveriesEverSaved) e o array local está
@@ -6423,6 +6518,9 @@
     let operationalUpdates = readStoredJSON('jiraDashboardOperationalUpdates', {});
     let executiveQuickNotes = readStoredJSON('jiraDashboardExecutiveQuickNotes', {});
     let planningConfirmations = readStoredJSON('vpPlanningConfirmations', {});
+    let planningSnapshots = readStoredJSON('vpPlanningSnapshots', {});
+    let sprintObjectives = readStoredJSON('vpSprintObjectives', {});
+    let sprintObjectiveSaveTimer = null;
     let editingOperationalKey = null;
 
     if (!Array.isArray(deliveries)) deliveries = [];
@@ -7764,6 +7862,94 @@
       }).join('') : '<div class="empty mini">Nenhum item de sprint para os filtros aplicados.</div>';
     }
 
+    function isSprintDelivered(row){
+      return /homologada|conclu[ií]da|done|resolved|finaliz/i.test(normalize(row?.situacao));
+    }
+
+    function sprintOutcomeFor(squadRows, squad){
+      const sprint = detectActiveSprint();
+      if(!sprint || sameSquad(squad, 'Todas')) return { hasSnapshot:false, scopeAll:true };
+      const key = planningConfirmationKey(sprint, squad);
+      const snapshot = planningSnapshots[key];
+      const now = new Date(); now.setHours(0,0,0,0);
+      const ended = Boolean(sprint.endDate && now > sprint.endDate);
+      const objective = normalize(sprintObjectives[key]) || normalize(snapshot?.objective);
+      if(!isValidPlanningSnapshot(snapshot, sprint) || !Array.isArray(snapshot?.storyKeys) || !snapshot.storyKeys.length){
+        return { hasSnapshot:false, ended, objective };
+      }
+
+      const byKey = new Map(squadRows.map(row => [storyKey(row), row]));
+      const committedRows = snapshot.storyKeys.map(key => byKey.get(key)).filter(Boolean);
+      const delivered = committedRows.filter(isSprintDelivered);
+      const pending = snapshot.storyKeys.length - delivered.length;
+      const percent = Math.round((delivered.length / snapshot.storyKeys.length) * 100);
+      const blocked = committedRows.filter(row => row.bloqueio || row.dependencia).length;
+      const retest = committedRows.filter(row => /reteste/i.test(`${row.situacao} ${(row.rotulos || []).join(' ')}`)).length;
+      const withoutOwner = committedRows.filter(row => !normalize(row.responsavel)).length;
+      const validation = committedRows.filter(row => !isSprintDelivered(row) && /teste|homolog/i.test(row.situacao)).length;
+      const unplannedDelivered = squadRows.filter(row => !snapshot.storyKeys.includes(storyKey(row)) && isSprintDelivered(row)).length;
+      const status = percent >= 90 ? 'Atingido' : percent >= 60 ? 'Parcialmente atingido' : 'Não atingido';
+      const forecast = percent >= 90 ? 'No alvo' : percent >= 60 ? 'Atenção' : 'Comprometida';
+      const reasons = [];
+      if(pending){
+        if(blocked) reasons.push(`${blocked} ${blocked === 1 ? 'história possui bloqueio ou dependência' : 'histórias possuem bloqueio ou dependência'}`);
+        if(retest) reasons.push(`${retest} ${retest === 1 ? 'história está em reteste' : 'histórias estão em reteste'}`);
+        if(validation) reasons.push(`${validation} ${validation === 1 ? 'história ainda está em teste ou homologação' : 'histórias ainda estão em teste ou homologação'}`);
+        if(withoutOwner) reasons.push(`${withoutOwner} ${withoutOwner === 1 ? 'história está sem responsável' : 'histórias estão sem responsável'}`);
+      }
+      return { hasSnapshot:true, ended, objective, commitment:snapshot.storyKeys.length, delivered:delivered.length, pending, percent, status, forecast, reasons, unplannedDelivered };
+    }
+
+    function renderSprintOutcome(squadRows, squad){
+      const outcome = sprintOutcomeFor(squadRows, squad);
+      const badge = $('sprintOutcomeBadge');
+      const objective = $('sprintOutcomeObjective');
+      const commitment = $('sprintOutcomeCommitment');
+      const delivered = $('sprintOutcomeDelivered');
+      const carryLabel = $('sprintOutcomeCarryLabel');
+      const carry = $('sprintOutcomeCarry');
+      const reason = $('sprintOutcomeReason');
+      const note = $('sprintOutcomeNote');
+      if(!badge || !objective || !commitment || !delivered || !carryLabel || !carry || !reason || !note) return;
+
+      objective.value = outcome.objective || '';
+      objective.disabled = Boolean(outcome.scopeAll);
+      if(outcome.scopeAll){
+        badge.textContent = 'Selecione uma squad';
+        badge.className = 'badge neutral';
+        commitment.textContent = '—'; delivered.textContent = '—'; carry.textContent = '—';
+        carryLabel.textContent = 'Transbordo';
+        reason.textContent = 'O resultado é calculado por squad porque o compromisso do planning é específico de cada time.';
+        note.textContent = 'Selecione uma squad para visualizar objetivo, compromisso e resultado automático.';
+        return;
+      }
+      if(!outcome.hasSnapshot){
+        badge.textContent = 'Planejamento pendente';
+        badge.className = 'badge amber';
+        commitment.textContent = '—'; delivered.textContent = '—'; carry.textContent = '—';
+        carryLabel.textContent = 'Transbordo';
+        reason.textContent = 'Confirme o planning para congelar o compromisso. Sem essa fotografia, o sistema não classifica itens como transbordo.';
+        note.textContent = 'Após a confirmação, entrega, risco de transbordo e justificativas serão atualizados automaticamente pelo Jira.';
+        return;
+      }
+
+      const label = outcome.ended ? outcome.status : `Previsão: ${outcome.forecast}`;
+      badge.textContent = label;
+      badge.className = `badge ${outcome.percent >= 90 ? 'green' : outcome.percent >= 60 ? 'amber' : 'red'}`;
+      commitment.textContent = outcome.commitment;
+      delivered.textContent = `${outcome.delivered} (${outcome.percent}%)`;
+      carryLabel.textContent = outcome.ended ? 'Transbordo' : 'Risco transbordo';
+      carry.textContent = outcome.pending;
+      if(outcome.pending === 0){
+        reason.textContent = 'Compromisso concluído. Não há itens previstos para transbordar.';
+      }else if(outcome.reasons.length){
+        reason.textContent = `${outcome.ended ? 'Justificativa automática:' : 'Motivos observados:'} ${outcome.reasons.join('; ')}.`;
+      }else{
+        reason.textContent = `${outcome.pending} ${outcome.pending === 1 ? 'história ainda não foi concluída' : 'histórias ainda não foram concluídas'} no compromisso original.`;
+      }
+      note.textContent = `${outcome.ended ? 'Resultado consolidado' : 'Previsão em andamento'} com base no planning confirmado e nos status importados do Jira.${outcome.unplannedDelivered ? ` ${outcome.unplannedDelivered} entregue(s) fora do compromisso não alteram o resultado.` : ''}`;
+    }
+
 
     function sprintExecutiveItem(r){
       const key = storyKey(r);
@@ -8150,18 +8336,101 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       return `${sprint.start}|${squadKey(squad)}`;
     }
 
-    function confirmSprintPlanning(){
+    function planningSnapshotRows(squad){
+      return effectiveSprintRows().filter(row => sameSquad(row.squad, squad));
+    }
+
+    function sprintObjectiveFor(sprint, squad){
+      if(!sprint || sameSquad(squad, 'Todas')) return '';
+      return normalize(sprintObjectives[planningConfirmationKey(sprint, squad)]);
+    }
+
+    function saveSprintObjective(){
       const sprint = detectActiveSprint();
       const squad = getSelectedSquad();
-      if(!sprint || !sprint.start || sameSquad(squad, 'Todas')) return;
-      planningConfirmations[planningConfirmationKey(sprint, squad)] = {
-        confirmedAt:new Date().toISOString(),
+      const input = $('sprintOutcomeObjective');
+      if(!sprint || !input || sameSquad(squad, 'Todas')) return;
+      const key = planningConfirmationKey(sprint, squad);
+      sprintObjectives[key] = normalize(input.value);
+      storageSet('vpSprintObjectives', JSON.stringify(sprintObjectives));
+      clearTimeout(sprintObjectiveSaveTimer);
+      sprintObjectiveSaveTimer = setTimeout(() => gasSaveVpData('vpSprintObjectives', sprintObjectives), 600);
+    }
+
+    function savePlanningSnapshots(){
+      storageSet('vpPlanningSnapshots', JSON.stringify(planningSnapshots));
+      gasSaveVpData('vpPlanningSnapshots', planningSnapshots);
+    }
+
+    function createPlanningSnapshot(sprint, squad, mode){
+      const key = planningConfirmationKey(sprint, squad);
+      if(planningSnapshots[key]) return false;
+      const commitment = planningSnapshotRows(squad);
+      const now = new Date().toISOString();
+      planningConfirmations[key] = {
+        confirmedAt:now,
+        mode,
         squad:normalize(squad),
         sprintStart:sprint.start,
         sprintEnd:sprint.end
       };
-      storageSet('vpPlanningConfirmations', JSON.stringify(planningConfirmations));
-      gasSaveVpData('vpPlanningConfirmations', planningConfirmations);
+      planningSnapshots[key] = {
+        createdAt:now,
+        mode,
+        squad:normalize(squad),
+        sprintName:normalize(sprint.name) || 'Sprint',
+        sprintStart:sprint.start,
+        sprintEnd:sprint.end,
+        objective:sprintObjectiveFor(sprint, squad),
+        storyKeys:[...new Set(commitment.map(storyKey).filter(Boolean))]
+      };
+      return true;
+    }
+
+    function autoConfirmSprintPlanningIfDue(){
+      const sprint = detectActiveSprint();
+      if(!sprint?.startDate) return false;
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const autoDate = new Date(sprint.startDate); autoDate.setDate(autoDate.getDate() + 1);
+      // A regra é específica: confirma somente no dia seguinte ao planning,
+      // a partir de 00:00. Não cria uma fotografia tardia dias depois.
+      if(!isSameCalendarDay(today, autoDate)) return false;
+      const squads = [...new Set(effectiveSprintRows().map(row => normalize(row.squad)).filter(Boolean))];
+      let changed = false;
+      squads.forEach(squad => { if(createPlanningSnapshot(sprint, squad, 'automatic')) changed = true; });
+      if(changed){
+        savePlanningSnapshots();
+        storageSet('vpPlanningConfirmations', JSON.stringify(planningConfirmations));
+        gasSaveVpData('vpPlanningConfirmations', planningConfirmations);
+      }
+      return changed;
+    }
+
+    function nextPlanningSprint(){
+      const today = new Date(); today.setHours(0,0,0,0);
+      return calendarSprints().find(sprint => sprint.startDate > today) || null;
+    }
+
+    function isValidPlanningSnapshot(snapshot, sprint){
+      if(!snapshot || !sprint?.startDate) return false;
+      const createdAt = new Date(snapshot.createdAt || snapshot.confirmedAt || 0);
+      if(Number.isNaN(createdAt.getTime())) return false;
+      if(snapshot.mode === 'automatic') return createdAt >= new Date(sprint.startDate.getFullYear(), sprint.startDate.getMonth(), sprint.startDate.getDate() + 1);
+      return isSameCalendarDay(createdAt, sprint.startDate);
+    }
+
+    function confirmSprintPlanning(){
+      const sprint = detectActiveSprint();
+      const squad = getSelectedSquad();
+      if(!sprint || !sprint.start || sameSquad(squad, 'Todas')) return;
+      const today = new Date(); today.setHours(0,0,0,0);
+      if(!isSameCalendarDay(today, sprint.startDate)) return;
+      if(createPlanningSnapshot(sprint, squad, 'manual')){
+        savePlanningSnapshots();
+        storageSet('vpPlanningConfirmations', JSON.stringify(planningConfirmations));
+        gasSaveVpData('vpPlanningConfirmations', planningConfirmations);
+      }
       renderAll();
     }
 
@@ -8179,19 +8448,26 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
       const messages = [];
       let tone = 'is-info';
-      const confirmation = !sameSquad(squad, 'Todas') && planningConfirmations[planningConfirmationKey(sprint, squad)];
-      if(today >= start && today <= end && !sameSquad(squad, 'Todas')){
-        if(confirmation){
-          const confirmedAt = new Date(confirmation.confirmedAt);
-          const dateLabel = Number.isNaN(confirmedAt.getTime()) ? '' : ` em ${confirmedAt.toLocaleDateString('pt-BR')}`;
-          messages.push(`<strong>Planning confirmado${dateLabel}.</strong>`);
+      let action = '';
+      const activeConfirmation = !sameSquad(squad, 'Todas') && planningConfirmations[planningConfirmationKey(sprint, squad)];
+      const validActiveConfirmation = isValidPlanningSnapshot(planningSnapshots[planningConfirmationKey(sprint, squad)], sprint) && activeConfirmation;
+      if(!sameSquad(squad, 'Todas')){
+        if(isSameCalendarDay(today, start)){
+          if(validActiveConfirmation){
+            messages.push(`<strong>Planning confirmado em ${formatIsoDateBr(sprint.start)}.</strong>`);
+          }else{
+            messages.push(`<strong>Planning de ${escapeHtml(squad)} é confirmado hoje.</strong> Às 00:00 de ${formatIsoDateBr(new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1).toISOString().slice(0,10))}, o compromisso será congelado automaticamente.`);
+            tone = 'is-warning';
+            action = '<button type="button" class="btn btn-soft" onclick="confirmSprintPlanning()">Confirmar planning</button>';
+          }
+        }else if(validActiveConfirmation && isSameCalendarDay(today, new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1))){
+          messages.push(`<strong>Planning confirmado automaticamente.</strong> O compromisso de ${escapeHtml(squad)} foi congelado às 00:00 após o dia do planning.`);
         }else{
-          const nextBusinessDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-          nextBusinessDay.setDate(nextBusinessDay.getDate() + 1);
-          while(!isBusinessDay(nextBusinessDay)) nextBusinessDay.setDate(nextBusinessDay.getDate() + 1);
-          const carryOver = today > start;
-          messages.push(`<strong>${carryOver ? 'Planning ainda pendente' : 'Planning pendente'} para ${escapeHtml(squad)}.</strong> ${carryOver ? 'A confirmação continua disponível no dia útil posterior.' : `Caso não seja concluído hoje, confirme até ${nextBusinessDay.toLocaleDateString('pt-BR')}.`}`);
-          tone = carryOver ? 'is-danger' : 'is-warning';
+          const next = nextPlanningSprint();
+          if(next){
+            const autoDate = new Date(next.startDate); autoDate.setDate(autoDate.getDate() + 1);
+            messages.push(`<strong>Próximo planning: ${formatIsoDateBr(next.start)}.</strong> A confirmação manual será liberada somente nesse dia; às 00:00 de ${formatIsoDateBr(autoDate.toISOString().slice(0,10))}, o compromisso será confirmado automaticamente.`);
+          }
         }
       }
 
@@ -8208,9 +8484,6 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       }
 
       if(!messages.length){ alert.style.display = 'none'; return; }
-      const action = !confirmation && !sameSquad(squad, 'Todas') && today >= start && today <= end
-        ? '<button type="button" class="btn btn-soft" onclick="confirmSprintPlanning()">Confirmar planning</button>'
-        : '';
       alert.className = `sprint-calendar-alert ${tone}`;
       alert.innerHTML = `<span>${messages.join(' ')}</span>${action}`;
       alert.style.display = 'flex';
@@ -8218,6 +8491,8 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
 
     function renderSprintCurrent(){
       applyActiveSprint();
+      syncSprintCalendarToServer();
+      autoConfirmSprintPlanningIfDue();
       renderSprintCalendarAlert();
       const squad = getSelectedSquad();
       let baseSprintData = effectiveSprintRows();
@@ -8238,7 +8513,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       $('sprintDeploy').textContent = groups.deploy.items.length;
       $('sprintAttention').textContent = groups.attention.items.length;
 
-      renderSprintAiAnalysis(data, groups, squad);
+      renderSprintOutcome(baseSprintData, squad);
       renderSprintStatusFlow(data);
       renderSprintTable(data);
     }
