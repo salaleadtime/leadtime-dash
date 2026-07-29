@@ -5911,9 +5911,10 @@ function renderOps4opsView(){
 
   var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,ops4opsSnaps,cur.seq);
   var notRefined=totalBacklog-totalRefined;
-  var refinementDonut=emDonutCard('Backlog x Refinada','calculado automaticamente',[{label:'Refinada',color:'#22c55e',value:totalRefined},{label:'Não refinada',color:'#f59e0b',value:notRefined}],totalRefined,totalRefined===1?'refinada':'refinadas');
+  var refinementDonut=emDonutCard('Ops4Ops · Backlog x Refinada','calculado automaticamente',[{label:'Refinada',color:'#22c55e',value:totalRefined},{label:'Não refinada',color:'#f59e0b',value:notRefined}],totalRefined,totalRefined===1?'refinada':'refinadas');
 
   host.innerHTML=
+    '<div class="sec-lbl" style="margin:0 0 .6rem">🔧 Ops4Ops</div>'+
     '<div class="sv-kpi" style="margin-bottom:1rem">'+
       svKpiItem('#7a0000',totalBacklog,'Total Ops4Ops','importação #'+cur.seq)+
       svKpiItem('#3b82f6',squads.length,'Squads com Ops4Ops','grupos ativos')+
@@ -5926,7 +5927,7 @@ function renderOps4opsView(){
           ' <span class="bk-delta-info">· '+totalBacklog+' histórias agora vs '+prev.stories.length+' antes</span>'
         : '<span style="color:#94a3b8">Importe novamente para ver o delta entre importações (▲▼=)</span>')+
     '</div>'+
-    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Backlog por Squad · Importação #'+cur.seq+'</div>'+
+    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Ops4Ops · Backlog por Squad · Importação #'+cur.seq+'</div>'+
     '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
 }
 
