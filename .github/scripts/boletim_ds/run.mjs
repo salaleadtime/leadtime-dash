@@ -76,8 +76,36 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// Ícones decorativos por bloco — só aparência, giram por dia junto com o
+// tema do cabeçalho (rules.pickDailyThemeIndex). Sempre na cor institucional
+// (var(--bds-primary), vermelho fixo) — nunca usam as cores semânticas dos
+// selos (crítico/atenção/ok), que continuam fixas em qualquer dia.
+const ICON_ATTRS = 'width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px;color:var(--bds-primary)"';
+const ICON_SETS = [
+  {
+    criticos: `<svg ${ICON_ATTRS}><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>`,
+    refinamento: `<svg ${ICON_ATTRS}><circle cx="10" cy="10" r="6"/><line x1="15" y1="15" x2="20" y2="20"/></svg>`,
+    homologacao: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="14"/></svg>`,
+    leadtime: `<svg ${ICON_ATTRS}><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/></svg>`
+  },
+  {
+    criticos: `<svg ${ICON_ATTRS}><polygon points="7,2 17,2 22,7 22,17 17,22 7,22 2,17 2,7"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16" r="0.6" fill="currentColor" stroke="none"/></svg>`,
+    refinamento: `<svg ${ICON_ATTRS}><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3 11c.6.5 1 1.2 1 2h4c0-.8.4-1.5 1-2a6 6 0 0 0-3-11z"/></svg>`,
+    homologacao: `<svg ${ICON_ATTRS}><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2.5 2.5L16 11"/></svg>`,
+    leadtime: `<svg ${ICON_ATTRS}><polyline points="3,17 9,11 13,15 21,6"/><polyline points="15,6 21,6 21,12"/></svg>`
+  },
+  {
+    criticos: `<svg ${ICON_ATTRS}><path d="M12 2c3 4 6 6 6 10a6 6 0 1 1-12 0c0-2 1-3 2-5 0 2 1 3 2 3-1-3 0-6 2-8z"/></svg>`,
+    refinamento: `<svg ${ICON_ATTRS}><path d="M9 2v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3L15 8V2"/><line x1="8" y1="2" x2="16" y2="2"/><line x1="7" y1="15" x2="17" y2="15"/></svg>`,
+    homologacao: `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>`,
+    leadtime: `<svg ${ICON_ATTRS}><path d="M4 15a8 8 0 1 1 16 0"/><line x1="12" y1="15" x2="16" y2="10"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/></svg>`
+  }
+];
+
 function renderStandaloneHtml({ selCrit, selRef, selHom, selEntregas }, generatedAt) {
   const dateStr = generatedAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const theme = rules.pickDailyTheme(generatedAt);
+  const icons = ICON_SETS[rules.pickDailyThemeIndex(generatedAt)];
 
   function rowsCriticos() {
     if (!selCrit.itens.length) return '<div class="bds-empty">✅ Nenhum ponto crítico no momento.</div>';
@@ -134,13 +162,13 @@ function renderStandaloneHtml({ selCrit, selRef, selHom, selEntregas }, generate
     font:14px/1.5 Inter,"Segoe UI",Arial,sans-serif;
     max-width:1040px;margin:0 auto;padding:18px;
   }
-  #boletim-ds-root .bds-header{background:var(--bds-header);color:#fff;border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+  #boletim-ds-root .bds-header{background:${theme.headerBg};border:${theme.headerBorder};color:${theme.headerText};border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
   #boletim-ds-root .bds-brand{display:flex;align-items:center;gap:10px}
   #boletim-ds-root .bds-robot{width:30px;height:30px;flex:none;border-radius:8px;background:var(--bds-primary);display:flex;align-items:center;justify-content:center;font-size:15px}
-  #boletim-ds-root .bds-title{font-size:16px;font-weight:800;margin:0;letter-spacing:.01em}
-  #boletim-ds-root .bds-subtitle{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c8ccd4;margin:2px 0 0}
-  #boletim-ds-root .bds-date{font-size:12px;font-weight:700;color:#e7e9ee;text-align:right;white-space:nowrap}
-  #boletim-ds-root .bds-date small{display:block;font-size:9px;font-weight:600;color:#9aa0ac;margin-top:2px}
+  #boletim-ds-root .bds-title{font-size:16px;font-weight:800;margin:0;letter-spacing:.01em;color:${theme.headerText}}
+  #boletim-ds-root .bds-subtitle{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${theme.headerSubtext};margin:2px 0 0}
+  #boletim-ds-root .bds-date{font-size:12px;font-weight:700;color:${theme.headerText};text-align:right;white-space:nowrap}
+  #boletim-ds-root .bds-date small{display:block;font-size:9px;font-weight:600;color:${theme.headerSubtext};margin-top:2px}
   #boletim-ds-root .bds-panel{background:var(--bds-panel);border:1px solid var(--bds-line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
   #boletim-ds-root .bds-panel h2{font-size:13px;font-weight:800;margin:0 0 3px;color:var(--bds-ink)}
   #boletim-ds-root .bds-panel .bds-hint{font-size:10.5px;color:var(--bds-muted);margin:0 0 10px}
@@ -181,21 +209,21 @@ function renderStandaloneHtml({ selCrit, selRef, selHom, selEntregas }, generate
     </div>
     <div class="bds-date">${dateStr}<small>Gerado automaticamente</small></div>
   </div>
-  <div class="bds-panel"><h2>Pontos críticos do dia</h2>
+  <div class="bds-panel"><h2>${icons.criticos}Pontos críticos do dia</h2>
     <p class="bds-hint">Itens classificados como críticos pelas regras já existentes do dashboard.</p>
     ${rowsCriticos()}
   </div>
   <div class="bds-cols">
-    <div class="bds-panel"><h2>Discoveries em refinamento</h2>
+    <div class="bds-panel"><h2>${icons.refinamento}Discoveries em refinamento</h2>
       <p class="bds-hint">Iniciativas na fase de Refinamento Técnico, conforme o Cronograma do Discovery PMO.</p>
       ${rowsRefinamento()}
     </div>
-    <div class="bds-panel"><h2>Homologação fora do prazo</h2>
+    <div class="bds-panel"><h2>${icons.homologacao}Homologação fora do prazo</h2>
       <p class="bds-hint">Itens em Homologação com o SLA de dias úteis já vencido.</p>
       ${rowsHomologacao()}
     </div>
   </div>
-  <div class="bds-panel"><h2>Lead Time e entregas do dia</h2>
+  <div class="bds-panel"><h2>${icons.leadtime}Lead Time e entregas do dia</h2>
     <p class="bds-hint">Squads que concluíram entregas hoje e o Lead Time de cada uma.</p>
     ${rowsEntregas()}
   </div>

@@ -32,7 +32,19 @@ quarto bloco, "Lead Time e entregas do dia": o Lead Time geral (média das
 entregas concluídas hoje) e o Lead Time médio por squad que entregou. Esse
 bloco é gerado com dado novo a cada execução — nunca estático — e some
 sozinho para "Nenhuma entrega concluída hoje" quando não há entrega no dia
-(nunca inventa dado). O mesmo bloco aparece tanto na imagem gerada pelo
+(nunca inventa dado).
+
+## Variação visual diária
+
+O cabeçalho e os ícones de cada bloco giram por dia do ano em 3 variações
+(`rules.js:DAILY_THEMES` / `pickDailyThemeIndex`), sempre dentro das cores
+institucionais Bradesco — vermelho + grafite, vermelho + preto, ou vermelho
++ branco. O robô e as cores semânticas dos selos (vermelho = crítico, âmbar
+= atenção, verde = ok) **nunca mudam**, em qualquer dia — só teriam sentido
+se fossem sempre iguais. A mesma lógica é usada no pipeline (`run.mjs`) e na
+página ao vivo (`index.html`), então os dois ficam idênticos no mesmo dia.
+
+O mesmo bloco aparece tanto na imagem gerada pelo
 pipeline quanto na página `boletim-ds/index.html`, que busca os dados ao
 vivo no navegador.
 

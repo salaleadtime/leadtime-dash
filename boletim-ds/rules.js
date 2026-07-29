@@ -310,6 +310,33 @@
     return { itens: out, squads: squads, ltGeral: ltGeral, inconsistencias: inconsistencias };
   }
 
+  // ── Variação visual diária (só aparência — nunca mexe em dado/regra) ──
+  // Três combinações dentro das cores institucionais (vermelho Bradesco +
+  // grafite/preto/branco). Os selos semânticos (crítico=vermelho,
+  // atenção=âmbar, ok=verde) e o robô NUNCA mudam — só o cabeçalho e os
+  // ícones de cada bloco giram por dia do ano, sempre no mesmo índice para
+  // o mesmo dia (imagem gerada e página ao vivo ficam idênticas).
+  var DAILY_THEMES = [
+    { id: 'grafite', headerBg: '#20242c', headerBorder: 'none', headerText: '#ffffff', headerSubtext: '#c8ccd4' },
+    { id: 'preto', headerBg: '#0b0b0c', headerBorder: 'none', headerText: '#ffffff', headerSubtext: '#d8d8d8' },
+    { id: 'branco', headerBg: '#ffffff', headerBorder: '2px solid #bf1830', headerText: '#bf1830', headerSubtext: '#687587' }
+  ];
+
+  function dayOfYear(date) {
+    var d = date || new Date();
+    var start = new Date(d.getFullYear(), 0, 0);
+    var diff = d - start;
+    return Math.floor(diff / 86400000);
+  }
+
+  function pickDailyThemeIndex(date) {
+    return dayOfYear(date) % DAILY_THEMES.length;
+  }
+
+  function pickDailyTheme(date) {
+    return DAILY_THEMES[pickDailyThemeIndex(date)];
+  }
+
   return {
     META_LEAD_TIME: META_LEAD_TIME,
     SLA_HOMOLOG_DAYS: SLA_HOMOLOG_DAYS,
@@ -319,6 +346,9 @@
     isSlaHomologationStatus: isSlaHomologationStatus,
     businessDaysBetween: businessDaysBetween,
     dueDate: dueDate,
+    DAILY_THEMES: DAILY_THEMES,
+    pickDailyThemeIndex: pickDailyThemeIndex,
+    pickDailyTheme: pickDailyTheme,
     resolveFocalPoint: resolveFocalPoint,
     selectCriticos: selectCriticos,
     selectRefinamento: selectRefinamento,
