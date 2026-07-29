@@ -2124,6 +2124,23 @@ tr:nth-child(even):hover td,
     </div>
   </div>
 
+  <div class="sv-upbar" id="opsUpbar" style="margin-top:1.4rem">
+    <span style="font-size:13px;flex-shrink:0">🔧</span>
+    <span class="sv-up-name" id="opsUpName">Ops4Ops · Refinada x Backlog</span>
+    <span class="sv-up-sub" id="opsUpSub">Export Jira do Ops4Ops · cria snapshot de evolução própria · .xlsx ou .csv</span>
+    <span class="up-saved hidden" id="opsUpSaved">💾 <span id="opsUpSavedTxt">Salvo localmente</span></span>
+    <input type="file" id="fiOps" accept=".xlsx,.xls,.csv">
+    <button class="up-btn" onclick="document.getElementById('fiOps').click()">Selecionar arquivo</button>
+  </div>
+
+  <div class="ep" id="ops4opsContent">
+    <div class="empty" style="padding:2rem 2rem;text-align:center">
+      <div style="font-size:28px;margin-bottom:.6rem">🔧</div>
+      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhuma carga do Ops4Ops importada ainda</div>
+      <div style="font-size:12px;color:#94a3b8">Importe o export do Jira com as histórias do Ops4Ops acima.</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══ DEMANDAS EMERGENCIAIS PANE ══ -->
@@ -2339,6 +2356,8 @@ var HOMOLOGATION_CROSS_KEY='sala_cross_import_homologation_v1';
 var STORY_LIMIT=12;
 var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
 var backlogSnaps=[];
+var OPS4OPS_KEY='leadtime_sala_v8_ops4ops_snaps';
+var ops4opsSnaps=[];
 var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
 var emergencyState={rules:[],meta:{}};
@@ -5525,128 +5544,30 @@ function isRefined(story){
   });
 }
 
-function renderBacklogView(){
-  var bkContent=$id('bkContent');
-  if(!bkContent) return;
-
-  if(!backlogSnaps.length){
-    if(_gasBacklogLoading){
-      bkContent.innerHTML=
-        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
-        '<div style="font-size:28px;margin-bottom:.8rem;animation:spin 1.2s linear infinite;display:inline-block">🔄</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando dados do servidor…</div>'+
-        '<div style="font-size:12px;color:#94a3b8">Aguarde enquanto o backlog compartilhado é carregado.</div>'+
-        '</div>';
-    } else if(_gasBacklogError){
-      bkContent.innerHTML=
-        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
-        '<div style="font-size:32px;margin-bottom:.8rem">⚠️</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Servidor não respondeu</div>'+
-        '<div style="font-size:12px;color:#94a3b8;margin-bottom:1rem">Não foi possível carregar o backlog do servidor ('+_gasBacklogError+').<br>Verifique a conexão ou tente recarregar a página.</div>'+
-        '<button onclick="_gasBacklogError=null;gasLoadBacklog();" style="padding:.5rem 1.2rem;background:#e11d48;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Tentar novamente</button>'+
-        '</div>';
-    } else {
-      bkContent.innerHTML=
-        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
-        '<div style="font-size:32px;margin-bottom:.8rem">📥</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>'+
-        '<div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>'+
-        '</div>';
-    }
-    return;
-  }
-
-  sortBacklogSnaps();
-  var cur=getCurrentBacklogSnapshot();
-  var prev=getPreviousBacklogSnapshot();
-  var stories=visibleStoryRows((cur&&Array.isArray(cur.stories))?cur.stories:[]);
-  var prevStories=visibleStoryRows((prev&&Array.isArray(prev.stories))?prev.stories:[]);
-
-  // Aviso quando o snapshot mais recente (por data) tem menos histórias que o maior
-  // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
-  var maxKnown=backlogSnaps.reduce(function(max,snap){
-    return Math.max(max,visibleStoryRows(snap&&snap.stories).length);
-  },0);
-  var curCount=stories.length;
-  var _bkWarnDismissed=(function(){ try{ return storageGet('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
-  var staleWarningHtml='';
-  if(maxKnown>curCount && !_bkWarnDismissed){
-    staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:.75rem;">'+
-      '<span style="flex:1">⚠️ O snapshot mais recente tem <strong>'+curCount+'</strong> histórias, mas há um snapshot com <strong>'+maxKnown+'</strong> histórias. '+
-      'O servidor pode não ter recebido a importação mais completa. Tente importar novamente ou aguarde a sincronização.</span>'+
-      '<button onclick="try{localStorage.setItem(\'bk_stale_warn_dismissed\',\'1\');}catch(e){}this.closest(\'div\').remove()" style="flex:0 0 auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;font-size:11px;color:#92400e;cursor:pointer;white-space:nowrap">Entendido ✕</button>'+
-      '</div>';
-  }
-
-  // Count per squad
-  var curSquadCnt={}, prevSquadCnt={};
-  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
-  if(prev) prevStories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
-
-  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
-  var totalBacklog=stories.length;
-  var totalRefined=stories.filter(isRefined).length;
-
-  // Histórias que saíram do backlog: estavam no snapshot anterior mas não estão no atual
-  var exitedBacklog=0;
-  if(prev&&Array.isArray(prev.stories)&&prev.stories.length){
-    var curIds={};
-    stories.forEach(function(s){ if(s.id) curIds[s.id]=true; });
-    exitedBacklog=prevStories.filter(function(s){ return s.id&&!curIds[s.id]; }).length;
-  }
-
-  // Global delta
-  var totalDelta=prev!==null?totalBacklog-prevStories.length:null;
-  var globalDeltaHtml='';
-  if(totalDelta!==null){
-    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
-    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
-    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
-  }
-
-  // Import history — últimas 5 como chips
-  var historyHtml='';
-  if(backlogSnaps.length>1){
-    var last5=backlogSnaps.slice(-5);
-    var chips=last5.map(function(snap,idx){
-      var isCur=idx===last5.length-1;
-      var snapCount=visibleStoryRows(snap.stories).length;
-      var previousCount=idx>0?visibleStoryRows(last5[idx-1].stories).length:0;
-      var delta=idx>0?(snapCount-previousCount):null;
-      var deltaStr=delta===null?'':(delta>0?'<span style="color:#dc2626;font-size:9px">▲'+delta+'</span>':(delta<0?'<span style="color:#16a34a;font-size:9px">▼'+Math.abs(delta)+'</span>':''));
-      return '<div class="bk-hist-chip'+(isCur?' bk-hist-chip-cur':'')+'">'+
-        '<span class="bk-hist-chip-seq">#'+snap.seq+'</span>'+
-        '<span class="bk-hist-chip-cnt">'+snapCount+'</span>'+
-        (deltaStr?deltaStr:'')+
-      '</div>';
-    });
-    var totalLabel=backlogSnaps.length>5?'<span style="font-size:10px;color:#94a3b8;align-self:center">+' +(backlogSnaps.length-5)+' anteriores</span>':'';
-    historyHtml='<div class="bk-history">'+
-      '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8">Últimas importações</span>'+
-      '<div class="bk-hist-chips">'+totalLabel+chips.join('')+'</div>'+
-    '</div>';
-  }
-
-  // Squad cards
-  var squadCardsHtml=squads.map(function(sq){
+// Grid de cards "Backlog por Squad" — extraído para ser reaproveitado tanto
+// pelo backlog geral quanto por conjuntos independentes (ex.: Ops4Ops).
+// prevSquadCnt: null quando não há importação anterior para comparar.
+// snapsHistory: lista de snapshots (mesmo formato de backlogSnaps) usada na sparkline.
+function buildSquadCards(stories,squads,prevSquadCnt,snapsHistory,curSeq){
+  return squads.map(function(sq){
     var sqStories=stories.filter(function(s){return s.squad===sq;});
     var refined=sqStories.filter(isRefined);
     var cnt=sqStories.length;
-    var delta=prev!==null?(cnt-(prevSquadCnt[sq]||0)):null;
+    var delta=prevSquadCnt?(cnt-(prevSquadCnt[sq]||0)):null;
     var accent=getSquadAccent(sq);
-    var cardId='bk_'+sq.replace(/[^a-z0-9]/gi,'_');
+    var cardId='bk_'+sq.replace(/[^a-z0-9]/gi,'_')+'_'+curSeq;
 
     var deltaHtml='';
     if(delta!==null){
-      if(delta>0) deltaHtml='<span class="bk-delta-up">▲ '+delta+' vs #'+(cur.seq-1)+'</span>';
-      else if(delta<0) deltaHtml='<span class="bk-delta-down">▼ '+Math.abs(delta)+' vs #'+(cur.seq-1)+'</span>';
-      else deltaHtml='<span class="bk-delta-eq">= vs #'+(cur.seq-1)+'</span>';
+      if(delta>0) deltaHtml='<span class="bk-delta-up">▲ '+delta+' vs #'+(curSeq-1)+'</span>';
+      else if(delta<0) deltaHtml='<span class="bk-delta-down">▼ '+Math.abs(delta)+' vs #'+(curSeq-1)+'</span>';
+      else deltaHtml='<span class="bk-delta-eq">= vs #'+(curSeq-1)+'</span>';
     }
 
     // Sparkline bars — últimas 10 importações
     var sparkHtml='';
-    if(backlogSnaps.length>1){
-      var snapSlice=backlogSnaps.slice(-10);
+    if(snapsHistory&&snapsHistory.length>1){
+      var snapSlice=snapsHistory.slice(-10);
       var snapCounts=snapSlice.map(function(snap){
         return visibleStoryRows(snap.stories).filter(function(s){return s.squad===sq;}).length;
       });
@@ -5752,6 +5673,111 @@ function renderBacklogView(){
       '<div class="bk-squad-body">'+rows+'</div>'+
     '</div>';
   }).join('');
+}
+
+function renderBacklogView(){
+  var bkContent=$id('bkContent');
+  if(!bkContent) return;
+
+  if(!backlogSnaps.length){
+    if(_gasBacklogLoading){
+      bkContent.innerHTML=
+        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:.8rem;animation:spin 1.2s linear infinite;display:inline-block">🔄</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando dados do servidor…</div>'+
+        '<div style="font-size:12px;color:#94a3b8">Aguarde enquanto o backlog compartilhado é carregado.</div>'+
+        '</div>';
+    } else if(_gasBacklogError){
+      bkContent.innerHTML=
+        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+        '<div style="font-size:32px;margin-bottom:.8rem">⚠️</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Servidor não respondeu</div>'+
+        '<div style="font-size:12px;color:#94a3b8;margin-bottom:1rem">Não foi possível carregar o backlog do servidor ('+_gasBacklogError+').<br>Verifique a conexão ou tente recarregar a página.</div>'+
+        '<button onclick="_gasBacklogError=null;gasLoadBacklog();" style="padding:.5rem 1.2rem;background:#e11d48;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Tentar novamente</button>'+
+        '</div>';
+    } else {
+      bkContent.innerHTML=
+        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+        '<div style="font-size:32px;margin-bottom:.8rem">📥</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>'+
+        '<div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>'+
+        '</div>';
+    }
+    return;
+  }
+
+  sortBacklogSnaps();
+  var cur=getCurrentBacklogSnapshot();
+  var prev=getPreviousBacklogSnapshot();
+  var stories=visibleStoryRows((cur&&Array.isArray(cur.stories))?cur.stories:[]);
+  var prevStories=visibleStoryRows((prev&&Array.isArray(prev.stories))?prev.stories:[]);
+
+  // Aviso quando o snapshot mais recente (por data) tem menos histórias que o maior
+  // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
+  var maxKnown=backlogSnaps.reduce(function(max,snap){
+    return Math.max(max,visibleStoryRows(snap&&snap.stories).length);
+  },0);
+  var curCount=stories.length;
+  var _bkWarnDismissed=(function(){ try{ return storageGet('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
+  var staleWarningHtml='';
+  if(maxKnown>curCount && !_bkWarnDismissed){
+    staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:.75rem;">'+
+      '<span style="flex:1">⚠️ O snapshot mais recente tem <strong>'+curCount+'</strong> histórias, mas há um snapshot com <strong>'+maxKnown+'</strong> histórias. '+
+      'O servidor pode não ter recebido a importação mais completa. Tente importar novamente ou aguarde a sincronização.</span>'+
+      '<button onclick="try{localStorage.setItem(\'bk_stale_warn_dismissed\',\'1\');}catch(e){}this.closest(\'div\').remove()" style="flex:0 0 auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;font-size:11px;color:#92400e;cursor:pointer;white-space:nowrap">Entendido ✕</button>'+
+      '</div>';
+  }
+
+  // Count per squad
+  var curSquadCnt={}, prevSquadCnt={};
+  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
+  if(prev) prevStories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
+
+  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  var totalBacklog=stories.length;
+  var totalRefined=stories.filter(isRefined).length;
+
+  // Histórias que saíram do backlog: estavam no snapshot anterior mas não estão no atual
+  var exitedBacklog=0;
+  if(prev&&Array.isArray(prev.stories)&&prev.stories.length){
+    var curIds={};
+    stories.forEach(function(s){ if(s.id) curIds[s.id]=true; });
+    exitedBacklog=prevStories.filter(function(s){ return s.id&&!curIds[s.id]; }).length;
+  }
+
+  // Global delta
+  var totalDelta=prev!==null?totalBacklog-prevStories.length:null;
+  var globalDeltaHtml='';
+  if(totalDelta!==null){
+    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
+    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
+    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
+  }
+
+  // Import history — últimas 5 como chips
+  var historyHtml='';
+  if(backlogSnaps.length>1){
+    var last5=backlogSnaps.slice(-5);
+    var chips=last5.map(function(snap,idx){
+      var isCur=idx===last5.length-1;
+      var snapCount=visibleStoryRows(snap.stories).length;
+      var previousCount=idx>0?visibleStoryRows(last5[idx-1].stories).length:0;
+      var delta=idx>0?(snapCount-previousCount):null;
+      var deltaStr=delta===null?'':(delta>0?'<span style="color:#dc2626;font-size:9px">▲'+delta+'</span>':(delta<0?'<span style="color:#16a34a;font-size:9px">▼'+Math.abs(delta)+'</span>':''));
+      return '<div class="bk-hist-chip'+(isCur?' bk-hist-chip-cur':'')+'">'+
+        '<span class="bk-hist-chip-seq">#'+snap.seq+'</span>'+
+        '<span class="bk-hist-chip-cnt">'+snapCount+'</span>'+
+        (deltaStr?deltaStr:'')+
+      '</div>';
+    });
+    var totalLabel=backlogSnaps.length>5?'<span style="font-size:10px;color:#94a3b8;align-self:center">+' +(backlogSnaps.length-5)+' anteriores</span>':'';
+    historyHtml='<div class="bk-history">'+
+      '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8">Últimas importações</span>'+
+      '<div class="bk-hist-chips">'+totalLabel+chips.join('')+'</div>'+
+    '</div>';
+  }
+
+  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,backlogSnaps,cur.seq);
 
   bkContent.innerHTML=
     staleWarningHtml+
@@ -5768,6 +5794,135 @@ function renderBacklogView(){
         : '<span style="color:#94a3b8">Importe novamente para ver o delta entre importações (▲▼=)</span>')+
     '</div>'+
     historyHtml+
+    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Backlog por Squad · Importação #'+cur.seq+'</div>'+
+    '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
+}
+
+// ═══════════════════════════════════════
+// OPS4OPS — conjunto independente do backlog geral, com sua própria
+// importação e histórico de snapshots (mesmo padrão de backlogSnaps),
+// exibido abaixo do "Backlog por Squad" na aba Backlog/Refinamento.
+// ═══════════════════════════════════════
+function saveOps4opsSnaps(){
+  if(ops4opsSnaps.length>MAX_BACKLOG_SNAPS){
+    ops4opsSnaps.sort(compareBacklogSnaps);
+    ops4opsSnaps=ops4opsSnaps.slice(ops4opsSnaps.length-MAX_BACKLOG_SNAPS);
+  }
+  try{ storageSet(OPS4OPS_KEY,JSON.stringify(ops4opsSnaps)); }catch(e){}
+}
+function loadOps4opsSnaps(){
+  try{
+    var raw=storageGet(OPS4OPS_KEY);
+    if(raw) ops4opsSnaps=JSON.parse(raw)||[];
+  }catch(e){ ops4opsSnaps=[]; }
+}
+function getCurrentOps4opsSnapshot(){ if(!ops4opsSnaps.length) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-1]; }
+function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
+
+function loadOps4opsXlsx(file){
+  if(typeof XLSX==='undefined'){
+    loadXlsxLib(function(){loadOps4opsXlsx(file);});
+    return;
+  }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=readWorkbook(e.target.result,file.name);
+      var det=detectBacklogFormat(wb);
+      if(!det){
+        toast('Formato não reconhecido','Colunas esperadas: "Chave do item" (ID) + "Situação". Export Jira do Ops4Ops.','err');
+        return;
+      }
+      var rows=det.rows, m=det.map;
+      var stories=[];
+      for(var i=det.hrow+1;i<rows.length;i++){
+        var row=rows[i];
+        if(!row||!row.length) continue;
+        var id=(row[m.id]||'').toString().trim();
+        if(!id) continue;
+        var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
+        var status=m.status>=0?(row[m.status]||'').toString().trim():'';
+        var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
+        var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
+        var atualizado=m.atualizado>=0?parseD(row[m.atualizado]):null;
+        var prazo=m.prazo>=0?parseD(row[m.prazo]):null;
+        var homologacaoData=m.homologacaoData>=0?parseD(row[m.homologacaoData]):null;
+        var responsavel=m.responsavel>=0?(row[m.responsavel]||'').toString().trim():'';
+        var labels=m.labelsIdx.length>0
+          ? m.labelsIdx.map(function(li){return(row[li]||'').toString().trim();}).filter(Boolean).join(' ')
+          : null;
+        stories.push({id:id,resumo:resumo,status:status,squad:squad,labels:labels,sprint:sprint,atualizado:atualizado,prazo:prazo,homologacaoData:homologacaoData,responsavel:responsavel});
+      }
+      if(!stories.length){
+        toast('Nenhuma história encontrada','O arquivo não contém histórias válidas.','err');
+        return;
+      }
+      var nextSeq=ops4opsSnaps.reduce(function(m,s){ return Math.max(m,Number(s&&s.seq)||0); },0)+1;
+      var snapId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+      ops4opsSnaps.push({id:snapId,seq:nextSeq,stories:stories,importedAt:new Date().toISOString()});
+      saveOps4opsSnaps();
+
+      var opsUpName=$id('opsUpName'); if(opsUpName) opsUpName.textContent=file.name;
+      var opsUpSub=$id('opsUpSub'); if(opsUpSub) opsUpSub.textContent='#'+nextSeq+' · '+stories.length+' histórias importadas';
+      var opsUpSaved=$id('opsUpSaved'); if(opsUpSaved) opsUpSaved.classList.remove('hidden');
+      var opsUpSavedTxt=$id('opsUpSavedTxt'); if(opsUpSavedTxt) opsUpSavedTxt.textContent='Importação #'+nextSeq+' salva localmente';
+
+      renderOps4opsView();
+      toast('🔧 Ops4Ops importado','Importação #'+nextSeq+' · '+stories.length+' histórias.');
+    }catch(err){
+      toast('Erro ao ler arquivo','Verifique se é um .xlsx/.csv válido: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderOps4opsView(){
+  var host=$id('ops4opsContent');
+  if(!host) return;
+  if(!ops4opsSnaps.length){
+    host.innerHTML=
+      '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
+      '<div style="font-size:28px;margin-bottom:.6rem">🔧</div>'+
+      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhuma carga do Ops4Ops importada ainda</div>'+
+      '<div style="font-size:12px;color:#94a3b8">Importe o export do Jira com as histórias do Ops4Ops acima.</div>'+
+      '</div>';
+    return;
+  }
+  var cur=getCurrentOps4opsSnapshot();
+  var prev=getPreviousOps4opsSnapshot();
+  var stories=visibleStoryRows((cur&&Array.isArray(cur.stories))?cur.stories:[]);
+  var prevStories=visibleStoryRows((prev&&Array.isArray(prev.stories))?prev.stories:[]);
+
+  var curSquadCnt={}, prevSquadCnt={};
+  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
+  if(prev) prevStories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
+
+  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  var totalBacklog=stories.length;
+  var totalRefined=stories.filter(isRefined).length;
+
+  var totalDelta=prev!==null?totalBacklog-prevStories.length:null;
+  var globalDeltaHtml='';
+  if(totalDelta!==null){
+    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
+    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
+    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
+  }
+
+  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,ops4opsSnaps,cur.seq);
+
+  host.innerHTML=
+    '<div class="sv-kpi" style="margin-bottom:1rem">'+
+      svKpiItem('#7a0000',totalBacklog,'Total Ops4Ops','importação #'+cur.seq)+
+      svKpiItem('#3b82f6',squads.length,'Squads com Ops4Ops','grupos ativos')+
+      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo "Refinada" no Jira')+
+    '</div>'+
+    '<div class="bk-delta-bar">'+
+      (prev
+        ? '<span class="bk-delta-info">vs importação anterior (#'+prev.seq+')</span> '+globalDeltaHtml+
+          ' <span class="bk-delta-info">· '+totalBacklog+' histórias agora vs '+prev.stories.length+' antes</span>'
+        : '<span style="color:#94a3b8">Importe novamente para ver o delta entre importações (▲▼=)</span>')+
+    '</div>'+
     '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Backlog por Squad · Importação #'+cur.seq+'</div>'+
     '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
 }
@@ -6774,11 +6929,21 @@ $id('fiSv').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.
 // Backlog upload
 $id('fiBk').onchange=function(e){if(e.target.files[0]) loadBacklogXlsx(e.target.files[0]);};
 $id('fiBkJson').onchange=function(e){if(e.target.files[0]){ importBacklogJson(e.target.files[0]); this.value=''; }};
+
+// Ops4Ops upload (conjunto independente, exibido abaixo do Backlog por Squad)
+var fiOps=$id('fiOps');
+if(fiOps) fiOps.onchange=function(e){if(e.target.files[0]) loadOps4opsXlsx(e.target.files[0]);};
 var bkUb=$id('bkUpbar');
 if(bkUb){
   bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
   bkUb.addEventListener('dragleave',function(){bkUb.style.background='';});
   bkUb.addEventListener('drop',function(e){e.preventDefault();bkUb.style.background='';if(e.dataTransfer.files[0]) loadBacklogXlsx(e.dataTransfer.files[0]);});
+}
+var opsUb=$id('opsUpbar');
+if(opsUb){
+  opsUb.addEventListener('dragover',function(e){e.preventDefault();opsUb.style.background='var(--accent-soft)';});
+  opsUb.addEventListener('dragleave',function(){opsUb.style.background='';});
+  opsUb.addEventListener('drop',function(e){e.preventDefault();opsUb.style.background='';if(e.dataTransfer.files[0]) loadOps4opsXlsx(e.dataTransfer.files[0]);});
 }
 var svUb=$id('svUpbar');
 if(svUb){
@@ -7821,6 +7986,7 @@ var SEED=[
     mergeHomologationFromVisual();
     // Restore backlog snapshots
     loadBacklogSnaps();
+    loadOps4opsSnaps();
     // Restore regras e complementos manuais das Demandas Emergenciais
     emLoadLocal();
     if(backlogSnaps.length){
@@ -7830,6 +7996,14 @@ var SEED=[
       var bkS=$id('bkUpSub'); if(bkS) bkS.textContent='#'+bkLastSnap.seq+' · '+bkLastSnap.stories.length+' histórias · recarregadas automaticamente';
       var bkSv=$id('bkUpSaved'); if(bkSv) bkSv.classList.remove('hidden');
       var bkSvT=$id('bkUpSavedTxt'); if(bkSvT) bkSvT.textContent='Importação #'+bkLastSnap.seq+' · '+backlogSnaps.length+' snapshots salvos';
+    }
+    if(ops4opsSnaps.length){
+      var opsLastSnap=getCurrentOps4opsSnapshot();
+      var opsN=$id('opsUpName'); if(opsN) opsN.textContent='Dados salvos localmente';
+      var opsS=$id('opsUpSub'); if(opsS) opsS.textContent='#'+opsLastSnap.seq+' · '+opsLastSnap.stories.length+' histórias · recarregadas automaticamente';
+      var opsSv=$id('opsUpSaved'); if(opsSv) opsSv.classList.remove('hidden');
+      var opsSvT=$id('opsUpSavedTxt'); if(opsSvT) opsSvT.textContent='Importação #'+opsLastSnap.seq+' · '+ops4opsSnaps.length+' snapshots salvos';
+      renderOps4opsView();
     }
     if(allStories.length){
       var upN=$id('svUpName'); if(upN) upN.textContent='Dados salvos localmente';
