@@ -7782,6 +7782,11 @@ var SEED=[
     setSyncLabel('🔄 Sincronizando com Google Sheets…');
     // Carrega meta de squad/resumo da nuvem antes do sync do Sheets
     loadEpicMetaFromCloud();
+    // Publica o calendário de sprints já salvo neste navegador para a nuvem —
+    // garante que vpSprintCalendar exista no backend mesmo sem uma edição nova
+    // (ver calSaveToCloud() para o motivo).
+    calLoad();
+    calSaveToCloud();
 
     // Pre-warm: dispara health check e aguarda resposta antes de carregar backlog/estórias,
     // garantindo que o cold-start do Apps Script já esteja resolvido.
@@ -7920,7 +7925,26 @@ function calLoad(){
   }
   return calData;
 }
-function calSave(){ try{ storageSet(CAL_KEY, JSON.stringify(calData)); }catch(e){} }
+function calSave(){ try{ storageSet(CAL_KEY, JSON.stringify(calData)); }catch(e){} calSaveToCloud(); }
+
+// ── Sprint Calendar Cloud ──────────────────────────────────────────────────
+// Publica a lista de sprints (achatada, sem agrupar por trimestre) na chave
+// vpSprintCalendar do backend, no mesmo formato {sprints:[{name,month,start,end}]}
+// que confirmarPlanningSprintAutomaticamente() (apps-script-backlog.gs) e
+// detectActiveSprint() (visao-projetos/index.html) esperam ler. Sem isso, o
+// calendário existia só no localStorage de quem editou — a confirmação
+// automática de planning no Apps Script nunca achava sprint nenhuma.
+function calSaveToCloud(){
+  if(!BK_GAS_URL || !Array.isArray(calData)) return;
+  var sprints = calData.reduce(function(acc,tri){
+    return acc.concat(Array.isArray(tri && tri.sprints) ? tri.sprints : []);
+  }, []);
+  fetch(BK_GAS_URL, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveVpData&key=vpSprintCalendar&payload='+encodeURIComponent(JSON.stringify({sprints:sprints}))
+  }).catch(function(){});
+}
 
 // planejamento padrão — datas exatas dos trimestres apresentados
 function calDefaultData(){
