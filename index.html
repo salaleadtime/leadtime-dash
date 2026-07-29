@@ -5955,9 +5955,6 @@ function emSla(story){
 function emFmtDate(iso){return iso?fmtD(iso):'—';}
 function emStatusClass(status){var s=emNorm(status);if(s.indexOf('homolog')>=0)return'violet';if(s.indexOf('desenvolv')>=0)return'blue';if(s.indexOf('backlog')>=0)return'green';if(s.indexOf('imped')>=0||s.indexOf('bloq')>=0)return'red';return'';}
 function emRefined(story){return isRefined(story);}
-// Uma vez entregue para homologação/produção (ou concluída), a previsão de dev já foi cumprida:
-// não faz sentido continuar marcando a história como "Vencida" só porque a data calculada passou.
-function emIsDelivered(story){var s=emNorm(story.status);return s.indexOf('homolog')>=0||s.indexOf('produc')>=0||s.indexOf('conclu')>=0||s.indexOf('cancel')>=0;}
 var EM_STATUS_GROUPS=[
   {key:'backlog',label:'Backlog',       color:'#94a3b8',test:function(s){return s.indexOf('backlog')>=0;}},
   {key:'refin',  label:'Refinamento',   color:'#f59e0b',test:function(s){return s.indexOf('refin')>=0;}},
@@ -5986,32 +5983,16 @@ function emBuildStatusBar(stories){
   var segments=groups.map(function(g){return{label:g.label,color:g.color,value:counts[g.key]};});
   return{counts:counts,segments:segments};
 }
-function emBuildRiskBar(stories,today){
-  var onTime=0,late=0,noEstimate=0;
-  stories.forEach(function(s){
-    var meta=emergencyState.meta[s.id]||{},forecast=emForecast(s,meta),hours=meta.estimateHours||emHours(s.estimativa)||0;
-    if(!hours||!forecast){noEstimate++;return;}
-    if(forecast<today&&!emIsDelivered(s))late++;else onTime++;
-  });
-  var segments=[{label:'No prazo',color:'#22c55e',value:onTime},{label:'Vencida',color:'#dc2626',value:late},{label:'Sem estimativa',color:'#cbd5e1',value:noEstimate}];
-  return{segments:segments,onTime:onTime,late:late,noEstimate:noEstimate};
-}
 // ─── Banner de prioridade: destaca de cara quem precisa de ação agora ──
-function emPriorityItems(stories,today){
-  return stories.map(function(s){
-    var meta=emergencyState.meta[s.id]||{},forecast=emForecast(s,meta),sla=emSla(s);
-    var lateDays=(forecast&&forecast<today&&!emIsDelivered(s))?Math.max(1,emBusinessDaysInclusive(forecast,today)-1):0;
-    var slaOverdue=!!sla.overdue;
-    return{story:s,forecast:forecast,sla:sla,lateDays:lateDays,slaOverdue:slaOverdue,severity:(slaOverdue?2:0)+(lateDays>0?1:0)};
-  }).filter(function(x){return x.severity>0;}).sort(function(a,b){return b.severity-a.severity||b.lateDays-a.lateDays;});
+function emPriorityItems(stories){
+  return stories.map(function(s){return{story:s,sla:emSla(s)};}).filter(function(x){return x.sla.overdue;});
 }
-function emPriorityBanner(stories,today){
-  var items=emPriorityItems(stories,today);
+function emPriorityBanner(stories){
+  var items=emPriorityItems(stories);
   if(!stories.length)return'';
-  if(!items.length)return'<div class="em-priority-wrap ok"><span class="em-priority-icon">✓</span><div><b>Nenhuma história em risco</b><span>Todos os prazos calculados automaticamente estão em dia.</span></div></div>';
+  if(!items.length)return'<div class="em-priority-wrap ok"><span class="em-priority-icon">✓</span><div><b>Nenhuma história em risco</b><span>Nenhum SLA de homologação vencido no conjunto.</span></div></div>';
   var cards=items.slice(0,3).map(function(x){
-    var reason=x.slaOverdue?'SLA de homologação vencido':(x.lateDays+(x.lateDays===1?' dia útil':' dias úteis')+' após a previsão de entrega');
-    return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(x.story.id)+'" target="_blank" rel="noopener">'+esc(x.story.id)+'</a><span class="em-priority-squad">'+esc(x.story.squad||'—')+'</span></div><div class="em-priority-title">'+esc(x.story.resumo||'Sem resumo')+'</div><div class="em-priority-reason">'+esc(reason)+'</div></div>';
+    return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(x.story.id)+'" target="_blank" rel="noopener">'+esc(x.story.id)+'</a><span class="em-priority-squad">'+esc(x.story.squad||'—')+'</span></div><div class="em-priority-title">'+esc(x.story.resumo||'Sem resumo')+'</div><div class="em-priority-reason">SLA de homologação vencido</div></div>';
   }).join('');
   return'<div class="em-priority-wrap"><div class="em-priority-head"><span class="em-priority-badge">⚠ Atenção imediata</span><span class="em-muted">'+items.length+' história(s) precisam de ação agora</span></div><div class="em-priority-grid">'+cards+'</div></div>';
 }
@@ -6249,23 +6230,21 @@ function renderEmergencyView(){
   }
   var forecasts=stories.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort(),nextForecast=forecasts[0]||'';
   var dev=stories.filter(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}).length,hom=stories.filter(emIsHomologation).length,pb=stories.filter(function(s){return emNorm(s.status).indexOf('backlog')>=0;}).length;
-  var overdue=stories.filter(function(s){var f=emForecast(s,emergencyState.meta[s.id]||{});return f&&f<today&&!emIsDelivered(s);}).length,slaLate=stories.filter(function(s){return emSla(s).overdue;}).length;
+  var slaLate=stories.filter(function(s){return emSla(s).overdue;}).length;
   var latestComment='Sem comentário registrado nas histórias.';stories.some(function(s){var m=emergencyState.meta[s.id]||{};if(m.comment){latestComment=m.comment+(m.commentDate?' · '+m.commentDate:'');return true;}return false;});
-  var statusBar=emBuildStatusBar(stories),riskBar=emBuildRiskBar(stories,today);
-  var priorityBanner=emPriorityBanner(stories,today);
+  var statusBar=emBuildStatusBar(stories);
+  var priorityBanner=emPriorityBanner(stories);
   var statusDonut=emDonutCard('Distribuição por status','calculado automaticamente',statusBar.segments,stories.length,stories.length===1?'história':'histórias');
-  var riskDonut=emDonutCard('Risco de prazo','calculado automaticamente',riskBar.segments,riskBar.late,riskBar.late===1?'vencida':'vencidas');
   var refinedCount=stories.filter(emRefined).length,notRefinedCount=stories.length-refinedCount;
   var refinementDonut=emDonutCard('Backlog x Refinada','calculado automaticamente',[{label:'Refinada',color:'#22c55e',value:refinedCount},{label:'Não refinada',color:'#f59e0b',value:notRefinedCount}],refinedCount,refinedCount===1?'refinada':'refinadas');
   var rowGroups={crit:[],atencao:[],ok:[]};
   stories.forEach(function(s){
-    var meta=emergencyState.meta[s.id]||{},forecast=emForecast(s,meta),sla=emSla(s),labels=emSplitLabels(s.labels),hours=meta.estimateHours||emHours(s.estimativa)||'',start=meta.forecastStart||'',isLate=forecast&&forecast<today&&!emIsDelivered(s),just=meta.justification||'';
+    var meta=emergencyState.meta[s.id]||{},forecast=emForecast(s,meta),sla=emSla(s),labels=emSplitLabels(s.labels),hours=meta.estimateHours||emHours(s.estimativa)||'',start=meta.forecastStart||'';
     var condition=meta.condition?'<div style="margin-top:4px"><span class="em-badge amber">'+esc(meta.condition)+'</span></div>':'';
     var slaHtml=sla.applies?'<span class="em-badge '+sla.cls+'">'+esc(sla.label)+'</span><div class="em-muted" style="margin-top:3px">'+(sla.days?esc(sla.days===1?'1 dia útil':sla.days+' dias úteis'):'')+(sla.due?' · limite '+emFmtDate(sla.due):'')+'</div>':'<span class="em-sla-na">—</span>';
     var forecastHtml=forecast?'<b>'+emFmtDate(forecast)+'</b>':(hours&&!start?'<span class="em-alert">Informe início</span>':'<span class="em-alert">Sem estimativa</span>');
-    if(isLate)forecastHtml+='<div style="margin-top:4px"><span class="em-badge red">Vencida</span></div><div class="em-muted" style="margin-top:3px">'+esc(just||'Justificativa pendente')+'</div>';
     var html='<tr><td class="em-story"><div class="em-story-head"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a><button class="em-edit em-no-capture" title="Editar detalhes" aria-label="Editar detalhes de '+esc(s.id)+'" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">✎</button></div><span class="em-story-title">'+esc(s.resumo||'Sem resumo')+'</span>'+(labels.length?'<div class="em-labels">'+labels.slice(0,4).map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div>':'')+'</td><td class="em-nowrap">'+esc(s.squad||'—')+'</td><td><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'Sem status')+'</span>'+condition+'</td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Não refinada')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" aria-label="Início do desenvolvimento de '+esc(s.id)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td>'+(hom?'<td>'+slaHtml+'</td>':'')+'<td><span class="em-inline-readonly">'+esc(s.sprint||'—')+'</span></td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" inputmode="decimal" placeholder="horas" aria-label="Estimativa de '+esc(s.id)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td class="em-nowrap">'+forecastHtml+'</td><td class="em-comment">'+esc(meta.comment||'—')+(meta.commentDate?'<div class="em-muted">Atualizado em '+esc(meta.commentDate)+'</div>':'')+'</td></tr>';
-    var severity=(isLate||sla.overdue)?'crit':((meta.condition||sla.dueToday||(!hours&&emNorm(s.status).indexOf('desenvolv')>=0))?'atencao':'ok');
+    var severity=sla.overdue?'crit':((meta.condition||sla.dueToday||(!hours&&emNorm(s.status).indexOf('desenvolv')>=0))?'atencao':'ok');
     rowGroups[severity].push(html);
   });
   var EM_SEVERITY_GROUPS=[{key:'crit',label:'🔴 Crítico'},{key:'atencao',label:'🟡 Atenção'},{key:'ok',label:'🟢 Em dia'}];
@@ -6274,7 +6253,7 @@ function renderEmergencyView(){
     return'<details class="em-severity-group" data-sev="'+g.key+'"'+(g.key!=='ok'?' open':'')+'><summary class="em-severity-summary"><span class="em-severity-label '+g.key+'">'+g.label+'</span><span class="em-muted">'+rowGroups[g.key].length+' história(s)</span></summary><div class="em-table-wrap"><table class="em-table"><thead>'+theadHtml+'</thead><tbody>'+rowGroups[g.key].join('')+'</tbody></table></div></details>';
   }).join('');
   var filterDesc=rule?emRuleDescription(rule):'todas as regras ativas',slaKpi=hom?' · '+slaLate+' SLA(s) de homologação vencido(s)':'',sectionContext=hom?'<span class="em-muted">SLA de homologação: 3 dias úteis · somente para '+hom+' história(s) em homologação</span>':'';
-  host.innerHTML=toolbar+filtersPanel+ruleBox+bulkBox+editor+priorityBanner+'<div class="em-section-hd"><h2>Resumo semanal</h2><div class="em-section-context"><span class="em-badge blue">'+esc(rule?rule.name:'Todos os conjuntos')+' · atualização '+new Date().toLocaleDateString('pt-BR')+'</span><span class="em-muted">'+esc(filterDesc)+'</span></div></div><div class="em-kpis"><div class="em-kpi"><small>Histórias identificadas</small><strong>'+stories.length+'</strong><span>'+baseStories.length+' no conjunto monitorado</span></div><div class="em-kpi"><small>Em andamento</small><strong>'+(dev+hom)+'</strong><span>'+dev+' desenvolvimento · '+hom+' homologação · '+pb+' Product Backlog</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(nextForecast)+'</strong><span>'+overdue+' previsão(ões) vencida(s)'+slaKpi+'</span></div></div><div class="em-charts">'+statusDonut+riskDonut+refinementDonut+'</div><div class="em-brief"><div class="em-brief-row"><b>Panorama</b><span>'+stories.length+' demanda(s), distribuída(s) em '+Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).length+' Squad(s).</span></div><div class="em-brief-row"><b>Avanços</b><span>'+dev+' em desenvolvimento, '+hom+' em homologação e '+pb+' no Product Backlog.</span></div><div class="em-brief-row"><b>Risco</b><span>'+(overdue||slaLate?(overdue+' previsão(ões) vencida(s)'+(hom?' e '+slaLate+' SLA(s) vencido(s).':'.')):'Nenhum prazo vencido identificado no conjunto.')+'</span></div><div class="em-brief-row"><b>Comentário</b><span>'+esc(latestComment)+'</span></div></div><div class="em-section-hd"><h2>Acompanhamento operacional</h2>'+sectionContext+'</div>'+(stories.length?groupedTable:'<div class="em-empty">Nenhuma história corresponde aos filtros. Ajuste os filtros para ampliar o resultado.</div>');
+  host.innerHTML=toolbar+filtersPanel+ruleBox+bulkBox+editor+priorityBanner+'<div class="em-section-hd"><h2>Resumo semanal</h2><div class="em-section-context"><span class="em-badge blue">'+esc(rule?rule.name:'Todos os conjuntos')+' · atualização '+new Date().toLocaleDateString('pt-BR')+'</span><span class="em-muted">'+esc(filterDesc)+'</span></div></div><div class="em-kpis"><div class="em-kpi"><small>Histórias identificadas</small><strong>'+stories.length+'</strong><span>'+baseStories.length+' no conjunto monitorado</span></div><div class="em-kpi"><small>Em andamento</small><strong>'+(dev+hom)+'</strong><span>'+dev+' desenvolvimento · '+hom+' homologação · '+pb+' Product Backlog</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(nextForecast)+'</strong><span>'+(slaKpi?slaKpi.replace(/^ · /,''):'calculado automaticamente a partir das estimativas')+'</span></div></div><div class="em-charts">'+statusDonut+refinementDonut+'</div><div class="em-brief"><div class="em-brief-row"><b>Panorama</b><span>'+stories.length+' demanda(s), distribuída(s) em '+Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).length+' Squad(s).</span></div><div class="em-brief-row"><b>Avanços</b><span>'+dev+' em desenvolvimento, '+hom+' em homologação e '+pb+' no Product Backlog.</span></div><div class="em-brief-row"><b>Risco</b><span>'+(slaLate?(slaLate+' SLA(s) de homologação vencido(s).'):'Nenhum SLA de homologação vencido no conjunto.')+'</span></div><div class="em-brief-row"><b>Comentário</b><span>'+esc(latestComment)+'</span></div></div><div class="em-section-hd"><h2>Acompanhamento operacional</h2>'+sectionContext+'</div>'+(stories.length?groupedTable:'<div class="em-empty">Nenhuma história corresponde aos filtros. Ajuste os filtros para ampliar o resultado.</div>');
 }
 
 var SV_STATUS=[
