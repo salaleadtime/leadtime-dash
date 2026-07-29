@@ -70,13 +70,29 @@
   #boletim-ds-root .bds-empty{padding:14px 6px;color:var(--bds-muted);font-size:11.5px;text-align:center}
   #boletim-ds-root .bds-footer{font-size:9.5px;color:var(--bds-muted);text-align:center;margin-top:6px}
   #boletim-ds-root .bds-footer a{color:var(--bds-muted)}
+  #boletim-ds-root .bds-lt-geral{font-size:11.5px;color:var(--bds-ink);margin:0 0 8px}
+  #boletim-ds-root .bds-lt-geral strong{color:var(--bds-primary);font-size:13px}
 </style>
 </head>
 <body>
 <div id="boletim-ds-root" data-bds-ready="false">
   <div class="bds-header">
     <div class="bds-brand">
-      <div class="bds-robot" aria-hidden="true">🤖</div>
+      <div class="bds-robot" aria-hidden="true">
+        <svg viewBox="0 0 100 100" width="100%" height="100%" role="img" focusable="false">
+          <line x1="50" y1="6" x2="50" y2="20" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="50" cy="6" r="6" fill="#fff"/>
+          <rect x="16" y="20" width="68" height="58" rx="16" fill="#d7dbe2"/>
+          <rect x="24" y="30" width="52" height="38" rx="10" fill="#eef0f4"/>
+          <circle cx="40" cy="49" r="8" fill="#20242c"/>
+          <circle cx="60" cy="49" r="8" fill="#20242c"/>
+          <circle cx="37.5" cy="46.5" r="2.4" fill="#fff"/>
+          <circle cx="57.5" cy="46.5" r="2.4" fill="#fff"/>
+          <rect x="38" y="60" width="24" height="6" rx="3" fill="#bf1830"/>
+          <rect x="6" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
+          <rect x="86" y="42" width="8" height="18" rx="4" fill="#d7dbe2"/>
+        </svg>
+      </div>
       <div>
         <p class="bds-title">Boletim Diário DS</p>
         <p class="bds-subtitle">Solução criada por DS</p>
@@ -86,22 +102,28 @@
   </div>
 
   <div class="bds-panel">
-    <h2>Pontos críticos do dia</h2>
+    <h2 id="bds-h2-criticos">Pontos críticos do dia</h2>
     <p class="bds-hint">Itens classificados como críticos pelas regras já existentes do dashboard (meta de Lead Time e impedimentos registrados).</p>
     <div id="bds-criticos"><div class="bds-empty">Carregando…</div></div>
   </div>
 
   <div class="bds-cols">
     <div class="bds-panel">
-      <h2>Discoveries em refinamento</h2>
+      <h2 id="bds-h2-refinamento">Discoveries em refinamento</h2>
       <p class="bds-hint">Iniciativas atualmente na fase de Refinamento Técnico, conforme o Cronograma do Discovery PMO.</p>
       <div id="bds-refinamento"><div class="bds-empty">Carregando…</div></div>
     </div>
     <div class="bds-panel">
-      <h2>Homologação fora do prazo</h2>
+      <h2 id="bds-h2-homologacao">Homologação fora do prazo</h2>
       <p class="bds-hint">Itens em Homologação com o SLA de dias úteis já vencido.</p>
       <div id="bds-homologacao"><div class="bds-empty">Carregando…</div></div>
     </div>
+  </div>
+
+  <div class="bds-panel">
+    <h2 id="bds-h2-entregas">Lead Time e entregas do dia</h2>
+    <p class="bds-hint">Squads que concluíram entregas hoje e o Lead Time de cada uma.</p>
+    <div id="bds-entregas"><div class="bds-empty">Carregando…</div></div>
   </div>
 
   <p class="bds-footer" id="bds-footer">Consultar o sistema completo: <a href="../index.html">dashboard</a> · <a href="../discovery-pmo/index.html">Discovery PMO</a></p>
@@ -154,6 +176,53 @@
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
+  // Variação visual diária (mesma lógica do pipeline em run.mjs): só
+  // aparência do cabeçalho e ícones de cada bloco — nunca a cor dos selos
+  // semânticos (crítico/atenção/ok) nem o robô, que ficam sempre iguais.
+  var ICON_ATTRS = 'width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px;color:var(--bds-primary)"';
+  var ICON_SETS = [
+    {
+      criticos: '<svg ' + ICON_ATTRS + '><path d="M12 3 2 20h20L12 3z"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>',
+      refinamento: '<svg ' + ICON_ATTRS + '><circle cx="10" cy="10" r="6"/><line x1="15" y1="15" x2="20" y2="20"/></svg>',
+      homologacao: '<svg ' + ICON_ATTRS + '><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="14"/></svg>',
+      leadtime: '<svg ' + ICON_ATTRS + '><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/></svg>'
+    },
+    {
+      criticos: '<svg ' + ICON_ATTRS + '><polygon points="7,2 17,2 22,7 22,17 17,22 7,22 2,17 2,7"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16" r="0.6" fill="currentColor" stroke="none"/></svg>',
+      refinamento: '<svg ' + ICON_ATTRS + '><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3 11c.6.5 1 1.2 1 2h4c0-.8.4-1.5 1-2a6 6 0 0 0-3-11z"/></svg>',
+      homologacao: '<svg ' + ICON_ATTRS + '><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2.5 2.5L16 11"/></svg>',
+      leadtime: '<svg ' + ICON_ATTRS + '><polyline points="3,17 9,11 13,15 21,6"/><polyline points="15,6 21,6 21,12"/></svg>'
+    },
+    {
+      criticos: '<svg ' + ICON_ATTRS + '><path d="M12 2c3 4 6 6 6 10a6 6 0 1 1-12 0c0-2 1-3 2-5 0 2 1 3 2 3-1-3 0-6 2-8z"/></svg>',
+      refinamento: '<svg ' + ICON_ATTRS + '><path d="M9 2v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3L15 8V2"/><line x1="8" y1="2" x2="16" y2="2"/><line x1="7" y1="15" x2="17" y2="15"/></svg>',
+      homologacao: '<svg ' + ICON_ATTRS + '><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>',
+      leadtime: '<svg ' + ICON_ATTRS + '><path d="M4 15a8 8 0 1 1 16 0"/><line x1="12" y1="15" x2="16" y2="10"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/></svg>'
+    }
+  ];
+
+  function applyDailyTheme() {
+    var today = new Date();
+    var theme = R.pickDailyTheme(today);
+    var icons = ICON_SETS[R.pickDailyThemeIndex(today)];
+
+    var header = document.querySelector('#boletim-ds-root .bds-header');
+    header.style.background = theme.headerBg;
+    header.style.border = theme.headerBorder;
+    header.style.color = theme.headerText;
+    document.querySelector('#boletim-ds-root .bds-title').style.color = theme.headerText;
+    document.querySelector('#boletim-ds-root .bds-subtitle').style.color = theme.headerSubtext;
+    var dateEl = document.getElementById('bds-date');
+    dateEl.style.color = theme.headerText;
+    var dateSmall = dateEl.querySelector('small');
+    if (dateSmall) dateSmall.style.color = theme.headerSubtext;
+
+    document.getElementById('bds-h2-criticos').innerHTML = icons.criticos + 'Pontos críticos do dia';
+    document.getElementById('bds-h2-refinamento').innerHTML = icons.refinamento + 'Discoveries em refinamento';
+    document.getElementById('bds-h2-homologacao').innerHTML = icons.homologacao + 'Homologação fora do prazo';
+    document.getElementById('bds-h2-entregas').innerHTML = icons.leadtime + 'Lead Time e entregas do dia';
+  }
+
   function renderCriticos(sel) {
     var el = document.getElementById('bds-criticos');
     if (!sel.itens.length) { el.innerHTML = '<div class="bds-empty">✅ Nenhum ponto crítico no momento.</div>'; return; }
@@ -190,14 +259,27 @@
       }).join('') + '</tbody></table>';
   }
 
+  function renderEntregas(sel) {
+    var el = document.getElementById('bds-entregas');
+    if (!sel.itens.length) { el.innerHTML = '<div class="bds-empty">Nenhuma entrega concluída hoje.</div>'; return; }
+    el.innerHTML = '<p class="bds-lt-geral">Lead Time geral (média de hoje): <strong>' + sel.ltGeral + 'd</strong></p>' +
+      '<table><thead><tr><th>Squad</th><th>Entregas</th><th>Lead Time médio</th></tr></thead><tbody>' +
+      sel.squads.map(function (s) {
+        return '<tr><td><span class="bds-slopc">' + esc(s.squad) + '</span></td>' +
+          '<td>' + s.qtd + '</td>' +
+          '<td><span class="bds-pill green">' + s.ltMedio + 'd</span></td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
   function fail(msg) {
-    ['bds-criticos', 'bds-refinamento', 'bds-homologacao'].forEach(function (id) {
+    ['bds-criticos', 'bds-refinamento', 'bds-homologacao', 'bds-entregas'].forEach(function (id) {
       document.getElementById(id).innerHTML = '<div class="bds-empty">Dados indisponíveis no momento (' + esc(msg) + ').</div>';
     });
     root.setAttribute('data-bds-ready', 'error');
   }
 
   document.getElementById('bds-date').innerHTML = fmtDate(new Date()) + '<small>Gerado automaticamente</small>';
+  applyDailyTheme();
 
   gasJsonp(BK_GAS_URL + '?action=getBacklog', function (errBacklog, backlogRes) {
     gasJsonp(BK_GAS_URL + '?action=getStories', function (errStories, storiesRes) {
@@ -226,18 +308,20 @@
         var selCrit = R.selectCriticos(epicos, focalByEpic);
         var selRef = R.selectRefinamento(projects, today);
         var selHom = R.selectHomologacaoAtrasada(stories, today);
+        var selEntregas = R.selectEntregasHoje(epicos, today);
 
         renderCriticos(selCrit);
         renderRefinamento(selRef);
         renderHomologacao(selHom);
+        renderEntregas(selEntregas);
 
         root.setAttribute('data-bds-ready', 'true');
         root.setAttribute('data-bds-inconsistencias',
-          String(selCrit.inconsistencias.length + selRef.inconsistencias.length + selHom.inconsistencias.length));
+          String(selCrit.inconsistencias.length + selRef.inconsistencias.length + selHom.inconsistencias.length + selEntregas.inconsistencias.length));
 
-        if (window.console && (selCrit.inconsistencias.length || selRef.inconsistencias.length || selHom.inconsistencias.length)) {
+        if (window.console && (selCrit.inconsistencias.length || selRef.inconsistencias.length || selHom.inconsistencias.length || selEntregas.inconsistencias.length)) {
           console.warn('[Boletim DS] Inconsistências detectadas (registradas, não corrigidas automaticamente):',
-            selCrit.inconsistencias.concat(selRef.inconsistencias, selHom.inconsistencias));
+            selCrit.inconsistencias.concat(selRef.inconsistencias, selHom.inconsistencias, selEntregas.inconsistencias));
         }
       });
     });

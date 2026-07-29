@@ -11,9 +11,10 @@ Time, SLA de Homologação, classificação de refinamento).
 
 - `boletim-ds/index.html` — página isolada (CSS/IDs escopados a
   `#boletim-ds-root`), útil para consultar o boletim a qualquer momento no
-  navegador. É publicada pelo GitHub Pages junto com o restante do site,
-  mas **não** está linkada no `index.html` principal (nenhuma alteração de
-  navegação foi feita sem aprovação).
+  navegador. É publicada pelo GitHub Pages junto com o restante do site, e
+  tem um atalho na aba **📰 Boletim DS** do painel Admin do `index.html`
+  principal (menu Admin → aba própria, só um link — nenhuma lógica do
+  boletim roda dentro do `index.html`).
 - `boletim-ds/rules.js` — regras de seleção/classificação compartilhadas
   entre a página e o pipeline de geração (fonte única, sem duplicar lógica).
 - `.github/scripts/boletim_ds/run.mjs` — pipeline de geração: busca dados,
@@ -21,14 +22,46 @@ Time, SLA de Homologação, classificação de refinamento).
   (Nodemailer), com deduplicação por dia.
 - `.github/workflows/boletim-diario-ds.yml` — workflow do GitHub Actions.
 
-## Status atual: envio automático BLOQUEADO até configuração
+## Página única para copiar/colar (e-mail e Teams)
 
-O envio por e-mail só acontece se todos os secrets abaixo estiverem
-configurados (`Settings → Secrets and variables → Actions`). Sem eles, o
-pipeline roda, gera o HTML e o PNG normalmente, mas **não envia** e-mail —
-isso é intencional (seção 11/13 da especificação: destinatários e
-credenciais nunca ficam no código-fonte e o envio automático não deve ser
-ativado sem validação explícita).
+O Boletim é **uma única imagem** (`boletim.png`), pensada para ser copiada e
+colada tanto no corpo do e-mail quanto no grupo do Teams — não existe mais
+um cartão separado. Além dos três blocos originais (Pontos críticos,
+Discoveries em refinamento, Homologação fora do prazo), a página traz um
+quarto bloco, "Lead Time e entregas do dia": o Lead Time geral (média das
+entregas concluídas hoje) e o Lead Time médio por squad que entregou. Esse
+bloco é gerado com dado novo a cada execução — nunca estático — e some
+sozinho para "Nenhuma entrega concluída hoje" quando não há entrega no dia
+(nunca inventa dado).
+
+## Variação visual diária
+
+O cabeçalho e os ícones de cada bloco giram por dia do ano em 3 variações
+(`rules.js:DAILY_THEMES` / `pickDailyThemeIndex`), sempre dentro das cores
+institucionais Bradesco — vermelho + grafite, vermelho + preto, ou vermelho
++ branco. O robô e as cores semânticas dos selos (vermelho = crítico, âmbar
+= atenção, verde = ok) **nunca mudam**, em qualquer dia — só teriam sentido
+se fossem sempre iguais. A mesma lógica é usada no pipeline (`run.mjs`) e na
+página ao vivo (`index.html`), então os dois ficam idênticos no mesmo dia.
+
+O mesmo bloco aparece tanto na imagem gerada pelo
+pipeline quanto na página `boletim-ds/index.html`, que busca os dados ao
+vivo no navegador.
+
+## Horário: aprovado — 09:00 todos os dias
+
+O workflow roda automaticamente **todos os dias às 09:00 (America/Sao_Paulo,
+UTC-3 fixo)** via `schedule: cron: '0 12 * * *'`. Continua também disponível
+por `workflow_dispatch` para testes manuais.
+
+## Status atual do e-mail: envio BLOQUEADO até configuração dos secrets
+
+O horário está ativo, mas o envio por e-mail em si só acontece se todos os
+secrets abaixo estiverem configurados (`Settings → Secrets and variables →
+Actions`). Sem eles, a execução diária roda, gera o HTML e o PNG
+normalmente, mas **não envia** e-mail — isso é intencional (seção 11/13 da
+especificação: destinatários e credenciais nunca ficam no código-fonte e o
+envio automático não deve ser ativado sem validação explícita).
 
 | Secret | Descrição |
 | --- | --- |
@@ -40,19 +73,6 @@ ativado sem validação explícita).
 
 Variável opcional (não secreta): `BOLETIM_DS_SYSTEM_LINK`, usada apenas
 para exibir o link "consultar o sistema" no rodapé do e-mail.
-
-## Ativar o horário automático (cron)
-
-O workflow só tem `workflow_dispatch` (disparo manual) até que o horário
-diário seja aprovado. Depois de decidido, adicionar em
-`.github/workflows/boletim-diario-ds.yml`:
-
-```yaml
-on:
-  schedule:
-    - cron: '0 11 * * 1-5'   # exemplo: 08:00 America/Sao_Paulo, seg-sex
-  workflow_dispatch: {}
-```
 
 ## Testar manualmente
 
