@@ -1480,15 +1480,6 @@ body{min-height:100vh}
   <div class="rnp-stats" id="rnpStats"></div>
 </div>
 
-<!-- ══ STATUS DAS CARGAS ══ -->
-<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:0 0 12px 0;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-    <strong style="font-size:13px;color:#111;">📋 Status das Cargas</strong>
-    <span style="font-size:11px;color:#94a3b8;">Atualizado ao carregar/importar · horário local do navegador</span>
-  </div>
-  <div id="importStatusPanel" style="overflow-x:auto;"></div>
-</div>
-
 <!-- ══ ÉPICOS PANE ══ -->
 <div class="pane on" id="pane-ep">
 <div class="ep">
@@ -9019,6 +9010,7 @@ function calSeedExample(){
         <button class="adm-tab on" onclick="admTab('config',this)">⚙️ Configurações</button>
         <button class="adm-tab" onclick="admTab('dados',this)">📊 Dados</button>
         <button class="adm-tab" onclick="admTab('epicos',this)">📋 Épicos</button>
+        <button class="adm-tab" onclick="admTab('cargas',this)">📦 Cargas</button>
         <button class="adm-tab" onclick="admTab('boletim',this)">📰 Boletim DS</button>
       </div>
 
@@ -9101,6 +9093,13 @@ function calSeedExample(){
         <div class="adm-msg" id="admEpMsg"></div>
       </div>
 
+      <!-- ABA: Cargas -->
+      <div class="adm-pane" id="adm-cargas">
+        <div class="adm-sec">Status das Cargas</div>
+        <p style="font-size:11px;color:#64748b;line-height:1.5;margin:-4px 0 10px">Última importação de cada relatório, com status (Atualizado/Pendente/Desatualizado/Erro). Atualizado automaticamente a cada carregamento/importação.</p>
+        <div id="importStatusPanel" style="overflow-x:auto;"></div>
+      </div>
+
       <!-- ABA: Boletim Diário DS -->
       <div class="adm-pane" id="adm-boletim">
         <div class="adm-sec">Boletim Diário DS</div>
@@ -9175,6 +9174,7 @@ function calSeedExample(){
     document.getElementById('adm-'+id).classList.add('on');
     if(id==='dados') admCarregarDados();
     if(id==='epicos') admCarregarEpicos();
+    if(id==='cargas'){ try{ renderImportStatusPanel(); }catch(e){} }
   };
 
   function admMsg(id, txt, tipo){
