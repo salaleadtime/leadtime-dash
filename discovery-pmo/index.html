@@ -11612,17 +11612,41 @@
       }, 60);
     }
 
+    function isKickoffScheduleItem(item) {
+      return /kick ?off/i.test(item?.item || '');
+    }
+
     function openLateScheduleModal() {
       const lateItems = collectLateScheduleMarcos(data.projects || []);
       const rows = lateItems.length
         ? lateItems.map(lateScheduleRowHtml).join('')
         : `<div class="ux-v6-attention-empty">Nenhum marco de Cronograma atrasado.</div>`;
+      const lateKickoffs = lateItems.filter(({ item }) => isKickoffScheduleItem(item));
       openModal(
         'Marcos em atraso',
         'Todo marco do Cronograma vencido e não concluído, em qualquer iniciativa. Clique num item para abrir a iniciativa na aba Cronograma.',
         `<div class="ux-v6-alert-list">${rows}</div>`,
-        [`<button type="button" class="btn" onclick="closeModal()">Fechar</button>`]
+        [
+          lateKickoffs.length ? `<button type="button" class="btn" onclick="markAllLateKickoffsDone()">Concluir Kickoffs atrasados (${lateKickoffs.length})</button>` : '',
+          `<button type="button" class="btn" onclick="closeModal()">Fechar</button>`
+        ]
       );
+    }
+
+    // Ação em lote pedida quando os Kickoffs já aconteceram de fato e só não
+    // foram marcados como concluídos no sistema — não mexe nos demais marcos
+    // (Discovery, Desenho de solução, Escrita das histórias, ...), que seguem
+    // sendo concluídos individualmente, um a um, ao terminarem de verdade.
+    function markAllLateKickoffsDone() {
+      const lateKickoffs = collectLateScheduleMarcos(data.projects || []).filter(({ item }) => isKickoffScheduleItem(item));
+      if (!lateKickoffs.length) { toast('Nenhum Kickoff atrasado para concluir.'); return; }
+      lateKickoffs.forEach(({ item }) => {
+        item.done = true;
+        item.progress = 100;
+        item.updatedAt = new Date().toISOString();
+      });
+      closeModal();
+      saveData(true);
     }
 
     function openAttentionActionsModal() {
