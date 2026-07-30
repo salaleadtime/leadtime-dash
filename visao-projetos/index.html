@@ -6384,7 +6384,7 @@
       if($('sprintPeriodDesc'))  $('sprintPeriodDesc').textContent  = `${sprintStartLabel} a ${sprintEndLabel}`;
       if($('sprintPeriodBadge')) $('sprintPeriodBadge').textContent = `${spName} ${shortS} → ${shortE}`;
     }
-    let selectedSquadState = 'Contact';
+    let selectedSquadState = 'Todas';
     let sprintFrenteFilter = 'Todas';
     function readStoredJSON(storageKey, fallback){
       const raw = storageGet(storageKey);
@@ -6816,15 +6816,14 @@
         ...effectiveSprintRows().map(r => normalize(r.squad))
       ]);
       const squadSelect = $('squadFilter');
-      const current = normalize(squadSelect.value) || selectedSquadState || 'Contact';
+      const current = normalize(squadSelect.value) || selectedSquadState || 'Todas';
       squadSelect.innerHTML = '<option value="Todas">Todas as squads</option>' + squads.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
 
       const exact = squads.find(s => sameSquad(s, current));
-      const contact = squads.find(s => sameSquad(s, 'Contact'));
-      if(exact){
+      if(sameSquad(current, 'Todas')){
+        squadSelect.value = 'Todas';
+      }else if(exact){
         squadSelect.value = exact;
-      }else if(contact){
-        squadSelect.value = contact;
       }else{
         squadSelect.value = 'Todas';
       }
@@ -6853,7 +6852,7 @@
     function getSelectedSquad(){
       const select = $('squadFilter');
       const selectedOption = select?.options?.[select.selectedIndex];
-      const value = normalize(select?.value || selectedOption?.value || selectedOption?.text || selectedSquadState || 'Contact');
+      const value = normalize(select?.value || selectedOption?.value || selectedOption?.text || selectedSquadState || 'Todas');
       selectedSquadState = value;
       return value;
     }
@@ -7028,7 +7027,7 @@
     }
 
     function handleSquadFilterChange(event){
-      const selected = normalize(event?.target?.value || $('squadFilter')?.value || selectedSquadState || 'Contact');
+      const selected = normalize(event?.target?.value || $('squadFilter')?.value || selectedSquadState || 'Todas');
       const squadSelect = $('squadFilter');
 
       if(squadSelect){
