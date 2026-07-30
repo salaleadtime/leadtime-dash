@@ -240,6 +240,21 @@ function doGet(e) {
       return jsonOut_({ ok: true, data: vpData }, callback);
     }
 
+    // getVpDataAll: lê todas as chaves do VP_SHEET_MAP numa única execução/lock,
+    // em vez de o cliente disparar um doGet por chave (9 chamadas ao Apps
+    // Script, cada uma com cold-start + abertura de planilha + espera de lock —
+    // era a causa da lentidão em "Atualizar"/carregar o painel).
+    if (action === 'getVpDataAll') {
+      var allData = withLock_(function() {
+        var out = {};
+        Object.keys(VP_SHEET_MAP).forEach(function(k) {
+          out[k] = readJsonFromSheet_(VP_SHEET_MAP[k], null);
+        });
+        return out;
+      });
+      return jsonOut_({ ok: true, data: allData }, callback);
+    }
+
     return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, data: [] }, callback);
   } catch (err) {
     Logger.log('doGet falhou: ' + (err && err.stack || err));
