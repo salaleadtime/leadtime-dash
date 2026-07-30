@@ -1143,8 +1143,10 @@ function squadOptionRows(){
   });
   return [...byId.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
 }
+let squadFilterTouched=false;
 function fillSquads(){
-  const cur=el('squadFilter').value||initialSquad||'';
+  const cur=squadFilterTouched?el('squadFilter').value:(el('squadFilter').value||initialSquad||'');
+  squadFilterTouched=true;
   const rows=squadOptionRows();
   el('squadFilter').innerHTML='<option value="">Todas as squads</option>'+rows.map(x=>`<option value="${esc(x.id||x.name)}">${esc(x.name)}</option>`).join('');
   const matched=rows.find(x=>x.id===cur||norm(x.name)===norm(cur));
