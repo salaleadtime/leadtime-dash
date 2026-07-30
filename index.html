@@ -1444,7 +1444,6 @@ body{min-height:100vh}
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
   <button class="tabbt" id="tab-em" onclick="goTab('em',this)">🚨 Demandas Emergenciais <span class="tab-ct" id="tabCtEm"></span></button>
   <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
-  <button class="tabbt" id="tab-rd" onclick="goTab('rd',this)">🗺️ Roadmap <span class="tab-ct" id="tabCtRd" style="background:#0052cc;color:#fff"></span></button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -2167,25 +2166,6 @@ tr:nth-child(even):hover td,
   </div>
 </div>
 
-<!-- ══ ROADMAP PANE ══ -->
-<div class="pane" id="pane-rd">
-  <div class="rd-wrap" id="rdContent">
-    <div class="rd-hd">
-      <div>
-        <div class="rd-hd-ti">🗺️ <span>Roadmap</span> · Histórias & Processos</div>
-        <div class="rd-hd-sub">Visão consolidada das histórias do Jira importadas — quantidade por squad, status e evolução do backlog</div>
-      </div>
-    </div>
-    <div id="rdInner">
-      <div class="rd-empty">
-        <div class="ico">📋</div>
-        <div class="t">Nenhuma história importada</div>
-        <div class="s">Importe as histórias do Jira via "📋 Qtd Story/Épicos" ou "Importar Tudo" para visualizar o Roadmap.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ══ CALENDÁRIO — editor de trimestre ══ -->
 <div class="cal-ov" id="calOv" onclick="if(event.target===this)calCloseEditor()">
   <div class="cal-mdl">
@@ -2385,7 +2365,7 @@ function loadTab(){
   try{ return storageGet(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='em'||id==='cal'||id==='rd') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='em'||id==='cal') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -3482,7 +3462,6 @@ function goTab(id,btn){
   else if(id==='bk') renderBacklogView();
   else if(id==='em') renderEmergencyView();
   else if(id==='cal') renderCalendar();
-  else if(id==='rd') renderRoadmapTab();
   updateTabCounts();
 }
 
@@ -3507,7 +3486,6 @@ function activateTab(id){
   else if(id==='bk') renderBacklogView();
   else if(id==='em') renderEmergencyView();
   else if(id==='cal') renderCalendar();
-  else if(id==='rd') renderRoadmapTab();
   updateTabCounts();
 }
 
@@ -3515,7 +3493,7 @@ function activateTab(id){
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='em'||id==='cal'||id==='rd')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='em'||id==='cal')?'none':'flex';
 }
 
 
@@ -4794,106 +4772,6 @@ function renderRiskNotifPanel(){
 }
 
 // ═══════════════════════════════════════
-// ROADMAP TAB — histórias Jira
-// ═══════════════════════════════════════
-function renderRoadmapTab(){
-  var root=$id('rdInner'); if(!root) return;
-  var stories=visibleStoryRows(window.allStories||[]);
-  var totalStories=stories.length;
-  // Squad breakdown from stories
-  var squadCnt={};
-  stories.forEach(function(s){ if(s.squad){ squadCnt[s.squad]=(squadCnt[s.squad]||0)+1; } });
-  var squadList=Object.keys(squadCnt).sort(function(a,b){return squadCnt[b]-squadCnt[a];});
-  // Status breakdown
-  var statusCnt={};
-  stories.forEach(function(s){ var st=(s.status||'Sem status').trim(); statusCnt[st]=(statusCnt[st]||0)+1; });
-  var statusList=Object.keys(statusCnt).sort(function(a,b){return statusCnt[b]-statusCnt[a];}).slice(0,8);
-  // Epics count
-  var epicSet={}; stories.forEach(function(s){ if(s.epic) epicSet[s.epic]=true; });
-  var epicCount=Object.keys(epicSet).length;
-  // Active epics from main data
-  var act=activeEpics();
-  var META_V=window.META||62;
-  var avgLt=act.length?Math.round(act.reduce(function(s,r){return s+r.lt;},0)/act.length):0;
-  var pctMeta=act.length?Math.round(act.filter(function(r){return r.lt<META_V;}).length/act.length*100):0;
-  // Colors for squads
-  var SQUAD_COLS=['#0052cc','#cc0000','#16a34a','#7c3aed','#d97706','#0891b2','#db2777','#64748b'];
-  if(!totalStories){
-    root.innerHTML='<div class="rd-empty"><div class="ico">📋</div><div class="t">Nenhuma história importada</div><div class="s">Importe as histórias do Jira via "📋 Qtd Story/Épicos" ou "Importar Tudo" para visualizar o Roadmap.</div></div>';
-    return;
-  }
-  // KPI row
-  var kpis=[
-    {l:'Histórias no Jira',v:totalStories,s:'estórias importadas',c:'#0052cc',rdk:'--rdk-col:#0052cc'},
-    {l:'Épicos vinculados',v:epicCount,s:'épicos com histórias',c:'#7c3aed',rdk:'--rdk-col:#7c3aed'},
-    {l:'Lead Time médio',v:avgLt+'d',s:'épicos ativos em andamento',c:'#cc0000',rdk:'--rdk-col:#cc0000'},
-    {l:'% na meta',v:pctMeta+'%',s:'épicos abaixo de '+META_V+'d',c:'#16a34a',rdk:'--rdk-col:#16a34a'},
-  ];
-  var kpiHtml=kpis.map(function(k){
-    return '<div class="rd-kpi" style="'+k.rdk+'">'+
-      '<div class="rd-kpi-l">'+esc(k.l)+'</div>'+
-      '<div class="rd-kpi-v">'+esc(k.v)+'</div>'+
-      '<div class="rd-kpi-s">'+esc(k.s)+'</div>'+
-    '</div>';
-  }).join('');
-  // Jira stories hero card
-  var jiraCard='<div class="rd-jira-card" style="position:relative;overflow:hidden">'+
-    '<div class="rd-jira-left">'+
-      '<div class="lbl">Histórias do Jira</div>'+
-      '<div class="num">'+totalStories+'</div>'+
-      '<div class="sub">estórias importadas · '+squadList.length+' squad'+(squadList.length!==1?'s':'')+' · '+epicCount+' épico'+(epicCount!==1?'s':'')+' vinculados</div>'+
-    '</div>'+
-    '<div class="rd-jira-right">'+
-      (squadList.slice(0,3).map(function(sq,i){
-        return '<div class="rd-jira-badge"><div class="bv">'+squadCnt[sq]+'</div><div class="bl">'+esc(sq)+'</div></div>';
-      }).join(''))+
-    '</div>'+
-    '<span class="rd-jira-logo">J</span>'+
-  '</div>';
-  // Squad panel
-  var maxSq=squadList.length?squadCnt[squadList[0]]:1;
-  var squadRows=squadList.map(function(sq,i){
-    var cnt=squadCnt[sq];
-    var pct=Math.round(cnt/totalStories*100);
-    var col=SQUAD_COLS[i%SQUAD_COLS.length];
-    return '<div class="rd-squad-row">'+
-      '<div class="rd-squad-name">'+esc(sq)+'</div>'+
-      '<div class="rd-squad-bar"><div class="rd-squad-fill" style="width:'+Math.round(cnt/maxSq*100)+'%;background:'+col+'"></div></div>'+
-      '<div class="rd-squad-val">'+cnt+'</div>'+
-      '<div class="rd-squad-pct">'+pct+'%</div>'+
-    '</div>';
-  }).join('');
-  // Status panel
-  var STATUS_DOTS={'Em Produção':'#16a34a','Em Desenvolvimento':'#2563eb','Em Homologação':'#7c3aed','Backlog':'#94a3b8','Refinamento':'#f59e0b','Impedido':'#dc2626','Concluído':'#16a34a'};
-  var statusRows=statusList.map(function(st){
-    var cnt=statusCnt[st];
-    var pct=Math.round(cnt/totalStories*100);
-    var col=STATUS_DOTS[st]||(st.toLowerCase().indexOf('produc')>=0?'#16a34a':st.toLowerCase().indexOf('bloq')>=0||st.toLowerCase().indexOf('imped')>=0?'#dc2626':'#64748b');
-    return '<div class="rd-status-item">'+
-      '<div class="rd-status-dot" style="background:'+col+'"></div>'+
-      '<div class="rd-status-lbl">'+esc(st)+'</div>'+
-      '<div class="rd-status-cnt">'+cnt+'</div>'+
-      '<div class="rd-status-pct">'+pct+'%</div>'+
-    '</div>';
-  }).join('');
-  root.innerHTML=
-    '<div class="rd-kpi-row">'+kpiHtml+'</div>'+
-    jiraCard+
-    '<div class="rd-cards">'+
-      '<div class="rd-panel">'+
-        '<div class="rd-panel-ti"><span class="rd-panel-ti-ico">👥</span> Histórias por Squad</div>'+
-        (squadRows||'<div class="rd-empty" style="padding:1rem"><div class="s">Sem dados de squad nas histórias</div></div>')+
-      '</div>'+
-      '<div class="rd-panel">'+
-        '<div class="rd-panel-ti"><span class="rd-panel-ti-ico">📊</span> Distribuição por Status</div>'+
-        (statusRows||'<div class="rd-empty" style="padding:1rem"><div class="s">Sem dados de status</div></div>')+
-      '</div>'+
-    '</div>';
-  // Update tab counter
-  var ct=$id('tabCtRd'); if(ct) ct.textContent=totalStories;
-}
-
-// ═══════════════════════════════════════
 // ESTÓRIAS — funções principais
 // ═══════════════════════════════════════
 
@@ -5106,7 +4984,6 @@ function loadStoriesXlsx(file, mergeHomologation){
       var upSaved=$id('svUpSaved'); if(upSaved) upSaved.classList.remove('hidden');
       var upSavedTxt=$id('svUpSavedTxt'); if(upSavedTxt) upSavedTxt.textContent='Salvo localmente · '+allStories.length+' estórias';
       renderStoryView();
-      renderRoadmapTab();
       renderRiskNotifPanel();
       updateTabCounts();
       toast(isHomologationFeed?'🧪 Homologação atualizada':'📋 Estórias carregadas',stories.length+' estórias importadas de "'+file.name+'".');
