@@ -6418,95 +6418,135 @@
       hideLoadingOverlay();
     }
 
+    // Antes, cada chave (vpGeral, vpSprint, vpHomologation, ...) disparava um
+    // doGet próprio contra o Apps Script — 9 execuções serializadas pelo mesmo
+    // LockService.getScriptLock(), cada uma com cold-start + abertura de
+    // planilha, e cada uma chamando renderAll() de novo assim que chegava. Isso
+    // é o que fazia "Atualizar"/abrir o painel/carregar Homologação demorarem
+    // tanto. Agora tudo vem numa única chamada (action=getVpDataAll) e um só
+    // renderAll() no final, com fallback para o modo antigo (chamada por
+    // chamada) caso o Apps Script publicado ainda não tenha o novo action.
     function gasLoadAndApplyVpAll(){
-      gasLoadVpData('vpGeral', function(err, serverData){
-        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length){
-          hideVpInitialSync();
+      if(!_VP_GAS_URL){ hideVpInitialSync(); return; }
+      _vpGasJsonp(_VP_GAS_URL+'?action=getVpDataAll&t='+Date.now(), function(err, json){
+        if(err || !json || !json.ok || !json.data){
+          gasLoadAndApplyVpAllLegacy();
           return;
         }
-        var local = readStoredJSON('vpBaseGeralImportada', null);
-        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
-        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
-        if(serverTime > localTime){
-          rows = serverData.rows.map(applyRefinementRule);
-          if(serverData.sourceName) sourceName = serverData.sourceName;
-          storageSet('vpBaseGeralImportada', JSON.stringify(serverData));
-          try{ renderAll(); }catch(e){}
-        }
+        applyVpDataAll(json.data);
         hideVpInitialSync();
       });
-      gasLoadVpData('vpSprint', function(err, serverData){
-        if(err || !serverData || !Array.isArray(serverData.rows) || !serverData.rows.length) return;
-        var local = readStoredJSON('vpBaseSprintImportada', null);
-        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
-        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
-        if(serverTime > localTime){
-          sprintRows = serverData.rows.map(function(row){ return applyRefinementRule(Object.assign({}, row, {sprintAtual:true})); });
-          if(serverData.sourceName) sprintSourceName = serverData.sourceName;
-          storageSet('vpBaseSprintImportada', JSON.stringify(serverData));
-          try{ renderAll(); }catch(e){}
+    }
+
+    function applyVpDataAll(all){
+      var needsRender = false;
+
+      var vpGeral = all.vpGeral;
+      if(vpGeral && Array.isArray(vpGeral.rows) && vpGeral.rows.length){
+        var localGeral = readStoredJSON('vpBaseGeralImportada', null);
+        var serverGeralTime = vpGeral.importedAt ? Date.parse(vpGeral.importedAt) : 0;
+        var localGeralTime  = localGeral && localGeral.importedAt ? Date.parse(localGeral.importedAt) : 0;
+        if(serverGeralTime > localGeralTime){
+          rows = vpGeral.rows.map(applyRefinementRule);
+          if(vpGeral.sourceName) sourceName = vpGeral.sourceName;
+          storageSet('vpBaseGeralImportada', JSON.stringify(vpGeral));
+          needsRender = true;
         }
-      });
-      gasLoadVpData('vpHomologation', function(err, serverData){
-        var local = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
-        if(err) return;
-        // Migra a carga que jÃ¡ existia apenas no navegador para a primeira
-        // sincronizaÃ§Ã£o compartilhada. Depois disso, o servidor passa a ser a
-        // referÃªncia para novos usuÃ¡rios e outras janelas.
-        if(!serverData || !Array.isArray(serverData.rows)){
-          if(local && Array.isArray(local.rows) && local.rows.length){
-            gasSaveVpData('vpHomologation', local);
-          }
-          return;
+      }
+
+      var vpSprint = all.vpSprint;
+      if(vpSprint && Array.isArray(vpSprint.rows) && vpSprint.rows.length){
+        var localSprint = readStoredJSON('vpBaseSprintImportada', null);
+        var serverSprintTime = vpSprint.importedAt ? Date.parse(vpSprint.importedAt) : 0;
+        var localSprintTime  = localSprint && localSprint.importedAt ? Date.parse(localSprint.importedAt) : 0;
+        if(serverSprintTime > localSprintTime){
+          sprintRows = vpSprint.rows.map(function(row){ return applyRefinementRule(Object.assign({}, row, {sprintAtual:true})); });
+          if(vpSprint.sourceName) sprintSourceName = vpSprint.sourceName;
+          storageSet('vpBaseSprintImportada', JSON.stringify(vpSprint));
+          needsRender = true;
         }
-        var serverTime = serverData.importedAt ? Date.parse(serverData.importedAt) : 0;
-        var localTime  = local && local.importedAt ? Date.parse(local.importedAt) : 0;
-        if(serverTime > localTime){
-          homologationRows = serverData.rows.map(applyRefinementRule).filter(isHomologation);
-          homologationSourceName = serverData.sourceName || 'Homologação compartilhada';
-          storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(serverData));
-          try{ renderAll(); }catch(e){}
+      }
+
+      var vpHomologation = all.vpHomologation;
+      var localHomolog = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
+      if(!vpHomologation || !Array.isArray(vpHomologation.rows)){
+        if(localHomolog && Array.isArray(localHomolog.rows) && localHomolog.rows.length){
+          gasSaveVpData('vpHomologation', localHomolog);
         }
-      });
-      gasLoadVpData('vpOpUpdates', function(err, serverData){
-        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
-        operationalUpdates = serverData;
+      } else {
+        var serverHomologTime = vpHomologation.importedAt ? Date.parse(vpHomologation.importedAt) : 0;
+        var localHomologTime  = localHomolog && localHomolog.importedAt ? Date.parse(localHomolog.importedAt) : 0;
+        if(serverHomologTime > localHomologTime){
+          homologationRows = vpHomologation.rows.map(applyRefinementRule).filter(isHomologation);
+          homologationSourceName = vpHomologation.sourceName || 'Homologação compartilhada';
+          storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(vpHomologation));
+          needsRender = true;
+        }
+      }
+
+      var vpOpUpdates = all.vpOpUpdates;
+      if(vpOpUpdates && typeof vpOpUpdates === 'object' && !Array.isArray(vpOpUpdates)){
+        operationalUpdates = vpOpUpdates;
         storageSet('jiraDashboardOperationalUpdates', JSON.stringify(operationalUpdates));
-        try{ renderAll(); }catch(e){}
-      });
-      gasLoadVpData('vpQuickNotes', function(err, serverData){
-        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
-        executiveQuickNotes = serverData;
+        needsRender = true;
+      }
+
+      var vpQuickNotes = all.vpQuickNotes;
+      if(vpQuickNotes && typeof vpQuickNotes === 'object' && !Array.isArray(vpQuickNotes)){
+        executiveQuickNotes = vpQuickNotes;
         storageSet('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
-        try{ renderAll(); }catch(e){}
-      });
-      gasLoadVpData('vpPlanningConfirmations', function(err, serverData){
-        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
-        planningConfirmations = serverData;
+        needsRender = true;
+      }
+
+      var vpPlanningConfirmations = all.vpPlanningConfirmations;
+      if(vpPlanningConfirmations && typeof vpPlanningConfirmations === 'object' && !Array.isArray(vpPlanningConfirmations)){
+        planningConfirmations = vpPlanningConfirmations;
         storageSet('vpPlanningConfirmations', JSON.stringify(planningConfirmations));
-        try{ renderAll(); }catch(e){}
-      });
-      gasLoadVpData('vpPlanningSnapshots', function(err, serverData){
-        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
-        planningSnapshots = serverData;
+        needsRender = true;
+      }
+
+      var vpPlanningSnapshots = all.vpPlanningSnapshots;
+      if(vpPlanningSnapshots && typeof vpPlanningSnapshots === 'object' && !Array.isArray(vpPlanningSnapshots)){
+        planningSnapshots = vpPlanningSnapshots;
         storageSet('vpPlanningSnapshots', JSON.stringify(planningSnapshots));
-        try{ renderAll(); }catch(e){}
-      });
-      gasLoadVpData('vpSprintObjectives', function(err, serverData){
-        if(err || !serverData || typeof serverData !== 'object' || Array.isArray(serverData)) return;
-        sprintObjectives = serverData;
+        needsRender = true;
+      }
+
+      var vpSprintObjectives = all.vpSprintObjectives;
+      if(vpSprintObjectives && typeof vpSprintObjectives === 'object' && !Array.isArray(vpSprintObjectives)){
+        sprintObjectives = vpSprintObjectives;
         storageSet('vpSprintObjectives', JSON.stringify(sprintObjectives));
-        try{ renderAll(); }catch(e){}
-      });
-      gasLoadVpData('vpDeliveries', function(err, serverData){
-        if(err || !Array.isArray(serverData) || !serverData.length) return;
-        // Se o usuário já salvou algo localmente (deliveriesEverSaved) e o array local está
-        // vazio, isso significa que ele excluiu todas as entregas intencionalmente —
-        // não sobrescrever com dados antigos do servidor.
-        if(deliveriesEverSaved && deliveries.length === 0) return;
-        deliveries = serverData;
+        needsRender = true;
+      }
+
+      var vpDeliveries = all.vpDeliveries;
+      if(Array.isArray(vpDeliveries) && vpDeliveries.length && !(deliveriesEverSaved && deliveries.length === 0)){
+        deliveries = vpDeliveries;
         storageSet('jiraDashboardDeliveries', JSON.stringify(deliveries));
-        try{ renderAll(); }catch(e){}
+        needsRender = true;
+      }
+
+      if(needsRender){ try{ renderAll(); }catch(e){} }
+    }
+
+    // Fallback: modo antigo (uma chamada por chave), usado só se o Apps Script
+    // publicado ainda não responder a action=getVpDataAll.
+    function gasLoadAndApplyVpAllLegacy(){
+      var keys = ['vpGeral','vpSprint','vpHomologation','vpOpUpdates','vpQuickNotes','vpPlanningConfirmations','vpPlanningSnapshots','vpSprintObjectives','vpDeliveries'];
+      var pending = keys.length;
+      var collected = {};
+      function done(){
+        pending--;
+        if(pending <= 0){
+          applyVpDataAll(collected);
+          hideVpInitialSync();
+        }
+      }
+      keys.forEach(function(key){
+        gasLoadVpData(key, function(err, serverData){
+          if(!err) collected[key] = serverData;
+          done();
+        });
       });
     }
     // ─────────────────────────────────────────────────────────────────────────

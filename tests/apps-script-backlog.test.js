@@ -264,5 +264,17 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
     /^cb123\(/.test(ctx.doGet({parameter:{action:'health', callback:'cb123'}}).getContent()), true);
 }
 
+console.log('\n═══ 13. getVpDataAll (batch, uma execução para todas as chaves) ═══');
+{
+  const { ctx } = novoAmbiente();
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify({ rows:[{a:1}], importedAt:'2026-01-01T00:00:00Z' }) }));
+  ctx.doPost(post({ action:'saveVpData', key:'vpQuickNotes', payload: JSON.stringify({ x:'nota' }) }));
+  const all = parse(ctx.doGet(post({ action:'getVpDataAll' })));
+  t('responde ok', all.ok, true);
+  t('traz vpGeral salvo', all.data.vpGeral && all.data.vpGeral.rows.length, 1);
+  t('traz vpQuickNotes salvo', all.data.vpQuickNotes && all.data.vpQuickNotes.x, 'nota');
+  t('chave nunca salva vem null', all.data.vpDeliveries, null);
+}
+
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
 process.exit(fail ? 1 : 0);
