@@ -594,7 +594,7 @@ body[data-model="B"] .only-a{display:none}
         <div class="roadmap-card">
           <div class="roadmap-head">
             <div>
-              <div class="roadmap-title"><span class="roadmap-dot"></span><div><h3>Riscos do Roadmap</h3><p>Leitura automática dos riscos, dependências e marcos registrados no Discovery PMO Tracker.</p></div></div>
+              <div class="roadmap-title"><span class="roadmap-dot"></span><div><h3>Riscos do Roadmap</h3><p>Leitura automática da aba Cronograma (marcos) e da aba Riscos e Dependências (riscos, impedimentos e dependências) do Discovery PMO Tracker.</p></div></div>
             </div>
             <div class="roadmap-chip" id="roadChip">Acompanhamento do período</div>
           </div>
@@ -615,12 +615,13 @@ body[data-model="B"] .only-a{display:none}
 
     <!-- ══ Riscos e impedimentos abertos ══ -->
     <div class="blk">
-      <div class="blk-h"><div><h2>Riscos e impedimentos abertos</h2><p>RAID do Discovery: risco, impedimento e dependência sem tratativa concluída.</p></div>
+      <div class="blk-h"><div><h2>Riscos e impedimentos abertos</h2><p>Dados da aba Riscos e Dependências do Discovery PMO Tracker: risco, impedimento e dependência sem tratativa concluída. Prazos e marcos vêm da aba Cronograma.</p></div>
         <div class="blk-h-right">
           <div class="info-wrap">
             <button type="button" class="info-btn" id="rkInfoBtn" onclick="toggleRkInfo(event)" title="O que é Risco, Impedimento e Dependência?" aria-label="O que é Risco, Impedimento e Dependência?">i</button>
             <div class="info-pop" id="rkInfoPop">
               <h4>O que significa cada tipo</h4>
+              <p style="margin:0 0 8px;font-size:9px;color:var(--muted)">Dados atualizados automaticamente a partir da aba <b>Riscos e Dependências</b> do Discovery PMO Tracker; prazos e marcos vêm da aba <b>Cronograma</b>.</p>
               <dl>
                 <div><dt><span class="pill r">Risco</span></dt><dd>Evento incerto que, se ocorrer, pode atrasar ou comprometer a iniciativa. Ainda não aconteceu — precisa de plano de mitigação.</dd></div>
                 <div><dt><span class="pill a">Impedimento</span></dt><dd>Bloqueio que já está acontecendo agora e impede o avanço da iniciativa. Exige ação imediata para ser removido.</dd></div>
