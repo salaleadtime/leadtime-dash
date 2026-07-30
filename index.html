@@ -2004,6 +2004,9 @@ tr:nth-child(even):hover td,
 .em-select,.em-input,.em-textarea{border:1px solid #dbe5f0;border-radius:7px;background:#fff;color:#1f2937;font:inherit;font-size:12px;padding:7px 9px;min-height:34px}.em-select:focus,.em-input:focus,.em-textarea:focus{outline:2px solid #d8e9ff;border-color:#8bb7eb}.em-textarea{min-height:62px;resize:vertical;text-transform:none;letter-spacing:0}.em-bulk-input{width:82px}
 .em-btn{border:1px solid #dbe2ec;border-radius:7px;background:#fff;color:#526174;font-size:11px;font-weight:700;padding:7px 10px;cursor:pointer}.em-btn:hover{background:#f6f8fb}.em-btn.primary{background:#7a0000;border-color:#7a0000;color:#fff}.em-btn.ghost{border-color:transparent;background:transparent;color:#667085;padding-left:6px;padding-right:6px}
 .em-rule-box,.em-editor{background:#fff;border:1px solid #e4e9f1;border-radius:10px;padding:12px;margin-bottom:14px}.em-rule-grid,.em-editor-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}.em-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:10px}
+.em-rule-preview{display:inline-block;margin:2px 0 12px;font-size:11px;font-weight:700;color:#245f9e;background:#eef5ff;border:1px solid #cde2fb;border-radius:8px;padding:8px 11px}
+.em-label-picker{margin-bottom:11px}.em-label-picker>.em-muted{display:block;margin-bottom:7px}.em-label-picker-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:110px;overflow-y:auto}.em-label-chip{border:1px solid #dbe2ec;background:#fff;border-radius:20px;padding:5px 11px;font-size:10px;font-weight:700;color:#526174;cursor:pointer}.em-label-chip:hover{background:#f6f8fb;border-color:#b7c5d5}.em-label-chip.active{background:#eef5ff;border-color:#5b9bea;color:#175ea8;box-shadow:0 0 0 1px #5b9bea inset}
+.em-rule-chips{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-bottom:13px}.em-rule-chips .em-muted{margin-right:2px}.em-rule-chip{border:1px solid #dbe2ec;background:#fff;border-radius:20px;padding:5px 12px;font-size:10px;font-weight:700;color:#526174;cursor:pointer}.em-rule-chip:hover{background:#f6f8fb;border-color:#b7c5d5}.em-rule-chip.active{background:#eef5ff;border-color:#a8cff7;color:#175ea8}
 .em-bulk{position:relative;overflow:hidden;background:linear-gradient(135deg,#eaf4ff 0,#f4f1ff 100%);border:1px solid #d3e2f6;border-radius:11px;padding:11px 12px;margin-bottom:14px;box-shadow:0 4px 14px rgba(47,125,225,.055)}.em-bulk:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#4f8fdf,#8d72cf)}.em-bulk-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}.em-bulk-head b{font-size:12px;color:#344054}.em-bulk-grid{display:grid;grid-template-columns:110px minmax(170px,1fr) minmax(170px,1fr) minmax(220px,1.4fr) auto;gap:8px;align-items:end}.em-bulk .em-textarea{min-height:34px;height:34px;padding-top:8px}
 .em-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.em-kpi{position:relative;overflow:hidden;border-radius:12px;padding:14px 15px;box-shadow:0 5px 16px rgba(29,78,216,.06)}.em-kpi:before{content:"";position:absolute;inset:0 0 auto;height:4px}.em-kpi:nth-child(1){background:linear-gradient(135deg,#e8f3ff,#f5f9ff);border:1px solid #cde2fb}.em-kpi:nth-child(1):before{background:#5b9bea}.em-kpi:nth-child(2){background:linear-gradient(135deg,#e7f8ef,#f5fcf8);border:1px solid #c9ead9}.em-kpi:nth-child(2):before{background:#55b88a}.em-kpi:nth-child(3){background:linear-gradient(135deg,#fff2d8,#fffaf0);border:1px solid #f0dca9}.em-kpi:nth-child(3):before{background:#e8ad45}.em-kpi small{display:block;color:#667085;font-size:11px}.em-kpi strong{display:block;color:#172033;font-size:22px;line-height:1.15;margin:5px 0}.em-kpi:nth-child(1) strong{color:#245f9e}.em-kpi:nth-child(2) strong{color:#237553}.em-kpi:nth-child(3) strong{color:#94620b}.em-kpi span{font-size:11px;color:#475467}
 .em-brief{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin-top:10px}.em-brief-row{display:grid;grid-template-columns:104px 1fr;gap:10px;padding:9px 11px;border:1px solid #e2eaf3;border-radius:8px;background:rgba(255,255,255,.7);font-size:12px}.em-brief-row:nth-child(1),.em-brief-row:nth-child(4){background:rgba(235,244,255,.72)}.em-brief-row:nth-child(2),.em-brief-row:nth-child(3){background:rgba(237,249,243,.72)}.em-brief-row b{color:#344054}.em-brief-row span{color:#475467}
@@ -2017,7 +2020,13 @@ tr:nth-child(even):hover td,
 .em-bulk{background:#fff;border-color:#dfe7f1;border-radius:14px;padding:15px;box-shadow:0 10px 28px rgba(30,41,59,.07)}.em-bulk:before{width:4px;background:linear-gradient(180deg,#765bd6,#5b9bea)}.em-bulk-grid{grid-template-columns:160px 160px minmax(180px,1fr) minmax(180px,1fr) auto;gap:10px}.em-bulk-input{width:auto}.em-bulk .em-textarea{min-height:42px;height:42px}
 .em-editor{border-radius:16px;padding:17px;border-color:#dce5ef;box-shadow:0 14px 34px rgba(30,41,59,.09)}.em-editor-grid{grid-template-columns:repeat(4,minmax(150px,1fr))}.em-forecast-box{display:flex;align-items:center;min-height:42px;border:1px dashed #a8c6e8;border-radius:10px;padding:9px 11px;background:#f3f8ff;color:#245f9e;font-size:13px;font-weight:800}.em-editor-comment{grid-column:span 4}
 .em-kpis{gap:11px;margin-top:3px;margin-bottom:12px}.em-kpi{min-height:76px;padding:11px 14px 10px;border:0!important;border-radius:14px;background:#fff!important;box-shadow:0 7px 18px rgba(30,41,59,.09)}.em-kpi:before{height:3px}.em-kpi:nth-child(1):before{background:#19b866}.em-kpi:nth-child(2):before{background:#f04444}.em-kpi:nth-child(3):before{background:#ed8b00}.em-kpi small{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#91a0b5}.em-kpi strong{font-size:23px;margin:3px 0 2px}.em-kpi:nth-child(1) strong{color:#08a64f}.em-kpi:nth-child(2) strong{color:#e7252c}.em-kpi:nth-child(3) strong{color:#d47700}.em-kpi span{font-size:10px;color:#8492a6}
+.em-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:11px;margin-bottom:12px}.em-chart-card{border:1px solid #e4e9f1;border-radius:14px;padding:13px 15px;background:#fff;box-shadow:0 7px 18px rgba(30,41,59,.06)}.em-chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:9px}.em-chart-head b{font-size:12px;color:#344054}
+.em-donut-row{display:flex;align-items:center;gap:16px}.em-donut{width:86px;height:86px;border-radius:50%;position:relative;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(15,23,42,.04)}.em-donut-hole{position:absolute;inset:10px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(15,23,42,.06)}.em-donut-hole strong{font-size:18px;color:#172033;line-height:1}.em-donut-hole span{font-size:8px;color:#8492a6;text-transform:uppercase;letter-spacing:.03em;margin-top:3px;text-align:center;max-width:52px}.em-donut-legend{display:flex;flex-direction:column;gap:7px;font-size:11px;color:#475467;min-width:0}.em-donut-leg-item{display:flex;align-items:center;gap:6px;white-space:nowrap}.em-donut-leg-item b{color:#172033}.em-donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.em-priority-wrap{position:relative;overflow:hidden;border-radius:14px;padding:13px 15px;margin-bottom:14px;background:linear-gradient(135deg,#fff3f3,#fff8f5);border:1px solid #f6c8c8;box-shadow:0 8px 20px rgba(220,38,38,.06)}.em-priority-wrap:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#dc2626,#f59e0b)}.em-priority-wrap.ok{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#eefcf3,#f5fffa);border-color:#c6ead7}.em-priority-wrap.ok:before{background:#22c55e}.em-priority-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#dcf6e6;color:#16a34a;font-size:14px;flex-shrink:0}.em-priority-wrap.ok b{display:block;font-size:12px;color:#166534}.em-priority-wrap.ok span{font-size:11px;color:#3f7a5c}
+.em-priority-head{display:flex;align-items:center;gap:9px;margin-bottom:11px}.em-priority-badge{background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:4px 10px;border-radius:20px}.em-priority-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:9px}.em-priority-card{background:#fff;border:1px solid #f3d6d6;border-radius:10px;padding:10px 12px}.em-priority-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.em-priority-top a{font-weight:800;color:#a0001d;text-decoration:none;font-size:12px}.em-priority-squad{font-size:9px;font-weight:700;text-transform:uppercase;color:#7b8798;background:#f2f4f7;border-radius:20px;padding:2px 7px}.em-priority-title{font-size:11px;color:#344054;margin-top:4px;line-height:1.35}.em-priority-reason{font-size:10px;color:#a0001d;font-weight:700;margin-top:6px}
+@media(max-width:900px){.em-charts{grid-template-columns:1fr}.em-priority-grid{grid-template-columns:1fr}}
 .em-filter-grid{grid-template-columns:minmax(180px,1.1fr) minmax(210px,1.3fr) repeat(3,minmax(145px,1fr))}
+.em-severity-group{margin-bottom:12px}.em-severity-summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 2px;user-select:none}.em-severity-summary::-webkit-details-marker{display:none}.em-severity-summary::before{content:'▸';font-size:10px;color:#98a2b3;transition:transform .15s}.em-severity-group[open]>.em-severity-summary::before{transform:rotate(90deg)}.em-severity-label{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px}.em-severity-label.crit{background:#ffe7e7;color:#991b1b}.em-severity-label.atencao{background:#fff3cf;color:#92400e}.em-severity-label.ok{background:#e4f8ed;color:#166534}
 .em-table-wrap{border-radius:14px;box-shadow:0 10px 26px rgba(30,41,59,.07)}.em-table th{padding:11px 10px;background:#f3f6fa}.em-table td{padding:12px 10px}.em-story-head{display:flex;align-items:center;gap:5px}.em-edit{display:inline-grid;place-items:center;width:24px;height:24px;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#8a98aa;font-size:12px;box-shadow:none!important;opacity:.72}.em-edit:hover{background:#eaf2fb!important;color:#245f9e;opacity:1;transform:none}.em-inline-input{width:100%;min-width:92px;max-width:132px;height:32px;border:1px solid #dce4ed;border-radius:8px;background:#fbfcfe;color:#344054;font:inherit;font-size:10px;padding:5px 7px;transition:border-color .15s,box-shadow .15s}.em-inline-input:hover{border-color:#b7c5d5;background:#fff}.em-inline-input:focus{outline:none;border-color:#5b9bea;background:#fff;box-shadow:0 0 0 3px rgba(91,155,234,.13)}.em-inline-date{min-width:126px}.em-inline-estimate{min-width:66px;max-width:76px}.em-inline-readonly{display:inline-flex;align-items:center;min-height:30px;max-width:180px;border-radius:8px;padding:4px 7px;background:#f6f8fb;color:#526174;white-space:normal}.em-sla-na{color:#b0bac7}.em-section-context{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 @media(max-width:900px){.em-rule-grid,.em-editor-grid,.em-kpis,.em-brief,.em-bulk-grid{grid-template-columns:1fr}.em-brief-row{grid-template-columns:90px 1fr}}
 @media(max-width:900px){.em-filter-grid{grid-template-columns:1fr}.em-editor-comment{grid-column:span 1}.em-modern-toolbar{align-items:flex-start}.em-kpis{gap:10px}.em-kpi{min-height:auto}}
@@ -2112,6 +2121,23 @@ tr:nth-child(even):hover td,
       <div style="font-size:32px;margin-bottom:.8rem">📥</div>
       <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>
       <div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>
+    </div>
+  </div>
+
+  <div class="sv-upbar" id="opsUpbar" style="margin-top:1.4rem">
+    <span style="font-size:13px;flex-shrink:0">🔧</span>
+    <span class="sv-up-name" id="opsUpName">Ops4Ops · Refinada x Backlog</span>
+    <span class="sv-up-sub" id="opsUpSub">Export Jira do Ops4Ops · cria snapshot de evolução própria · .xlsx ou .csv</span>
+    <span class="up-saved hidden" id="opsUpSaved">💾 <span id="opsUpSavedTxt">Salvo localmente</span></span>
+    <input type="file" id="fiOps" accept=".xlsx,.xls,.csv">
+    <button class="up-btn" onclick="document.getElementById('fiOps').click()">Selecionar arquivo</button>
+  </div>
+
+  <div class="ep" id="ops4opsContent">
+    <div class="empty" style="padding:2rem 2rem;text-align:center">
+      <div style="font-size:28px;margin-bottom:.6rem">🔧</div>
+      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhuma carga do Ops4Ops importada ainda</div>
+      <div style="font-size:12px;color:#94a3b8">Importe o export do Jira com as histórias do Ops4Ops acima.</div>
     </div>
   </div>
 
@@ -2330,6 +2356,8 @@ var HOMOLOGATION_CROSS_KEY='sala_cross_import_homologation_v1';
 var STORY_LIMIT=12;
 var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
 var backlogSnaps=[];
+var OPS4OPS_KEY='leadtime_sala_v8_ops4ops_snaps';
+var ops4opsSnaps=[];
 var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
 var emergencyState={rules:[],meta:{}};
@@ -5516,128 +5544,30 @@ function isRefined(story){
   });
 }
 
-function renderBacklogView(){
-  var bkContent=$id('bkContent');
-  if(!bkContent) return;
-
-  if(!backlogSnaps.length){
-    if(_gasBacklogLoading){
-      bkContent.innerHTML=
-        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
-        '<div style="font-size:28px;margin-bottom:.8rem;animation:spin 1.2s linear infinite;display:inline-block">🔄</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando dados do servidor…</div>'+
-        '<div style="font-size:12px;color:#94a3b8">Aguarde enquanto o backlog compartilhado é carregado.</div>'+
-        '</div>';
-    } else if(_gasBacklogError){
-      bkContent.innerHTML=
-        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
-        '<div style="font-size:32px;margin-bottom:.8rem">⚠️</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Servidor não respondeu</div>'+
-        '<div style="font-size:12px;color:#94a3b8;margin-bottom:1rem">Não foi possível carregar o backlog do servidor ('+_gasBacklogError+').<br>Verifique a conexão ou tente recarregar a página.</div>'+
-        '<button onclick="_gasBacklogError=null;gasLoadBacklog();" style="padding:.5rem 1.2rem;background:#e11d48;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Tentar novamente</button>'+
-        '</div>';
-    } else {
-      bkContent.innerHTML=
-        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
-        '<div style="font-size:32px;margin-bottom:.8rem">📥</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>'+
-        '<div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>'+
-        '</div>';
-    }
-    return;
-  }
-
-  sortBacklogSnaps();
-  var cur=getCurrentBacklogSnapshot();
-  var prev=getPreviousBacklogSnapshot();
-  var stories=visibleStoryRows((cur&&Array.isArray(cur.stories))?cur.stories:[]);
-  var prevStories=visibleStoryRows((prev&&Array.isArray(prev.stories))?prev.stories:[]);
-
-  // Aviso quando o snapshot mais recente (por data) tem menos histórias que o maior
-  // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
-  var maxKnown=backlogSnaps.reduce(function(max,snap){
-    return Math.max(max,visibleStoryRows(snap&&snap.stories).length);
-  },0);
-  var curCount=stories.length;
-  var _bkWarnDismissed=(function(){ try{ return storageGet('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
-  var staleWarningHtml='';
-  if(maxKnown>curCount && !_bkWarnDismissed){
-    staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:.75rem;">'+
-      '<span style="flex:1">⚠️ O snapshot mais recente tem <strong>'+curCount+'</strong> histórias, mas há um snapshot com <strong>'+maxKnown+'</strong> histórias. '+
-      'O servidor pode não ter recebido a importação mais completa. Tente importar novamente ou aguarde a sincronização.</span>'+
-      '<button onclick="try{localStorage.setItem(\'bk_stale_warn_dismissed\',\'1\');}catch(e){}this.closest(\'div\').remove()" style="flex:0 0 auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;font-size:11px;color:#92400e;cursor:pointer;white-space:nowrap">Entendido ✕</button>'+
-      '</div>';
-  }
-
-  // Count per squad
-  var curSquadCnt={}, prevSquadCnt={};
-  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
-  if(prev) prevStories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
-
-  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
-  var totalBacklog=stories.length;
-  var totalRefined=stories.filter(isRefined).length;
-
-  // Histórias que saíram do backlog: estavam no snapshot anterior mas não estão no atual
-  var exitedBacklog=0;
-  if(prev&&Array.isArray(prev.stories)&&prev.stories.length){
-    var curIds={};
-    stories.forEach(function(s){ if(s.id) curIds[s.id]=true; });
-    exitedBacklog=prevStories.filter(function(s){ return s.id&&!curIds[s.id]; }).length;
-  }
-
-  // Global delta
-  var totalDelta=prev!==null?totalBacklog-prevStories.length:null;
-  var globalDeltaHtml='';
-  if(totalDelta!==null){
-    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
-    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
-    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
-  }
-
-  // Import history — últimas 5 como chips
-  var historyHtml='';
-  if(backlogSnaps.length>1){
-    var last5=backlogSnaps.slice(-5);
-    var chips=last5.map(function(snap,idx){
-      var isCur=idx===last5.length-1;
-      var snapCount=visibleStoryRows(snap.stories).length;
-      var previousCount=idx>0?visibleStoryRows(last5[idx-1].stories).length:0;
-      var delta=idx>0?(snapCount-previousCount):null;
-      var deltaStr=delta===null?'':(delta>0?'<span style="color:#dc2626;font-size:9px">▲'+delta+'</span>':(delta<0?'<span style="color:#16a34a;font-size:9px">▼'+Math.abs(delta)+'</span>':''));
-      return '<div class="bk-hist-chip'+(isCur?' bk-hist-chip-cur':'')+'">'+
-        '<span class="bk-hist-chip-seq">#'+snap.seq+'</span>'+
-        '<span class="bk-hist-chip-cnt">'+snapCount+'</span>'+
-        (deltaStr?deltaStr:'')+
-      '</div>';
-    });
-    var totalLabel=backlogSnaps.length>5?'<span style="font-size:10px;color:#94a3b8;align-self:center">+' +(backlogSnaps.length-5)+' anteriores</span>':'';
-    historyHtml='<div class="bk-history">'+
-      '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8">Últimas importações</span>'+
-      '<div class="bk-hist-chips">'+totalLabel+chips.join('')+'</div>'+
-    '</div>';
-  }
-
-  // Squad cards
-  var squadCardsHtml=squads.map(function(sq){
+// Grid de cards "Backlog por Squad" — extraído para ser reaproveitado tanto
+// pelo backlog geral quanto por conjuntos independentes (ex.: Ops4Ops).
+// prevSquadCnt: null quando não há importação anterior para comparar.
+// snapsHistory: lista de snapshots (mesmo formato de backlogSnaps) usada na sparkline.
+function buildSquadCards(stories,squads,prevSquadCnt,snapsHistory,curSeq){
+  return squads.map(function(sq){
     var sqStories=stories.filter(function(s){return s.squad===sq;});
     var refined=sqStories.filter(isRefined);
     var cnt=sqStories.length;
-    var delta=prev!==null?(cnt-(prevSquadCnt[sq]||0)):null;
+    var delta=prevSquadCnt?(cnt-(prevSquadCnt[sq]||0)):null;
     var accent=getSquadAccent(sq);
-    var cardId='bk_'+sq.replace(/[^a-z0-9]/gi,'_');
+    var cardId='bk_'+sq.replace(/[^a-z0-9]/gi,'_')+'_'+curSeq;
 
     var deltaHtml='';
     if(delta!==null){
-      if(delta>0) deltaHtml='<span class="bk-delta-up">▲ '+delta+' vs #'+(cur.seq-1)+'</span>';
-      else if(delta<0) deltaHtml='<span class="bk-delta-down">▼ '+Math.abs(delta)+' vs #'+(cur.seq-1)+'</span>';
-      else deltaHtml='<span class="bk-delta-eq">= vs #'+(cur.seq-1)+'</span>';
+      if(delta>0) deltaHtml='<span class="bk-delta-up">▲ '+delta+' vs #'+(curSeq-1)+'</span>';
+      else if(delta<0) deltaHtml='<span class="bk-delta-down">▼ '+Math.abs(delta)+' vs #'+(curSeq-1)+'</span>';
+      else deltaHtml='<span class="bk-delta-eq">= vs #'+(curSeq-1)+'</span>';
     }
 
     // Sparkline bars — últimas 10 importações
     var sparkHtml='';
-    if(backlogSnaps.length>1){
-      var snapSlice=backlogSnaps.slice(-10);
+    if(snapsHistory&&snapsHistory.length>1){
+      var snapSlice=snapsHistory.slice(-10);
       var snapCounts=snapSlice.map(function(snap){
         return visibleStoryRows(snap.stories).filter(function(s){return s.squad===sq;}).length;
       });
@@ -5743,6 +5673,111 @@ function renderBacklogView(){
       '<div class="bk-squad-body">'+rows+'</div>'+
     '</div>';
   }).join('');
+}
+
+function renderBacklogView(){
+  var bkContent=$id('bkContent');
+  if(!bkContent) return;
+
+  if(!backlogSnaps.length){
+    if(_gasBacklogLoading){
+      bkContent.innerHTML=
+        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:.8rem;animation:spin 1.2s linear infinite;display:inline-block">🔄</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando dados do servidor…</div>'+
+        '<div style="font-size:12px;color:#94a3b8">Aguarde enquanto o backlog compartilhado é carregado.</div>'+
+        '</div>';
+    } else if(_gasBacklogError){
+      bkContent.innerHTML=
+        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+        '<div style="font-size:32px;margin-bottom:.8rem">⚠️</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Servidor não respondeu</div>'+
+        '<div style="font-size:12px;color:#94a3b8;margin-bottom:1rem">Não foi possível carregar o backlog do servidor ('+_gasBacklogError+').<br>Verifique a conexão ou tente recarregar a página.</div>'+
+        '<button onclick="_gasBacklogError=null;gasLoadBacklog();" style="padding:.5rem 1.2rem;background:#e11d48;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Tentar novamente</button>'+
+        '</div>';
+    } else {
+      bkContent.innerHTML=
+        '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
+        '<div style="font-size:32px;margin-bottom:.8rem">📥</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>'+
+        '<div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>'+
+        '</div>';
+    }
+    return;
+  }
+
+  sortBacklogSnaps();
+  var cur=getCurrentBacklogSnapshot();
+  var prev=getPreviousBacklogSnapshot();
+  var stories=visibleStoryRows((cur&&Array.isArray(cur.stories))?cur.stories:[]);
+  var prevStories=visibleStoryRows((prev&&Array.isArray(prev.stories))?prev.stories:[]);
+
+  // Aviso quando o snapshot mais recente (por data) tem menos histórias que o maior
+  // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
+  var maxKnown=backlogSnaps.reduce(function(max,snap){
+    return Math.max(max,visibleStoryRows(snap&&snap.stories).length);
+  },0);
+  var curCount=stories.length;
+  var _bkWarnDismissed=(function(){ try{ return storageGet('bk_stale_warn_dismissed')==='1'; }catch(e){ return false; } })();
+  var staleWarningHtml='';
+  if(maxKnown>curCount && !_bkWarnDismissed){
+    staleWarningHtml='<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:13px;color:#92400e;display:flex;align-items:flex-start;gap:.75rem;">'+
+      '<span style="flex:1">⚠️ O snapshot mais recente tem <strong>'+curCount+'</strong> histórias, mas há um snapshot com <strong>'+maxKnown+'</strong> histórias. '+
+      'O servidor pode não ter recebido a importação mais completa. Tente importar novamente ou aguarde a sincronização.</span>'+
+      '<button onclick="try{localStorage.setItem(\'bk_stale_warn_dismissed\',\'1\');}catch(e){}this.closest(\'div\').remove()" style="flex:0 0 auto;background:none;border:1px solid #f59e0b;border-radius:6px;padding:2px 8px;font-size:11px;color:#92400e;cursor:pointer;white-space:nowrap">Entendido ✕</button>'+
+      '</div>';
+  }
+
+  // Count per squad
+  var curSquadCnt={}, prevSquadCnt={};
+  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
+  if(prev) prevStories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
+
+  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  var totalBacklog=stories.length;
+  var totalRefined=stories.filter(isRefined).length;
+
+  // Histórias que saíram do backlog: estavam no snapshot anterior mas não estão no atual
+  var exitedBacklog=0;
+  if(prev&&Array.isArray(prev.stories)&&prev.stories.length){
+    var curIds={};
+    stories.forEach(function(s){ if(s.id) curIds[s.id]=true; });
+    exitedBacklog=prevStories.filter(function(s){ return s.id&&!curIds[s.id]; }).length;
+  }
+
+  // Global delta
+  var totalDelta=prev!==null?totalBacklog-prevStories.length:null;
+  var globalDeltaHtml='';
+  if(totalDelta!==null){
+    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
+    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
+    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
+  }
+
+  // Import history — últimas 5 como chips
+  var historyHtml='';
+  if(backlogSnaps.length>1){
+    var last5=backlogSnaps.slice(-5);
+    var chips=last5.map(function(snap,idx){
+      var isCur=idx===last5.length-1;
+      var snapCount=visibleStoryRows(snap.stories).length;
+      var previousCount=idx>0?visibleStoryRows(last5[idx-1].stories).length:0;
+      var delta=idx>0?(snapCount-previousCount):null;
+      var deltaStr=delta===null?'':(delta>0?'<span style="color:#dc2626;font-size:9px">▲'+delta+'</span>':(delta<0?'<span style="color:#16a34a;font-size:9px">▼'+Math.abs(delta)+'</span>':''));
+      return '<div class="bk-hist-chip'+(isCur?' bk-hist-chip-cur':'')+'">'+
+        '<span class="bk-hist-chip-seq">#'+snap.seq+'</span>'+
+        '<span class="bk-hist-chip-cnt">'+snapCount+'</span>'+
+        (deltaStr?deltaStr:'')+
+      '</div>';
+    });
+    var totalLabel=backlogSnaps.length>5?'<span style="font-size:10px;color:#94a3b8;align-self:center">+' +(backlogSnaps.length-5)+' anteriores</span>':'';
+    historyHtml='<div class="bk-history">'+
+      '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8">Últimas importações</span>'+
+      '<div class="bk-hist-chips">'+totalLabel+chips.join('')+'</div>'+
+    '</div>';
+  }
+
+  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,backlogSnaps,cur.seq);
 
   bkContent.innerHTML=
     staleWarningHtml+
@@ -5760,6 +5795,139 @@ function renderBacklogView(){
     '</div>'+
     historyHtml+
     '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Backlog por Squad · Importação #'+cur.seq+'</div>'+
+    '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
+}
+
+// ═══════════════════════════════════════
+// OPS4OPS — conjunto independente do backlog geral, com sua própria
+// importação e histórico de snapshots (mesmo padrão de backlogSnaps),
+// exibido abaixo do "Backlog por Squad" na aba Backlog/Refinamento.
+// ═══════════════════════════════════════
+function saveOps4opsSnaps(){
+  if(ops4opsSnaps.length>MAX_BACKLOG_SNAPS){
+    ops4opsSnaps.sort(compareBacklogSnaps);
+    ops4opsSnaps=ops4opsSnaps.slice(ops4opsSnaps.length-MAX_BACKLOG_SNAPS);
+  }
+  try{ storageSet(OPS4OPS_KEY,JSON.stringify(ops4opsSnaps)); }catch(e){}
+}
+function loadOps4opsSnaps(){
+  try{
+    var raw=storageGet(OPS4OPS_KEY);
+    if(raw) ops4opsSnaps=JSON.parse(raw)||[];
+  }catch(e){ ops4opsSnaps=[]; }
+}
+function getCurrentOps4opsSnapshot(){ if(!ops4opsSnaps.length) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-1]; }
+function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
+
+function loadOps4opsXlsx(file){
+  if(typeof XLSX==='undefined'){
+    loadXlsxLib(function(){loadOps4opsXlsx(file);});
+    return;
+  }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=readWorkbook(e.target.result,file.name);
+      var det=detectBacklogFormat(wb);
+      if(!det){
+        toast('Formato não reconhecido','Colunas esperadas: "Chave do item" (ID) + "Situação". Export Jira do Ops4Ops.','err');
+        return;
+      }
+      var rows=det.rows, m=det.map;
+      var stories=[];
+      for(var i=det.hrow+1;i<rows.length;i++){
+        var row=rows[i];
+        if(!row||!row.length) continue;
+        var id=(row[m.id]||'').toString().trim();
+        if(!id) continue;
+        var resumo=m.resumo>=0?(row[m.resumo]||'').toString().trim():'';
+        var status=m.status>=0?(row[m.status]||'').toString().trim():'';
+        var squad=m.squad>=0?normalizeSquad((row[m.squad]||'').toString().trim()):'';
+        var sprint=m.sprint>=0?(row[m.sprint]||'').toString().trim():'';
+        var atualizado=m.atualizado>=0?parseD(row[m.atualizado]):null;
+        var prazo=m.prazo>=0?parseD(row[m.prazo]):null;
+        var homologacaoData=m.homologacaoData>=0?parseD(row[m.homologacaoData]):null;
+        var responsavel=m.responsavel>=0?(row[m.responsavel]||'').toString().trim():'';
+        var labels=m.labelsIdx.length>0
+          ? m.labelsIdx.map(function(li){return(row[li]||'').toString().trim();}).filter(Boolean).join(' ')
+          : null;
+        stories.push({id:id,resumo:resumo,status:status,squad:squad,labels:labels,sprint:sprint,atualizado:atualizado,prazo:prazo,homologacaoData:homologacaoData,responsavel:responsavel});
+      }
+      if(!stories.length){
+        toast('Nenhuma história encontrada','O arquivo não contém histórias válidas.','err');
+        return;
+      }
+      var nextSeq=ops4opsSnaps.reduce(function(m,s){ return Math.max(m,Number(s&&s.seq)||0); },0)+1;
+      var snapId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+      ops4opsSnaps.push({id:snapId,seq:nextSeq,stories:stories,importedAt:new Date().toISOString()});
+      saveOps4opsSnaps();
+
+      var opsUpName=$id('opsUpName'); if(opsUpName) opsUpName.textContent=file.name;
+      var opsUpSub=$id('opsUpSub'); if(opsUpSub) opsUpSub.textContent='#'+nextSeq+' · '+stories.length+' histórias importadas';
+      var opsUpSaved=$id('opsUpSaved'); if(opsUpSaved) opsUpSaved.classList.remove('hidden');
+      var opsUpSavedTxt=$id('opsUpSavedTxt'); if(opsUpSavedTxt) opsUpSavedTxt.textContent='Importação #'+nextSeq+' salva localmente';
+
+      renderOps4opsView();
+      toast('🔧 Ops4Ops importado','Importação #'+nextSeq+' · '+stories.length+' histórias.');
+    }catch(err){
+      toast('Erro ao ler arquivo','Verifique se é um .xlsx/.csv válido: '+err.message,'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderOps4opsView(){
+  var host=$id('ops4opsContent');
+  if(!host) return;
+  if(!ops4opsSnaps.length){
+    host.innerHTML=
+      '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
+      '<div style="font-size:28px;margin-bottom:.6rem">🔧</div>'+
+      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhuma carga do Ops4Ops importada ainda</div>'+
+      '<div style="font-size:12px;color:#94a3b8">Importe o export do Jira com as histórias do Ops4Ops acima.</div>'+
+      '</div>';
+    return;
+  }
+  var cur=getCurrentOps4opsSnapshot();
+  var prev=getPreviousOps4opsSnapshot();
+  var stories=visibleStoryRows((cur&&Array.isArray(cur.stories))?cur.stories:[]);
+  var prevStories=visibleStoryRows((prev&&Array.isArray(prev.stories))?prev.stories:[]);
+
+  var curSquadCnt={}, prevSquadCnt={};
+  stories.forEach(function(s){ if(s.squad) curSquadCnt[s.squad]=(curSquadCnt[s.squad]||0)+1; });
+  if(prev) prevStories.forEach(function(s){ if(s.squad) prevSquadCnt[s.squad]=(prevSquadCnt[s.squad]||0)+1; });
+
+  var squads=Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  var totalBacklog=stories.length;
+  var totalRefined=stories.filter(isRefined).length;
+
+  var totalDelta=prev!==null?totalBacklog-prevStories.length:null;
+  var globalDeltaHtml='';
+  if(totalDelta!==null){
+    if(totalDelta>0) globalDeltaHtml='<span class="bk-delta-up">▲ '+totalDelta+' histórias a mais</span>';
+    else if(totalDelta<0) globalDeltaHtml='<span class="bk-delta-down">▼ '+Math.abs(totalDelta)+' histórias a menos</span>';
+    else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
+  }
+
+  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,ops4opsSnaps,cur.seq);
+  var notRefined=totalBacklog-totalRefined;
+  var refinementDonut=emDonutCard('Ops4Ops · Backlog x Refinada','calculado automaticamente',[{label:'Refinada',color:'#22c55e',value:totalRefined},{label:'Não refinada',color:'#f59e0b',value:notRefined}],totalRefined,totalRefined===1?'refinada':'refinadas');
+
+  host.innerHTML=
+    '<div class="sec-lbl" style="margin:0 0 .6rem">🔧 Ops4Ops</div>'+
+    '<div class="sv-kpi" style="margin-bottom:1rem">'+
+      svKpiItem('#7a0000',totalBacklog,'Total Ops4Ops','importação #'+cur.seq)+
+      svKpiItem('#3b82f6',squads.length,'Squads com Ops4Ops','grupos ativos')+
+      svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo "Refinada" no Jira')+
+    '</div>'+
+    '<div class="em-charts" style="margin-bottom:1rem">'+refinementDonut+'</div>'+
+    '<div class="bk-delta-bar">'+
+      (prev
+        ? '<span class="bk-delta-info">vs importação anterior (#'+prev.seq+')</span> '+globalDeltaHtml+
+          ' <span class="bk-delta-info">· '+totalBacklog+' histórias agora vs '+prev.stories.length+' antes</span>'
+        : '<span style="color:#94a3b8">Importe novamente para ver o delta entre importações (▲▼=)</span>')+
+    '</div>'+
+    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Ops4Ops · Backlog por Squad · Importação #'+cur.seq+'</div>'+
     '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
 }
 
@@ -5946,6 +6114,47 @@ function emSla(story){
 function emFmtDate(iso){return iso?fmtD(iso):'—';}
 function emStatusClass(status){var s=emNorm(status);if(s.indexOf('homolog')>=0)return'violet';if(s.indexOf('desenvolv')>=0)return'blue';if(s.indexOf('backlog')>=0)return'green';if(s.indexOf('imped')>=0||s.indexOf('bloq')>=0)return'red';return'';}
 function emRefined(story){return isRefined(story);}
+var EM_STATUS_GROUPS=[
+  {key:'backlog',label:'Backlog',       color:'#94a3b8',test:function(s){return s.indexOf('backlog')>=0;}},
+  {key:'refin',  label:'Refinamento',   color:'#f59e0b',test:function(s){return s.indexOf('refin')>=0;}},
+  {key:'dev',    label:'Desenvolvimento',color:'#3b82f6',test:function(s){return s.indexOf('desenvolv')>=0;}},
+  {key:'imped',  label:'Impedido',      color:'#dc2626',test:function(s){return s.indexOf('imped')>=0||s.indexOf('bloq')>=0;}},
+  {key:'homolog',label:'Homologação',   color:'#8b5cf6',test:function(s){return s.indexOf('homolog')>=0;}},
+  {key:'prod',   label:'Produção/Concluído',color:'#22c55e',test:function(s){return s.indexOf('produc')>=0||s.indexOf('conclu')>=0;}}
+];
+function emClassifyStatus(status){var s=emNorm(status);for(var i=0;i<EM_STATUS_GROUPS.length;i++){if(EM_STATUS_GROUPS[i].test(s))return EM_STATUS_GROUPS[i].key;}return'other';}
+// ─── Visual: donuts em CSS puro (sem dependência externa) ──────────
+function emConicGradient(segments){
+  var total=segments.reduce(function(a,s){return a+s.value;},0)||1,acc=0,parts=[];
+  segments.forEach(function(s){if(!s.value)return;var start=acc/total*360;acc+=s.value;var end=acc/total*360;parts.push(s.color+' '+start.toFixed(1)+'deg '+end.toFixed(1)+'deg');});
+  return parts.length?'conic-gradient('+parts.join(',')+')':'#eef2f7';
+}
+function emDonutCard(title,sub,segments,centerValue,centerLabel){
+  var visible=segments.filter(function(s){return s.value>0;});
+  var css=emConicGradient(visible);
+  var legend=visible.map(function(s){return'<span class="em-donut-leg-item"><span class="em-donut-dot" style="background:'+s.color+'"></span>'+esc(s.label)+' <b>'+s.value+'</b></span>';}).join('');
+  return'<div class="em-chart-card"><div class="em-chart-head"><b>'+esc(title)+'</b><span class="em-muted">'+esc(sub)+'</span></div><div class="em-donut-row"><div class="em-donut" style="background:'+css+'"><div class="em-donut-hole"><strong>'+centerValue+'</strong><span>'+esc(centerLabel)+'</span></div></div><div class="em-donut-legend">'+(legend||'<span class="em-muted">Sem dados</span>')+'</div></div></div>';
+}
+function emBuildStatusBar(stories){
+  var counts={other:0};EM_STATUS_GROUPS.forEach(function(g){counts[g.key]=0;});
+  stories.forEach(function(s){var k=emClassifyStatus(s.status);counts[k]=(counts[k]||0)+1;});
+  var groups=EM_STATUS_GROUPS.concat([{key:'other',label:'Outros',color:'#cbd5e1'}]);
+  var segments=groups.map(function(g){return{label:g.label,color:g.color,value:counts[g.key]};});
+  return{counts:counts,segments:segments};
+}
+// ─── Banner de prioridade: destaca de cara quem precisa de ação agora ──
+function emPriorityItems(stories){
+  return stories.map(function(s){return{story:s,sla:emSla(s)};}).filter(function(x){return x.sla.overdue;});
+}
+function emPriorityBanner(stories){
+  var items=emPriorityItems(stories);
+  if(!stories.length)return'';
+  if(!items.length)return'<div class="em-priority-wrap ok"><span class="em-priority-icon">✓</span><div><b>Nenhuma história em risco</b><span>Nenhum SLA de homologação vencido no conjunto.</span></div></div>';
+  var cards=items.slice(0,3).map(function(x){
+    return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(x.story.id)+'" target="_blank" rel="noopener">'+esc(x.story.id)+'</a><span class="em-priority-squad">'+esc(x.story.squad||'—')+'</span></div><div class="em-priority-title">'+esc(x.story.resumo||'Sem resumo')+'</div><div class="em-priority-reason">SLA de homologação vencido</div></div>';
+  }).join('');
+  return'<div class="em-priority-wrap"><div class="em-priority-head"><span class="em-priority-badge">⚠ Atenção imediata</span><span class="em-muted">'+items.length+' história(s) precisam de ação agora</span></div><div class="em-priority-grid">'+cards+'</div></div>';
+}
 function emSelectedRule(){return emergencyState.rules.find(function(r){return r.id===emergencyRuleId;})||emergencyState.rules[0];}
 function emRuleDescription(rule){if(!rule)return'Todas as regras ativas';var names={titleStarts:'título começa com',titleContains:'título contém',labelAny:'possui um dos Labels',squad:'Squad é'};return(names[rule.type]||names.titleStarts)+' “'+rule.value+'”';}
 
@@ -5955,6 +6164,29 @@ function emSaveRule(){
   var name=($id('emRuleName').value||'').trim(),type=$id('emRuleType').value,value=($id('emRuleValue').value||'').trim();
   if(!name||!value){toast('Regra incompleta','Informe nome e valor da regra.','warn');return;}
   var id='regra-'+Date.now().toString(36);emergencyState.rules.push({id:id,name:name,type:type,value:value,active:true,updatedAt:new Date().toISOString()});emergencyRuleId=id;_emRuleOpen=false;emSaveState();renderEmergencyView();updateTabCounts();toast('Regra salva',name+' já está disponível no seletor.');
+}
+function emRulePreviewCount(){
+  var typeEl=$id('emRuleType'),valueEl=$id('emRuleValue'),out=$id('emRulePreview'),picker=$id('emLabelPicker'),squadPicker=$id('emSquadPicker');if(!typeEl||!valueEl||!out)return;
+  var type=typeEl.value,value=(valueEl.value||'').trim();
+  if(picker)picker.style.display=(type==='labelAny')?'':'none';
+  if(squadPicker)squadPicker.style.display=(type==='squad')?'':'none';
+  if(!value){out.textContent=type==='labelAny'?'Escolha um ou mais rótulos acima para ver quantas histórias corresponderiam':(type==='squad'?'Escolha uma squad acima para ver quantas histórias corresponderiam':'Digite um valor para ver quantas histórias corresponderiam');return;}
+  var count=getEmergencySourceStories().filter(function(s){return emRuleMatches(s,{type:type,value:value,active:true});}).length;
+  out.textContent=count?(count+' história(s) do Jira já corresponderiam a essa regra hoje'):'Nenhuma história corresponde a esse valor ainda';
+}
+function emToggleRuleLabelChip(btn){
+  btn.classList.toggle('active');
+  var valueEl=$id('emRuleValue'),picker=$id('emLabelPicker');if(!valueEl||!picker)return;
+  var selected=Array.from(picker.querySelectorAll('.em-label-chip.active')).map(function(b){return b.getAttribute('data-label');});
+  valueEl.value=selected.join(' | ');
+  emRulePreviewCount();
+}
+function emSelectRuleSquadChip(btn){
+  var picker=$id('emSquadPicker'),valueEl=$id('emRuleValue');if(!picker||!valueEl)return;
+  Array.from(picker.querySelectorAll('.em-label-chip')).forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  valueEl.value=btn.getAttribute('data-squad');
+  emRulePreviewCount();
 }
 function emOpenEditor(id){emergencyEditingId=id;renderEmergencyView();setTimeout(function(){var e=$id('emEditor');if(e)e.scrollIntoView({behavior:'smooth',block:'nearest'});},0);}
 function emCancelEditor(){emergencyEditingId='';renderEmergencyView();}
@@ -6003,7 +6235,10 @@ function renderEmergencyView(){
   var host=$id('emContent');if(!host)return;emEnsureState();
   var stories=getEmergencyStories(),rule=emergencyRuleId==='all'?null:emSelectedRule(),today=emTodayISO();
   var ruleOptions='<option value="all"'+(emergencyRuleId==='all'?' selected':'')+'>Todas as demandas emergenciais</option>'+emergencyState.rules.filter(function(r){return r.active!==false;}).map(function(r){return'<option value="'+esc(r.id)+'"'+(r.id===emergencyRuleId?' selected':'')+'>'+esc(r.name)+'</option>';}).join('');
-  var ruleBox=_emRuleOpen?'<div class="em-rule-box em-no-capture"><div class="em-rule-grid"><label class="em-field">Nome<input class="em-input" id="emRuleName" placeholder="Ex.: Cartões"></label><label class="em-field">Localizar por<select class="em-select" id="emRuleType"><option value="titleStarts">Início do título</option><option value="titleContains">Texto no título</option><option value="labelAny">Rótulo (Label)</option><option value="squad">Squad</option></select></label><label class="em-field">Valor<input class="em-input" id="emRuleValue" placeholder="Ex.: credito-rural"></label></div><div class="em-actions"><button class="em-btn" onclick="emToggleRule(false)">Cancelar</button><button class="em-btn primary" onclick="emSaveRule()">Salvar regra</button></div></div>':'';
+  var ruleChips=emergencyState.rules.length?('<div class="em-rule-chips"><span class="em-muted">Regras ativas:</span>'+emergencyState.rules.map(function(r){return'<button class="em-rule-chip'+(r.id===emergencyRuleId?' active':'')+'" onclick="emSelectRule(\''+esc(jsq(r.id))+'\')">'+esc(r.name)+'</button>';}).join('')+'</div>'):'';
+  var emRuleLabelOptions=_emRuleOpen?Array.from(new Set(getEmergencySourceStories().reduce(function(a,s){return a.concat(emSplitLabels(s.labels));},[]))).filter(Boolean).sort().map(function(l){return'<button type="button" class="em-label-chip" data-label="'+esc(l)+'" onclick="emToggleRuleLabelChip(this)">'+esc(l)+'</button>';}).join(''):'';
+  var emRuleSquadOptions=_emRuleOpen?Array.from(new Set(getEmergencySourceStories().map(function(s){return s.squad;}).filter(Boolean))).sort().map(function(sq){return'<button type="button" class="em-label-chip" data-squad="'+esc(sq)+'" onclick="emSelectRuleSquadChip(this)">'+esc(sq)+'</button>';}).join(''):'';
+  var ruleBox=_emRuleOpen?'<div class="em-panel em-no-capture"><div class="em-panel-head"><div class="em-panel-title"><span class="em-panel-icon">➕</span><div><b>Nova regra de captura</b><span>Qualquer história do Jira que corresponda passa a fazer parte deste conjunto automaticamente.</span></div></div><button class="em-btn ghost" onclick="emToggleRule(false)">Fechar</button></div><div class="em-rule-grid"><label class="em-field">Nome<input class="em-input" id="emRuleName" placeholder="Ex.: Cartões"></label><label class="em-field">Localizar por<select class="em-select" id="emRuleType" onchange="emRulePreviewCount()"><option value="titleStarts">Início do título</option><option value="titleContains">Texto no título</option><option value="labelAny">Rótulo (Label)</option><option value="squad">Squad</option></select></label><label class="em-field">Valor<input class="em-input" id="emRuleValue" placeholder="Ex.: credito-rural" oninput="emRulePreviewCount()"></label></div><div class="em-label-picker" id="emLabelPicker" style="display:none"><span class="em-muted">Clique para escolher um ou mais rótulos:</span><div class="em-label-picker-chips">'+emRuleLabelOptions+'</div></div><div class="em-label-picker" id="emSquadPicker" style="display:none"><span class="em-muted">Clique para escolher a squad:</span><div class="em-label-picker-chips">'+emRuleSquadOptions+'</div></div><div class="em-rule-preview" id="emRulePreview">Digite um valor para ver quantas histórias corresponderiam</div>'+ruleChips+'<div class="em-actions"><button class="em-btn" onclick="emToggleRule(false)">Cancelar</button><button class="em-btn primary" onclick="emSaveRule()">Salvar regra</button></div></div>':'';
   var bulkConditions=['','Aguardando homologação','Refinamento bloqueado','Dependência externa','Impedida'];
   var bulkJustifications=['','Dependência externa','Aguardando definição','Capacidade da Squad','Homologação pendente','Mudança de escopo','Impedimento técnico','Outro'];
   var bulkBox='<div class="em-bulk em-no-capture"><div class="em-bulk-head"><b>Atualização em lote</b><span class="em-muted">Somente os campos preenchidos serão alterados.</span></div><div class="em-bulk-grid"><label class="em-field">Estimativa para todas<input class="em-input em-bulk-input" id="emBulkEstimate" placeholder="Ex.: 6h"></label><label class="em-field">Condição operacional<select class="em-select" id="emBulkCondition">'+bulkConditions.map(function(v){return'<option value="'+esc(v)+'">'+esc(v||'Não alterar')+'</option>';}).join('')+'</select></label><label class="em-field">Justificativa<select class="em-select" id="emBulkJustification">'+bulkJustifications.map(function(v){return'<option value="'+esc(v)+'">'+esc(v||'Não alterar')+'</option>';}).join('')+'</select></label><label class="em-field">Comentário<textarea class="em-textarea" id="emBulkComment" placeholder="Não alterar"></textarea></label><button class="em-btn primary" onclick="emApplyBulk()">Aplicar às '+stories.length+'</button></div></div>';
@@ -6135,7 +6370,10 @@ function renderEmergencyView(){
   var toolbar='<div class="em-toolbar em-modern-toolbar em-no-capture"><div class="em-toolbar-summary"><strong>'+esc(rule?rule.name:'Todos os conjuntos')+'</strong><span class="em-active-filter">'+stories.length+' de '+baseStories.length+' histórias</span>'+(filterCount?'<span class="em-active-filter">'+filterCount+' filtro(s) ativo(s)</span>':'')+'</div><div class="em-toolbar-actions"><button class="em-btn modern '+(_emFiltersOpen?'active':'')+'" onclick="emToggleFilters()">⌕ Filtros</button><button class="em-btn modern '+(_emBulkOpen?'active':'')+'" onclick="emToggleBulk()">⚡ Atualização em lote</button><button class="em-btn modern" onclick="emCopySummary()">▣ Copiar resumo</button></div></div>';
   var filtersPanel='';
   if(_emFiltersOpen)filtersPanel='<div class="em-panel em-no-capture"><div class="em-panel-head"><div class="em-panel-title"><span class="em-panel-icon">⌕</span><div><b>Filtros do acompanhamento</b><span>Refine a visualização sem alterar os dados importados.</span></div></div><button class="em-btn ghost" onclick="emToggleFilters(false)">Fechar</button></div><div class="em-filter-grid"><label class="em-field">Conjunto monitorado<select class="em-select" onchange="emSelectRule(this.value)">'+ruleOptions+'</select></label><label class="em-field">Buscar história<input class="em-input" id="emFilterSearch" value="'+esc(emViewFilters.search)+'" placeholder="Código, título ou Label"></label><label class="em-field">Status<select class="em-select" id="emFilterStatus">'+emOption('','Todos',emViewFilters.status)+statuses.map(function(v){return emOption(v,v,emViewFilters.status);}).join('')+'</select></label><label class="em-field">Squad<select class="em-select" id="emFilterSquad">'+emOption('','Todas',emViewFilters.squad)+squads.map(function(v){return emOption(v,v,emViewFilters.squad);}).join('')+'</select></label><label class="em-field">Refinamento<select class="em-select" id="emFilterRefined">'+emOption('','Todos',emViewFilters.refined)+emOption('yes','Refinadas',emViewFilters.refined)+emOption('no','Não refinadas',emViewFilters.refined)+'</select></label></div><div class="em-filter-actions"><button class="em-btn" onclick="emToggleRule()">+ Nova regra</button><button class="em-btn" onclick="emClearViewFilters()">Limpar</button><button class="em-btn primary" onclick="emApplyViewFilters()">Aplicar filtros</button></div></div>';
-  var ruleBox=_emRuleOpen?'<div class="em-rule-box em-no-capture"><div class="em-rule-grid"><label class="em-field">Nome<input class="em-input" id="emRuleName" placeholder="Ex.: Cartões"></label><label class="em-field">Localizar por<select class="em-select" id="emRuleType"><option value="titleStarts">Início do título</option><option value="titleContains">Texto no título</option><option value="labelAny">Rótulo (Label)</option><option value="squad">Squad</option></select></label><label class="em-field">Valor<input class="em-input" id="emRuleValue" placeholder="Ex.: credito-rural"></label></div><div class="em-actions"><button class="em-btn" onclick="emToggleRule(false)">Cancelar</button><button class="em-btn primary" onclick="emSaveRule()">Salvar regra</button></div></div>':'';
+  var ruleChips=emergencyState.rules.length?('<div class="em-rule-chips"><span class="em-muted">Regras ativas:</span>'+emergencyState.rules.map(function(r){return'<button class="em-rule-chip'+(r.id===emergencyRuleId?' active':'')+'" onclick="emSelectRule(\''+esc(jsq(r.id))+'\')">'+esc(r.name)+'</button>';}).join('')+'</div>'):'';
+  var emRuleLabelOptions=_emRuleOpen?Array.from(new Set(getEmergencySourceStories().reduce(function(a,s){return a.concat(emSplitLabels(s.labels));},[]))).filter(Boolean).sort().map(function(l){return'<button type="button" class="em-label-chip" data-label="'+esc(l)+'" onclick="emToggleRuleLabelChip(this)">'+esc(l)+'</button>';}).join(''):'';
+  var emRuleSquadOptions=_emRuleOpen?Array.from(new Set(getEmergencySourceStories().map(function(s){return s.squad;}).filter(Boolean))).sort().map(function(sq){return'<button type="button" class="em-label-chip" data-squad="'+esc(sq)+'" onclick="emSelectRuleSquadChip(this)">'+esc(sq)+'</button>';}).join(''):'';
+  var ruleBox=_emRuleOpen?'<div class="em-panel em-no-capture"><div class="em-panel-head"><div class="em-panel-title"><span class="em-panel-icon">➕</span><div><b>Nova regra de captura</b><span>Qualquer história do Jira que corresponda passa a fazer parte deste conjunto automaticamente.</span></div></div><button class="em-btn ghost" onclick="emToggleRule(false)">Fechar</button></div><div class="em-rule-grid"><label class="em-field">Nome<input class="em-input" id="emRuleName" placeholder="Ex.: Cartões"></label><label class="em-field">Localizar por<select class="em-select" id="emRuleType" onchange="emRulePreviewCount()"><option value="titleStarts">Início do título</option><option value="titleContains">Texto no título</option><option value="labelAny">Rótulo (Label)</option><option value="squad">Squad</option></select></label><label class="em-field">Valor<input class="em-input" id="emRuleValue" placeholder="Ex.: credito-rural" oninput="emRulePreviewCount()"></label></div><div class="em-label-picker" id="emLabelPicker" style="display:none"><span class="em-muted">Clique para escolher um ou mais rótulos:</span><div class="em-label-picker-chips">'+emRuleLabelOptions+'</div></div><div class="em-label-picker" id="emSquadPicker" style="display:none"><span class="em-muted">Clique para escolher a squad:</span><div class="em-label-picker-chips">'+emRuleSquadOptions+'</div></div><div class="em-rule-preview" id="emRulePreview">Digite um valor para ver quantas histórias corresponderiam</div>'+ruleChips+'<div class="em-actions"><button class="em-btn" onclick="emToggleRule(false)">Cancelar</button><button class="em-btn primary" onclick="emSaveRule()">Salvar regra</button></div></div>':'';
   var bulkConditions=['','Aguardando homologação','Refinamento bloqueado','Dependência externa','Impedida'],justifications=['','Dependência externa','Aguardando definição','Capacidade da Squad','Homologação pendente','Mudança de escopo','Impedimento técnico','Outro'];
   var bulkBox='';
   if(_emBulkOpen)bulkBox='<div class="em-bulk em-no-capture"><div class="em-panel-head"><div class="em-panel-title"><span class="em-panel-icon">⚡</span><div><b>Atualização em lote</b><span>Será aplicada somente às '+stories.length+' histórias visíveis.</span></div></div><button class="em-btn ghost" onclick="emToggleBulk(false)">Fechar</button></div><div class="em-bulk-grid"><label class="em-field">Início do desenvolvimento<input class="em-input" type="date" id="emBulkStart"></label><label class="em-field">Estimativa para todas<input class="em-input em-bulk-input" id="emBulkEstimate" placeholder="Ex.: 6h"><span class="em-field-help">8 horas úteis por dia</span></label><label class="em-field">Condição operacional<select class="em-select" id="emBulkCondition">'+bulkConditions.map(function(v){return emOption(v,v||'Não alterar','');}).join('')+'</select></label><label class="em-field">Justificativa<select class="em-select" id="emBulkJustification">'+justifications.map(function(v){return emOption(v,v||'Não alterar','');}).join('')+'</select></label><button class="em-btn primary" onclick="emApplyBulk()">Aplicar às '+stories.length+'</button></div></div>';
@@ -6151,18 +6389,30 @@ function renderEmergencyView(){
   }
   var forecasts=stories.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort(),nextForecast=forecasts[0]||'';
   var dev=stories.filter(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}).length,hom=stories.filter(emIsHomologation).length,pb=stories.filter(function(s){return emNorm(s.status).indexOf('backlog')>=0;}).length;
-  var overdue=stories.filter(function(s){var f=emForecast(s,emergencyState.meta[s.id]||{});return f&&f<today;}).length,slaLate=stories.filter(function(s){return emSla(s).overdue;}).length;
+  var slaLate=stories.filter(function(s){return emSla(s).overdue;}).length;
   var latestComment='Sem comentário registrado nas histórias.';stories.some(function(s){var m=emergencyState.meta[s.id]||{};if(m.comment){latestComment=m.comment+(m.commentDate?' · '+m.commentDate:'');return true;}return false;});
-  var rows=stories.map(function(s){
-    var meta=emergencyState.meta[s.id]||{},forecast=emForecast(s,meta),sla=emSla(s),labels=emSplitLabels(s.labels),hours=meta.estimateHours||emHours(s.estimativa)||'',start=meta.forecastStart||'',isLate=forecast&&forecast<today,just=meta.justification||'';
+  var statusBar=emBuildStatusBar(stories);
+  var priorityBanner=emPriorityBanner(stories);
+  var statusDonut=emDonutCard('Distribuição por status','calculado automaticamente',statusBar.segments,stories.length,stories.length===1?'história':'histórias');
+  var refinedCount=stories.filter(emRefined).length,notRefinedCount=stories.length-refinedCount;
+  var refinementDonut=emDonutCard('Backlog x Refinada','calculado automaticamente',[{label:'Refinada',color:'#22c55e',value:refinedCount},{label:'Não refinada',color:'#f59e0b',value:notRefinedCount}],refinedCount,refinedCount===1?'refinada':'refinadas');
+  var rowGroups={crit:[],atencao:[],ok:[]};
+  stories.forEach(function(s){
+    var meta=emergencyState.meta[s.id]||{},forecast=emForecast(s,meta),sla=emSla(s),labels=emSplitLabels(s.labels),hours=meta.estimateHours||emHours(s.estimativa)||'',start=meta.forecastStart||'';
     var condition=meta.condition?'<div style="margin-top:4px"><span class="em-badge amber">'+esc(meta.condition)+'</span></div>':'';
     var slaHtml=sla.applies?'<span class="em-badge '+sla.cls+'">'+esc(sla.label)+'</span><div class="em-muted" style="margin-top:3px">'+(sla.days?esc(sla.days===1?'1 dia útil':sla.days+' dias úteis'):'')+(sla.due?' · limite '+emFmtDate(sla.due):'')+'</div>':'<span class="em-sla-na">—</span>';
     var forecastHtml=forecast?'<b>'+emFmtDate(forecast)+'</b>':(hours&&!start?'<span class="em-alert">Informe início</span>':'<span class="em-alert">Sem estimativa</span>');
-    if(isLate)forecastHtml+='<div style="margin-top:4px"><span class="em-badge red">Vencida</span></div><div class="em-muted" style="margin-top:3px">'+esc(just||'Justificativa pendente')+'</div>';
-    return'<tr><td class="em-story"><div class="em-story-head"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a><button class="em-edit em-no-capture" title="Editar detalhes" aria-label="Editar detalhes de '+esc(s.id)+'" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">✎</button></div><span class="em-story-title">'+esc(s.resumo||'Sem resumo')+'</span>'+(labels.length?'<div class="em-labels">'+labels.slice(0,4).map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div>':'')+'</td><td class="em-nowrap">'+esc(s.squad||'—')+'</td><td><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'Sem status')+'</span>'+condition+'</td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Não refinada')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" aria-label="Início do desenvolvimento de '+esc(s.id)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td>'+(hom?'<td>'+slaHtml+'</td>':'')+'<td><span class="em-inline-readonly">'+esc(s.sprint||'—')+'</span></td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" inputmode="decimal" placeholder="horas" aria-label="Estimativa de '+esc(s.id)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td class="em-nowrap">'+forecastHtml+'</td><td class="em-comment">'+esc(meta.comment||'—')+(meta.commentDate?'<div class="em-muted">Atualizado em '+esc(meta.commentDate)+'</div>':'')+'</td></tr>';
+    var html='<tr><td class="em-story"><div class="em-story-head"><a href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a><button class="em-edit em-no-capture" title="Editar detalhes" aria-label="Editar detalhes de '+esc(s.id)+'" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">✎</button></div><span class="em-story-title">'+esc(s.resumo||'Sem resumo')+'</span>'+(labels.length?'<div class="em-labels">'+labels.slice(0,4).map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div>':'')+'</td><td class="em-nowrap">'+esc(s.squad||'—')+'</td><td><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'Sem status')+'</span>'+condition+'</td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Não refinada')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" aria-label="Início do desenvolvimento de '+esc(s.id)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td>'+(hom?'<td>'+slaHtml+'</td>':'')+'<td><span class="em-inline-readonly">'+esc(s.sprint||'—')+'</span></td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" inputmode="decimal" placeholder="horas" aria-label="Estimativa de '+esc(s.id)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td class="em-nowrap">'+forecastHtml+'</td><td class="em-comment">'+esc(meta.comment||'—')+(meta.commentDate?'<div class="em-muted">Atualizado em '+esc(meta.commentDate)+'</div>':'')+'</td></tr>';
+    var severity=sla.overdue?'crit':((meta.condition||sla.dueToday||(!hours&&emNorm(s.status).indexOf('desenvolv')>=0))?'atencao':'ok');
+    rowGroups[severity].push(html);
+  });
+  var EM_SEVERITY_GROUPS=[{key:'crit',label:'🔴 Crítico'},{key:'atencao',label:'🟡 Atenção'},{key:'ok',label:'🟢 Em dia'}];
+  var theadHtml='<tr><th>História / Labels</th><th>Squad</th><th>Status</th><th>Refinamento</th><th>Início dev.</th>'+(hom?'<th>SLA homologação</th>':'')+'<th>Sprint</th><th>Estimativa</th><th>Data prevista</th><th>Comentário</th></tr>';
+  var groupedTable=EM_SEVERITY_GROUPS.filter(function(g){return rowGroups[g.key].length;}).map(function(g){
+    return'<details class="em-severity-group" data-sev="'+g.key+'"'+(g.key!=='ok'?' open':'')+'><summary class="em-severity-summary"><span class="em-severity-label '+g.key+'">'+g.label+'</span><span class="em-muted">'+rowGroups[g.key].length+' história(s)</span></summary><div class="em-table-wrap"><table class="em-table"><thead>'+theadHtml+'</thead><tbody>'+rowGroups[g.key].join('')+'</tbody></table></div></details>';
   }).join('');
   var filterDesc=rule?emRuleDescription(rule):'todas as regras ativas',slaKpi=hom?' · '+slaLate+' SLA(s) de homologação vencido(s)':'',sectionContext=hom?'<span class="em-muted">SLA de homologação: 3 dias úteis · somente para '+hom+' história(s) em homologação</span>':'';
-  host.innerHTML=toolbar+filtersPanel+ruleBox+bulkBox+editor+'<div class="em-section-hd"><h2>Resumo semanal</h2><div class="em-section-context"><span class="em-badge blue">'+esc(rule?rule.name:'Todos os conjuntos')+' · atualização '+new Date().toLocaleDateString('pt-BR')+'</span><span class="em-muted">'+esc(filterDesc)+'</span></div></div><div class="em-kpis"><div class="em-kpi"><small>Histórias identificadas</small><strong>'+stories.length+'</strong><span>'+baseStories.length+' no conjunto monitorado</span></div><div class="em-kpi"><small>Em andamento</small><strong>'+(dev+hom)+'</strong><span>'+dev+' desenvolvimento · '+hom+' homologação · '+pb+' Product Backlog</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(nextForecast)+'</strong><span>'+overdue+' previsão(ões) vencida(s)'+slaKpi+'</span></div></div><div class="em-brief"><div class="em-brief-row"><b>Panorama</b><span>'+stories.length+' demanda(s), distribuída(s) em '+Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).length+' Squad(s).</span></div><div class="em-brief-row"><b>Avanços</b><span>'+dev+' em desenvolvimento, '+hom+' em homologação e '+pb+' no Product Backlog.</span></div><div class="em-brief-row"><b>Risco</b><span>'+(overdue||slaLate?(overdue+' previsão(ões) vencida(s)'+(hom?' e '+slaLate+' SLA(s) vencido(s).':'.')):'Nenhum prazo vencido identificado no conjunto.')+'</span></div><div class="em-brief-row"><b>Comentário</b><span>'+esc(latestComment)+'</span></div></div><div class="em-section-hd"><h2>Acompanhamento operacional</h2>'+sectionContext+'</div>'+(stories.length?'<div class="em-table-wrap"><table class="em-table"><thead><tr><th>História / Labels</th><th>Squad</th><th>Status</th><th>Refinamento</th><th>Início dev.</th>'+(hom?'<th>SLA homologação</th>':'')+'<th>Sprint</th><th>Estimativa</th><th>Data prevista</th><th>Comentário</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="em-empty">Nenhuma história corresponde aos filtros. Ajuste os filtros para ampliar o resultado.</div>');
+  host.innerHTML=toolbar+filtersPanel+ruleBox+bulkBox+editor+priorityBanner+'<div class="em-section-hd"><h2>Resumo semanal</h2><div class="em-section-context"><span class="em-badge blue">'+esc(rule?rule.name:'Todos os conjuntos')+' · atualização '+new Date().toLocaleDateString('pt-BR')+'</span><span class="em-muted">'+esc(filterDesc)+'</span></div></div><div class="em-kpis"><div class="em-kpi"><small>Histórias identificadas</small><strong>'+stories.length+'</strong><span>'+baseStories.length+' no conjunto monitorado</span></div><div class="em-kpi"><small>Em andamento</small><strong>'+(dev+hom)+'</strong><span>'+dev+' desenvolvimento · '+hom+' homologação · '+pb+' Product Backlog</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(nextForecast)+'</strong><span>'+(slaKpi?slaKpi.replace(/^ · /,''):'calculado automaticamente a partir das estimativas')+'</span></div></div><div class="em-charts">'+statusDonut+refinementDonut+'</div><div class="em-brief"><div class="em-brief-row"><b>Panorama</b><span>'+stories.length+' demanda(s), distribuída(s) em '+Array.from(new Set(stories.map(function(s){return s.squad;}).filter(Boolean))).length+' Squad(s).</span></div><div class="em-brief-row"><b>Avanços</b><span>'+dev+' em desenvolvimento, '+hom+' em homologação e '+pb+' no Product Backlog.</span></div><div class="em-brief-row"><b>Risco</b><span>'+(slaLate?(slaLate+' SLA(s) de homologação vencido(s).'):'Nenhum SLA de homologação vencido no conjunto.')+'</span></div><div class="em-brief-row"><b>Comentário</b><span>'+esc(latestComment)+'</span></div></div><div class="em-section-hd"><h2>Acompanhamento operacional</h2>'+sectionContext+'</div>'+(stories.length?groupedTable:'<div class="em-empty">Nenhuma história corresponde aos filtros. Ajuste os filtros para ampliar o resultado.</div>');
 }
 
 var SV_STATUS=[
@@ -6683,11 +6933,21 @@ $id('fiSv').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.
 // Backlog upload
 $id('fiBk').onchange=function(e){if(e.target.files[0]) loadBacklogXlsx(e.target.files[0]);};
 $id('fiBkJson').onchange=function(e){if(e.target.files[0]){ importBacklogJson(e.target.files[0]); this.value=''; }};
+
+// Ops4Ops upload (conjunto independente, exibido abaixo do Backlog por Squad)
+var fiOps=$id('fiOps');
+if(fiOps) fiOps.onchange=function(e){if(e.target.files[0]) loadOps4opsXlsx(e.target.files[0]);};
 var bkUb=$id('bkUpbar');
 if(bkUb){
   bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
   bkUb.addEventListener('dragleave',function(){bkUb.style.background='';});
   bkUb.addEventListener('drop',function(e){e.preventDefault();bkUb.style.background='';if(e.dataTransfer.files[0]) loadBacklogXlsx(e.dataTransfer.files[0]);});
+}
+var opsUb=$id('opsUpbar');
+if(opsUb){
+  opsUb.addEventListener('dragover',function(e){e.preventDefault();opsUb.style.background='var(--accent-soft)';});
+  opsUb.addEventListener('dragleave',function(){opsUb.style.background='';});
+  opsUb.addEventListener('drop',function(e){e.preventDefault();opsUb.style.background='';if(e.dataTransfer.files[0]) loadOps4opsXlsx(e.dataTransfer.files[0]);});
 }
 var svUb=$id('svUpbar');
 if(svUb){
@@ -7730,6 +7990,7 @@ var SEED=[
     mergeHomologationFromVisual();
     // Restore backlog snapshots
     loadBacklogSnaps();
+    loadOps4opsSnaps();
     // Restore regras e complementos manuais das Demandas Emergenciais
     emLoadLocal();
     if(backlogSnaps.length){
@@ -7739,6 +8000,14 @@ var SEED=[
       var bkS=$id('bkUpSub'); if(bkS) bkS.textContent='#'+bkLastSnap.seq+' · '+bkLastSnap.stories.length+' histórias · recarregadas automaticamente';
       var bkSv=$id('bkUpSaved'); if(bkSv) bkSv.classList.remove('hidden');
       var bkSvT=$id('bkUpSavedTxt'); if(bkSvT) bkSvT.textContent='Importação #'+bkLastSnap.seq+' · '+backlogSnaps.length+' snapshots salvos';
+    }
+    if(ops4opsSnaps.length){
+      var opsLastSnap=getCurrentOps4opsSnapshot();
+      var opsN=$id('opsUpName'); if(opsN) opsN.textContent='Dados salvos localmente';
+      var opsS=$id('opsUpSub'); if(opsS) opsS.textContent='#'+opsLastSnap.seq+' · '+opsLastSnap.stories.length+' histórias · recarregadas automaticamente';
+      var opsSv=$id('opsUpSaved'); if(opsSv) opsSv.classList.remove('hidden');
+      var opsSvT=$id('opsUpSavedTxt'); if(opsSvT) opsSvT.textContent='Importação #'+opsLastSnap.seq+' · '+ops4opsSnaps.length+' snapshots salvos';
+      renderOps4opsView();
     }
     if(allStories.length){
       var upN=$id('svUpName'); if(upN) upN.textContent='Dados salvos localmente';
