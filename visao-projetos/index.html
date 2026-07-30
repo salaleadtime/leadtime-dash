@@ -8,8 +8,40 @@
   <!-- v58: Lead Time corrigido; não inferir LT do épico por data de criação das histórias -->
   <!-- v56: Leitura inteligente da sprint; backlog neste bloco = backlog da sprint atual importada -->
   <!-- v55 produção: Expresso-1 revisada, homologação por quantidade e vínculo por squad/frente preservado -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // xlsx/chart.js eram <script src> diretos para o CDN externo (jsdelivr),
+    // bloqueando o parsing do HTML até baixarem — e em rede corporativa que
+    // bloqueia/limita CDN externo (como esta), a página inteira ficava presa
+    // esperando. Agora carregam de uma cópia local em vendor/ (com o CDN só
+    // como reserva), de forma assíncrona, sem travar o restante da página.
+    var _libQueue = {};
+    function loadLibFallback(srcs, cb){
+      var list = srcs.slice();
+      function tryNext(){
+        var src = list.shift();
+        if(!src){ return; }
+        if(_libQueue[src]){ if(cb) _libQueue[src].push(cb); return; }
+        _libQueue[src] = cb ? [cb] : [];
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = function(){
+          var q = _libQueue[src]; delete _libQueue[src];
+          (q||[]).forEach(function(f){ try{ f(); }catch(e){} });
+        };
+        s.onerror = function(){ delete _libQueue[src]; tryNext(); };
+        document.head.appendChild(s);
+      }
+      tryNext();
+    }
+    var CHART_SOURCES = ['../vendor/chart.umd.min.js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'];
+    var XLSX_SOURCES = ['../vendor/xlsx.full.min.js', 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'];
+    // Chart.js: carrega já, e reexecuta renderAll() quando terminar — o painel
+    // pode ter renderizado antes disso e ficado sem os gráficos.
+    loadLibFallback(CHART_SOURCES, function(){ try{ if(typeof renderAll === 'function') renderAll(); }catch(e){} });
+    // xlsx: só é usado ao importar/exportar planilha (ação do usuário), então
+    // não precisa bloquear nada — carrega em paralelo, pronto antes do 1º clique.
+    loadLibFallback(XLSX_SOURCES);
+  </script>
   <style>
     :root{
       --red:#CC092F;
