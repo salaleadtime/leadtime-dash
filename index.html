@@ -1466,6 +1466,11 @@ body{min-height:100vh}
   <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
   <button class="up-btn up-btn-all" onclick="document.getElementById('fiAll').click()" title="Importa só neste dashboard (SALA): _Epicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas. Sprint_ativa e Acomp._Geral são detectados mas não propagados.">📦 Importar Tudo</button>
   <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Importa em TODOS os dashboards: arquivos do SALA ficam aqui · Sprint_ativa, Acomp._Geral e Homologação são propagados para Visão de Projetos · Épicos são propagados para o Discovery PMO Tracker (Jira)">🌐 Importar em Todos</button>
+  <span id="importLockBanner" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 10px;">
+    <span class="imp-spinner" style="width:12px;height:12px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;display:inline-block;animation:imp-spin .7s linear infinite;"></span>
+    Importação em andamento…
+  </span>
+  <style>@keyframes imp-spin{to{transform:rotate(360deg);}}</style>
 </div>
 
 <!-- ══ RISK NOTIFICATION PANEL (tela inicial) ══ -->
@@ -1475,6 +1480,15 @@ body{min-height:100vh}
     <div class="rnp-ticker" id="rnpTicker"></div>
   </div>
   <div class="rnp-stats" id="rnpStats"></div>
+</div>
+
+<!-- ══ STATUS DAS CARGAS ══ -->
+<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:0 0 12px 0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+    <strong style="font-size:13px;color:#111;">📋 Status das Cargas</strong>
+    <span style="font-size:11px;color:#94a3b8;">Atualizado ao carregar/importar · horário local do navegador</span>
+  </div>
+  <div id="importStatusPanel" style="overflow-x:auto;"></div>
 </div>
 
 <!-- ══ ÉPICOS PANE ══ -->
@@ -4980,6 +4994,32 @@ function extractEpicName(v){
   return (after&&after!==s)?after:'';
 }
 
+// Faz merge campo a campo entre um registro existente e um novo: valores
+// vazios no arquivo recém-importado NUNCA apagam um valor já preenchido
+// (evita perda de dados quando uma exportação parcial do Jira é reimportada).
+function mergeRecordFields(oldRec, newRec){
+  var merged=Object.assign({},oldRec);
+  Object.keys(newRec).forEach(function(k){
+    var v=newRec[k];
+    if(v!==''&&v!==null&&v!==undefined) merged[k]=v;
+  });
+  return merged;
+}
+
+// Une uma lista de estórias recém-importadas à base já carregada, por ID.
+// Nunca substitui allStories inteiro: histórias de outras cargas/squads que
+// não estejam no arquivo atual permanecem intactas (merge, não snapshot).
+function mergeStoriesIntoAllStories(stories){
+  if(!allStories.length){ allStories=stories; return; }
+  var existingById={};
+  allStories.forEach(function(item,idx){if(item&&item.id) existingById[item.id]=idx;});
+  stories.forEach(function(item){
+    var index=existingById[item.id];
+    if(index===undefined){ allStories.push(item); existingById[item.id]=allStories.length-1; }
+    else { allStories[index]=mergeRecordFields(allStories[index],item); }
+  });
+}
+
 // Carrega planilha de Estórias
 function loadStoriesXlsx(file, mergeHomologation){
   if(typeof XLSX==='undefined'){
@@ -5069,17 +5109,7 @@ function loadStoriesXlsx(file, mergeHomologation){
           storageSet(HOMOLOGATION_CROSS_KEY,JSON.stringify({matrix:XLSX.utils.sheet_to_json(homologSheet,{header:1,defval:''}),fileName:file.name,savedAt:new Date().toISOString()}));
         }catch(crossError){}
       }
-      if(isHomologationFeed&&allStories.length){
-        var existingById={};
-        allStories.forEach(function(item,idx){if(item&&item.id) existingById[item.id]=idx;});
-        stories.forEach(function(item){
-          var index=existingById[item.id];
-          if(index===undefined){ allStories.push(item); }
-          else { allStories[index]=Object.assign({},allStories[index],item); }
-        });
-      } else {
-        allStories=stories;
-      }
+      mergeStoriesIntoAllStories(stories);
       backfillEpicSquads();
       saveStoriesLocal();
       var upName=$id('svUpName'); if(upName) upName.textContent=file.name;
@@ -5091,9 +5121,11 @@ function loadStoriesXlsx(file, mergeHomologation){
       renderRiskNotifPanel();
       updateTabCounts();
       toast(isHomologationFeed?'🧪 Homologação atualizada':'📋 Estórias carregadas',stories.length+' estórias importadas de "'+file.name+'".');
+      recordImportEvent(isHomologationFeed?'homologation':'stories', file.name, stories.length);
     }catch(err){
       toast('Erro ao ler arquivo','Verifique se é um .xlsx válido: '+err.message,'err');
     }
+    finally{ releaseImportLock(); }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -5125,7 +5157,7 @@ function mergeHomologationFromVisual(){
       var incoming={id:id,epic:extractJiraKey(row.epic),epicName:'',resumo:row.resumo||'',status:row.situacao||'',squad:normalizeSquad(row.squad||''),criado:parseD(row.criado),atualizado:parseD(row.atualizado),sprint:row.sprint||'',estimativa:row.estimativa||'',prazo:parseD(row.prazo),homologacaoData:parseD(row.homologacaoData),responsavel:row.responsavel||'',labels:Array.isArray(row.rotulos)?row.rotulos.join(' | '):(row.rotulos||'')};
       if(byId[id]===undefined){ allStories.push(incoming); byId[id]=allStories.length-1; changed=true; }
       else {
-        var merged=Object.assign({},allStories[byId[id]],incoming);
+        var merged=mergeRecordFields(allStories[byId[id]],incoming);
         if(JSON.stringify(merged)!==JSON.stringify(allStories[byId[id]])){allStories[byId[id]]=merged;changed=true;}
       }
     });
@@ -5528,9 +5560,12 @@ function loadBacklogXlsx(file){
       renderBacklogView();
       updateTabCounts();
       toast('📥 Backlog importado','Importação #'+nextSeq+' · '+stories.length+' histórias em backlog.');
+      recordImportEvent('backlog', file.name, stories.length);
     }catch(err){
       toast('Erro ao ler arquivo','Verifique se é um .xlsx válido: '+err.message,'err');
+      recordImportError('backlog', file.name, err.message);
     }
+    finally{ releaseImportLock(); }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -5924,9 +5959,12 @@ function loadOps4opsXlsx(file){
 
       renderOps4opsView();
       toast('🔧 Ops4Ops importado','Importação #'+nextSeq+' · '+stories.length+' histórias.');
+      recordImportEvent('ops4ops', file.name, stories.length);
     }catch(err){
       toast('Erro ao ler arquivo','Verifique se é um .xlsx/.csv válido: '+err.message,'err');
+      recordImportError('ops4ops', file.name, err.message);
     }
+    finally{ releaseImportLock(); }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -6859,7 +6897,7 @@ function loadMultipleFiles(files, propagate){
     return;
   }
   var fileList=Array.from(files);
-  if(!fileList.length) return;
+  if(!fileList.length){ releaseImportLock(); return; }
   var pending=fileList.length;
   var detected={epics:null,stories:null,backlog:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[]};
 
@@ -6932,6 +6970,10 @@ function loadMultipleFiles(files, propagate){
     } else {
       toast('📦 Importação Tudo',lines.join(' · '));
     }
+    // Cada arquivo roteado (loadXlsx/loadStoriesXlsx/loadBacklogXlsx) libera a
+    // trava ao concluir sua própria leitura; isto é uma rede de segurança caso
+    // nenhum arquivo tenha sido roteado (ex.: todos "unknown").
+    releaseImportLock();
   }
 
   fileList.forEach(function(file){
@@ -6958,57 +7000,174 @@ function loadMultipleFiles(files, propagate){
   });
 }
 
+// STATUS DAS CARGAS — registro central de datasets (evita strings/regras
+// espalhadas) e painel visual de quais relatórios estão atualizados/pendentes
+// ═══════════════════════════════════════
+var IMPORT_STATUS_KEY='leadtime_sala_import_status_v1';
+var IMPORT_DATASETS=[
+  {id:'epics',        label:'Épicos',                required:true,  cadence:'daily'},
+  {id:'stories',      label:'QTD Story/Épicos',      required:true,  cadence:'daily'},
+  {id:'backlog',      label:'Backlog/Refinamento',   required:true,  cadence:'daily'},
+  {id:'homologation', label:'Homologação',           required:true,  cadence:'daily'},
+  {id:'ops4ops',      label:'Ops4Ops',               required:false, cadence:'on-demand'}
+];
+function _readImportStatusLog(){ try{ return JSON.parse(storageGet(IMPORT_STATUS_KEY)||'{}'); }catch(e){ return {}; } }
+function _writeImportStatusLog(log){ try{ storageSet(IMPORT_STATUS_KEY,JSON.stringify(log)); }catch(e){} }
+function recordImportEvent(datasetId,fileName,count){
+  var log=_readImportStatusLog();
+  log[datasetId]={fileName:fileName,count:count,at:new Date().toISOString(),ok:true};
+  _writeImportStatusLog(log);
+  renderImportStatusPanel();
+}
+function recordImportError(datasetId,fileName,message){
+  var log=_readImportStatusLog();
+  log[datasetId]={fileName:fileName,count:0,at:new Date().toISOString(),ok:false,error:message};
+  _writeImportStatusLog(log);
+  renderImportStatusPanel();
+}
+function _fmtBRDateTime(d){
+  return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function computeImportStatus(entry,meta){
+  if(_importLockActive) return 'Em andamento';
+  if(!entry) return meta.required ? 'Pendente' : 'Não aplicável';
+  if(entry.ok===false) return 'Erro';
+  var d=new Date(entry.at);
+  if(isNaN(d.getTime())) return 'Pendente';
+  if(meta.cadence!=='daily') return 'Atualizado';
+  var now=new Date();
+  return now.toDateString()===d.toDateString() ? 'Atualizado' : 'Desatualizado';
+}
+var IMPORT_STATUS_COLORS={'Atualizado':'#059669','Pendente':'#6b7280','Desatualizado':'#d97706','Erro':'#dc2626','Em andamento':'#2563eb','Não aplicável':'#94a3b8'};
+function renderImportStatusPanel(){
+  var el=$id('importStatusPanel');
+  if(!el) return;
+  var log=_readImportStatusLog();
+  var rowsHtml=IMPORT_DATASETS.map(function(meta){
+    var entry=log[meta.id];
+    var status=computeImportStatus(entry,meta);
+    var color=IMPORT_STATUS_COLORS[status]||'#6b7280';
+    var when=entry&&entry.at ? _fmtBRDateTime(new Date(entry.at)) : '—';
+    var file=entry&&entry.fileName ? entry.fileName : '—';
+    var count=entry ? (entry.ok===false?0:entry.count) : (meta.required?0:'—');
+    var situacao=entry ? (entry.ok===false ? (entry.error||'Falha na importação') : (status==='Desatualizado'?'Última carga anterior':'Sucesso')) : (meta.required?'Sem carga hoje':'—');
+    return '<tr style="border-top:1px solid var(--border-soft,#edf1f8);">'
+      +'<td style="padding:4px 8px 4px 0;white-space:nowrap;font-weight:600;">'+meta.label+'</td>'
+      +'<td style="padding:4px 8px;"><span style="color:'+color+';font-weight:700;">●</span> '+status+'</td>'
+      +'<td style="padding:4px 8px;white-space:nowrap;">'+when+'</td>'
+      +'<td style="padding:4px 8px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;">'+String(file).replace(/</g,'&lt;')+'</td>'
+      +'<td style="padding:4px 8px;text-align:right;">'+count+'</td>'
+      +'<td style="padding:4px 8px;color:#64748b;">'+situacao+'</td>'
+      +'</tr>';
+  }).join('');
+  el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    +'<thead><tr style="text-align:left;color:#94a3b8;font-weight:600;">'
+    +'<th style="padding:4px 8px 4px 0;">Relatório</th><th style="padding:4px 8px;">Status</th>'
+    +'<th style="padding:4px 8px;">Última carga</th><th style="padding:4px 8px;">Arquivo</th>'
+    +'<th style="padding:4px 8px;text-align:right;">Registros</th><th style="padding:4px 8px;">Situação</th>'
+    +'</tr></thead><tbody>'+rowsHtml+'</tbody></table>';
+}
+
+// TRAVA DE IMPORTAÇÃO — impede duas importações simultâneas ou duplo clique
+// ═══════════════════════════════════════
+var _importLockActive=false;
+function acquireImportLock(){
+  if(_importLockActive) return false;
+  _importLockActive=true;
+  document.querySelectorAll('.up-btn').forEach(function(el){ el.disabled=true; el.style.opacity='0.55'; el.style.cursor='not-allowed'; });
+  var banner=$id('importLockBanner'); if(banner) banner.style.display='inline-flex';
+  try{ renderImportStatusPanel(); }catch(e){}
+  return true;
+}
+function releaseImportLock(){
+  _importLockActive=false;
+  document.querySelectorAll('.up-btn').forEach(function(el){ el.disabled=false; el.style.opacity=''; el.style.cursor=''; });
+  var banner=$id('importLockBanner'); if(banner) banner.style.display='none';
+  try{ renderImportStatusPanel(); }catch(e){}
+}
+function guardImportStart(){
+  if(!acquireImportLock()){
+    alert('Já existe uma importação em andamento. Aguarde a conclusão antes de iniciar uma nova carga.');
+    return false;
+  }
+  return true;
+}
+
 // UPLOAD handlers
 // ═══════════════════════════════════════
-$id('fi').onchange=function(e){if(e.target.files[0]) loadXlsx(e.target.files[0]);};
+$id('fi').onchange=function(e){
+  if(!e.target.files[0]) return;
+  if(!guardImportStart()){ this.value=''; return; }
+  loadXlsx(e.target.files[0]);
+};
 var ub=$id('upbar');
 ub.addEventListener('dragover',function(e){e.preventDefault();ub.classList.add('drag');});
 ub.addEventListener('dragleave',function(){ub.classList.remove('drag');});
 ub.addEventListener('drop',function(e){
   e.preventDefault();ub.classList.remove('drag');
   var fs=e.dataTransfer.files;
+  if(!fs.length) return;
+  if(!guardImportStart()) return;
   if(fs.length>1) loadMultipleFiles(fs, false);
-  else if(fs[0]) loadXlsx(fs[0]);
+  else loadXlsx(fs[0]);
 });
 // Handler do importador unificado (multi-arquivo)
 // fiAll → só este dashboard (sem propagação)
 $id('fiAll').onchange=function(e){
-  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files, false);
+  var has=e.target.files&&e.target.files.length>0;
   this.value='';
+  if(!has) return;
+  if(!guardImportStart()) return;
+  loadMultipleFiles(e.target.files, false);
 };
 // fiAllGlobal → todos os dashboards (com propagação)
 $id('fiAllGlobal').onchange=function(e){
-  if(e.target.files&&e.target.files.length>0) loadMultipleFiles(e.target.files, true);
+  var has=e.target.files&&e.target.files.length>0;
   this.value='';
+  if(!has) return;
+  if(!guardImportStart()) return;
+  loadMultipleFiles(e.target.files, true);
 };
 
 // Stories upload
-$id('fiSv').onchange=function(e){if(e.target.files[0]) loadStoriesXlsx(e.target.files[0]);};
+$id('fiSv').onchange=function(e){
+  if(!e.target.files[0]) return;
+  if(!guardImportStart()){ this.value=''; return; }
+  loadStoriesXlsx(e.target.files[0]);
+};
 
 // Backlog upload
-$id('fiBk').onchange=function(e){if(e.target.files[0]) loadBacklogXlsx(e.target.files[0]);};
+$id('fiBk').onchange=function(e){
+  if(!e.target.files[0]) return;
+  if(!guardImportStart()){ this.value=''; return; }
+  loadBacklogXlsx(e.target.files[0]);
+};
 $id('fiBkJson').onchange=function(e){if(e.target.files[0]){ importBacklogJson(e.target.files[0]); this.value=''; }};
 
 // Ops4Ops upload (conjunto independente, exibido abaixo do Backlog por Squad)
 var fiOps=$id('fiOps');
-if(fiOps) fiOps.onchange=function(e){if(e.target.files[0]) loadOps4opsXlsx(e.target.files[0]);};
+if(fiOps) fiOps.onchange=function(e){
+  if(!e.target.files[0]) return;
+  if(!guardImportStart()){ this.value=''; return; }
+  loadOps4opsXlsx(e.target.files[0]);
+};
 var bkUb=$id('bkUpbar');
 if(bkUb){
   bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
   bkUb.addEventListener('dragleave',function(){bkUb.style.background='';});
-  bkUb.addEventListener('drop',function(e){e.preventDefault();bkUb.style.background='';if(e.dataTransfer.files[0]) loadBacklogXlsx(e.dataTransfer.files[0]);});
+  bkUb.addEventListener('drop',function(e){e.preventDefault();bkUb.style.background='';if(e.dataTransfer.files[0]&&guardImportStart()) loadBacklogXlsx(e.dataTransfer.files[0]);});
 }
 var opsUb=$id('opsUpbar');
 if(opsUb){
   opsUb.addEventListener('dragover',function(e){e.preventDefault();opsUb.style.background='var(--accent-soft)';});
   opsUb.addEventListener('dragleave',function(){opsUb.style.background='';});
-  opsUb.addEventListener('drop',function(e){e.preventDefault();opsUb.style.background='';if(e.dataTransfer.files[0]) loadOps4opsXlsx(e.dataTransfer.files[0]);});
+  opsUb.addEventListener('drop',function(e){e.preventDefault();opsUb.style.background='';if(e.dataTransfer.files[0]&&guardImportStart()) loadOps4opsXlsx(e.dataTransfer.files[0]);});
 }
 var svUb=$id('svUpbar');
 if(svUb){
   svUb.addEventListener('dragover',function(e){e.preventDefault();svUb.style.background='var(--accent-soft)';});
   svUb.addEventListener('dragleave',function(){svUb.style.background='';});
-  svUb.addEventListener('drop',function(e){e.preventDefault();svUb.style.background='';if(e.dataTransfer.files[0]) loadStoriesXlsx(e.dataTransfer.files[0]);});
+  svUb.addEventListener('drop',function(e){e.preventDefault();svUb.style.background='';if(e.dataTransfer.files[0]&&guardImportStart()) loadStoriesXlsx(e.dataTransfer.files[0]);});
 }
 
 // ═══════════════════════════════════════
@@ -7336,6 +7495,7 @@ function loadXlsx(file){
       $id('upName').textContent=file.name;
       $id('upSub').textContent=merged.length+' épicos · '+new Date().toLocaleDateString('pt-BR');
       registrarImportacaoSala();
+      recordImportEvent('epics', file.name, merged.length);
 
       // Feedback detalhado ao usuário
       var parts=[];
@@ -7381,6 +7541,7 @@ function loadXlsx(file){
       }
 
     }catch(err){toast('Erro ao ler arquivo',err.message,'err');}
+    finally{ releaseImportLock(); }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -7952,6 +8113,7 @@ var SEED=[
 (function boot(){
   // Reflete a meta configurada (pode diferir do padrão 62) na barra do topo.
   try{ syncMetabar(); }catch(e){}
+  try{ renderImportStatusPanel(); }catch(e){}
   // Limpa filtros visuais que o navegador pode reaproveitar por autocomplete/cache.
   try{
     if($id('srch')){
