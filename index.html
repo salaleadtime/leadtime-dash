@@ -2357,7 +2357,9 @@ var STORY_LIMIT=12;
 var BACKLOG_KEY='leadtime_sala_v8_backlog_snaps';
 var backlogSnaps=[];
 var OPS4OPS_KEY='leadtime_sala_v8_ops4ops_snaps';
+var OPS4OPS_CLOUD_KEY='ops4opsSnaps';
 var ops4opsSnaps=[];
+var _gasOps4opsSaving=false;
 var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
 var emergencyState={rules:[],meta:{}};
@@ -5809,6 +5811,7 @@ function saveOps4opsSnaps(){
     ops4opsSnaps=ops4opsSnaps.slice(ops4opsSnaps.length-MAX_BACKLOG_SNAPS);
   }
   try{ storageSet(OPS4OPS_KEY,JSON.stringify(ops4opsSnaps)); }catch(e){}
+  gasSaveOps4ops();
 }
 function loadOps4opsSnaps(){
   try{
@@ -5817,6 +5820,58 @@ function loadOps4opsSnaps(){
   }catch(e){ ops4opsSnaps=[]; }
 }
 function getCurrentOps4opsSnapshot(){ if(!ops4opsSnaps.length) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-1]; }
+
+// Merge NÃO-destrutivo (mesma lógica de mergeBacklog): une snapshots vindos do
+// servidor sem apagar o que já temos localmente; em colisão de identidade,
+// mantém o snapshot mais completo (mais histórias).
+function mergeOps4ops(incoming){
+  if(!Array.isArray(incoming) || !incoming.length) return 0;
+  var byKey={};
+  ops4opsSnaps.forEach(function(s){ byKey[snapKey(s)]=s; });
+  var added=0;
+  incoming.forEach(function(s){
+    if(!s) return;
+    var k=snapKey(s);
+    var ex=byKey[k];
+    if(!ex){ ops4opsSnaps.push(s); byKey[k]=s; added++; return; }
+    var nNew=(s.stories?s.stories.length:0), nOld=(ex.stories?ex.stories.length:0);
+    if(nNew>nOld){ var idx=ops4opsSnaps.indexOf(ex); if(idx>=0) ops4opsSnaps[idx]=s; byKey[k]=s; }
+  });
+  ops4opsSnaps.sort(compareBacklogSnaps);
+  return added;
+}
+
+// Publica os snapshots do Ops4Ops no mesmo Apps Script do Backlog (chave
+// dedicada via saveVpData/getVpData) — sem isso, a importação só existia no
+// localStorage do navegador que a fez, e outros navegadores/abas anônimas
+// nunca viam os dados (mode:'no-cors' torna a resposta opaca; ver getVpData
+// no load para confirmar a gravação).
+function gasSaveOps4ops(){
+  if(!BK_GAS_URL || !ops4opsSnaps.length || _gasOps4opsSaving) return;
+  _gasOps4opsSaving=true;
+  fetch(BK_GAS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveVpData&key='+encodeURIComponent(OPS4OPS_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(ops4opsSnaps))
+  }).then(function(){
+    _gasOps4opsSaving=false;
+  }).catch(function(){
+    _gasOps4opsSaving=false;
+  });
+}
+function gasLoadOps4ops(cb){
+  if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key='+encodeURIComponent(OPS4OPS_CLOUD_KEY)+'&t='+Date.now(), function(err,json){
+    if(err || !json || !json.ok || !Array.isArray(json.data) || !json.data.length){
+      if(cb) cb(err||null, 0);
+      return;
+    }
+    var added=mergeOps4ops(json.data);
+    try{ storageSet(OPS4OPS_KEY,JSON.stringify(ops4opsSnaps)); }catch(e){}
+    if(cb) cb(null, ops4opsSnaps.length, added);
+  });
+}
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
 function loadOps4opsXlsx(file){
@@ -8069,6 +8124,17 @@ var SEED=[
           toast('☁️ Backlog carregado','Dados do servidor: '+count+' snapshots disponíveis.');
         } else if(err){
           toast('⚠️ Backlog: falha ao carregar servidor','Erro: '+err,'warn');
+        }
+      });
+      gasLoadOps4ops(function(err, count, added){
+        if(!err && count>0){
+          var opsN=$id('opsUpName'); if(opsN) opsN.textContent='Ops4Ops sincronizado';
+          var opsS=$id('opsUpSub'); if(opsS) opsS.textContent=count+' snapshots carregados do servidor';
+          var opsSv=$id('opsUpSaved'); if(opsSv) opsSv.classList.remove('hidden');
+          renderOps4opsView();
+          if(added) toast('☁️ Ops4Ops carregado','Dados do servidor: '+count+' snapshots disponíveis.');
+        } else if(err){
+          toast('⚠️ Ops4Ops: falha ao carregar servidor','Erro: '+err,'warn');
         }
       });
       gasLoadStories(function(err, count){
