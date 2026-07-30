@@ -2116,15 +2116,7 @@ tr:nth-child(even):hover td,
     <button class="up-btn" style="background:#475569" onclick="document.getElementById('fiBkJson').click()" title="Importar snapshots exportados por outro membro do time">⬆ Importar Backlog</button>
   </div>
 
-  <div class="ep" id="bkContent">
-    <div class="empty" style="padding:3rem 2rem;text-align:center">
-      <div style="font-size:32px;margin-bottom:.8rem">📥</div>
-      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>
-      <div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>
-    </div>
-  </div>
-
-  <div class="sv-upbar" id="opsUpbar" style="margin-top:1.4rem">
+  <div class="sv-upbar" id="opsUpbar">
     <span style="font-size:13px;flex-shrink:0">🔧</span>
     <span class="sv-up-name" id="opsUpName">Ops4Ops · Refinada x Backlog</span>
     <span class="sv-up-sub" id="opsUpSub">Export Jira do Ops4Ops · cria snapshot de evolução própria · .xlsx ou .csv</span>
@@ -2133,7 +2125,15 @@ tr:nth-child(even):hover td,
     <button class="up-btn" onclick="document.getElementById('fiOps').click()">Selecionar arquivo</button>
   </div>
 
-  <div class="ep" id="ops4opsContent">
+  <div class="ep" id="bkContent">
+    <div class="empty" style="padding:3rem 2rem;text-align:center">
+      <div style="font-size:32px;margin-bottom:.8rem">📥</div>
+      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum backlog importado ainda</div>
+      <div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>
+    </div>
+  </div>
+
+  <div class="ep" id="ops4opsContent" style="margin-top:1.4rem">
     <div class="empty" style="padding:2rem 2rem;text-align:center">
       <div style="font-size:28px;margin-bottom:.6rem">🔧</div>
       <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhuma carga do Ops4Ops importada ainda</div>
