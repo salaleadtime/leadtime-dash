@@ -5401,7 +5401,10 @@ function gasLoadStories(cb){
         if(cb) cb(null, 0);
         return;
       }
-      allStories=json.stories;
+      // Merge em vez de substituição: o servidor pode estar um pouco atrasado
+      // (mesma contagem, mas sem a última edição local) — mesclar preserva o
+      // que já está na tela em vez de arriscar sobrescrever com dado mais velho.
+      mergeStoriesIntoAllStories(json.stories);
       try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
       renderStoryView();
       if(curTab==='em') renderEmergencyView();
