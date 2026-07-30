@@ -5953,6 +5953,38 @@
       color: #8a5a00;
     }
 
+    /* Linha do modal "Marcos em atraso" com checkbox de seleção — variante do
+       .ux-v6-attention-item padrão (que é um único <button>), pois aqui o
+       checkbox precisa de área de clique própria, separada da navegação. */
+    .ux-v6-attention-item--selectable {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      cursor: default;
+    }
+
+    .ux-v6-attention-item--selectable .late-marco-check {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--red, #CC092F);
+    }
+
+    .ux-v6-attention-link {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+
     .ux-v6-attention-empty {
       font-size: 12px;
       color: #6b7788;
@@ -11593,6 +11625,26 @@
       </button>`;
     }
 
+    // Variante só do modal "Marcos em atraso" (openLateScheduleModal), com
+    // checkbox de seleção — lateScheduleRowHtml (acima) é reaproveitada em
+    // outras duas telas (card resumido "Atrasos do cronograma" na home e o
+    // painel de Macro Timeline), que não devem ganhar checkbox nenhum.
+    function lateScheduleSelectableRowHtml({ project, item, days }) {
+      const squad = squadForProject(project);
+      const initiativeLabel = [initiativeNumber(project), displayProjectTitle(project)].filter(Boolean).join(' · ');
+      const preChecked = isKickoffScheduleItem(item) ? 'checked' : '';
+      return `<div class="ux-v6-attention-item ux-v6-attention-item--selectable">
+        <input type="checkbox" class="late-marco-check" data-project="${escapeAttr(project.id)}" data-item="${escapeAttr(item.id)}" ${preChecked} title="Selecionar este marco para concluir" aria-label="Selecionar ${escapeAttr(item.item)} de ${escapeAttr(displayProjectTitle(project))} para concluir" />
+        <button type="button" class="ux-v6-attention-link" onclick="goToLateSchedule('${escapeAttr(project.id)}')" title="Abrir ${escapeAttr(displayProjectTitle(project))} na aba Cronograma">
+          <div class="ux-v6-attention-main">
+            <strong>${escapeHtml(item.item)}</strong>
+            <span>${escapeHtml(initiativeLabel || 'Sem iniciativa')} · ${escapeHtml(squad?.name || project.squad || 'A validar')}</span>
+          </div>
+        </button>
+        <span class="ux-v6-attention-badge crit">${days}d atrasado</span>
+      </div>`;
+    }
+
     function goToLateSchedule(projectId) {
       if (!(data.projects || []).some(p => p.id === projectId)) { toast('Iniciativa não encontrada'); return; }
       closeModal();
@@ -11619,31 +11671,37 @@
     function openLateScheduleModal() {
       const lateItems = collectLateScheduleMarcos(data.projects || []);
       const rows = lateItems.length
-        ? lateItems.map(lateScheduleRowHtml).join('')
+        ? lateItems.map(lateScheduleSelectableRowHtml).join('')
         : `<div class="ux-v6-attention-empty">Nenhum marco de Cronograma atrasado.</div>`;
-      const lateKickoffs = lateItems.filter(({ item }) => isKickoffScheduleItem(item));
       openModal(
         'Marcos em atraso',
-        'Todo marco do Cronograma vencido e não concluído, em qualquer iniciativa. Clique num item para abrir a iniciativa na aba Cronograma.',
+        'Todo marco do Cronograma vencido e não concluído, em qualquer iniciativa. Marque abaixo os que já aconteceram de fato e clique em "Concluir selecionados" — os Kickoffs já vêm marcados. Clique no título de um item para abrir a iniciativa na aba Cronograma.',
         `<div class="ux-v6-alert-list">${rows}</div>`,
-        [
-          lateKickoffs.length ? `<button type="button" class="btn" onclick="markAllLateKickoffsDone()">Concluir Kickoffs atrasados (${lateKickoffs.length})</button>` : '',
-          `<button type="button" class="btn" onclick="closeModal()">Fechar</button>`
-        ]
+        lateItems.length ? [
+          `<button type="button" class="btn" onclick="closeModal()">Fechar</button>`,
+          `<button type="button" class="btn primary" onclick="concludeSelectedLateSchedule()">Concluir selecionados</button>`
+        ] : [`<button type="button" class="btn" onclick="closeModal()">Fechar</button>`]
       );
     }
 
-    // Ação em lote pedida quando os Kickoffs já aconteceram de fato e só não
-    // foram marcados como concluídos no sistema — não mexe nos demais marcos
-    // (Discovery, Desenho de solução, Escrita das histórias, ...), que seguem
-    // sendo concluídos individualmente, um a um, ao terminarem de verdade.
-    function markAllLateKickoffsDone() {
-      const lateKickoffs = collectLateScheduleMarcos(data.projects || []).filter(({ item }) => isKickoffScheduleItem(item));
-      if (!lateKickoffs.length) { toast('Nenhum Kickoff atrasado para concluir.'); return; }
-      lateKickoffs.forEach(({ item }) => {
+    // Pedido: em vez de um botão único que decide sozinho o que concluir, o
+    // usuário marca em cada linha o que já aconteceu de fato e finaliza tudo de
+    // uma vez, ali mesmo no modal — sem precisar abrir iniciativa por
+    // iniciativa. Kickoff vem pré-marcado por já ter sido confirmado como
+    // concluído na prática; os demais tipos de marco ficam desmarcados por
+    // padrão e só são concluídos se o usuário escolher.
+    function concludeSelectedLateSchedule() {
+      const checks = [...document.querySelectorAll('.late-marco-check:checked')];
+      if (!checks.length) { toast('Selecione ao menos um marco para concluir.'); return; }
+      let count = 0;
+      checks.forEach(chk => {
+        const project = (data.projects || []).find(p => p.id === chk.dataset.project);
+        const item = project?.schedule?.find(s => s.id === chk.dataset.item);
+        if (!item) return;
         item.done = true;
         item.progress = 100;
         item.updatedAt = new Date().toISOString();
+        count++;
       });
       closeModal();
       saveData(true);
