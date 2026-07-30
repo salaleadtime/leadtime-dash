@@ -124,6 +124,16 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}
 .blk-h p{margin:1px 0 0;font-size:9.5px;color:var(--muted)}
 .blk-b{padding:13px 14px}
 .tagn{font-size:9px;font-weight:850;padding:4px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary);white-space:nowrap}
+.blk-h-right{display:flex;align-items:center;gap:8px;flex:none}
+.info-wrap{position:relative}
+.info-btn{width:20px;height:20px;border-radius:50%;border:1px solid var(--line-strong);background:var(--panel);color:var(--muted);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.info-btn:hover,.info-btn.on{background:var(--primary-soft);border-color:#f4c7d1;color:var(--primary)}
+.info-pop{display:none;position:absolute;top:26px;right:0;z-index:40;width:300px;background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--radius-xs);box-shadow:var(--shadow);padding:12px 13px}
+.info-pop.on{display:block}
+.info-pop h4{margin:0 0 8px;font-size:10.5px;color:var(--ink)}
+.info-pop dl{margin:0;display:grid;gap:8px}
+.info-pop dt{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:850}
+.info-pop dd{margin:2px 0 0;font-size:9.5px;color:var(--muted);line-height:1.45}
 /* apêndice recolhível — detalhe granular que já aparece resumido em outro bloco
    (cards de refinamento, feed de evolução, riscos) não precisa ficar aberto por padrão */
 details.blk-more{border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:12px;overflow:hidden;background:var(--panel)}
@@ -319,7 +329,7 @@ body:not(.exporting) .editable:hover{background:#fffbf0;box-shadow:inset 0 0 0 1
 .dc small{display:block;font-size:9.5px;color:var(--muted);line-height:1.5}
 .dc .dev{display:block;margin-top:5px;font-size:9.5px;color:var(--ink);font-weight:650}
 /* evolução em dois painéis (modelo aprovado) */
-.evo{display:grid;grid-template-columns:1.15fr 1fr;gap:12px}
+.evo{display:grid;grid-template-columns:.8fr 1.35fr;gap:12px}
 .evo-left{border:1px solid var(--line);background:var(--panel-2);border-radius:var(--radius-sm);padding:13px}
 .evo-top{display:flex;align-items:center;gap:8px;font-weight:850;font-size:13px}
 .evo-top .dot{width:10px;height:10px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 5px rgba(191,24,48,.12);flex:none}
@@ -584,7 +594,7 @@ body[data-model="B"] .only-a{display:none}
         <div class="roadmap-card">
           <div class="roadmap-head">
             <div>
-              <div class="roadmap-title"><span class="roadmap-dot"></span><div><h3>Riscos do Roadmap</h3><p>Leitura automática dos riscos, dependências e marcos registrados no Discovery PMO Tracker.</p></div></div>
+              <div class="roadmap-title"><span class="roadmap-dot"></span><div><h3>Riscos do Roadmap</h3><p>Leitura automática da aba Cronograma (marcos) e da aba Riscos e Dependências (riscos, impedimentos e dependências) do Discovery PMO Tracker.</p></div></div>
             </div>
             <div class="roadmap-chip" id="roadChip">Acompanhamento do período</div>
           </div>
@@ -605,7 +615,23 @@ body[data-model="B"] .only-a{display:none}
 
     <!-- ══ Riscos e impedimentos abertos ══ -->
     <div class="blk">
-      <div class="blk-h"><div><h2>Riscos e impedimentos abertos</h2><p>RAID do Discovery: risco, impedimento e dependência sem tratativa concluída.</p></div><span class="tagn" id="rkTag">4 aberto(s)</span></div>
+      <div class="blk-h"><div><h2>Riscos e impedimentos abertos</h2><p>Dados da aba Riscos e Dependências do Discovery PMO Tracker: risco, impedimento e dependência sem tratativa concluída. Prazos e marcos vêm da aba Cronograma.</p></div>
+        <div class="blk-h-right">
+          <div class="info-wrap">
+            <button type="button" class="info-btn" id="rkInfoBtn" onclick="toggleRkInfo(event)" title="O que é Risco, Impedimento e Dependência?" aria-label="O que é Risco, Impedimento e Dependência?">i</button>
+            <div class="info-pop" id="rkInfoPop">
+              <h4>O que significa cada tipo</h4>
+              <p style="margin:0 0 8px;font-size:9px;color:var(--muted)">Dados atualizados automaticamente a partir da aba <b>Riscos e Dependências</b> do Discovery PMO Tracker; prazos e marcos vêm da aba <b>Cronograma</b>.</p>
+              <dl>
+                <div><dt><span class="pill r">Risco</span></dt><dd>Evento incerto que, se ocorrer, pode atrasar ou comprometer a iniciativa. Ainda não aconteceu — precisa de plano de mitigação.</dd></div>
+                <div><dt><span class="pill a">Impedimento</span></dt><dd>Bloqueio que já está acontecendo agora e impede o avanço da iniciativa. Exige ação imediata para ser removido.</dd></div>
+                <div><dt><span class="pill b">Dependência</span></dt><dd>Entrega ou decisão de terceiros (outra squad, área ou fornecedor) da qual a iniciativa depende para seguir.</dd></div>
+              </dl>
+            </div>
+          </div>
+          <span class="tagn" id="rkTag">4 aberto(s)</span>
+        </div>
+      </div>
       <div class="blk-b">
         <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th></tr></thead><tbody id="rkRows"><tr><td><b style="color:var(--primary)">98434</b><br><span style="color:var(--ink)">Automação Câmbio Trade Finance QuickWin</span></td>
       <td>Contact</td>
@@ -1358,6 +1384,17 @@ function openComplement(def='evolucao'){
   selectComplement(def)
 }
 function openAdd(k){openComplement(k)}
+function toggleRkInfo(ev){
+  ev.stopPropagation();
+  el('rkInfoPop').classList.toggle('on');
+  el('rkInfoBtn').classList.toggle('on');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#rkInfoBtn')&&!e.target.closest('#rkInfoPop')){
+    el('rkInfoPop')?.classList.remove('on');
+    el('rkInfoBtn')?.classList.remove('on');
+  }
+});
 function openEdit(kind,index=null){
   modalEdit={kind,index};
   el('mKindSelect').innerHTML=Object.entries(MODAL_DEF).map(([k,d])=>`<option value="${k}">${esc(d.t)}</option>`).join('');
