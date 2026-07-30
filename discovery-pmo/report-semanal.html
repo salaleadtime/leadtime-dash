@@ -944,7 +944,9 @@ const ARCH_RE=/arquitet|solution design|dati|desenho de solu/i;
 let base={projects:[],squads:[]}, source='—', scoped=[], edits={}, curWeek='', lastCtx=null;
 const initialParams=new URLSearchParams(window.location.search);
 const initialWeek=initialParams.get('week');
-const initialSquad=initialParams.get('squad')==='squad-asd'?'':initialParams.get('squad');
+/* O report sempre abre com "Todas as squads" selecionado; o parâmetro
+   ?squad= da URL não é mais usado para pré-selecionar uma squad específica. */
+const initialSquad='';
 const openedFromTracker=initialParams.get('source')==='tracker';
 
 /* ════════════ utils ════════════ */
