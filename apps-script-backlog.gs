@@ -1,6 +1,20 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v14 — concorrência otimista (baseRevision) para saveStories e saveVpData.
+ * Cada aba (_stories_chunks e cada aba de VP_SHEET_MAP) tem um contador de
+ * revisão em Script Properties, devolvido em getStories/getVpData/getVpDataAll
+ * e incrementado a cada escrita OK. O cliente que leu revisão N manda
+ * baseRevision=N ao salvar; se a revisão atual mudou nesse meio-tempo (outra
+ * pessoa salvou), a gravação é recusada com conflict:true em vez de sobrescrever
+ * por cima da edição alheia — o "última gravação vence" citado na v11/v13.
+ * baseRevision é OPCIONAL: cliente que não manda (ou nunca leu) não é afetado,
+ * então os fluxos automáticos do Bradesco continuam intactos sem mudança lá.
+ * Wiring do lado do cliente feito só para Estórias (gasLoadStories/gasSaveStories
+ * em index.html) nesta rodada; as chaves de VP_SHEET_MAP já recebem e devolvem
+ * revisão, mas nenhum cliente ainda manda baseRevision para elas — extensão
+ * futura sem exigir mudança de novo neste arquivo.
+ *
  * v13 — camada de proteção de escrita.
  *
  * Construída SOBRE a v12 publicada (2026-07-27-discovery-raid-area-v12).
@@ -50,7 +64,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-28-guardas-e-snapshots-v13';
+var BACKLOG_SCRIPT_VERSION = '2026-07-30-base-revision-v14';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -124,6 +138,24 @@ var PROP_ALLOW_SHRINK_UNTIL = 'ALLOW_SHRINK_UNTIL'; // timestamp ms: janela para
 // cliente grava com mode:'no-cors' e não enxerga a resposta, uma recusa hoje é
 // silenciosa: subir direto em modo bloqueante sem medir seria adivinhação.
 var PROP_GUARD_DRY_RUN = 'GUARD_DRY_RUN';
+
+// v14 — cada aba tem um contador de revisão (REV_<sheet> em Script Properties),
+// incrementado a cada escrita bem-sucedida. O cliente que leu a revisão N pode
+// mandar baseRevision=N ao salvar; se a revisão atual já mudou (alguém salvou
+// no meio), a escrita é recusada em vez de sobrescrever por cima da mudança
+// alheia ("última gravação vence" virava perda silenciosa de campo editado por
+// outra pessoa). Cliente que NUNCA leu (ou não manda baseRevision) não é
+// afetado — mantém o comportamento anterior, o que preserva os fluxos
+// automáticos do Bradesco (flushPendingWrites etc.) sem exigir mudança lá.
+function revisionProp_(sheetName) { return 'REV_' + sheetName; }
+function getRevision_(sheetName) {
+  return Number(props_().getProperty(revisionProp_(sheetName)) || 0);
+}
+function bumpRevision_(sheetName) {
+  var next = getRevision_(sheetName) + 1;
+  props_().setProperty(revisionProp_(sheetName), String(next));
+  return next;
+}
 
 var _propsCache = null;
 function props_() {
@@ -226,7 +258,8 @@ function doGet(e) {
       return jsonOut_({
         ok: true,
         version: BACKLOG_SCRIPT_VERSION,
-        stories: stories
+        stories: stories,
+        revision: getRevision_(STORIES_SHEET)
       }, callback);
     }
 
@@ -237,7 +270,7 @@ function doGet(e) {
         return jsonOut_({ ok: false, error: 'chave inválida: ' + key }, callback);
       }
       var vpData = withLock_(function() { return readJsonFromSheet_(sheetName, null); });
-      return jsonOut_({ ok: true, data: vpData }, callback);
+      return jsonOut_({ ok: true, data: vpData, revision: getRevision_(sheetName) }, callback);
     }
 
     // getVpDataAll: lê todas as chaves do VP_SHEET_MAP numa única execução/lock,
@@ -247,12 +280,14 @@ function doGet(e) {
     if (action === 'getVpDataAll') {
       var allData = withLock_(function() {
         var out = {};
+        var revisions = {};
         Object.keys(VP_SHEET_MAP).forEach(function(k) {
           out[k] = readJsonFromSheet_(VP_SHEET_MAP[k], null);
+          revisions[k] = getRevision_(VP_SHEET_MAP[k]);
         });
-        return out;
+        return { out: out, revisions: revisions };
       });
-      return jsonOut_({ ok: true, data: allData }, callback);
+      return jsonOut_({ ok: true, data: allData.out, revisions: allData.revisions }, callback);
     }
 
     return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, data: [] }, callback);
@@ -321,23 +356,24 @@ function doPost(e) {
 
     if (action === 'saveStories') {
       var payloadStories = getParam_(e, 'payload') || '[]';
+      var baseRevisionStories = getParam_(e, 'baseRevision');
       try {
         var parsedStoriesResult = parsePayload_(payloadStories, true);
         if (!parsedStoriesResult.ok) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: parsedStoriesResult.error });
         var parsedStories = parsedStoriesResult.data;
         if (parsedStories.length === 0) {
           var existing = withLock_(function() { return readJsonFromSheet_(STORIES_SHEET, []); });
-          return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, skipped: 'payload vazio', savedStories: existing.length });
+          return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, skipped: 'payload vazio', savedStories: existing.length, revision: getRevision_(STORIES_SHEET) });
         }
         var storiesWrite = withLock_(function() {
           var chunks = readChunks_(STORIES_SHEET);
           var before = chunksToData_(chunks, null);
-          return commitWrite_(STORIES_SHEET, 'saveStories', chunks, before, parsedStories, payloadStories.length);
+          return commitWrite_(STORIES_SHEET, 'saveStories', chunks, before, parsedStories, payloadStories.length, baseRevisionStories);
         });
         if (!storiesWrite.ok) {
-          return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: storiesWrite.error });
+          return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: storiesWrite.error, conflict: !!storiesWrite.conflict, currentRevision: storiesWrite.currentRevision });
         }
-        return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, savedStories: parsedStories.length });
+        return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, savedStories: parsedStories.length, revision: storiesWrite.revision });
       } catch (err) {
         return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'payload inválido: ' + String(err && err.message || err) });
       }
@@ -350,6 +386,7 @@ function doPost(e) {
         return jsonOut_({ ok: false, error: 'chave inválida: ' + vpKey });
       }
       var vpPayload = getParam_(e, 'payload') || 'null';
+      var baseRevisionVp = getParam_(e, 'baseRevision');
       try {
         var parsedVp = parsePayload_(vpPayload, false);
         if (!parsedVp.ok || parsedVp.data === null || typeof parsedVp.data !== 'object') {
@@ -370,14 +407,14 @@ function doPost(e) {
             toWrite = mergeMap_(before, toWrite);
             didMerge = true;
           }
-          var w = commitWrite_(vpSheetName, 'saveVpData/' + vpKey, chunks, before, toWrite, vpPayload.length);
+          var w = commitWrite_(vpSheetName, 'saveVpData/' + vpKey, chunks, before, toWrite, vpPayload.length, baseRevisionVp);
           w.merged = didMerge;
           return w;
         });
         if (!vpWrite.ok) {
-          return jsonOut_({ ok: false, key: vpKey, error: vpWrite.error });
+          return jsonOut_({ ok: false, key: vpKey, error: vpWrite.error, conflict: !!vpWrite.conflict, currentRevision: vpWrite.currentRevision });
         }
-        return jsonOut_({ ok: true, key: vpKey, before: vpWrite.beforeN, after: vpWrite.afterN, merged: !!vpWrite.merged });
+        return jsonOut_({ ok: true, key: vpKey, before: vpWrite.beforeN, after: vpWrite.afterN, merged: !!vpWrite.merged, revision: vpWrite.revision });
       } catch (vpErr) {
         return jsonOut_({ ok: false, error: 'payload inválido: ' + String(vpErr && vpErr.message || vpErr) });
       }
@@ -396,11 +433,27 @@ function doPost(e) {
 
 // Ponto único por onde TODA escrita passa. Roda sempre dentro de withLock_ e
 // recebe os chunks já lidos, para não pagar uma segunda leitura da planilha.
-function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars) {
+function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars, baseRevision) {
   if (!writesEnabled_()) {
     var offMsg = 'gravação recusada: escritas desativadas no servidor (' + PROP_WRITES_ENABLED + '=false).';
     audit_(label, payloadChars, countRecords_(before), countRecords_(incoming), 'DESATIVADO', offMsg);
     return { ok: false, error: offMsg };
+  }
+
+  // Checagem de concorrência otimista: só se aplica quando o cliente MANDA
+  // baseRevision (leu antes de salvar) e já existe uma revisão publicada.
+  // Ausência de baseRevision = cliente antigo ou primeira gravação = sem checagem,
+  // igual ao comportamento anterior a esta versão.
+  var currentRevision = getRevision_(sheetName);
+  if (baseRevision !== undefined && baseRevision !== null && String(baseRevision) !== '' && currentRevision > 0) {
+    var baseRevisionNum = Number(baseRevision);
+    if (!isNaN(baseRevisionNum) && baseRevisionNum !== currentRevision) {
+      var conflictMsg = 'gravação recusada: alguém salvou "' + label + '" depois da última leitura deste cliente ' +
+                         '(revisão lida ' + baseRevisionNum + ', revisão atual ' + currentRevision + '). ' +
+                         'Recarregue os dados e tente novamente.';
+      audit_(label, payloadChars, countRecords_(before), countRecords_(incoming), 'CONFLITO_REVISAO', conflictMsg);
+      return { ok: false, error: conflictMsg, conflict: true, currentRevision: currentRevision };
+    }
   }
 
   var verdict = guardWrite_(label, before, incoming);
@@ -444,6 +497,7 @@ function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars) 
   }
 
   writeJsonToSheet_(sheetName, incoming);
+  var newRevision = bumpRevision_(sheetName);
 
   var detalhes = [];
   if (nota) detalhes.push(nota);
@@ -451,7 +505,7 @@ function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars) 
   if (shrinking && snap.attempted && !snap.ok) detalhes.push('ATENÇÃO: snapshot falhou (' + snap.error + ')');
   audit_(label, payloadChars, verdict.beforeN, verdict.afterN, resultado, detalhes.join(' · '));
 
-  return { ok: true, beforeN: verdict.beforeN, afterN: verdict.afterN };
+  return { ok: true, beforeN: verdict.beforeN, afterN: verdict.afterN, revision: newRevision };
 }
 
 // Conta "registros" sem depender do formato — cada chave tem uma forma diferente.

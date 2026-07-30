@@ -4655,27 +4655,31 @@ document.querySelectorAll('.chip[data-f]').forEach(function(btn){
 // REFRESH / RENDER ALL
 // ═══════════════════════════════════════
 function doEmergencyRecover(){
-  try{
-    // Limpa completamente o localStorage para forçar recarga do Google Sheets
-    storageClear();
-  }catch(e){}
   setSyncLabel('🔄 Recuperando dados…');
   var btn=$id('recoverBtn'); if(btn) btn.disabled=true;
-  // Recarrega os dados do Google Sheets direto
-  allData=SEED.map(makeRow);
-  renderAll();
-  if(SHEETS_WEBAPP){
-    loadFromSheets(function(err, sheetsData){
-      if(!err && Array.isArray(sheetsData) && sheetsData.length){
-        replaceFromSharedSource(sheetsData);
-        setSyncLabel('✅ Dados recuperados — '+sheetsData.length+' épicos carregados');
-        if(btn){ btn.style.display='none'; btn.disabled=false; }
-      } else {
-        setSyncLabel('⚠️ Sheets offline — exibindo dados base ('+allData.length+' épicos)');
-        if(btn) btn.disabled=false;
-      }
-    }, false);
+  if(!SHEETS_WEBAPP){
+    setSyncLabel('⚠️ Sheets não configurado — nada para recuperar do servidor');
+    if(btn) btn.disabled=false;
+    return;
   }
+  // Lê o remoto ANTES de tocar no cache local: só limpamos o localStorage depois
+  // de confirmar que a fonte compartilhada respondeu com dados de verdade. Antes
+  // esta função limpava primeiro e só então tentava carregar — uma falha de rede
+  // ou um Sheets temporariamente vazio apagava dados locais ainda não
+  // sincronizados sem ter para onde voltar.
+  loadFromSheets(function(err, sheetsData){
+    if(!err && Array.isArray(sheetsData) && sheetsData.length){
+      try{ storageClear(); }catch(e){}
+      allData=SEED.map(makeRow);
+      renderAll();
+      replaceFromSharedSource(sheetsData);
+      setSyncLabel('✅ Dados recuperados — '+sheetsData.length+' épicos carregados');
+      if(btn){ btn.style.display='none'; btn.disabled=false; }
+    } else {
+      setSyncLabel('⚠️ Sheets offline ou vazio — dados locais preservados, nada foi apagado');
+      if(btn) btn.disabled=false;
+    }
+  }, false);
 }
 
 function doRefresh(){
@@ -5255,11 +5259,19 @@ function gasSaveBacklog(){
 }
 
 var _gasStoriesSaving=false;
+// Revisão da última leitura confirmada do servidor (contador REV_ do Apps
+// Script v14). null = nunca leu nesta sessão; nesse caso gasSaveStories NÃO
+// manda baseRevision, então o servidor não checa conflito (mesmo
+// comportamento de antes desta versão) — evita falso conflito no primeiro
+// salvamento sem leitura prévia.
+var _storiesRevision=null;
+var _gasStoriesConflictRetry=false;
 function gasLoadStories(cb){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
     if(err){ if(cb) cb(err); return; }
     if(json && json.ok && Array.isArray(json.stories)){
+      if(typeof json.revision==='number') _storiesRevision=json.revision;
       // Servidor com menos estórias que as locais: NÃO sobrescreve (evita apagar
       // uma importação local recém-feita que ainda não terminou de subir, ex. ao
       // clicar Atualizar logo após importar). Em vez disso, sobe as locais para
@@ -5290,15 +5302,33 @@ function gasLoadStories(cb){
 function gasSaveStories(){
   if(!BK_GAS_URL || !allStories.length || _gasStoriesSaving) return;
   _gasStoriesSaving=true;
+  var sentBaseRevision=_storiesRevision;
+  var body='action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories));
+  if(sentBaseRevision!=null) body+='&baseRevision='+encodeURIComponent(sentBaseRevision);
   fetch(BK_GAS_URL, {
     method:'POST',
     mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories))
+    body:body
   })
   .then(function(){
     toast('☁️ Estórias publicadas','Sincronizando com o servidor…');
-    setTimeout(function(){ gasLoadStories(function(err,n){ if(!err) renderStoryView(); }); }, 2500);
+    setTimeout(function(){
+      gasLoadStories(function(err,n){
+        if(err) return;
+        renderStoryView();
+        // POST é no-cors (resposta opaca) — só descobrimos se o servidor recusou
+        // por conflito de revisão comparando com a releitura acima: se a revisão
+        // que voltou não é exatamente a que enviamos + 1, outra pessoa salvou no
+        // meio. gasLoadStories já mesclou por id; reenviamos uma vez para não
+        // perder a edição local em silêncio.
+        if(sentBaseRevision!=null && _storiesRevision!=null && _storiesRevision!==sentBaseRevision+1 && !_gasStoriesConflictRetry){
+          _gasStoriesConflictRetry=true;
+          toast('⚠️ Conflito de gravação','Outra pessoa salvou estórias ao mesmo tempo. Mesclando e reenviando…');
+          setTimeout(function(){ _gasStoriesConflictRetry=false; gasSaveStories(); }, 800);
+        }
+      });
+    }, 2500);
   })
   .catch(function(){ /* mantém salvo localmente */ })
   .finally(function(){ _gasStoriesSaving=false; });
