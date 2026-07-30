@@ -14786,11 +14786,9 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function openWeeklyDiscoveryReport() {
+      // O report semanal sempre abre com "Todas as squads" selecionado;
+      // não faz mais sentido pré-filtrar por squad na URL.
       const params = new URLSearchParams({ week: currentIsoWeek(), source: 'tracker' });
-      const squadId = viewMode === 'project'
-        ? (getProject()?.squadId || '')
-        : (dashboardSquadId || '');
-      if (squadId && squadId !== 'squad-asd') params.set('squad', squadId);
       window.open(`./report-semanal.html?${params.toString()}`, '_blank', 'noopener');
     }
 
