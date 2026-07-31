@@ -636,27 +636,11 @@ body[data-model="B"] .only-a{display:none}
         </div>
       </div>
       <div class="blk-b">
-        <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th></tr></thead><tbody id="rkRows"><tr><td><b style="color:var(--primary)">98434</b><br><span style="color:var(--ink)">Automação Câmbio Trade Finance QuickWin</span></td>
-      <td>Contact</td>
-      <td><span class="pill r">Risco</span></td>
-      <td>Atraso na ação: Desenho de Arquitetura</td>
-      <td>Arquitetura<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
-      <td>Eduardo Paiva</td><td>24/07/2026</td><td><span class="pill r">vencido há 3d</span></td></tr><tr><td><b style="color:var(--primary)">113315</b><br><span style="color:var(--ink)">Consignado, Conciliação e Portabilidade</span></td>
-      <td>Interstelar</td>
-      <td><span class="pill a">Impedimento</span></td>
-      <td>Squad principal não informada na planilha; classificada temporariamente como A valida…</td>
-      <td>Alocação / RTE<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
-      <td>Helen Da</td><td>10/08/2026</td><td><span class="pill g">no prazo</span></td></tr><tr><td><b style="color:var(--primary)">113315</b><br><span style="color:var(--ink)">Consignado, Conciliação e Portabilidade</span></td>
-      <td>Interstelar</td>
-      <td><span class="pill a">Impedimento</span></td>
-      <td>Filha 113318 está na Squad TopGun, diferente da mãe 113315 (A validar).</td>
-      <td>Alocação / RTE<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
-      <td>Helen Da</td><td>10/08/2026</td><td><span class="pill g">no prazo</span></td></tr><tr><td><b style="color:var(--primary)">113315</b><br><span style="color:var(--ink)">Consignado, Conciliação e Portabilidade</span></td>
-      <td>Interstelar</td>
-      <td><span class="pill a">Impedimento</span></td>
-      <td>1 filha(s) sem Squad informada na planilha.</td>
-      <td>Alocação / RTE<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span></td>
-      <td>Helen Da</td><td>10/08/2026</td><td><span class="pill g">no prazo</span></td></tr></tbody></table>
+        <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="rkRows"></tbody></table>
+        <div class="edit-ui" id="rkResolvedBlk" style="margin-top:10px">
+          <div class="blk-h" style="padding:0 0 6px"><div><h3 style="margin:0;font-size:11.5px">Concluídos recentemente</h3><p style="margin:0;font-size:9.5px;color:var(--muted)">Marcados como concluídos direto neste report. Reabra se foi engano.</p></div><span class="tagn" id="rkResolvedTag">0</span></div>
+          <div id="rkResolvedRows"></div>
+        </div>
       </div>
     </div>
 
@@ -935,7 +919,7 @@ const CFG={
   gasKey:'discoveryPmo',
   trackerKey:'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3',
   cacheKey:'sala_rep_cache_v3', editKey:'sala_rep_edit_v4', snapKey:'sala_rep_snap_v4',
-  syncKey:'sala_rep_last_sync_v1',
+  syncKey:'sala_rep_last_sync_v1', resolveKey:'sala_rep_resolved_v1',
   horizon:14, staleDays:10
 };
 const TL_STAGES=[{id:'entendimento',title:'Entendimento do Problema'},{id:'analise',title:'Levantamento e Análise'},{id:'desenho',title:'Desenho da Solução'},{id:'validacao',title:'Validação e Prontidão'}];
@@ -1450,6 +1434,34 @@ function compActions(kind,index,label='complemento'){
 function snaps(){try{return JSON.parse(localStorage.getItem(CFG.snapKey)||'{}')}catch(e){return{}}}
 /* assinatura estável de um risco, para reconhecê-lo de uma semana para outra */
 const rkSig=i=>norm(i.text).slice(0,60)+'|'+(i.due||'');
+/* ════════════ conclusão manual de risco/impedimento/dependência ════════════
+   O status "concluído" pode ser marcado direto no report (sem depender do
+   Tracker já ter sido atualizado). Guardamos a data de conclusão por
+   assinatura do item: se ela cai numa semana anterior à selecionada, ou no
+   meio da própria semana selecionada (ou seja, <= fim do período em vista),
+   o item some da lista de abertos daquele período — igual a se já tivesse
+   sido resolvido no Tracker. */
+let currentRk=[];
+let currentResolvedList=[];
+function resolvedMap(){try{return JSON.parse(localStorage.getItem(CFG.resolveKey)||'{}')}catch(e){return{}}}
+function saveResolvedMap(o){try{localStorage.setItem(CFG.resolveKey,JSON.stringify(o))}catch(e){}}
+function resolveRiskAt(idx){
+  const row=currentRk[idx];if(!row)return;
+  const sig=rkSig(row.i);
+  const def=iso(new Date());
+  const raw=prompt(`Concluir "${cut(row.i.text,50)}"\nData da conclusão (aaaa-mm-dd):`,def);
+  if(raw===null)return;
+  const d=pDate((raw||'').trim()||def);
+  if(!d){toast('Data inválida — use aaaa-mm-dd','err');return}
+  const R=resolvedMap();
+  R[sig]={date:iso(d),text:row.i.text,ini:row.a.p.initiativeNumber||'',name:row.a.p.name||''};
+  saveResolvedMap(R);render();toast('Marcado como concluído');
+}
+function reopenResolvedAt(idx){
+  const row=currentResolvedList[idx];if(!row)return;
+  const R=resolvedMap();if(!(row[0] in R))return;
+  delete R[row[0]];saveResolvedMap(R);render();toast('Reaberto');
+}
 function snapOf(a){const p=a.p;return{pg:a.progress,lv:a.level,st:p.status,sq:p.squad,po:p.po,tl:p.techLead,
   dd:p.discoveryDate,sd:p.startDev,ed:p.endDev,tg:p.target,rk:a.risksOpen,
   fs:a.fase.atual,mv:a.movs.length,
@@ -1688,8 +1700,13 @@ function render(){
   // ── Riscos e impedimentos abertos + resumo do roadmap ──
   const TIPO={risks:'Risco',issues:'Impedimento',dependencies:'Dependência'};
   const hoje=pDate(iso(new Date()));
+  /* concluído (manualmente pelo report) numa semana anterior ou até o fim da
+     própria semana em vista não conta mais como aberto neste período */
+  const RMAP=resolvedMap();
+  const endIso=iso(end);
+  const notResolvedNow=i=>{const hit=RMAP[rkSig(i)];return !(hit&&hit.date<=endIso)};
   const rk=[];
-  scoped.forEach(a=>['risks','issues','dependencies'].forEach(g=>a.R[g].filter(i=>!i.done).forEach(i=>rk.push({a,g,i}))));
+  scoped.forEach(a=>['risks','issues','dependencies'].forEach(g=>a.R[g].filter(i=>!i.done&&notResolvedNow(i)).forEach(i=>rk.push({a,g,i}))));
   /* Complementos manuais continuam visíveis na tabela detalhada, mas NÃO alteram
      os indicadores do Roadmap. Os três números abaixo usam somente a base real
      recebida do Discovery PMO Tracker. */
@@ -1709,9 +1726,12 @@ function render(){
     const p=linked?linked.p:{id:`manual-${x.g}-${x.rm}`,initiativeNumber:x.i.iniciativa||'Adicional',name:x.i.nome||'Registro complementar',squad:x.i.squad||'Não informada'};
     const owner=linked?(linked.p.techLead||linked.p.po||x.i.resp||''):(x.i.resp||'');
     const due=linked?(linked.p.target||linked.p.endDev||x.i.prazo||''):(x.i.prazo||'');
-    rk.push({a:{p},g:x.g,i:{text:x.i.texto,owner,due,area:x.i.area,done:false},manual:true,rm:x.rm,kind:x.g==='risks'?'riscos':'dependencias',cronogramaLinked:!!linked});
+    const item={text:x.i.texto,owner,due,area:x.i.area,done:false};
+    if(!notResolvedNow(item))return;
+    rk.push({a:{p},g:x.g,i:item,manual:true,rm:x.rm,kind:x.g==='risks'?'riscos':'dependencias',cronogramaLinked:!!linked});
   });
   rk.sort((x,y)=>{const dx=pDate(x.i.due),dy=pDate(y.i.due);return (dx?dx.getTime():9e15)-(dy?dy.getTime():9e15)});
+  currentRk=rk;
 
   const overdueSchedule=scoped.flatMap(a=>scOf(a.p)
     .filter(i=>!i.jira&&!schDone(i))
@@ -1752,7 +1772,7 @@ function render(){
 
   /* risco exposto sempre com iniciativa (nome completo), squad, área responsável e dono */
   el('rkTag').textContent=`${rk.length} aberto(s)`;
-  el('rkRows').innerHTML=rk.length?rk.map(({a,g,i,manual,kind,rm,cronogramaLinked})=>{
+  el('rkRows').innerHTML=rk.length?rk.map(({a,g,i,manual,kind,rm,cronogramaLinked},idx)=>{
     const d=pDate(i.due), ar=areaOf(i,a.p);
     const sit=!d?'<span class="pill n">sem prazo</span>':d<hoje?`<span class="pill r">vencido há ${dias(d,hoje)}d</span>`
       :dias(hoje,d)===0?'<span class="pill a">vence hoje</span>'
@@ -1764,8 +1784,18 @@ function render(){
       <td><span class="pill ${g==='risks'?'r':g==='issues'?'a':'b'}">${TIPO[g]}</span></td>
       <td>${esc(cut(i.text,86))}${streak>=1?`<span class="cons">Sem evolução há ${streak+1} semanas</span>`:''}${manual?compActions(kind,rm,kind==='riscos'?'risco adicional':'dependência adicional'):''}</td>
       <td>${esc(ar.nome)}${ar.inferida?'<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span>':''}</td>
-      <td>${esc(nome2(i.owner)||'—')}${doCrono}</td><td>${i.due?fD(i.due):'—'}${doCrono}</td><td>${sit}</td></tr>`}).join('')
-    :'<tr><td colspan="8" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
+      <td>${esc(nome2(i.owner)||'—')}${doCrono}</td><td>${i.due?fD(i.due):'—'}${doCrono}</td><td>${sit}</td>
+      <td><div class="comp-actions edit-ui"><button class="comp-btn" onclick="resolveRiskAt(${idx})" title="Marcar como concluído" aria-label="Marcar como concluído">✓</button></div></td></tr>`}).join('')
+    :'<tr><td colspan="9" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
+  currentResolvedList=Object.entries(RMAP).sort((x,y)=>y[1].date.localeCompare(x[1].date)).slice(0,10);
+  const rkResBlk=el('rkResolvedBlk');
+  if(rkResBlk){
+    rkResBlk.classList.toggle('hide',!currentResolvedList.length);
+    el('rkResolvedTag').textContent=`${currentResolvedList.length}`;
+    el('rkResolvedRows').innerHTML=currentResolvedList.map(([sig,v],idx)=>
+      `<div class="li"><span class="bul" style="--c:var(--green)"></span><div><b>${esc(v.ini||'—')} ${esc(cut(v.text,70))}</b><span>${esc(v.name||'')} · concluído em ${fD(v.date)}</span></div>
+      <div class="comp-actions edit-ui"><button class="comp-btn" onclick="reopenResolvedAt(${idx})" title="Reabrir" aria-label="Reabrir">↺</button></div></div>`).join('');
+  }
 
   // ── Janelas de refinamento técnico (tabela) — somente em curso ──
   const rfList=scoped.map(a=>{
