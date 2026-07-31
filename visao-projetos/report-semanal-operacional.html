@@ -281,6 +281,34 @@
     var renderBeforeCompactActionRows=render;
     render=function(){renderBeforeCompactActionRows();renderCompactActionRows()};
     window.render=render;
+    // Antes, cada carga disparava até 9 chamadas separadas ao Apps Script
+    // (vpGeral, vpHomologation, vpOpUpdates, vpQuickNotes, discoveryPmo,
+    // vpSprint, backlog, medição e uma chamada morta pra vpEmergencyDemands —
+    // chave que nunca existiu no backend, sempre falhava em silêncio). Agora
+    // as 6 primeiras vêm numa única chamada (action=getVpDataAll, mesmo
+    // endpoint já usado pela Visão de Projetos para o mesmo problema);
+    // backlog e medição continuam separados por serem endpoints/planilhas
+    // diferentes. Total cai de 9 chamadas para 3 por carregamento.
+    function loadVpDataAll(){return jsonp(GAS+'?action=getVpDataAll',18000).then(function(r){if(!r||!r.ok)throw new Error((r&&r.error)||'Base indisponível');return r.data||{}})}
+    window.loadAll=function(manual){$('app').innerHTML='<div class="loading">Carregando visão operacional…</div>';state.errors=[];return loadVpDataAll().then(function(all){
+      var geralData=all.vpGeral||[];state.rows=asRows(geralData);state.geralImportedAt=(geralData&&geralData.importedAt)||'';
+      var homologData=all.vpHomologation||{rows:[]};state.homolog=asRows(homologData).filter(isHom);state.homologSource=homologData.sourceName||'';state.homologImportedAt=homologData.importedAt||'';
+      state.ops=all.vpOpUpdates||{};
+      state.quick=all.vpQuickNotes||JSON.parse(localStorage.getItem('overviewDsExecutiveQuickNotes')||'{}')||{};
+      state.discovery=all.discoveryPmo||{projects:[]};
+      state.sprintRows=asRows(all.vpSprint||[])||[];
+      state.loadedAt=new Date();initFilter();render();
+      if(manual)toast('Visão carregada. Backlog e Medição atualizando…');
+      return Promise.allSettled([loadBacklogData(),loadMeasurement()]).then(function(extra){
+        function extraData(i,fallback){if(extra[i].status==='fulfilled')return extra[i].value;state.errors.push(extra[i].reason&&extra[i].reason.message||'falha');return fallback}
+        var b=extraData(0,null);state.backlogFallback=!(b&&Array.isArray(b.backlog)&&b.backlog.length);state.backlog=state.backlogFallback?[verifiedBacklogSnapshot()]:b.backlog;
+        state.measurement=extraData(1,[])||[];
+        state.loadedAt=new Date();
+        (function(){var rawActions=(state.quick.weeklyExecutiveReport&&state.quick.weeklyExecutiveReport.actions)||[],cleaned=getExtras().actions;if(cleaned.length<rawActions.length)persistQuick().catch(function(){})})();
+        render();
+        if(manual&&state.errors.length)toast('Visão atualizada com '+state.errors.length+' fonte(s) indisponível(is).')
+      })
+    }).catch(function(error){state.rows=[];state.errors=[error&&error.message||'Base indisponível'];render();if(manual)toast(error&&error.message||'Falha ao carregar dados.')})};
     loadAll(false);
   })();
   </script>
