@@ -630,7 +630,7 @@ body[data-model="B"] .only-a{display:none}
       <div class="blk-b">
         <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="rkRows"></tbody></table>
         <div class="edit-ui" id="rkResolvedBlk" style="margin-top:10px">
-          <div class="blk-h" style="padding:0 0 6px"><div><h3 style="margin:0;font-size:11.5px">Concluídos recentemente</h3><p style="margin:0;font-size:9.5px;color:var(--muted)">Marcados como concluídos direto neste report. Reabra se foi engano.</p></div><span class="tagn" id="rkResolvedTag">0</span></div>
+          <div class="blk-h" style="padding:0 0 6px"><div><h3 style="margin:0;font-size:11.5px">Removidos manualmente</h3><p style="margin:0;font-size:9.5px;color:var(--muted)">Marcados como concluídos ou excluídos direto neste report. Reabra se foi engano.</p></div><span class="tagn" id="rkResolvedTag">0</span></div>
           <div id="rkResolvedRows"></div>
         </div>
       </div>
@@ -1446,8 +1446,21 @@ function resolveRiskAt(idx){
   const d=pDate((raw||'').trim()||def);
   if(!d){toast('Data inválida — use aaaa-mm-dd','err');return}
   const R=resolvedMap();
-  R[sig]={date:iso(d),text:row.i.text,ini:row.a.p.initiativeNumber||'',name:row.a.p.name||''};
+  R[sig]={date:iso(d),text:row.i.text,ini:row.a.p.initiativeNumber||'',name:row.a.p.name||'',kind:'concluido'};
   saveResolvedMap(R);render();toast('Marcado como concluído');
+}
+/* Excluir: some da lista independente de semana ou prazo — para item vindo
+   automático do Tracker que não é relevante para esta iniciativa/relatório.
+   Diferente de "concluir", não fica preso à data de conclusão: some já na
+   próxima renderização e em todas as semanas seguintes, mas continua
+   reversível pela lista de "Removidos manualmente". */
+function dismissRiskAt(idx){
+  const row=currentRk[idx];if(!row)return;
+  if(!confirm(`Excluir "${cut(row.i.text,60)}" da lista?\nContinua reversível em "Removidos manualmente".`))return;
+  const sig=rkSig(row.i);
+  const R=resolvedMap();
+  R[sig]={date:iso(new Date()),text:row.i.text,ini:row.a.p.initiativeNumber||'',name:row.a.p.name||'',kind:'excluido'};
+  saveResolvedMap(R);render();toast('Excluído da lista');
 }
 function reopenResolvedAt(idx){
   const row=currentResolvedList[idx];if(!row)return;
@@ -1674,7 +1687,7 @@ function render(){
      própria semana em vista não conta mais como aberto neste período */
   const RMAP=resolvedMap();
   const endIso=iso(end);
-  const notResolvedNow=i=>{const hit=RMAP[rkSig(i)];return !(hit&&hit.date<=endIso)};
+  const notResolvedNow=i=>{const hit=RMAP[rkSig(i)];if(!hit)return true;if(hit.kind==='excluido')return false;return !(hit.date<=endIso)};
   const rk=[];
   scoped.forEach(a=>['risks','issues','dependencies'].forEach(g=>a.R[g].filter(i=>!i.done&&notResolvedNow(i)).forEach(i=>rk.push({a,g,i}))));
   /* Complementos manuais continuam visíveis na tabela detalhada, mas NÃO alteram
@@ -1755,16 +1768,22 @@ function render(){
       <td>${esc(cut(i.text,86))}${streak>=1?`<span class="cons">Sem evolução há ${streak+1} semanas</span>`:''}${manual?compActions(kind,rm,kind==='riscos'?'risco adicional':'dependência adicional'):''}</td>
       <td>${esc(ar.nome)}${ar.inferida?'<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span>':''}</td>
       <td>${esc(nome2(i.owner)||'—')}${doCrono}</td><td>${i.due?fD(i.due):'—'}${doCrono}</td><td>${sit}</td>
-      <td><div class="comp-actions edit-ui"><button class="comp-btn" onclick="resolveRiskAt(${idx})" title="Marcar como concluído" aria-label="Marcar como concluído">✓</button></div></td></tr>`}).join('')
+      <td><div class="comp-actions edit-ui">
+        <button class="comp-btn" onclick="resolveRiskAt(${idx})" title="Marcar como concluído" aria-label="Marcar como concluído">✓</button>
+        ${manual?'':`<button class="comp-btn delete" onclick="dismissRiskAt(${idx})" title="Excluir da lista (não relacionado)" aria-label="Excluir da lista">×</button>`}
+      </div></td></tr>`}).join('')
     :'<tr><td colspan="9" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
   currentResolvedList=Object.entries(RMAP).sort((x,y)=>y[1].date.localeCompare(x[1].date)).slice(0,10);
   const rkResBlk=el('rkResolvedBlk');
   if(rkResBlk){
     rkResBlk.classList.toggle('hide',!currentResolvedList.length);
     el('rkResolvedTag').textContent=`${currentResolvedList.length}`;
-    el('rkResolvedRows').innerHTML=currentResolvedList.map(([sig,v],idx)=>
-      `<div class="li"><span class="bul" style="--c:var(--green)"></span><div><b>${esc(v.ini||'—')} ${esc(cut(v.text,70))}</b><span>${esc(v.name||'')} · concluído em ${fD(v.date)}</span></div>
-      <div class="comp-actions edit-ui"><button class="comp-btn" onclick="reopenResolvedAt(${idx})" title="Reabrir" aria-label="Reabrir">↺</button></div></div>`).join('');
+    el('rkResolvedRows').innerHTML=currentResolvedList.map(([sig,v],idx)=>{
+      const excluido=v.kind==='excluido';
+      const desc=excluido?`excluído da lista em ${fD(v.date)}`:`concluído em ${fD(v.date)}`;
+      return `<div class="li"><span class="bul" style="--c:${excluido?'var(--muted)':'var(--green)'}"></span><div><b>${esc(v.ini||'—')} ${esc(cut(v.text,70))}</b><span>${esc(v.name||'')} · ${desc}</span></div>
+      <div class="comp-actions edit-ui"><button class="comp-btn" onclick="reopenResolvedAt(${idx})" title="Reabrir" aria-label="Reabrir">↺</button></div></div>`;
+    }).join('');
   }
 
   // ── Janelas de refinamento técnico (tabela) — somente em curso ──
