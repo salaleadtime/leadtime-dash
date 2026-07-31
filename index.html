@@ -6680,6 +6680,15 @@ function renderStoryView(){
   var totalFilSt=filteredEpicIds.reduce(function(n,ep){return n+(epicMap[ep]||[]).length;},0);
   $id('svTotal').textContent=filteredEpicIds.length+' épicos · '+totalFilSt+' estórias';
 
+  // Épico sem registro correspondente (ou sem status) na aba Épicos: nome,
+  // status e lead time ficam em branco na linha (ver svEpicRow). Aviso
+  // discreto no rodapé em vez de banner, só pra não passar despercebido que
+  // falta importar/atualizar a aba Épicos para esses casos.
+  var missingEpicDataCnt=filteredEpicIds.filter(function(ep){
+    var rec=allData.find(function(r){return r.id===ep;});
+    return !(rec&&rec.status);
+  }).length;
+
   var rows=filteredEpicIds.map(function(ep){return svEpicRow(ep,epicMap[ep]);}).join('');
   var noStRows=noStoriesFiltered.map(function(id){return svEpicRow(id,[]);}).join('');
 
@@ -6702,6 +6711,7 @@ function renderStoryView(){
         '<tfoot><tr>'+
           '<td colspan="3">'+filteredEpicIds.length+' épico'+(filteredEpicIds.length!==1?'s':'')+' exibido'+(filteredEpicIds.length!==1?'s':'')+
             (noStoriesFiltered.length?' · '+noStoriesFiltered.length+' sem estórias':'')+
+            (missingEpicDataCnt?' · <span style="color:#94a3b8" title="Épico sem registro (ou sem status) na aba Épicos — nome/status/lead time ficam em branco até reimportar">'+missingEpicDataCnt+' sem dados da aba Épicos</span>':'')+
           '</td>'+
           '<td style="text-align:center"></td>'+
           '<td style="text-align:center;font-size:16px;font-weight:800;color:#0f172a">'+totalFilSt+'</td>'+
