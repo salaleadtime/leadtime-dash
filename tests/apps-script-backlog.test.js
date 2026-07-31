@@ -254,7 +254,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-07-30-base-revision-v14');
+  t('versão correta', h.version, '2026-07-31-jira-epic-snapshot-v15');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -274,6 +274,7 @@ console.log('\n═══ 13. getVpDataAll (batch, uma execução para todas as c
   t('traz vpGeral salvo', all.data.vpGeral && all.data.vpGeral.rows.length, 1);
   t('traz vpQuickNotes salvo', all.data.vpQuickNotes && all.data.vpQuickNotes.x, 'nota');
   t('chave nunca salva vem null', all.data.vpDeliveries, null);
+  t('foto Jira ainda não gravada vem null', all.data.jiraEpicSnapshot, null);
 }
 
 console.log('\n═══ 14. baseRevision — concorrência otimista (v14) ═══');

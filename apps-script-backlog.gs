@@ -64,7 +64,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-30-base-revision-v14';
+var BACKLOG_SCRIPT_VERSION = '2026-07-31-jira-epic-snapshot-v15';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -79,6 +79,9 @@ var VP_SHEET_MAP = {
   vpOpUpdates:  '_vp_opupdates',
   vpQuickNotes: '_vp_quicknotes',
   vpEpicMeta:   '_vp_epic_meta',
+  // Foto oficial da última carga Jira de épicos. É separada dos metadados para
+  // que qualquer navegador aplique a mesma carteira antes de ler o Sheets legado.
+  jiraEpicSnapshot: '_jira_epic_snapshot',
   // v13: vpPlanningConfirmations estava FALTANDO no mapa. visao-projetos/index.html
   // chama gasLoadVpData/gasSaveVpData com esta chave (L6391 e L8143), o servidor
   // respondia {ok:false,'chave inválida'} e o cliente tratava como "sem dados".

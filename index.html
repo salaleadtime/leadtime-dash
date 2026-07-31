@@ -2735,6 +2735,11 @@ function isCancelled(rec){ return !!rec && String(rec.status||'').trim()==='Canc
 // Uma história sem épico conhecido continua elegível. Quando o épico existe no
 // painel, porém, Cancelado e concluído ficam restritos à aba Medição.
 function isStoryEpicVisible(epicId){
+  // Quando existe uma carga Jira oficial recente, histórias de épicos que não
+  // pertencem àquela foto são resíduos do servidor legado e não podem inflar a
+  // aba Qtd Story/Épicos em outro navegador.
+  var jiraSnapshot=loadJiraEpicSnapshot();
+  if(jiraSnapshot && jiraSnapshot.ids.indexOf(epicId)<0) return false;
   var rec=allData.find(function(r){return r.id===epicId;});
   if(!rec) return true;
   return !isCancelled(rec) && !isValidDate(rec.fim);
@@ -3082,17 +3087,44 @@ function loadSquadCache(){
 function saveJiraEpicSnapshot(rows){
   try{
     var ids=(rows||[]).map(function(r){return r&&r.id;}).filter(Boolean);
-    storageSet(JIRA_EPIC_SNAPSHOT_KEY,JSON.stringify({ids:ids,importedAt:new Date().toISOString()}));
+    var snapshot={ids:ids,importedAt:new Date().toISOString(),source:'Jira - Épicos pós-identificados'};
+    storageSet(JIRA_EPIC_SNAPSHOT_KEY,JSON.stringify(snapshot));
+    _jiraEpicSnapshotCloud=snapshot;
+    // Publica a mesma carteira para todos os navegadores. O Sheets legado
+    // continua como fonte dos campos, mas não pode ressuscitar épicos fora da carga Jira.
+    if(BK_GAS_URL) fetch(BK_GAS_URL,{
+      method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'action=saveVpData&key=jiraEpicSnapshot&payload='+encodeURIComponent(JSON.stringify(snapshot))
+    }).catch(function(){});
   }catch(e){}
+}
+var _jiraEpicSnapshotCloud=null;
+function isUsableJiraEpicSnapshot(snap){
+  if(!snap||!Array.isArray(snap.ids)||!snap.ids.length) return false;
+  var importedAt=new Date(snap.importedAt||0);
+  return !isNaN(importedAt.getTime()) && (Date.now()-importedAt.getTime())<=48*60*60*1000;
 }
 function loadJiraEpicSnapshot(){
   try{
-    var snap=JSON.parse(storageGet(JIRA_EPIC_SNAPSHOT_KEY)||'null');
-    if(!snap||!Array.isArray(snap.ids)||!snap.ids.length) return null;
-    var importedAt=new Date(snap.importedAt||0);
-    if(isNaN(importedAt.getTime()) || (Date.now()-importedAt.getTime())>48*60*60*1000) return null;
-    return snap;
+    var local=JSON.parse(storageGet(JIRA_EPIC_SNAPSHOT_KEY)||'null');
+    var cloud=_jiraEpicSnapshotCloud;
+    if(!isUsableJiraEpicSnapshot(local)) local=null;
+    if(!isUsableJiraEpicSnapshot(cloud)) cloud=null;
+    if(!local) return cloud;
+    if(!cloud) return local;
+    return new Date(cloud.importedAt).getTime()>new Date(local.importedAt).getTime()?cloud:local;
   }catch(e){ return null; }
+}
+function loadJiraEpicSnapshotFromCloud(cb){
+  if(!BK_GAS_URL){ if(cb) cb(); return; }
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key=jiraEpicSnapshot&t='+Date.now(),function(err,json){
+    var snapshot=!err&&json&&json.ok?json.data:null;
+    if(isUsableJiraEpicSnapshot(snapshot)){
+      _jiraEpicSnapshotCloud=snapshot;
+      try{ storageSet(JIRA_EPIC_SNAPSHOT_KEY,JSON.stringify(snapshot)); }catch(e){}
+    }
+    if(cb) cb();
+  });
 }
 
 // ── Fila de escritas pendentes (motor de sincronização) ─────────────────────
@@ -8350,7 +8382,8 @@ var SEED=[
       console.log('[HealthCheck] Verificação automática às',new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     }, 3600000);
     setSyncLabel('🔄 Sincronizando com Google Sheets…');
-    // Carrega meta de squad/resumo da nuvem antes do sync do Sheets
+    // Carrega os metadados e a foto Jira antes do sync do Sheets. Assim uma
+    // sessão nova não recebe a carteira antiga enquanto a fonte legada migra.
     loadEpicMetaFromCloud();
     // Publica o calendário de sprints já salvo neste navegador para a nuvem —
     // garante que vpSprintCalendar exista no backend mesmo sem uma edição nova
@@ -8396,14 +8429,16 @@ var SEED=[
     } else {
       _afterWarmup();
     }
-    loadFromSheets(function(err, sheetsData){
-      if(!err && Array.isArray(sheetsData) && sheetsData.length){
-        replaceFromSharedSource(sheetsData);
-        registrarImportacaoSala();
-        return;
-      }
-      setSyncLabel('⚠️ Sheets offline — usando cache local');
-    }, false);
+    loadJiraEpicSnapshotFromCloud(function(){
+      loadFromSheets(function(err, sheetsData){
+        if(!err && Array.isArray(sheetsData) && sheetsData.length){
+          replaceFromSharedSource(sheetsData);
+          registrarImportacaoSala();
+          return;
+        }
+        setSyncLabel('⚠️ Sheets offline — usando cache local');
+      }, false);
+    });
     return;
   }
 
