@@ -674,6 +674,7 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .sv-kpi-item.alert .sv-kpi-val{color:#dc2626}
 .sv-card{background:#fff;border:1px solid #e8edf5;border-radius:10px;overflow:hidden;border-left:4px solid var(--sq-accent,#e2e8f0);box-shadow:0 1px 4px rgba(15,23,42,.06);transition:box-shadow .2s}
 .sv-card:hover{box-shadow:0 3px 12px rgba(15,23,42,.1)}
+.bk-vision-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:0 0 14px}.bk-vision-title{font-size:19px;font-weight:850;letter-spacing:-.35px;color:#172033;margin:0}.bk-vision-copy{font-size:11px;color:#71809a;margin:4px 0 0}.bk-vision-rule{font-size:10px;font-weight:750;color:#61708a;background:#f7f9fc;border:1px solid #e7edf5;border-radius:999px;padding:6px 10px;white-space:nowrap}.bk-sources-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}.bk-source-panel{background:#fff;border:1px solid #e5ebf3;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,.04)}.bk-source-panel--backlog{border-top:4px solid #7897dd}.bk-source-panel--ops{border-top:4px solid #df8aa3}.bk-source-panel .sv-upbar{margin:0!important;border:0!important;border-bottom:1px solid #edf1f5!important;border-radius:0!important;background:transparent!important;padding:10px 12px!important;min-height:auto}.bk-source-panel .sv-up-name{font-size:12px}.bk-source-panel .sv-up-sub{display:none}.bk-source-panel .up-btn{font-size:10px;padding:5px 8px;border-radius:7px}.bk-source-panel .ep{margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:12px!important}.bk-source-panel .sv-kpi{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px!important}.bk-source-panel .sv-kpi-item{min-height:86px;padding:12px 11px;border-radius:12px!important;box-shadow:none!important}.bk-source-panel--backlog .sv-kpi-item{background:#f2f6ff!important}.bk-source-panel--ops .sv-kpi-item{background:#fff3f6!important}.bk-source-panel .sv-kpi-val{font-size:25px}.bk-source-panel .sv-kpi-lbl{font-size:9px}.bk-source-panel .sv-kpi-sub{font-size:9px}.bk-source-panel .bk-delta-bar,.bk-source-panel .bk-history{display:none}.bk-source-panel .sec-lbl{font-size:10px!important;margin:3px 0 8px!important}.bk-source-panel .bk-squad-list{gap:7px}.bk-source-panel .bk-squad-card{border-radius:11px!important;box-shadow:none!important}.bk-source-panel .bk-squad-hd{padding:9px 10px!important}.bk-source-panel .bk-squad-name{font-size:12px}.bk-source-panel .bk-squad-cnt{font-size:20px}.bk-source-panel .bk-squad-sub{font-size:9px}.bk-source-panel .bk-st-pills{gap:3px;margin-top:4px}.bk-source-panel .bk-st-pill{font-size:8px;padding:2px 5px}.bk-source-panel .bk-spark-row{display:none}.bk-source-panel .bk-squad-hd-row2{margin-top:5px}.bk-source-panel .bk-refined-cnt{font-size:9px;padding:3px 5px}.bk-source-panel .bk-squad-body{max-height:300px;overflow:auto}.bk-source-panel .bk-story-row{padding:8px 10px;grid-template-columns:98px 1fr auto;gap:6px}.bk-source-panel .empty{padding:2rem 1rem!important}@media(max-width:980px){.bk-sources-grid{grid-template-columns:1fr}.bk-vision-head{align-items:flex-start;flex-direction:column;gap:7px}.bk-vision-rule{white-space:normal}}
 .sv-card-list{display:flex;flex-direction:column;gap:6px}
 .sv-card-hd{display:flex;align-items:center;gap:8px;padding:.55rem 1rem;cursor:pointer;user-select:none;flex-wrap:wrap;min-height:42px}
 .sv-card-hd:hover{background:#fafafa}
@@ -2105,7 +2106,16 @@ tr:nth-child(even):hover td,
 
 <!-- ══ BACKLOG / REFINAMENTO PANE ══ -->
 <div class="pane" id="pane-bk">
+  <div class="bk-vision-head">
+    <div>
+      <h2 class="bk-vision-title">Visão de Backlog x Refinamento</h2>
+      <p class="bk-vision-copy">Acompanhamento de refinamento por origem, squad e história.</p>
+    </div>
+    <span class="bk-vision-rule">Backlog e Ops4Ops, sem misturar os dados.</span>
+  </div>
 
+  <div class="bk-sources-grid">
+  <section class="bk-source-panel bk-source-panel--backlog">
   <div class="sv-upbar" id="bkUpbar">
     <span style="font-size:13px;flex-shrink:0">📥</span>
     <span class="sv-up-name" id="bkUpName">Story no Backlog Refinadas</span>
@@ -2125,22 +2135,25 @@ tr:nth-child(even):hover td,
       <div style="font-size:12px;color:#94a3b8">Importe um export do Jira com histórias em Product Backlog acima.<br>Cada importação cria um snapshot: #1, #2, #3… mostrando a evolução por squad.</div>
     </div>
   </div>
+  </section>
 
-  <div class="sv-upbar" id="opsUpbar" style="margin-top:1.4rem">
+  <section class="bk-source-panel bk-source-panel--ops">
+  <div class="sv-upbar" id="opsUpbar">
     <span style="font-size:13px;flex-shrink:0">🔧</span>
-    <span class="sv-up-name" id="opsUpName">Ops4Ops · Refinada x Backlog</span>
-    <span class="sv-up-sub" id="opsUpSub">Export Jira do Ops4Ops · cria snapshot de evolução própria · .xlsx ou .csv</span>
-    <span class="up-saved hidden" id="opsUpSaved">💾 <span id="opsUpSavedTxt">Salvo localmente</span></span>
-    <input type="file" id="fiOps" accept=".xlsx,.xls,.csv">
-    <button class="up-btn" onclick="document.getElementById('fiOps').click()">Selecionar arquivo</button>
+    <span class="sv-up-name" id="opsUpName">Ops4Ops · dados do Discovery</span>
+    <span class="sv-up-sub" id="opsUpSub">As histórias são importadas e sincronizadas pelo Discovery PMO Tracker.</span>
+    <span class="up-saved hidden" id="opsUpSaved">☁️ <span id="opsUpSavedTxt">Aguardando sincronização</span></span>
+    <a class="up-btn" href="discovery-pmo/" style="text-decoration:none">Abrir Discovery</a>
   </div>
 
   <div class="ep" id="ops4opsContent">
     <div class="empty" style="padding:2rem 2rem;text-align:center">
       <div style="font-size:28px;margin-bottom:.6rem">🔧</div>
-      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhuma carga do Ops4Ops importada ainda</div>
-      <div style="font-size:12px;color:#94a3b8">Importe o export do Jira com as histórias do Ops4Ops acima.</div>
+      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado do Ops4Ops disponível ainda</div>
+      <div style="font-size:12px;color:#94a3b8">Importe e sincronize as histórias no Discovery PMO Tracker.</div>
     </div>
+  </div>
+  </section>
   </div>
 
 </div>
@@ -2342,6 +2355,7 @@ var backlogSnaps=[];
 var OPS4OPS_KEY='leadtime_sala_v8_ops4ops_snaps';
 var OPS4OPS_CLOUD_KEY='ops4opsSnaps';
 var ops4opsSnaps=[];
+var ops4opsFromDiscovery=false;
 var _gasOps4opsSaving=false;
 var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
@@ -5563,7 +5577,7 @@ function buildSquadCards(stories,squads,prevSquadCnt,snapsHistory,curSeq){
           '</div>'+
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">'+
             '<span class="bk-squad-cnt">'+cnt+'</span>'+
-            '<span class="bk-squad-sub">histórias</span>'+
+            '<span class="bk-squad-sub">itens no Backlog</span>'+
           '</div>'+
         '</div>'+
         '<div class="bk-squad-hd-row2">'+
@@ -5710,18 +5724,21 @@ function renderBacklogView(){
 // exibido abaixo do "Backlog por Squad" na aba Backlog/Refinamento.
 // ═══════════════════════════════════════
 function saveOps4opsSnaps(){
+  // O Ops4Ops tem o Discovery como fonte única de verdade. Esta aba nunca salva.
+  return;
+  /* legado mantido abaixo apenas para compatibilidade de leitura do código antigo:
   if(ops4opsSnaps.length>MAX_BACKLOG_SNAPS){
     ops4opsSnaps.sort(compareBacklogSnaps);
     ops4opsSnaps=ops4opsSnaps.slice(ops4opsSnaps.length-MAX_BACKLOG_SNAPS);
   }
   try{ storageSet(OPS4OPS_KEY,JSON.stringify(ops4opsSnaps)); }catch(e){}
   gasSaveOps4ops();
+  */
 }
 function loadOps4opsSnaps(){
-  try{
-    var raw=storageGet(OPS4OPS_KEY);
-    if(raw) ops4opsSnaps=JSON.parse(raw)||[];
-  }catch(e){ ops4opsSnaps=[]; }
+  // Ignora snapshots antigos do navegador: evita exibir dados que não vieram do Discovery.
+  ops4opsFromDiscovery=true;
+  ops4opsSnaps=[];
 }
 function getCurrentOps4opsSnapshot(){ if(!ops4opsSnaps.length) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-1]; }
 
@@ -5751,7 +5768,7 @@ function mergeOps4ops(incoming){
 // nunca viam os dados (mode:'no-cors' torna a resposta opaca; ver getVpData
 // no load para confirmar a gravação).
 function gasSaveOps4ops(){
-  if(!BK_GAS_URL || !ops4opsSnaps.length || _gasOps4opsSaving) return;
+  if(ops4opsFromDiscovery || !BK_GAS_URL || !ops4opsSnaps.length || _gasOps4opsSaving) return;
   _gasOps4opsSaving=true;
   fetch(BK_GAS_URL, {
     method:'POST',
@@ -5776,9 +5793,47 @@ function gasLoadOps4ops(cb){
     if(cb) cb(null, ops4opsSnaps.length, added);
   });
 }
+
+// O Ops4Ops é importado no Discovery PMO Tracker. Esta aba apenas consome
+// as histórias já sincronizadas em discoveryPmo, sem duplicar a importação
+// nem criar uma segunda base.
+function gasLoadOps4opsFromDiscovery(cb){
+  if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key=discoveryPmo&t='+Date.now(), function(err,json){
+    if(err || !json || !json.ok || !json.data){ if(cb) cb(err||'sem dados',0); return; }
+    var projects=Array.isArray(json.data.projects)?json.data.projects:[];
+    var seen={}, stories=[];
+    projects.forEach(function(project){
+      (Array.isArray(project.jiraStories)?project.jiraStories:[]).forEach(function(story){
+        var id=String(story.key||story.id||'').trim();
+        if(!id || seen[id]) return;
+        if(/epic/i.test(String(story.tipo||story.type||''))) return;
+        seen[id]=true;
+        stories.push({
+          id:id,
+          resumo:String(story.summary||story.resumo||''),
+          status:String(story.status||''),
+          squad:normalizeSquad(String(story.team||project.squad||'')),
+          labels:Array.isArray(story.labels)?story.labels.join(' | '):String(story.labels||''),
+          atualizado:story.updated||project.updatedAt||'',
+          responsavel:String(project.owner||'')
+        });
+      });
+    });
+    if(!stories.length){ if(cb) cb(null,0); return; }
+    // Snapshot transitório: o Discovery permanece como fonte de verdade.
+    ops4opsFromDiscovery=true;
+    ops4opsSnaps=[{id:'discovery-pmo',seq:1,stories:stories,importedAt:json.data.updatedAt||new Date().toISOString()}];
+    if(cb) cb(null,1,stories.length);
+  });
+}
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
 function loadOps4opsXlsx(file){
+  // Fonte única: a importação é feita no Discovery PMO Tracker.
+  // Esta aba não aceita carga local, mesmo se a função for chamada indiretamente.
+  toast('Ops4Ops é gerenciado pelo Discovery','Abra o Discovery PMO Tracker para importar ou atualizar as histórias.','warn');
+  return;
   if(typeof XLSX==='undefined'){
     loadXlsxLib(function(){loadOps4opsXlsx(file);});
     return;
@@ -5845,8 +5900,8 @@ function renderOps4opsView(){
     host.innerHTML=
       '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
       '<div style="font-size:28px;margin-bottom:.6rem">🔧</div>'+
-      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhuma carga do Ops4Ops importada ainda</div>'+
-      '<div style="font-size:12px;color:#94a3b8">Importe o export do Jira com as histórias do Ops4Ops acima.</div>'+
+      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado do Ops4Ops disponível ainda</div>'+
+      '<div style="font-size:12px;color:#94a3b8">Importe e sincronize as histórias no Discovery PMO Tracker.</div>'+
       '</div>';
     return;
   }
@@ -7007,24 +7062,12 @@ $id('fiBk').onchange=function(e){
 };
 $id('fiBkJson').onchange=function(e){if(e.target.files[0]){ importBacklogJson(e.target.files[0]); this.value=''; }};
 
-// Ops4Ops upload (conjunto independente, exibido abaixo do Backlog por Squad)
-var fiOps=$id('fiOps');
-if(fiOps) fiOps.onchange=function(e){
-  if(!e.target.files[0]) return;
-  if(!guardImportStart()){ this.value=''; return; }
-  loadOps4opsXlsx(e.target.files[0]);
-};
+// Ops4Ops é carregado do Discovery PMO; não há importação local nesta aba.
 var bkUb=$id('bkUpbar');
 if(bkUb){
   bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
   bkUb.addEventListener('dragleave',function(){bkUb.style.background='';});
   bkUb.addEventListener('drop',function(e){e.preventDefault();bkUb.style.background='';if(e.dataTransfer.files[0]&&guardImportStart()) loadBacklogXlsx(e.dataTransfer.files[0]);});
-}
-var opsUb=$id('opsUpbar');
-if(opsUb){
-  opsUb.addEventListener('dragover',function(e){e.preventDefault();opsUb.style.background='var(--accent-soft)';});
-  opsUb.addEventListener('dragleave',function(){opsUb.style.background='';});
-  opsUb.addEventListener('drop',function(e){e.preventDefault();opsUb.style.background='';if(e.dataTransfer.files[0]&&guardImportStart()) loadOps4opsXlsx(e.dataTransfer.files[0]);});
 }
 var svUb=$id('svUpbar');
 if(svUb){
@@ -8151,13 +8194,13 @@ var SEED=[
           toast('⚠️ Backlog: falha ao carregar servidor','Erro: '+err,'warn');
         }
       });
-      gasLoadOps4ops(function(err, count, added){
+      gasLoadOps4opsFromDiscovery(function(err, count, added){
         if(!err && count>0){
-          var opsN=$id('opsUpName'); if(opsN) opsN.textContent='Ops4Ops sincronizado';
-          var opsS=$id('opsUpSub'); if(opsS) opsS.textContent=count+' snapshots carregados do servidor';
+          var opsN=$id('opsUpName'); if(opsN) opsN.textContent='Ops4Ops carregado do Discovery';
+          var opsS=$id('opsUpSub'); if(opsS) opsS.textContent=added+' histórias importadas no Discovery';
           var opsSv=$id('opsUpSaved'); if(opsSv) opsSv.classList.remove('hidden');
           renderOps4opsView();
-          if(added) toast('☁️ Ops4Ops carregado','Dados do servidor: '+count+' snapshots disponíveis.');
+          if(added) toast('☁️ Ops4Ops carregado','Histórias sincronizadas a partir do Discovery PMO.');
         } else if(err){
           toast('⚠️ Ops4Ops: falha ao carregar servidor','Erro: '+err,'warn');
         }
