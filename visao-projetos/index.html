@@ -6208,8 +6208,8 @@
   <div class="loading-overlay hidden" id="loadingOverlay">
     <div class="loading-card">
       <div class="spinner"></div>
-      <h3>Importando planilha...</h3>
-      <p>Processando dados do Jira.<br>Isso pode levar alguns segundos.</p>
+      <h3 id="loadingOverlayTitle">Importando planilha...</h3>
+      <p id="loadingOverlaySubtitle">Processando dados do Jira.<br>Isso pode levar alguns segundos.</p>
       <div class="loading-progress">
         <div class="loading-progress-bar" id="loadBar"></div>
       </div>
@@ -9818,9 +9818,12 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     ══════════════════════════════════════════════════════════ */
 
     /* #3 — Loading overlay */
-    function showLoadingOverlay(msg){
+    function showLoadingOverlay(title, subtitle){
       const el = $('loadingOverlay');
       if(!el) return;
+      const titleEl = $('loadingOverlayTitle'), subtitleEl = $('loadingOverlaySubtitle');
+      if(titleEl) titleEl.textContent = title || 'Importando planilha...';
+      if(subtitleEl) subtitleEl.innerHTML = subtitle || 'Processando dados do Jira.<br>Isso pode levar alguns segundos.';
       el.classList.remove('hidden');
       const bar = $('loadBar');
       if(bar){ bar.style.width='0'; setTimeout(()=>{ bar.style.width='70%'; }, 50); }
@@ -9921,8 +9924,11 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     /* ══════════════════════════════════════════════════════════ */
 
     // No primeiro acesso ainda nÃ£o hÃ¡ uma base local: aguarda a fonte
-    // compartilhada em vez de mostrar o snapshot histÃ³rico embutido.
-    showLoadingOverlay();
+    // compartilhada em vez de mostrar o snapshot histÃ³rico embutido. Esse
+    // sincronismo acontece toda vez que a página abre (não só na primeira
+    // vez) — por isso usa um texto próprio, sem mencionar "importação", que
+    // é uma ação separada que o usuário dispara manualmente.
+    showLoadingOverlay('Sincronizando com a base compartilhada...', 'Carregando os dados mais recentes.<br>Isso pode levar alguns segundos.');
     setTimeout(hideVpInitialSync, 8000);
     setupFilters();
     restoreSquadFromUrl();
