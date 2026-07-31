@@ -2739,18 +2739,18 @@ function isHistoricEpic(rec){
 }
 // Uma história sem épico conhecido continua elegível. Quando o épico existe no
 // painel, porém, Cancelado e concluído ficam restritos à aba Medição.
-function isStoryEpicVisible(epicId){
-  // Quando existe uma carga Jira oficial recente, histórias de épicos que não
-  // pertencem àquela foto são resíduos do servidor legado e não podem inflar a
-  // aba Qtd Story/Épicos em outro navegador.
+function isStoryEpicVisible(epicId, restrictToCurrentEpicSnapshot){
+  // A foto Jira vale somente para Qtd Story/Épicos. Backlog, Ops4Ops e os
+  // demais painéis possuem conjuntos de histórias próprios e não têm, em
+  // geral, o campo `epic`; aplicá-la ali zerava o painel em janela anônima.
   var jiraSnapshot=loadJiraEpicSnapshot();
-  if(jiraSnapshot && jiraSnapshot.ids.indexOf(epicId)<0) return false;
+  if(restrictToCurrentEpicSnapshot && jiraSnapshot && epicId && jiraSnapshot.ids.indexOf(epicId)<0) return false;
   var rec=allData.find(function(r){return r.id===epicId;});
   if(!rec) return true;
   return !isCancelled(rec) && !isValidDate(rec.fim);
 }
-function visibleStoryRows(stories){
-  return (stories||[]).filter(function(s){ return isStoryEpicVisible(s&&s.epic); });
+function visibleStoryRows(stories, restrictToCurrentEpicSnapshot){
+  return (stories||[]).filter(function(s){ return isStoryEpicVisible(s&&s.epic,restrictToCurrentEpicSnapshot); });
 }
 function activeEpics(){
   return allData.filter(function(r){ return !isCancelled(r) && !isValidDate(r.fim); });
@@ -4721,7 +4721,7 @@ function updateTabCounts(){
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
   var svEl=$id('tabCtSv');
-  var visibleStoryCount=visibleStoryRows(allStories).length;
+  var visibleStoryCount=visibleStoryRows(allStories,true).length;
   if(svEl) svEl.textContent=visibleStoryCount||'';
   var bkEl=$id('tabCtBk');
   if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?visibleStoryRows(bkCurSnap.stories).length:0; bkEl.textContent=bkCur||''; }
@@ -6646,7 +6646,7 @@ function renderStoryView(){
   var faseFilter=svFase?svFase.value:'all';
   var activeStoryEpics=allData.filter(function(r){return isStoryEpicVisible(r.id);});
   var activeStoryEpicIds=activeStoryEpics.map(function(r){return r.id;});
-  var visibleStories=visibleStoryRows(allStories);
+  var visibleStories=visibleStoryRows(allStories,true);
 
   // Populate squad dropdown from active epics/stories only.
   var allSquads=Array.from(new Set(
