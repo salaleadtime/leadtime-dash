@@ -630,7 +630,7 @@ body[data-model="B"] .only-a{display:none}
       <div class="blk-b">
         <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="rkRows"></tbody></table>
         <div class="edit-ui" id="rkResolvedBlk" style="margin-top:10px">
-          <div class="blk-h" style="padding:0 0 6px"><div><h3 style="margin:0;font-size:11.5px">Removidos manualmente</h3><p style="margin:0;font-size:9.5px;color:var(--muted)">Marcados como concluídos ou excluídos direto neste report. Reabra se foi engano.</p></div><span class="tagn" id="rkResolvedTag">0</span></div>
+          <div class="blk-h" style="padding:0 0 6px"><div><h3 style="margin:0;font-size:11.5px">Concluídos recentemente</h3><p style="margin:0;font-size:9.5px;color:var(--muted)">Marcados como concluídos direto neste report. Reabra se foi engano. Itens excluídos não aparecem aqui.</p></div><span class="tagn" id="rkResolvedTag">0</span></div>
           <div id="rkResolvedRows"></div>
         </div>
       </div>
@@ -1773,15 +1773,15 @@ function render(){
         ${manual?'':`<button class="comp-btn delete" onclick="dismissRiskAt(${idx})" title="Excluir da lista (não relacionado)" aria-label="Excluir da lista">×</button>`}
       </div></td></tr>`}).join('')
     :'<tr><td colspan="9" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
-  currentResolvedList=Object.entries(RMAP).sort((x,y)=>y[1].date.localeCompare(x[1].date)).slice(0,10);
+  /* excluído não aparece nem aqui — é para sumir de vez, sem deixar rastro visível.
+     Só "concluído" fica reversível nesta lista. */
+  currentResolvedList=Object.entries(RMAP).filter(([,v])=>v.kind!=='excluido').sort((x,y)=>y[1].date.localeCompare(x[1].date)).slice(0,10);
   const rkResBlk=el('rkResolvedBlk');
   if(rkResBlk){
     rkResBlk.classList.toggle('hide',!currentResolvedList.length);
     el('rkResolvedTag').textContent=`${currentResolvedList.length}`;
     el('rkResolvedRows').innerHTML=currentResolvedList.map(([sig,v],idx)=>{
-      const excluido=v.kind==='excluido';
-      const desc=excluido?`excluído da lista em ${fD(v.date)}`:`concluído em ${fD(v.date)}`;
-      return `<div class="li"><span class="bul" style="--c:${excluido?'var(--muted)':'var(--green)'}"></span><div><b>${esc(v.ini||'—')} ${esc(cut(v.text,70))}</b><span>${esc(v.name||'')} · ${desc}</span></div>
+      return `<div class="li"><span class="bul" style="--c:var(--green)"></span><div><b>${esc(v.ini||'—')} ${esc(cut(v.text,70))}</b><span>${esc(v.name||'')} · concluído em ${fD(v.date)}</span></div>
       <div class="comp-actions edit-ui"><button class="comp-btn" onclick="reopenResolvedAt(${idx})" title="Reabrir" aria-label="Reabrir">↺</button></div></div>`;
     }).join('');
   }
