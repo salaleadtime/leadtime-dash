@@ -1355,8 +1355,8 @@ const MODAL_DEF={
   evolucao:{t:'Evolução relevante',h:'Movimento ocorrido no período que ainda não está registrado no Discovery.',f:[['texto','O que mudou','textarea'],['detalhe','Iniciativa, squad ou contexto','text']]},
   alinhamentos:{t:'Alinhamento realizado',h:'Acordo, reunião ou direcionamento concluído no período.',f:[['texto','Alinhamento realizado','textarea'],['detalhe','Participantes ou iniciativa','text']]},
   itens:{t:'Pendência adicional',h:'Ponto de atenção que ainda não está cadastrado no Discovery.',f:[['texto','Pendência','textarea'],['detalhe','Iniciativa / contexto','text']]},
-  riscos:{t:'Risco adicional',h:'Risco ainda não cadastrado no RAID do Discovery.',f:[['iniciativa','Nº da iniciativa','text'],['nome','Nome da iniciativa','text'],['squad','Squad','text'],['texto','Descrição do risco','textarea'],['area','Área responsável','text'],['resp','Dono','text'],['prazo','Prazo','date']]},
-  dependencias:{t:'Dependência adicional',h:'Dependência ainda não cadastrada no RAID do Discovery.',f:[['iniciativa','Nº da iniciativa','text'],['nome','Nome da iniciativa','text'],['squad','Squad','text'],['texto','Descrição da dependência','textarea'],['area','Área responsável','text'],['resp','Dono','text'],['prazo','Prazo','date']]},
+  riscos:{t:'Risco adicional',h:'Risco ainda não cadastrado no RAID do Discovery. Se a iniciativa informada existir no Cronograma, Dono e Prazo são puxados de lá automaticamente.',f:[['iniciativa','Nº da iniciativa','text'],['nome','Nome da iniciativa','text'],['squad','Squad','text'],['texto','Descrição do risco','textarea'],['area','Área responsável','text'],['resp','Dono (só se a iniciativa não estiver no Cronograma)','text'],['prazo','Prazo (só se a iniciativa não estiver no Cronograma)','date']]},
+  dependencias:{t:'Dependência adicional',h:'Dependência ainda não cadastrada no RAID do Discovery. Se a iniciativa informada existir no Cronograma, Dono e Prazo são puxados de lá automaticamente.',f:[['iniciativa','Nº da iniciativa','text'],['nome','Nome da iniciativa','text'],['squad','Squad','text'],['texto','Descrição da dependência','textarea'],['area','Área responsável','text'],['resp','Dono (só se a iniciativa não estiver no Cronograma)','text'],['prazo','Prazo (só se a iniciativa não estiver no Cronograma)','date']]},
   obs:{t:'Observação executiva',h:'Síntese opcional para contextualizar a leitura da gestão.',f:[['texto','Observação executiva','textarea']]},
   avancos:{t:'Avanço confirmado',h:'Avanço adicional do período que ainda não foi identificado automaticamente.',f:[['texto','Avanço confirmado','textarea'],['detalhe','Iniciativa / contexto','text']]}
 };
@@ -1682,8 +1682,23 @@ function render(){
      os indicadores do Roadmap. Os três números abaixo usam somente a base real
      recebida do Discovery PMO Tracker. */
   const trackerRk=rk.slice();
+  /* regra: Dono e Prazo de um complemento manual devem sempre vir do Cronograma
+     da iniciativa vinculada (Tech Lead/PO e Data-alvo/Fim do Delivery), igual ao
+     que já acontece nos riscos automáticos. O campo digitado no formulário só é
+     usado quando a iniciativa informada não é encontrada no Cronograma. */
+  const findIniciativa=(num,nome)=>{
+    const n=norm(num||''),nm=norm(nome||'');
+    if(!n&&!nm)return null;
+    return scoped.find(a=>(n&&norm(a.p.initiativeNumber||'')===n)||(nm&&norm(a.p.name||'')===nm))||null;
+  };
   const manualRaid=[...(E.riscos||[]).map((i,idx)=>({g:'risks',i,rm:idx})),...(E.dependencias||[]).map((i,idx)=>({g:'dependencies',i,rm:idx}))];
-  manualRaid.forEach((x)=>{const p={id:`manual-${x.g}-${x.rm}`,initiativeNumber:x.i.iniciativa||'Adicional',name:x.i.nome||'Registro complementar',squad:x.i.squad||'Não informada'};rk.push({a:{p},g:x.g,i:{text:x.i.texto,owner:x.i.resp,due:x.i.prazo,area:x.i.area,done:false},manual:true,rm:x.rm,kind:x.g==='risks'?'riscos':'dependencias'})});
+  manualRaid.forEach((x)=>{
+    const linked=findIniciativa(x.i.iniciativa,x.i.nome);
+    const p=linked?linked.p:{id:`manual-${x.g}-${x.rm}`,initiativeNumber:x.i.iniciativa||'Adicional',name:x.i.nome||'Registro complementar',squad:x.i.squad||'Não informada'};
+    const owner=linked?(linked.p.techLead||linked.p.po||x.i.resp||''):(x.i.resp||'');
+    const due=linked?(linked.p.target||linked.p.endDev||x.i.prazo||''):(x.i.prazo||'');
+    rk.push({a:{p},g:x.g,i:{text:x.i.texto,owner,due,area:x.i.area,done:false},manual:true,rm:x.rm,kind:x.g==='risks'?'riscos':'dependencias',cronogramaLinked:!!linked});
+  });
   rk.sort((x,y)=>{const dx=pDate(x.i.due),dy=pDate(y.i.due);return (dx?dx.getTime():9e15)-(dy?dy.getTime():9e15)});
 
   const overdueSchedule=scoped.flatMap(a=>scOf(a.p)
@@ -1725,18 +1740,19 @@ function render(){
 
   /* risco exposto sempre com iniciativa (nome completo), squad, área responsável e dono */
   el('rkTag').textContent=`${rk.length} aberto(s)`;
-  el('rkRows').innerHTML=rk.length?rk.map(({a,g,i,manual,kind,rm})=>{
+  el('rkRows').innerHTML=rk.length?rk.map(({a,g,i,manual,kind,rm,cronogramaLinked})=>{
     const d=pDate(i.due), ar=areaOf(i,a.p);
     const sit=!d?'<span class="pill n">sem prazo</span>':d<hoje?`<span class="pill r">vencido há ${dias(d,hoje)}d</span>`
       :dias(hoje,d)===0?'<span class="pill a">vence hoje</span>'
       :dias(hoje,d)<=7?`<span class="pill a">vence em ${dias(hoje,d)}d</span>`:'<span class="pill g">no prazo</span>';
     const streak=riskStreak(a.p.id,rkSig(i),curWeek);
+    const doCrono=manual&&cronogramaLinked?'<span style="color:var(--muted);font-size:8.5px;display:block">do Cronograma</span>':'';
     return `<tr><td><b style="color:var(--primary)">${esc(a.p.initiativeNumber||'—')}</b><br><span style="color:var(--ink)">${esc(a.p.name)}</span></td>
       <td>${esc(a.p.squad||'Sem squad')}</td>
       <td><span class="pill ${g==='risks'?'r':g==='issues'?'a':'b'}">${TIPO[g]}</span></td>
       <td>${esc(cut(i.text,86))}${streak>=1?`<span class="cons">Sem evolução há ${streak+1} semanas</span>`:''}${manual?compActions(kind,rm,kind==='riscos'?'risco adicional':'dependência adicional'):''}</td>
       <td>${esc(ar.nome)}${ar.inferida?'<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span>':''}</td>
-      <td>${esc(nome2(i.owner)||'—')}</td><td>${i.due?fD(i.due):'—'}</td><td>${sit}</td></tr>`}).join('')
+      <td>${esc(nome2(i.owner)||'—')}${doCrono}</td><td>${i.due?fD(i.due):'—'}${doCrono}</td><td>${sit}</td></tr>`}).join('')
     :'<tr><td colspan="8" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
 
   // ── Janelas de refinamento técnico (tabela) — somente em curso ──
