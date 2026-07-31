@@ -392,7 +392,7 @@ body[data-model="B"] .only-a{display:none}
   <button class="tb ok" onclick="capturePng(this)" title="Gera uma imagem PNG real do report inteiro">▣ Capturar PNG</button>
   <button class="tb" onclick="exportPdf(this)">⇩ Exportar PDF</button>
   <button class="tb" onclick="returnToTracker()">← Voltar ao Discovery</button>
-  <div class="tstatus"><b id="srcLabel">Servidor Discovery PMO</b><span id="srcDetail">Carregando iniciativas…</span></div>
+  <div class="tstatus"><span id="srcDetail">Carregando iniciativas…</span></div>
 </div>
 
 <div class="stage">
@@ -1568,7 +1568,7 @@ function render(){
     .filter(m=>{if(seen.has(m.a.p.id))return false;seen.add(m.a.p.id);return true});
 
   // cabeçalho
-  el('srcLabel').textContent=source;{const editedLabel=dataEditedLabel();el('srcDetail').textContent=`${scoped.length} iniciativa(s) · atualizado ${dataUpdatedLabel()}`+(editedLabel?` · editado ${editedLabel}`:'');}
+  {const editedLabel=dataEditedLabel();el('srcDetail').innerHTML=`${scoped.length} iniciativa(s)<br><b>Base atualizada</b> em ${dataUpdatedLabel()} BRT`+(editedLabel?`<br><b>Base editada</b> em ${editedLabel} BRT`:'');}
   el('heroWeek').textContent=`${fDM(start)} – ${fDM(new Date(end))}`;
   el('heroScope').textContent=selectedSquadName(squad)||'todas as squads';
   el('heroSub').textContent=`${scoped.length} iniciativas acompanhadas · maturidade média de ${avg}%`;
