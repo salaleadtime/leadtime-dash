@@ -1,0 +1,17 @@
+name: Testes
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  apps-script-backlog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Roda suíte E2E do apps-script-backlog.gs
+        run: node tests/apps-script-backlog.test.js

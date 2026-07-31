@@ -254,7 +254,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-07-28-guardas-e-snapshots-v13');
+  t('versão correta', h.version, '2026-07-30-base-revision-v14');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -274,6 +274,50 @@ console.log('\n═══ 13. getVpDataAll (batch, uma execução para todas as c
   t('traz vpGeral salvo', all.data.vpGeral && all.data.vpGeral.rows.length, 1);
   t('traz vpQuickNotes salvo', all.data.vpQuickNotes && all.data.vpQuickNotes.x, 'nota');
   t('chave nunca salva vem null', all.data.vpDeliveries, null);
+}
+
+console.log('\n═══ 14. baseRevision — concorrência otimista (v14) ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const st = n => JSON.stringify(Array.from({length:n},(_,i)=>({id:i})));
+
+  const first = parse(ctx.doPost(post({ action:'saveStories', payload: st(20) })));
+  t('primeira carga grava e devolve revisão 1', [first.ok, first.revision], [true, 1]);
+
+  const g1 = parse(ctx.doGet(post({ action:'getStories' })));
+  t('getStories expõe a revisão atual', g1.revision, 1);
+
+  const withStaleRev = parse(ctx.doPost(post({
+    action:'saveStories', payload: st(20), baseRevision: 1
+  })));
+  t('gravação com baseRevision atual é aceita', withStaleRev.ok, true);
+  t('revisão avança para 2', withStaleRev.revision, 2);
+
+  // Simula duas pessoas: ambas leram a revisão 2, uma salva primeiro (vai para 3)...
+  const winner = parse(ctx.doPost(post({ action:'saveStories', payload: st(21), baseRevision: 2 })));
+  t('primeira gravação concorrente passa', [winner.ok, winner.revision], [true, 3]);
+  // ...a segunda ainda manda baseRevision=2 (desatualizado) e deve ser recusada.
+  const loser = parse(ctx.doPost(post({ action:'saveStories', payload: st(19), baseRevision: 2 })));
+  t('segunda gravação com revisão desatualizada é RECUSADA', loser.ok, false);
+  t('resposta sinaliza conflito de revisão', loser.conflict, true);
+  t('revisão atual informada no erro de conflito', loser.currentRevision, 3);
+  t('dado do vencedor permanece intacto (não foi sobrescrito pelo perdedor)',
+    lerAba(SHEETS, '_stories_chunks').length, 21);
+
+  // Cliente que nunca leu (sem baseRevision) continua funcionando como antes —
+  // fluxos automáticos do Bradesco não quebram com esta versão.
+  const noRevision = parse(ctx.doPost(post({ action:'saveStories', payload: st(22) })));
+  t('gravação sem baseRevision não é bloqueada por conflito', noRevision.ok, true);
+
+  // saveVpData segue a mesma regra.
+  const mk = n => JSON.stringify({ rows: Array.from({length:n}, (_,i)=>({id:i})) });
+  const vp1 = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(10) })));
+  t('saveVpData primeira carga devolve revisão 1', [vp1.ok, vp1.revision], [true, 1]);
+  const vp2 = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(11), baseRevision: 1 })));
+  t('saveVpData com revisão certa passa', [vp2.ok, vp2.revision], [true, 2]);
+  const vpConflict = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(12), baseRevision: 1 })));
+  t('saveVpData com revisão velha é RECUSADO', vpConflict.ok, false);
+  t('saveVpData sinaliza conflito', vpConflict.conflict, true);
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
