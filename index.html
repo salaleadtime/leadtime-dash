@@ -7198,9 +7198,13 @@ function guardImportStart(){
 // UPLOAD handlers
 // ═══════════════════════════════════════
 $id('fi').onchange=function(e){
-  if(!e.target.files[0]) return;
-  if(!guardImportStart()){ this.value=''; return; }
-  loadXlsx(e.target.files[0]);
+  // Copia e limpa antes de processar: permite selecionar novamente o mesmo
+  // CSV/XLSX, situação comum em correções de carga no Jira.
+  var file=e.target.files&&e.target.files[0];
+  this.value='';
+  if(!file) return;
+  if(!guardImportStart()) return;
+  loadXlsx(file);
 };
 var ub=$id('upbar');
 ub.addEventListener('dragover',function(e){e.preventDefault();ub.classList.add('drag');});
