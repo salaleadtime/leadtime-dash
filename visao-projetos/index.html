@@ -7753,21 +7753,36 @@
       return getSelectedSquad();
     }
 
+    // executiveQuickNotes também carrega weeklyExecutiveReport (usado só pelo
+    // report-semanal-operacional.html) porque as duas telas compartilham a mesma
+    // chave vpQuickNotes. Essa tela só mexe na anotação por squad — nunca deve
+    // reenviar a cópia em cache de weeklyExecutiveReport (até 2 min desatualizada
+    // pelo polling), senão apaga em silêncio ações/riscos salvos no report
+    // semanal nesse intervalo. Por isso busca o vpQuickNotes fresco do servidor
+    // bem antes de gravar e só sobrepõe a chave da squad que mudou.
+    function gasSaveVpQuickNote(key, value){
+      executiveQuickNotes[key] = value;
+      storageSet('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+      gasLoadVpData('vpQuickNotes', function(err, remote){
+        var base = (!err && remote && typeof remote === 'object' && !Array.isArray(remote)) ? Object.assign({}, remote) : Object.assign({}, executiveQuickNotes);
+        base[key] = value;
+        executiveQuickNotes = base;
+        storageSet('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
+        gasSaveVpData('vpQuickNotes', base);
+      });
+    }
+
     function saveExecutiveQuickNote(){
       const noteEl = $('executiveQuickNote');
       if(!noteEl) return;
       const key = getExecutiveNoteKey();
-      executiveQuickNotes[key] = noteEl.value;
-      storageSet('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
-      gasSaveVpData('vpQuickNotes', executiveQuickNotes);
+      gasSaveVpQuickNote(key, noteEl.value);
       if($('executiveNoteSaved')) $('executiveNoteSaved').textContent = 'Anotação salva automaticamente.';
     }
 
     function clearExecutiveQuickNote(){
       const key = getExecutiveNoteKey();
-      executiveQuickNotes[key] = '';
-      storageSet('jiraDashboardExecutiveQuickNotes', JSON.stringify(executiveQuickNotes));
-      gasSaveVpData('vpQuickNotes', executiveQuickNotes);
+      gasSaveVpQuickNote(key, '');
       if($('executiveQuickNote')) $('executiveQuickNote').value = '';
       if($('executiveNoteSaved')) $('executiveNoteSaved').textContent = 'Anotação limpa.';
     }
