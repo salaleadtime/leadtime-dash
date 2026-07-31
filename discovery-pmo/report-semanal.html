@@ -6,7 +6,10 @@
 <meta name="color-scheme" content="light">
 <title>Overview DS / Planejamento 2026 / Report Semanal</title>
 <script src="./vendor/html-to-image.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Cópia local evita depender do CDN externo, que fica bloqueado em redes
+     corporativas — sem isso, se o CDN cair, a captura de imagem falha E o
+     fallback sugerido ("Use Exportar PDF") falha também pelo mesmo motivo. -->
+<script src="./vendor/jspdf.umd.min.js"></script>
 <style>
 :root{
   /* Tokens espelhados do Discovery PMO Tracker — mesma paleta, mesmos raios */
