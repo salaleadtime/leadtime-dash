@@ -10387,7 +10387,7 @@
     }
 
     function itemChangedAt(item) {
-      return Date.parse(item?.updatedAt || item?.movedAt || item?.addedAt || '') || 0;
+      return Date.parse(item?.updatedAt || item?.movedAt || item?.addedAt || item?.updated || '') || 0;
     }
 
     function mergeNestedById(localList, remoteList, deletedIds) {
@@ -10427,6 +10427,12 @@
       base.subInitiatives = mergeNestedById(localProject?.subInitiatives, remoteProject?.subInitiatives, deletedIds);
       base.attachments = mergeNestedById(localProject?.attachments, remoteProject?.attachments, deletedIds);
       base.timelineItems = mergeNestedById(localProject?.timelineItems, remoteProject?.timelineItems, deletedIds);
+      // jiraStories precisa mesclar por registro (chave = "key" do Jira) como os demais
+      // arrays acima — sem isso, o "base" (escolhido pelo updatedAt da iniciativa inteira,
+      // não do array) descartava por completo as histórias do lado perdedor sempre que
+      // QUALQUER outro campo da iniciativa fosse editado depois em outro navegador. Era
+      // esse o motivo de Épicos & Histórias (Jira) sumir ou divergir entre navegadores.
+      base.jiraStories = mergeNestedById(localProject?.jiraStories, remoteProject?.jiraStories, deletedIds);
       return base;
     }
 
