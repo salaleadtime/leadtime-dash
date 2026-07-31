@@ -9383,6 +9383,25 @@ function emSaveConfig(){
 }
 function renderEmergencyView(){
   var host=$id('emContent');if(!host)return;emEnsureState();
+  if(!$id('emKanbanNoKpiCss')){
+    var emStyle=document.createElement('style');
+    emStyle.id='emKanbanNoKpiCss';
+    emStyle.textContent='#pane-em .em-kpis{display:none!important}'+
+      '#pane-em .em-priority-grid{gap:8px!important;margin-bottom:10px!important}'+
+      '#pane-em .em-priority-grid .em-panel{padding:10px!important;margin-bottom:0!important;border-radius:12px!important;box-shadow:0 3px 10px rgba(30,41,59,.04)!important}'+
+      '#pane-em .em-priority-card{padding:8px 9px!important;margin-top:6px!important;border-radius:9px!important}'+
+      '#pane-em .em-priority-card .em-priority-title{font-size:10px!important;margin-top:2px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-priority-card .em-muted{font-size:9px!important}'+
+      '#pane-em .em-badge{font-size:8px!important;padding:2px 5px!important}'+
+      '#pane-em .em-table-wrap{border-radius:12px!important;box-shadow:0 3px 12px rgba(30,41,59,.05)!important}'+
+      '#pane-em .em-table{font-size:10px!important}'+
+      '#pane-em .em-table th{padding:8px 7px!important;font-size:8px!important}'+
+      '#pane-em .em-table td{padding:8px 7px!important}'+
+      '#pane-em .em-story-title{font-size:10px!important;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-inline-input{height:28px!important;min-width:82px!important;font-size:9px!important}'+
+      '#pane-em .em-modern-toolbar{padding:8px 10px!important;margin-bottom:10px!important;border-radius:11px!important}';
+    document.head.appendChild(emStyle);
+  }
   var all=getEmergencyStories(),today=emTodayISO(),by=function(fn){return all.filter(fn);};
   var backlog=by(function(s){return !emRefined(s);}),refined=by(emRefined),dev=by(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}),overdue=dev.filter(function(s){var d=emForecast(s,emergencyState.meta[s.id]||{});return d&&d<today;});
   var next=all.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort()[0]||'';
