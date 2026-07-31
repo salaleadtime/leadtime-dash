@@ -9402,12 +9402,35 @@ function renderEmergencyView(){
       '#pane-em .em-modern-toolbar{padding:8px 10px!important;margin-bottom:10px!important;border-radius:11px!important}';
     document.head.appendChild(emStyle);
   }
-  var all=getEmergencyStories(),today=emTodayISO(),by=function(fn){return all.filter(fn);};
+  var source=getEmergencyStories(),filters=window.emKanbanFilters||{label:'',squad:'',status:''};
+  var all=source.filter(function(s){
+    return (!filters.label||emSplitLabels(s.labels).some(function(l){return l===filters.label;}))&&
+      (!filters.squad||s.squad===filters.squad)&&(!filters.status||s.status===filters.status);
+  }),today=emTodayISO(),by=function(fn){return all.filter(fn);};
   var backlog=by(function(s){return !emRefined(s);}),refined=by(emRefined),dev=by(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}),overdue=dev.filter(function(s){var d=emForecast(s,emergencyState.meta[s.id]||{});return d&&d<today;});
   var next=all.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort()[0]||'';
   function cards(items,kind){return items.slice(0,6).map(function(s){var m=emergencyState.meta[s.id]||{},d=emForecast(s,m),late=d&&d<today;return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a><button class="em-edit" title="Copiar" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button></div><div class="em-priority-title">'+esc(s.resumo||'Sem resumo')+'</div><div class="em-muted">'+esc(s.squad||'—')+' · '+esc(s.status||'—')+'</div><span class="em-badge '+(kind==='backlog'?'blue':'green')+'">'+(kind==='backlog'?'Backlog':'Refinada')+'</span>'+(late?'<button class="em-btn" style="float:right;padding:4px 7px;font-size:9px" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">Reprogramar</button>':'')+'</div>';}).join('')||'<div class="em-muted">Nenhuma história</div>';}
   var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge blue">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td>'+esc(m.comment||'—')+'</td></tr>';}).join('');
   host.innerHTML='<div class="em-modern-toolbar"><div class="em-toolbar-summary"><strong>Demandas Emergenciais</strong><span class="em-muted">Qtd Story/Épicos + Backlog/Refinamento</span></div><div class="em-toolbar-actions"><button class="em-btn modern" onclick="emOpenConfig()">⚙ Configuração</button></div></div><div class="em-kpis"><div class="em-kpi"><small>Na fila</small><strong>'+all.length+'</strong><span>labels configurados</span></div><div class="em-kpi"><small>Backlog · '+backlog.length+'</small><strong>'+backlog.length+'</strong><span>aguardam refinamento</span></div><div class="em-kpi"><small>Refinadas · '+refined.length+'</small><strong>'+refined.length+'</strong><span>prontas para avançar</span></div><div class="em-kpi"><small>Desenvolvimento · '+overdue.length+'</small><strong>'+overdue.length+'</strong><span>com prazo vencido</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(next)+'</strong><span>'+emWorkdayHours()+'h por dia útil</span></div></div><div class="em-priority-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="em-panel"><b>📋 Backlog · '+backlog.length+'</b>'+cards(backlog,'backlog')+'</div><div class="em-panel"><b>✓ Refinadas · '+refined.length+'</b>'+cards(refined,'refined')+'</div><div class="em-panel" style="border-top:3px solid #e57b00"><b>Desenvolvimento · '+overdue.length+'</b><div class="em-muted">prazo vencido</div>'+cards(overdue,'dev')+'</div></div><div class="em-table-wrap"><table class="em-table"><thead><tr><th>História / Labels</th><th>Squad</th><th>Status</th><th>Refinamento</th><th>Início dev.</th><th>Sprint</th><th>Estimativa</th><th>Data prevista</th><th>Comentário</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+var _renderEmergencyWithFilters=renderEmergencyView;
+function emKanbanSetFilter(field,value){
+  window.emKanbanFilters=window.emKanbanFilters||{label:'',squad:'',status:''};
+  window.emKanbanFilters[field]=value;renderEmergencyView();
+}
+renderEmergencyView=function(){
+  _renderEmergencyWithFilters();
+  var host=$id('emContent');if(!host)return;
+  var source=getEmergencyStories(),filters=window.emKanbanFilters||{label:'',squad:'',status:''};
+  var labels=Array.from(new Set(source.reduce(function(a,s){return a.concat(emSplitLabels(s.labels));},[]))).filter(Boolean).sort();
+  var squads=Array.from(new Set(source.map(function(s){return s.squad;}).filter(Boolean))).sort();
+  var statuses=Array.from(new Set(source.map(function(s){return s.status;}).filter(Boolean))).sort();
+  var bar='<div class="em-modern-toolbar" id="emKanbanFilters" style="margin-top:-2px">'+
+    '<label class="em-field">Rótulos<select class="em-select" onchange="emKanbanSetFilter(\'label\',this.value)"><option value="">Todos os rótulos</option>'+labels.map(function(v){return'<option value="'+esc(v)+'"'+(filters.label===v?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select></label>'+
+    '<label class="em-field">Squad<select class="em-select" onchange="emKanbanSetFilter(\'squad\',this.value)"><option value="">Todas as squads</option>'+squads.map(function(v){return'<option value="'+esc(v)+'"'+(filters.squad===v?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select></label>'+
+    '<label class="em-field">Status<select class="em-select" onchange="emKanbanSetFilter(\'status\',this.value)"><option value="">Todos os status</option>'+statuses.map(function(v){return'<option value="'+esc(v)+'"'+(filters.status===v?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select></label>'+
+    '<button class="em-btn primary" onclick="emOpenConfig()">Configuração</button></div>';
+  var toolbar=host.querySelector('.em-modern-toolbar');if(toolbar)toolbar.insertAdjacentHTML('afterend',bar);
 }
 </script>
 </body>
