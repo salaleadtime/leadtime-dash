@@ -1574,10 +1574,10 @@ body{min-height:100vh}
 
   <div class="kgrid" id="medKpi" style="margin-bottom:.9rem"></div>
 
-  <div class="sec-lbl" style="margin-bottom:.5rem">Lead Time por Squad</div>
+  <div class="sec-lbl" id="medSquadsLbl" style="margin-bottom:.5rem">Lead Time por Squad</div>
   <div class="sgrid" id="medSquads" style="margin-bottom:.9rem"></div>
 
-  <div class="tc">
+  <div class="tc" id="medTblCard">
     <div class="tc-hd">
       <span class="tc-hd-t" id="medTblTitle">Épicos Medidos</span>
       <span class="tc-hint"><span id="medCnt">—</span> · ordenados por Data Fim (mais recente primeiro)</span>
@@ -4498,11 +4498,20 @@ function populateSqF(){
 // ═══════════════════════════════════════
 function renderMed(){
   // Auto-inicia com o trimestre atual na primeira abertura da aba
-  if(!_medTriInited){
+  // Só decide o trimestre inicial quando já existem dados carregados — senão a
+  // escolha cairia sempre no fallback "sem filtro".
+  if(!_medTriInited && allData.length){
     _medTriInited=true;
     var triNow=getCurrentTrimester();
-    medTriChip=triNow.q;
-    var triDates=getTriDates(triNow.q);
+    var comEntrega=triWithDeliveries();
+    // Um trimestre recém-iniciado ainda não tem entregas e abriria a aba em
+    // branco. Nesse caso começa no trimestre mais recente que já tem épicos
+    // medidos; se nenhum tiver, abre sem filtro de período.
+    var startQ = comEntrega.indexOf(triNow.q)>=0
+      ? triNow.q
+      : (comEntrega.length ? comEntrega[comEntrega.length-1] : 0);
+    medTriChip=startQ;
+    var triDates = startQ ? getTriDates(startQ) : {from:'',to:''};
     medFilt.dateFrom=triDates.from; medFilt.dateTo=triDates.to;
     var df=$id('medDateFrom'); if(df) df.value=triDates.from;
     var dt=$id('medDateTo');   if(dt) dt.value=triDates.to;
@@ -4560,14 +4569,31 @@ function renderMed(){
     if(n===0){
       var emptyMsg=medTriChip
         ?'📊 Nenhum épico entregue ainda no <b>'+ordTri(medTriChip)+' Trimestre</b> ('+esc(medFilt.dateFrom)+' a '+esc(medFilt.dateTo)+').'
-        :'📊 Nenhum épico encontrado para o filtro selecionado.';
-      $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem">'+emptyMsg+'</div>';
+        : (medFilt.squad!=='all'||medFilt.dateFrom||medFilt.dateTo)
+          ?'📊 Nenhum épico encontrado para o filtro selecionado.'
+          :'📊 Nenhum épico medido ainda — épicos entram aqui quando recebem Data Fim.';
+      // Atalho para o trimestre mais recente que tem entregas, para o usuário
+      // não ficar preso numa tela em branco no início de um trimestre novo.
+      var comEntrega=triWithDeliveries();
+      var alvo=comEntrega.filter(function(q){return q!==medTriChip;}).pop();
+      var cta='';
+      if(alvo) cta='<div><button class="chip on" style="margin-top:.9rem" onclick="applyTriChip('+alvo+')">Ver '+ordTri(alvo)+' Trimestre</button></div>';
+      else if(medFilt.squad!=='all'||medFilt.dateFrom||medFilt.dateTo) cta='<div><button class="chip on" style="margin-top:.9rem" onclick="medShowAll()">Ver todos os épicos medidos</button></div>';
+      $id('medKpi').innerHTML='<div class="empty" style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border2);border-radius:var(--rad);padding:2rem;text-align:center">'+emptyMsg+cta+'</div>';
       $id('medSquads').innerHTML='';
       $id('medTblBody').innerHTML='';
       $id('medCnt').textContent='0 épicos';
+      // Sem dados não faz sentido manter o rótulo "Lead Time por Squad" nem a
+      // tabela só com o cabeçalho: some com os dois blocos vazios.
+      var lbl=$id('medSquadsLbl'); if(lbl) lbl.style.display='none';
+      var card=$id('medTblCard'); if(card) card.style.display='none';
+      renderMedStories();
       return;
     }
   }
+  var lblOn=$id('medSquadsLbl'); if(lblOn) lblOn.style.display='';
+  var cardOn=$id('medTblCard'); if(cardOn) cardOn.style.display='';
+
   var lts=countable.map(function(r){return r.lt;});
   var avg=n?Math.round(lts.reduce(function(a,b){return a+b;},0)/n):0;
   var minLT=n?Math.min.apply(null,lts):0;
@@ -4648,6 +4674,18 @@ function getTriDates(q){
   var y=new Date().getFullYear(), sm=(q-1)*3;
   return {from:fmtIso(new Date(y,sm,1)), to:fmtIso(new Date(y,sm+3,0))};
 }
+// Trimestres do ano corrente que já possuem épicos entregues (cancelados não
+// contam: eles não têm Data Fim e não representam entrega).
+function triWithDeliveries(){
+  var y=new Date().getFullYear(), seen={};
+  allData.forEach(function(r){
+    if(!r||isCancelled(r)||!isValidDate(r.fim)) return;
+    var d=new Date(r.fim+'T00:00:00');
+    if(d.getFullYear()!==y) return;
+    seen[Math.floor(d.getMonth()/3)+1]=true;
+  });
+  return Object.keys(seen).map(Number).sort(function(a,b){return a-b;});
+}
 function applyTriChip(q){
   var dates=getTriDates(q);
   medFilt.dateFrom=dates.from; medFilt.dateTo=dates.to; medTriChip=q;
@@ -4660,6 +4698,12 @@ function syncTriChips(){
     var ch=$id('medChip'+q);
     if(ch) ch.classList.toggle('on', medTriChip===q);
   }
+}
+// Limpa todos os filtros da Medição (usado pelo atalho do estado vazio).
+function medShowAll(){
+  medFilt.squad='all';
+  var sq=$id('medSqF'); if(sq) sq.value='all';
+  clearMedDateF();
 }
 function clearMedDateF(){
   medFilt.dateFrom=''; medFilt.dateTo=''; medTriChip=0;
