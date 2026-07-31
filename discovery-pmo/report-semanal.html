@@ -414,14 +414,6 @@ body[data-model="B"] .only-a{display:none}
         <span id="heroScope">todas as squads</span>
       </div>
     </div>
-    <div class="verdict">
-      <div class="vico" id="vIco">↔</div>
-      <div class="verdict-main">
-        <b id="vTitle">Resumo de travas da semana</b>
-        <small id="vText" class="hide">—</small>
-        <div class="lock-summary" id="vDetails"><div class="lock-empty">Carregando ocorrências da semana selecionada…</div></div>
-      </div>
-    </div>
   </header>
 
   <div class="body">
@@ -638,7 +630,7 @@ body[data-model="B"] .only-a{display:none}
       <div class="blk-b">
         <table class="tb2"><thead><tr><th>Iniciativa</th><th>Squad</th><th>Tipo</th><th style="width:26%">Descrição</th><th>Área responsável</th><th>Dono</th><th>Prazo</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="rkRows"></tbody></table>
         <div class="edit-ui" id="rkResolvedBlk" style="margin-top:10px">
-          <div class="blk-h" style="padding:0 0 6px"><div><h3 style="margin:0;font-size:11.5px">Concluídos recentemente</h3><p style="margin:0;font-size:9.5px;color:var(--muted)">Marcados como concluídos direto neste report. Reabra se foi engano.</p></div><span class="tagn" id="rkResolvedTag">0</span></div>
+          <div class="blk-h" style="padding:0 0 6px"><div><h3 style="margin:0;font-size:11.5px">Removidos manualmente</h3><p style="margin:0;font-size:9.5px;color:var(--muted)">Marcados como concluídos ou excluídos direto neste report. Reabra se foi engano.</p></div><span class="tagn" id="rkResolvedTag">0</span></div>
           <div id="rkResolvedRows"></div>
         </div>
       </div>
@@ -1454,8 +1446,21 @@ function resolveRiskAt(idx){
   const d=pDate((raw||'').trim()||def);
   if(!d){toast('Data inválida — use aaaa-mm-dd','err');return}
   const R=resolvedMap();
-  R[sig]={date:iso(d),text:row.i.text,ini:row.a.p.initiativeNumber||'',name:row.a.p.name||''};
+  R[sig]={date:iso(d),text:row.i.text,ini:row.a.p.initiativeNumber||'',name:row.a.p.name||'',kind:'concluido'};
   saveResolvedMap(R);render();toast('Marcado como concluído');
+}
+/* Excluir: some da lista independente de semana ou prazo — para item vindo
+   automático do Tracker que não é relevante para esta iniciativa/relatório.
+   Diferente de "concluir", não fica preso à data de conclusão: some já na
+   próxima renderização e em todas as semanas seguintes, mas continua
+   reversível pela lista de "Removidos manualmente". */
+function dismissRiskAt(idx){
+  const row=currentRk[idx];if(!row)return;
+  if(!confirm(`Excluir "${cut(row.i.text,60)}" da lista?\nContinua reversível em "Removidos manualmente".`))return;
+  const sig=rkSig(row.i);
+  const R=resolvedMap();
+  R[sig]={date:iso(new Date()),text:row.i.text,ini:row.a.p.initiativeNumber||'',name:row.a.p.name||'',kind:'excluido'};
+  saveResolvedMap(R);render();toast('Excluído da lista');
 }
 function reopenResolvedAt(idx){
   const row=currentResolvedList[idx];if(!row)return;
@@ -1597,35 +1602,13 @@ function render(){
   const jiraStories=scoped.reduce((t,a)=>t+(+jiraQtd(a.p)||0),0);
   const weeklyLocks=new Set(atts.filter(x=>x.lvl==='red'||x.cat==='Arquitetura'||x.cat==='Bloqueio').map(x=>x.a.p.id)).size;
   const preventive=scoped.filter(a=>!(+jiraQtd(a.p)||0)&&!a.miles.find(m=>pDate(m.date)>=end)).length;
+  /* vT/vX: resumo textual de travas/destravamentos do período — usado só nas
+     exportações (cópia rica, texto simples); o bloco visual foi removido. */
   const lockEvents=movs.filter(m=>['desbloqueio','bloqueio','risco'].includes(m.k));
-  const lockPriority={desbloqueio:3,bloqueio:2,risco:1};
-  lockEvents.sort((a,b)=>(lockPriority[b.k]||0)-(lockPriority[a.k]||0)||b.at-a.at);
-  /* Exceção pontual para a captura executiva: mantém o registro na base,
-     mas não o expõe no resumo visual desta iniciativa. */
-  const lockPresentationExceptions=new Set(['113327']);
-  const visibleLockEvents=lockEvents.filter(m=>!lockPresentationExceptions.has(String(m.a?.p?.initiativeNumber||'')));
-  const shownLocks=visibleLockEvents.slice(0,3);
-  const lockStatus=m=>m.k==='desbloqueio'?{label:'Destravado',cls:'done'}:{label:m.k==='bloqueio'?'Travado':'Em atenção',cls:'open'};
-  const ownerOfMove=m=>nome2(m.owner)||nome2(m.a?.p?.techLead)||nome2(m.a?.p?.po)||nome2(m.a?.p?.rteOwner)||'Não informado';
-  const areaOfMove=m=>m.area||areaOf({text:m.occurrence||m.t||'',owner:m.owner||''},m.a?.p||{}).nome;
-  const lockHtml=shownLocks.length?shownLocks.map(m=>{
-    const p=m.a.p,s=lockStatus(m);
-    return `<div class="lock-row">
-      <span class="lock-state ${s.cls}">${s.label}</span>
-      <div class="lock-init"><strong>${esc(p.initiativeNumber||'—')} · ${esc(p.name||'Iniciativa sem nome')}</strong></div>
-      <div class="lock-squad"><span>Squad</span><strong>${esc(p.squad||'Não informada')}</strong></div>
-      <div class="lock-area"><span>Área</span><strong>${esc(areaOfMove(m))}</strong></div>
-      <div class="lock-owner"><span>Responsável</span><strong>${esc(ownerOfMove(m))}</strong></div>
-      <div class="lock-occurrence"><span>Ocorrido no período</span><strong>${esc(m.occurrence||m.t||'Movimento registrado')}</strong></div>
-    </div>`;
-  }).join('')+(visibleLockEvents.length>shownLocks.length?`<div class="lock-more">+ ${visibleLockEvents.length-shownLocks.length} outra(s) ocorrência(s) registrada(s) na semana selecionada.</div>`:'')
-    :`<div class="lock-empty">Nenhuma trava ou destravamento foi registrado entre ${fD(iso(start))} e ${fD(iso(end))}. O resumo permanece visível para deixar explícito que não houve ocorrência no período selecionado.</div>`;
-  el('vIco').textContent='↔';
-  el('vTitle').textContent='Resumo de travas da semana';
-  el('vDetails').innerHTML=lockHtml;
+  lockEvents.sort((a,b)=>b.at-a.at);
+  const lockStatus=m=>m.k==='desbloqueio'?'Destravado':(m.k==='bloqueio'?'Travado':'Em atenção');
   const vT='Resumo de travas da semana';
-  const vX=visibleLockEvents.length?visibleLockEvents.map(m=>{const p=m.a.p,s=lockStatus(m);return `${s.label}: ${p.initiativeNumber||'—'} · ${p.name} · Squad ${p.squad||'Não informada'} · Área ${areaOfMove(m)} · Responsável ${ownerOfMove(m)} · ${m.occurrence||m.t}`}).join(' | '):`Nenhuma trava ou destravamento registrado entre ${fD(iso(start))} e ${fD(iso(end))}.`;
-  el('vText').textContent=vX;
+  const vX=lockEvents.length?lockEvents.map(m=>{const p=m.a.p;return `${lockStatus(m)}: ${p.initiativeNumber||'—'} · ${p.name} · Squad ${p.squad||'Não informada'} · ${m.occurrence||m.t}`}).join(' | '):`Nenhuma trava ou destravamento registrado entre ${fD(iso(start))} e ${fD(iso(end))}.`;
 
   el('k1').textContent=scoped.length;
   el('k2').textContent=startedDisc;el('k2s').textContent=`${Math.max(scoped.length-startedDisc,0)} ainda não iniciadas`;
@@ -1704,7 +1687,7 @@ function render(){
      própria semana em vista não conta mais como aberto neste período */
   const RMAP=resolvedMap();
   const endIso=iso(end);
-  const notResolvedNow=i=>{const hit=RMAP[rkSig(i)];return !(hit&&hit.date<=endIso)};
+  const notResolvedNow=i=>{const hit=RMAP[rkSig(i)];if(!hit)return true;if(hit.kind==='excluido')return false;return !(hit.date<=endIso)};
   const rk=[];
   scoped.forEach(a=>['risks','issues','dependencies'].forEach(g=>a.R[g].filter(i=>!i.done&&notResolvedNow(i)).forEach(i=>rk.push({a,g,i}))));
   /* Complementos manuais continuam visíveis na tabela detalhada, mas NÃO alteram
@@ -1785,16 +1768,22 @@ function render(){
       <td>${esc(cut(i.text,86))}${streak>=1?`<span class="cons">Sem evolução há ${streak+1} semanas</span>`:''}${manual?compActions(kind,rm,kind==='riscos'?'risco adicional':'dependência adicional'):''}</td>
       <td>${esc(ar.nome)}${ar.inferida?'<span style="color:var(--muted);font-size:8.5px;display:block">inferida</span>':''}</td>
       <td>${esc(nome2(i.owner)||'—')}${doCrono}</td><td>${i.due?fD(i.due):'—'}${doCrono}</td><td>${sit}</td>
-      <td><div class="comp-actions edit-ui"><button class="comp-btn" onclick="resolveRiskAt(${idx})" title="Marcar como concluído" aria-label="Marcar como concluído">✓</button></div></td></tr>`}).join('')
+      <td><div class="comp-actions edit-ui">
+        <button class="comp-btn" onclick="resolveRiskAt(${idx})" title="Marcar como concluído" aria-label="Marcar como concluído">✓</button>
+        ${manual?'':`<button class="comp-btn delete" onclick="dismissRiskAt(${idx})" title="Excluir da lista (não relacionado)" aria-label="Excluir da lista">×</button>`}
+      </div></td></tr>`}).join('')
     :'<tr><td colspan="9" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
   currentResolvedList=Object.entries(RMAP).sort((x,y)=>y[1].date.localeCompare(x[1].date)).slice(0,10);
   const rkResBlk=el('rkResolvedBlk');
   if(rkResBlk){
     rkResBlk.classList.toggle('hide',!currentResolvedList.length);
     el('rkResolvedTag').textContent=`${currentResolvedList.length}`;
-    el('rkResolvedRows').innerHTML=currentResolvedList.map(([sig,v],idx)=>
-      `<div class="li"><span class="bul" style="--c:var(--green)"></span><div><b>${esc(v.ini||'—')} ${esc(cut(v.text,70))}</b><span>${esc(v.name||'')} · concluído em ${fD(v.date)}</span></div>
-      <div class="comp-actions edit-ui"><button class="comp-btn" onclick="reopenResolvedAt(${idx})" title="Reabrir" aria-label="Reabrir">↺</button></div></div>`).join('');
+    el('rkResolvedRows').innerHTML=currentResolvedList.map(([sig,v],idx)=>{
+      const excluido=v.kind==='excluido';
+      const desc=excluido?`excluído da lista em ${fD(v.date)}`:`concluído em ${fD(v.date)}`;
+      return `<div class="li"><span class="bul" style="--c:${excluido?'var(--muted)':'var(--green)'}"></span><div><b>${esc(v.ini||'—')} ${esc(cut(v.text,70))}</b><span>${esc(v.name||'')} · ${desc}</span></div>
+      <div class="comp-actions edit-ui"><button class="comp-btn" onclick="reopenResolvedAt(${idx})" title="Reabrir" aria-label="Reabrir">↺</button></div></div>`;
+    }).join('');
   }
 
   // ── Janelas de refinamento técnico (tabela) — somente em curso ──
