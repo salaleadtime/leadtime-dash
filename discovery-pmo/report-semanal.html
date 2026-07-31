@@ -932,6 +932,7 @@ const CFG={
   gasKey:'discoveryPmo',
   trackerKey:'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3',
   cacheKey:'sala_rep_cache_v3', editKey:'sala_rep_edit_v4', snapKey:'sala_rep_snap_v4',
+  syncKey:'sala_rep_last_sync_v1',
   horizon:14, staleDays:10
 };
 const TL_STAGES=[{id:'entendimento',title:'Entendimento do Problema'},{id:'analise',title:'Levantamento e Análise'},{id:'desenho',title:'Desenho da Solução'},{id:'validacao',title:'Validação e Prontidão'}];
@@ -1097,6 +1098,13 @@ function areaOf(item,p){
 }
 function toast(m,k){const t=el('toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(window.__t);window.__t=setTimeout(()=>t.className='toast',3200)}
 
+// "Base atualizada" = quando este report sincronizou com sucesso com o servidor
+// (não muda só por abrir a página se o fetch falhar e cair no cache). "Base
+// editada" = quando alguém de fato alterou um projeto/iniciativa no Discovery
+// PMO (base.updatedAt / project.updatedAt, mantidos pelo próprio tracker).
+function dataUpdatedLabel(){let iso=null;try{iso=localStorage.getItem(CFG.syncKey)}catch(e){}const t=iso?Date.parse(iso):NaN;if(isNaN(t))return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date());return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(t))}
+function dataEditedLabel(){const times=[];const add=v=>{const t=Date.parse(v||'');if(!isNaN(t))times.push(t)};add(base.updatedAt);(base.projects||[]).forEach(p=>add(p.updatedAt));if(!times.length)return null;return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(Math.max(...times)))}
+
 /* período do report */
 function isoWeekOf(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()+3-((d.getDay()+6)%7));const y=d.getFullYear();const j=new Date(y,0,4);const w=1+Math.round(((d-j)/864e5-3+((j.getDay()+6)%7))/7);return `${y}-W${String(w).padStart(2,'0')}`}
 function weekStrOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()+3-((x.getDay()+6)%7));const firstThu=new Date(x.getFullYear(),0,4);const week=1+Math.round(((x-firstThu)/864e5-3+((firstThu.getDay()+6)%7))/7);return `${x.getFullYear()}-W${String(week).padStart(2,'0')}`;}
@@ -1117,6 +1125,7 @@ async function generate(){
     if(!live.projects.length)throw new Error('vazio');
     base=live;source='Servidor Discovery PMO';
     try{localStorage.setItem(CFG.cacheKey,JSON.stringify(live))}catch(e){}
+    try{localStorage.setItem(CFG.syncKey,new Date().toISOString())}catch(e){}
   }catch(e){
     if(local){
       base=local.data;source=local.source+' · dados reais em cache';
@@ -1559,7 +1568,7 @@ function render(){
     .filter(m=>{if(seen.has(m.a.p.id))return false;seen.add(m.a.p.id);return true});
 
   // cabeçalho
-  el('srcLabel').textContent=source;el('srcDetail').textContent=`${scoped.length} iniciativa(s) · atualizado ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}`;
+  el('srcLabel').textContent=source;{const editedLabel=dataEditedLabel();el('srcDetail').textContent=`${scoped.length} iniciativa(s) · atualizado ${dataUpdatedLabel()}`+(editedLabel?` · editado ${editedLabel}`:'');}
   el('heroWeek').textContent=`${fDM(start)} – ${fDM(new Date(end))}`;
   el('heroScope').textContent=selectedSquadName(squad)||'todas as squads';
   el('heroSub').textContent=`${scoped.length} iniciativas acompanhadas · maturidade média de ${avg}%`;
