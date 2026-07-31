@@ -1918,6 +1918,28 @@ tr:nth-child(even):hover td,
   border:1px solid var(--line-soft)!important;
 }
 
+/* Backlog/Refinamento: restaura a leitura colorida suave dos cards de squad.
+   Este bloco fica após o tema global, que torna os cards brancos por padrão. */
+#pane-bk .bk-source-panel .bk-squad-card:not(.bk-squad-card--sla-out){
+  border:0!important;
+  border-left:0!important;
+  box-shadow:none!important;
+  background:#eff4ff!important;
+}
+#pane-bk .bk-source-panel .bk-squad-card:not(.bk-squad-card--sla-out):nth-child(4n+2){background:#effaf6!important}
+#pane-bk .bk-source-panel .bk-squad-card:not(.bk-squad-card--sla-out):nth-child(4n+3){background:#fff7e9!important}
+#pane-bk .bk-source-panel .bk-squad-card:not(.bk-squad-card--sla-out):nth-child(4n+4){background:#fff0f4!important}
+#pane-bk .bk-source-panel .bk-squad-card{border-radius:12px!important}
+#pane-bk .bk-source-panel .bk-squad-hd:hover{background:rgba(255,255,255,.42)!important}
+#pane-bk .bk-source-panel .bk-squad-name{font-size:13px;font-weight:800}
+#pane-bk .bk-source-panel .bk-squad-cnt{font-size:24px;color:#172033}
+#pane-bk .bk-source-panel .bk-squad-sub{color:#60749a}
+#pane-bk .bk-source-panel .bk-refined-cnt{background:transparent;border:0;padding:0;color:#079765;font-size:11px}
+#pane-bk .bk-source-panel .bk-squad-body{background:#fff}
+#bkSquadOv{z-index:750;padding:16px}
+#bkSquadOv .mdl{width:min(760px,94vw);max-width:760px;padding:24px 28px;border-radius:22px}
+.bk-modal-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.bk-modal-eyebrow{font-size:11px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:#7d91b7}.bk-modal-title{font-size:28px;letter-spacing:-.7px;line-height:1.1;margin:5px 0 0}.bk-modal-close{border:0;background:#f1f4f8;border-radius:10px;width:42px;height:42px;font-size:24px;line-height:1;color:#172033;cursor:pointer}.bk-modal-copy{font-size:15px;line-height:1.55;color:#70829f;margin:22px 0}.bk-modal-row{display:flex;justify-content:space-between;gap:16px;align-items:center;border-top:1px solid #dfe6ef;padding:14px 0;font-size:14px;color:#253145}.bk-modal-row b{font-size:15px;color:#172033}.bk-modal-list{border-top:1px solid #dfe6ef;padding-top:13px}.bk-modal-list h4{font-size:14px;margin:0 0 7px}.bk-modal-story{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;text-decoration:none;color:#172033;border-top:1px solid #edf1f5;padding:12px 0;font-size:13px}.bk-modal-story:hover .bk-modal-jira{text-decoration:underline}.bk-modal-key{font-weight:850;color:#c00}.bk-modal-jira{font-size:12px;font-weight:800;color:#c00;white-space:nowrap}.bk-modal-badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:850}.bk-modal-badge.refined{background:#e5f7ef;color:#117a4c}.bk-modal-badge.backlog{background:#edf3ff;color:#5274d8}@media(max-width:600px){#bkSquadOv .mdl{padding:20px}.bk-modal-title{font-size:24px}.bk-modal-story{grid-template-columns:1fr auto}.bk-modal-story .bk-modal-badge{grid-row:2}.bk-modal-jira{grid-column:2;grid-row:1 / span 2}}
+
 /* Qtd Story/Épicos: tabela neutra e previsível para squads/épicos novos */
 #pane-sv .sv-tbl-wrap{
   border-radius:12px!important;
@@ -2218,6 +2240,20 @@ tr:nth-child(even):hover td,
 </div>
 
 <!-- GitHub Integration modal -->
+<div class="ov" id="bkSquadOv" onclick="if(event.target===this)closeBkSquadModal()">
+  <div class="mdl" role="dialog" aria-modal="true" aria-labelledby="bkSquadModalTitle">
+    <div class="bk-modal-top">
+      <div><div class="bk-modal-eyebrow" id="bkSquadModalOrigin">Backlog / Refinamento</div><h3 class="bk-modal-title" id="bkSquadModalTitle">Squad</h3></div>
+      <button class="bk-modal-close" type="button" onclick="closeBkSquadModal()" aria-label="Fechar">×</button>
+    </div>
+    <p class="bk-modal-copy">Clique em qualquer item abaixo para abrir diretamente no Jira. A etiqueta mostra se o item está Refinado ou ainda no Backlog.</p>
+    <div class="bk-modal-row"><span>Total do Backlog</span><b id="bkSquadModalTotal">—</b></div>
+    <div class="bk-modal-row"><span>Refinadas</span><b id="bkSquadModalRefined">—</b></div>
+    <div class="bk-modal-list"><h4>Backlog da squad</h4><div id="bkSquadModalStories"></div></div>
+  </div>
+</div>
+
+<!-- GitHub Integration modal -->
 <div class="ov" id="jbOv" onclick="if(event.target===this)closeJB()">
   <div class="mdl" style="max-width:480px">
     <div class="mt">☁️ Sincronização em Tempo Real</div>
@@ -2357,6 +2393,8 @@ var OPS4OPS_CLOUD_KEY='ops4opsSnaps';
 var ops4opsSnaps=[];
 var ops4opsFromDiscovery=false;
 var _gasOps4opsSaving=false;
+var _gasOps4opsLoading=false;
+var _gasOps4opsError=null;
 var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
 var emergencyState={rules:[],meta:{}};
@@ -5468,14 +5506,15 @@ function isRefined(story){
 // pelo backlog geral quanto por conjuntos independentes (ex.: Ops4Ops).
 // prevSquadCnt: null quando não há importação anterior para comparar.
 // snapsHistory: lista de snapshots (mesmo formato de backlogSnaps) usada na sparkline.
-function buildSquadCards(stories,squads,prevSquadCnt,snapsHistory,curSeq){
+function buildSquadCards(stories,squads,prevSquadCnt,snapsHistory,curSeq,source){
+  source=source||'backlog';
   return squads.map(function(sq){
     var sqStories=stories.filter(function(s){return s.squad===sq;});
     var refined=sqStories.filter(isRefined);
     var cnt=sqStories.length;
     var delta=prevSquadCnt?(cnt-(prevSquadCnt[sq]||0)):null;
     var accent=getSquadAccent(sq);
-    var cardId='bk_'+sq.replace(/[^a-z0-9]/gi,'_')+'_'+curSeq;
+    var cardId=(source==='ops4ops'?'ops_':'bk_')+sq.replace(/[^a-z0-9]/gi,'_')+'_'+curSeq;
 
     var deltaHtml='';
     if(delta!==null){
@@ -5569,7 +5608,7 @@ function buildSquadCards(stories,squads,prevSquadCnt,snapsHistory,curSeq){
     }
 
     return '<div class="bk-squad-card'+(homologOut>0?' bk-squad-card--sla-out':'')+'" id="'+cardId+'" style="--sq-accent:'+accent+'">'+
-      '<div class="bk-squad-hd" onclick="toggleCard(\''+cardId+'\')">'+
+      '<div class="bk-squad-hd" onclick="openBkSquadModal(\''+sq.replace(/'/g,"\\'")+'\',\''+source+'\')">'+
         '<div class="bk-squad-hd-row1">'+
           '<div>'+
             '<span class="bk-squad-name">'+esc(sq)+'</span>'+
@@ -5697,7 +5736,7 @@ function renderBacklogView(){
     '</div>';
   }
 
-  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,backlogSnaps,cur.seq);
+  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,backlogSnaps,cur.seq,'backlog');
 
   bkContent.innerHTML=
     staleWarningHtml+
@@ -5799,8 +5838,12 @@ function gasLoadOps4ops(cb){
 // nem criar uma segunda base.
 function gasLoadOps4opsFromDiscovery(cb){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  _gasOps4opsLoading=true;
+  _gasOps4opsError=null;
+  renderOps4opsView();
   _gasJsonp(BK_GAS_URL+'?action=getVpData&key=discoveryPmo&t='+Date.now(), function(err,json){
-    if(err || !json || !json.ok || !json.data){ if(cb) cb(err||'sem dados',0); return; }
+    _gasOps4opsLoading=false;
+    if(err || !json || !json.ok || !json.data){ _gasOps4opsError=err||'sem dados'; renderOps4opsView(); if(cb) cb(err||'sem dados',0); return; }
     var projects=Array.isArray(json.data.projects)?json.data.projects:[];
     var seen={}, stories=[];
     projects.forEach(function(project){
@@ -5820,7 +5863,7 @@ function gasLoadOps4opsFromDiscovery(cb){
         });
       });
     });
-    if(!stories.length){ if(cb) cb(null,0); return; }
+    if(!stories.length){ renderOps4opsView(); if(cb) cb(null,0); return; }
     // Snapshot transitório: o Discovery permanece como fonte de verdade.
     ops4opsFromDiscovery=true;
     ops4opsSnaps=[{id:'discovery-pmo',seq:1,stories:stories,importedAt:json.data.updatedAt||new Date().toISOString()}];
@@ -5897,6 +5940,24 @@ function renderOps4opsView(){
   var host=$id('ops4opsContent');
   if(!host) return;
   if(!ops4opsSnaps.length){
+    if(_gasOps4opsLoading){
+      host.innerHTML=
+        '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:.6rem;animation:spin 1.2s linear infinite;display:inline-block">🔄</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando Ops4Ops do Discovery…</div>'+
+        '<div style="font-size:12px;color:#94a3b8">As histórias importadas no Discovery estão sendo carregadas.</div>'+
+        '</div>';
+      return;
+    }
+    if(_gasOps4opsError){
+      host.innerHTML=
+        '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:.6rem">⚠️</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Não foi possível sincronizar o Ops4Ops</div>'+
+        '<div style="font-size:12px;color:#94a3b8">Tente atualizar novamente. Os dados permanecem no Discovery PMO Tracker.</div>'+
+        '</div>';
+      return;
+    }
     host.innerHTML=
       '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
       '<div style="font-size:28px;margin-bottom:.6rem">🔧</div>'+
@@ -5926,10 +5987,7 @@ function renderOps4opsView(){
     else globalDeltaHtml='<span class="bk-delta-eq">= sem variação</span>';
   }
 
-  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,ops4opsSnaps,cur.seq);
-  var notRefined=totalBacklog-totalRefined;
-  var refinementDonut=emDonutCard('Ops4Ops · Backlog x Refinada','calculado automaticamente',[{label:'Refinada',color:'#22c55e',value:totalRefined},{label:'Não refinada',color:'#f59e0b',value:notRefined}],totalRefined,totalRefined===1?'refinada':'refinadas');
-
+  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,ops4opsSnaps,cur.seq,'ops4ops');
   host.innerHTML=
     '<div class="sec-lbl" style="margin:0 0 .6rem">🔧 Ops4Ops</div>'+
     '<div class="sv-kpi" style="margin-bottom:1rem">'+
@@ -5937,7 +5995,6 @@ function renderOps4opsView(){
       svKpiItem('#3b82f6',squads.length,'Squads com Ops4Ops','grupos ativos')+
       svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo "Refinada" no Jira')+
     '</div>'+
-    '<div class="em-charts" style="margin-bottom:1rem">'+refinementDonut+'</div>'+
     '<div class="bk-delta-bar">'+
       (prev
         ? '<span class="bk-delta-info">vs importação anterior (#'+prev.seq+')</span> '+globalDeltaHtml+
@@ -6716,6 +6773,31 @@ var svOpenRows={};
 function toggleCard(cardId){
   var card=document.getElementById(cardId);
   if(card) card.classList.toggle('open');
+}
+
+function closeBkSquadModal(){
+  var ov=$id('bkSquadOv');
+  if(ov) ov.classList.remove('on');
+}
+function openBkSquadModal(squad,source){
+  var isOps=source==='ops4ops';
+  var snap=isOps?getCurrentOps4opsSnapshot():getCurrentBacklogSnapshot();
+  var stories=visibleStoryRows((snap&&Array.isArray(snap.stories))?snap.stories:[]).filter(function(s){return s.squad===squad;});
+  var refined=stories.filter(isRefined);
+  var origin=isOps?'Ops4Ops':'Backlog / Refinamento';
+  var list=stories.map(function(s){
+    var ref=isRefined(s);
+    return '<a class="bk-modal-story" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+
+      '<span class="bk-modal-key">'+esc(s.id)+'</span>'+
+      '<span class="bk-modal-badge '+(ref?'refined':'backlog')+'">'+(ref?'Refinada':'Backlog')+'</span>'+
+      '<span class="bk-modal-jira">Abrir no Jira ↗</span></a>';
+  }).join('')||'<div style="padding:12px 0;color:#71819a;font-size:13px">Nenhum item disponível para esta squad.</div>';
+  $id('bkSquadModalOrigin').textContent=origin;
+  $id('bkSquadModalTitle').textContent=squad;
+  $id('bkSquadModalTotal').textContent=stories.length+' itens no Backlog';
+  $id('bkSquadModalRefined').textContent=refined.length+' refinada'+(refined.length!==1?'s':'');
+  $id('bkSquadModalStories').innerHTML=list;
+  $id('bkSquadOv').classList.add('on');
 }
 
 function toggleSvRow(bodyRowId){
