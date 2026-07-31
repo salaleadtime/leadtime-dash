@@ -6964,16 +6964,41 @@ function loadMultipleFiles(files, propagate){
     }catch(e){ return false; }
   }
 
+  // O vínculo Épico↔Iniciativa usado pelo Discovery PMO Tracker vem do rótulo "#Nº"
+  // das HISTÓRIAS, não do arquivo de Épicos em si (que só lista o épico, sem rótulo
+  // de iniciativa). Por isso propaga a lista de fontes (épicos + todo arquivo que
+  // tenha história com "Chave do item") em vez de só o arquivo de épicos — antes,
+  // só o arquivo de épicos ia para o Discovery PMO e, como ele nunca tem "#Nº",
+  // a importação lá sempre dava zero grupos vinculados, mesmo com "Importar em Todos".
+  function _saveCrossImportSources(key, sources, mainFileName){
+    try{
+      var payload=sources.map(function(s){
+        var ws=s.wb.Sheets[s.wb.SheetNames[0]];
+        return {matrix:XLSX.utils.sheet_to_json(ws,{header:1,defval:''}), fileName:s.file.name};
+      });
+      storageSet(key,JSON.stringify({sources:payload,fileName:mainFileName,savedAt:new Date().toISOString()}));
+      return true;
+    }catch(e){ return false; }
+  }
+
   function processWhenReady(){
     var lines=[];
     if(detected.epics){
       loadXlsx(detected.epics.file);
       lines.push('📊 Épicos → Tab Épicos');
-      if(propagate){
-        // Mesmo arquivo (Tipo de Item/Chave do item/Rótulos #Nº) alimenta o Jira do Discovery PMO
-        var okEp=_saveCrossImport('sala_cross_import_epics_v1',detected.epics.wb,detected.epics.file.name);
-        lines.push(okEp ? '🧭 Épicos → propagado para Discovery PMO Tracker automaticamente'
-                        : '🧭 Épicos → abra o Discovery PMO Tracker e use "⇪ Importar Jira"');
+    }
+    if(propagate){
+      // Junta épicos + qualquer arquivo com histórias (Acomp. Geral, Sprint Ativa, QTD
+      // Épicos, Backlog, Homologação): o rótulo "#Nº da iniciativa" que liga cada
+      // história ao Discovery PMO Tracker só existe nesses arquivos de história.
+      var jiraSources=[];
+      if(detected.epics) jiraSources.push(detected.epics);
+      if(detected.stories) jiraSources.push(detected.stories);
+      jiraSources=jiraSources.concat(detected.backlog, detected.sprint_visao, detected.general_visao, detected.homologation_visao);
+      if(jiraSources.length){
+        var okEp=_saveCrossImportSources('sala_cross_import_epics_v1',jiraSources,jiraSources[0].file.name);
+        lines.push(okEp ? '🧭 Épicos & Histórias → propagado para Discovery PMO Tracker automaticamente'
+                        : '🧭 Épicos & Histórias → abra o Discovery PMO Tracker e use "⇪ Importar Jira"');
       }
     }
     if(detected.stories){

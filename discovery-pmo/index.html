@@ -10387,7 +10387,7 @@
     }
 
     function itemChangedAt(item) {
-      return Date.parse(item?.updatedAt || item?.movedAt || item?.addedAt || '') || 0;
+      return Date.parse(item?.updatedAt || item?.movedAt || item?.addedAt || item?.updated || '') || 0;
     }
 
     function mergeNestedById(localList, remoteList, deletedIds) {
@@ -10427,6 +10427,12 @@
       base.subInitiatives = mergeNestedById(localProject?.subInitiatives, remoteProject?.subInitiatives, deletedIds);
       base.attachments = mergeNestedById(localProject?.attachments, remoteProject?.attachments, deletedIds);
       base.timelineItems = mergeNestedById(localProject?.timelineItems, remoteProject?.timelineItems, deletedIds);
+      // jiraStories precisa mesclar por registro (chave = "key" do Jira) como os demais
+      // arrays acima — sem isso, o "base" (escolhido pelo updatedAt da iniciativa inteira,
+      // não do array) descartava por completo as histórias do lado perdedor sempre que
+      // QUALQUER outro campo da iniciativa fosse editado depois em outro navegador. Era
+      // esse o motivo de Épicos & Histórias (Jira) sumir ou divergir entre navegadores.
+      base.jiraStories = mergeNestedById(localProject?.jiraStories, remoteProject?.jiraStories, deletedIds);
       return base;
     }
 
@@ -16952,13 +16958,24 @@ Recomendação PMO: ${d.recommendation}`;
     function applyCrossImportEpicsFromSala() {
       let stored;
       try { stored = JSON.parse(storageGet(CROSS_IMPORT_EPICS_KEY) || 'null'); } catch (e) { return false; }
-      if (!stored || !Array.isArray(stored.matrix) || !stored.matrix.length || !stored.savedAt) return false;
+      if (!stored || !stored.savedAt) return false;
+      // Formato novo: várias planilhas (Épicos + toda planilha de história) num só
+      // pacote — o rótulo "#Nº da iniciativa" que vincula cada história só existe nas
+      // planilhas de história, nunca na de Épicos isolada, então uma única matrix não
+      // bastava. Mantém o formato antigo (`matrix` solto) para bases já salvas antes
+      // dessa mudança.
+      const matrixSources = Array.isArray(stored.sources) && stored.sources.length
+        ? stored.sources.map(s => s.matrix).filter(m => Array.isArray(m) && m.length)
+        : (Array.isArray(stored.matrix) && stored.matrix.length ? [stored.matrix] : []);
+      if (!matrixSources.length) return false;
       const savedAt = new Date(stored.savedAt);
       if (isNaN(savedAt.getTime())) return false;
       const appliedAt = storageGet(CROSS_IMPORT_EPICS_APPLIED_KEY);
       if (appliedAt && new Date(appliedAt) >= savedAt) return false;
       try {
-        const records = buildJiraImportRecords(stored.matrix);
+        const records = matrixSources.flatMap(matrix => {
+          try { return buildJiraImportRecords(matrix); } catch (e) { return []; }
+        });
         if (!records.length) { storageSet(CROSS_IMPORT_EPICS_APPLIED_KEY, stored.savedAt); return false; }
         const plan = planJiraImportChanges(records);
         if (!plan.groups.size) { storageSet(CROSS_IMPORT_EPICS_APPLIED_KEY, stored.savedAt); return false; }
