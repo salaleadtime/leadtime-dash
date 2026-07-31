@@ -16958,13 +16958,24 @@ Recomendação PMO: ${d.recommendation}`;
     function applyCrossImportEpicsFromSala() {
       let stored;
       try { stored = JSON.parse(storageGet(CROSS_IMPORT_EPICS_KEY) || 'null'); } catch (e) { return false; }
-      if (!stored || !Array.isArray(stored.matrix) || !stored.matrix.length || !stored.savedAt) return false;
+      if (!stored || !stored.savedAt) return false;
+      // Formato novo: várias planilhas (Épicos + toda planilha de história) num só
+      // pacote — o rótulo "#Nº da iniciativa" que vincula cada história só existe nas
+      // planilhas de história, nunca na de Épicos isolada, então uma única matrix não
+      // bastava. Mantém o formato antigo (`matrix` solto) para bases já salvas antes
+      // dessa mudança.
+      const matrixSources = Array.isArray(stored.sources) && stored.sources.length
+        ? stored.sources.map(s => s.matrix).filter(m => Array.isArray(m) && m.length)
+        : (Array.isArray(stored.matrix) && stored.matrix.length ? [stored.matrix] : []);
+      if (!matrixSources.length) return false;
       const savedAt = new Date(stored.savedAt);
       if (isNaN(savedAt.getTime())) return false;
       const appliedAt = storageGet(CROSS_IMPORT_EPICS_APPLIED_KEY);
       if (appliedAt && new Date(appliedAt) >= savedAt) return false;
       try {
-        const records = buildJiraImportRecords(stored.matrix);
+        const records = matrixSources.flatMap(matrix => {
+          try { return buildJiraImportRecords(matrix); } catch (e) { return []; }
+        });
         if (!records.length) { storageSet(CROSS_IMPORT_EPICS_APPLIED_KEY, stored.savedAt); return false; }
         const plan = planJiraImportChanges(records);
         if (!plan.groups.size) { storageSet(CROSS_IMPORT_EPICS_APPLIED_KEY, stored.savedAt); return false; }
