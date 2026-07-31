@@ -9445,6 +9445,9 @@ renderEmergencyView=function(){
     '<button class="em-btn primary" onclick="emOpenConfig()">Configuração</button></div>';
   var toolbar=host.querySelector('.em-modern-toolbar');if(toolbar)toolbar.insertAdjacentHTML('afterend',bar);
 }
+// Evita exibir o layout legado enquanto a sincronização assíncrona é concluída.
+// Este script é carregado após o boot inicial; redesenha a aba já aberta agora.
+if((typeof curTab!=='undefined'&&curTab==='em')||document.querySelector('#pane-em.on')) renderEmergencyView();
 </script>
 </body>
 </html>
