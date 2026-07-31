@@ -2438,6 +2438,8 @@ var STORAGE_VERSION_KEY='leadtime_sala_v8_seed_version';
 var FIM_LOG_KEY='leadtime_sala_v8_fim_log';
 var RESUMO_KEY='leadtime_sala_v8_resumo'; // cache exclusivo do Jira; nunca apagado pelo Sheets
 var SQUAD_KEY='leadtime_sala_v8_squad';   // cache de squad originado do Jira/SEED; nunca apagado pelo Sheets
+// A carga de Épicos do Jira é uma fotografia da carteira atual.
+var JIRA_EPIC_SNAPSHOT_KEY='leadtime_sala_v8_jira_epic_snapshot';
 // SEED_VERSION é atualizado toda vez que alguém clica em "Salvar no HTML".
 // Se o HTML baixado (ex: pull do Git) tiver versão diferente do cache local,
 // o arquivo vence e o cache é descartado — garantindo que TODOS vejam os mesmos dados.
@@ -2821,6 +2823,13 @@ function replaceFromSharedSource(rows){
   }catch(e){}
 
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
+  // Uma importação Jira recente é autoritativa para a carteira de épicos.
+  // Assim, o Sheets não reintroduz cartões históricos que não estão no arquivo atual.
+  var jiraEpicSnapshot=loadJiraEpicSnapshot();
+  if(jiraEpicSnapshot){
+    var currentIds={}; jiraEpicSnapshot.ids.forEach(function(id){currentIds[id]=true;});
+    incoming=incoming.filter(function(r){return currentIds[r.id];});
+  }
 
   // Caches persistidos pelo import do Jira (nunca sobrescritos pelo Sheets)
   var resumoCache=loadResumoCache();
@@ -2942,7 +2951,7 @@ function replaceFromSharedSource(rows){
   // não desapareçam para o time quando o Sheets não os contém.
   // (inIds já foi montado acima a partir de `incoming`.)
   allData.forEach(function(r){
-    if(r&&r.id&&!inIds[r.id]) incoming.push(r);
+    if(r&&r.id&&!inIds[r.id]&&!jiraEpicSnapshot) incoming.push(r);
   });
 
   // Proteção: nunca substituir dados existentes por lista vazia
@@ -3069,6 +3078,21 @@ function loadResumoCache(){
 }
 function loadSquadCache(){
   try{ return JSON.parse(storageGet(SQUAD_KEY)||'{}'); }catch(e){ return {}; }
+}
+function saveJiraEpicSnapshot(rows){
+  try{
+    var ids=(rows||[]).map(function(r){return r&&r.id;}).filter(Boolean);
+    storageSet(JIRA_EPIC_SNAPSHOT_KEY,JSON.stringify({ids:ids,importedAt:new Date().toISOString()}));
+  }catch(e){}
+}
+function loadJiraEpicSnapshot(){
+  try{
+    var snap=JSON.parse(storageGet(JIRA_EPIC_SNAPSHOT_KEY)||'null');
+    if(!snap||!Array.isArray(snap.ids)||!snap.ids.length) return null;
+    var importedAt=new Date(snap.importedAt||0);
+    if(isNaN(importedAt.getTime()) || (Date.now()-importedAt.getTime())>48*60*60*1000) return null;
+    return snap;
+  }catch(e){ return null; }
 }
 
 // ── Fila de escritas pendentes (motor de sincronização) ─────────────────────
@@ -7194,11 +7218,11 @@ ub.addEventListener('drop',function(e){
 });
 // fiAllGlobal → ponto único de importação em massa (sempre propaga para todos os dashboards)
 $id('fiAllGlobal').onchange=function(e){
-  var has=e.target.files&&e.target.files.length>0;
+  var files=Array.from(e.target.files||[]);
   this.value='';
-  if(!has) return;
+  if(!files.length) return;
   if(!guardImportStart()) return;
-  loadMultipleFiles(e.target.files, true);
+  loadMultipleFiles(files, true);
 };
 
 // Stories upload
@@ -7521,15 +7545,10 @@ function loadXlsx(file){
         }
       }
 
-      // CRÍTICO: MANTÉM épicos que já estavam no sistema mas NÃO vieram no import
-      // Isso atende o pedido do usuário de "não apagar dados existentes"
+      // A exportação Jira de Épicos é a fotografia da carteira atual. O merge
+      // acima preserva campos manuais das chaves recebidas; chaves ausentes não
+      // ficam como cards órfãos ou sem resumo.
       var keptFromExisting=0;
-      allData.forEach(function(r){
-        if(r && r.id && !seenIds[r.id]){
-          merged.push(Object.assign({},r)); // preserva intacto
-          keptFromExisting++;
-        }
-      });
 
       if(!merged.length){
         toast('Nenhum dado encontrado','O arquivo não contém épicos válidos com ID.','err');
@@ -7537,6 +7556,7 @@ function loadXlsx(file){
       }
 
       allData = merged;
+      saveJiraEpicSnapshot(merged);
       saveResumoCache(merged);
       saveEpicMetaToCloud(merged);
       backfillEpicSquads();

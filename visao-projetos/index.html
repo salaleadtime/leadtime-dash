@@ -8682,7 +8682,9 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     }
 
     function isHomologation(row){
-      return /homolog/i.test(row?.situacao || '');
+      // Apenas a etapa ativa entra em SLA/KPI de Homologação. "Homologada",
+      // "Pós-Homologação" e textos de rota para Produção não podem permanecer nela.
+      return normalize(row?.situacao || '') === 'em homologacao';
     }
 
     function parseFlexibleDate(value){
@@ -9325,24 +9327,25 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     // - Registro novo é incluído.
     // - Registro existente é atualizado, mas um campo vazio no arquivo novo
     //   nunca apaga um valor já preenchido.
-    // - Registros ausentes no novo arquivo permanecem (nenhuma exclusão automática).
-    // Isso evita que uma carga (ex.: só a squad A) apague os dados de outra
-    // carga anterior (ex.: squad B) do mesmo relatório.
-    function mergeRowsByChave(existingRows, incomingRows){
+    // - Por padrão, registros ausentes permanecem para cargas parciais.
+    // - Com replaceSnapshot=true, a fonte é uma fotografia completa e ausentes
+    //   saem da base, sem apagar campos manuais das chaves ainda recebidas.
+    function mergeRowsByChave(existingRows, incomingRows, replaceSnapshot){
       if(!existingRows || !existingRows.length) return incomingRows.slice();
       const byKey = {};
       existingRows.forEach((row, idx) => { const k = String(row.chave||'').toUpperCase(); if(k) byKey[k] = idx; });
-      const merged = existingRows.slice();
+      const merged = replaceSnapshot ? [] : existingRows.slice();
       incomingRows.forEach(row => {
         const k = String(row.chave||'').toUpperCase();
         if(!k){ merged.push(row); return; }
         const idx = byKey[k];
         if(idx === undefined){ merged.push(row); byKey[k] = merged.length - 1; }
         else {
-          const prev = merged[idx];
+          const prev = existingRows[idx] || merged[idx];
           const next = {...prev};
           Object.keys(row).forEach(f => { const v = row[f]; if(v !== '' && v !== null && v !== undefined) next[f] = v; });
-          merged[idx] = next;
+          if(replaceSnapshot){ merged.push(next); byKey[k] = merged.length - 1; }
+          else merged[idx] = next;
         }
       });
       return merged;
@@ -9366,7 +9369,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
               if(!parsed || !parsed.length) continue;
               const type = detectVisaoFileType(file, parsed);
               if(type === 'sprint' || files.length === 1){
-                sprintRows = mergeRowsByChave(sprintRows, parsed.map(row => ({...row, sprintAtual:true})));
+                sprintRows = mergeRowsByChave(sprintRows, parsed.map(row => ({...row, sprintAtual:true})), true);
                 sprintSourceName = file.name;
                 importedSprint = true;
               }
@@ -9397,7 +9400,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
         try{
           const parsed = await readJiraFileToRows(file);
           if(!parsed) return;
-          homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation));
+          homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation), true);
           homologationSourceName = file.name;
           lastImportAt.homologation = new Date();
           persistHomologationBase();
@@ -9444,20 +9447,20 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
             const type = detectVisaoFileTypeExt(file, parsed);
             if(type === 'epics'){ skipped.push(file.name + ' (épicos — use no SALA)'); continue; }
             if(type === 'sprint'){
-              sprintRows = mergeRowsByChave(sprintRows, parsed.map(r => ({...r, sprintAtual:true})));
+              sprintRows = mergeRowsByChave(sprintRows, parsed.map(r => ({...r, sprintAtual:true})), true);
               sprintSourceName = file.name;
               importedSprint = true;
               lastImportAt.sprint = new Date();
               try{ storageSet(CROSS_IMPORT_SPRINT_KEY, JSON.stringify({rows: sprintRows, fileName: file.name, savedAt: new Date().toISOString()})); }catch(e){}
             } else if(type === 'homologation'){
-              homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation));
+              homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation), true);
               homologationSourceName = file.name;
               importedHomolog = true;
               lastImportAt.homologation = new Date();
               persistHomologationBase();
               try{ storageSet(CROSS_IMPORT_HOMOLOGATION_KEY, JSON.stringify({rows: homologationRows, fileName: file.name, savedAt: new Date().toISOString()})); }catch(e){}
             } else {
-              rows = mergeRowsByChave(rows, parsed);
+              rows = mergeRowsByChave(rows, parsed, true);
               sourceName = file.name;
               importedGeneral = true;
               lastImportAt.general = new Date();
@@ -9519,7 +9522,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const key = keyMap[type];
       if (!key) return false;
       const stored = readStoredJSON(key, null);
-      if (!stored || !Array.isArray(stored.matrix) || !stored.matrix.length) return false;
+      if (!stored || (!Array.isArray(stored.matrix) && !Array.isArray(stored.rows))) return false;
       // Payload já aplicado antes (mesmo savedAt) → nunca reaplica.
       if (stored.savedAt && lastCrossApplied[type] === stored.savedAt) return false;
       // Compara com a última importação DESTE dataset específico (não um
@@ -9540,14 +9543,14 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
             : null;
         if (!parsed || !parsed.length) return false;
         if (type === 'sprint') {
-          sprintRows = mergeRowsByChave(sprintRows, parsed.map(r => ({...r, sprintAtual: true})));
+          sprintRows = mergeRowsByChave(sprintRows, parsed.map(r => ({...r, sprintAtual: true})), true);
           sprintSourceName = stored.fileName || 'Sprint (via SALA)';
         } else if (type === 'homologation') {
-          homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation));
+          homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation), true);
           homologationSourceName = stored.fileName || 'Homologação (via SALA)';
           try { persistHomologationBase(); } catch(e){}
         } else {
-          rows = mergeRowsByChave(rows, parsed);
+          rows = mergeRowsByChave(rows, parsed, true);
           sourceName = stored.fileName || 'Acomp. Geral (via SALA)';
         }
         lastImportAt[type] = new Date();
