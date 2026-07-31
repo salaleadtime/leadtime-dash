@@ -2732,6 +2732,11 @@ function isValidIsoDate(value){
   return !isNaN(d.getTime()) && d.toISOString().slice(0,10) === value;
 }
 function isCancelled(rec){ return !!rec && String(rec.status||'').trim()==='Cancelado'; }
+// Uma foto Jira define a carteira atual, mas nunca pode apagar evidências de
+// entrega/cancelamento usadas na Medição e no histórico executivo.
+function isHistoricEpic(rec){
+  return !!rec && (isCancelled(rec)||isValidDate(rec.fim)||isValidDate(rec.fimAntes));
+}
 // Uma história sem épico conhecido continua elegível. Quando o épico existe no
 // painel, porém, Cancelado e concluído ficam restritos à aba Medição.
 function isStoryEpicVisible(epicId){
@@ -2828,12 +2833,12 @@ function replaceFromSharedSource(rows){
   }catch(e){}
 
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
-  // Uma importação Jira recente é autoritativa para a carteira de épicos.
-  // Assim, o Sheets não reintroduz cartões históricos que não estão no arquivo atual.
+  // Uma importação Jira recente é autoritativa para a carteira ATUAL. Entregas
+  // e cancelamentos fora dela continuam no histórico e na aba Medição.
   var jiraEpicSnapshot=loadJiraEpicSnapshot();
   if(jiraEpicSnapshot){
     var currentIds={}; jiraEpicSnapshot.ids.forEach(function(id){currentIds[id]=true;});
-    incoming=incoming.filter(function(r){return currentIds[r.id];});
+    incoming=incoming.filter(function(r){return currentIds[r.id]||isHistoricEpic(r);});
   }
 
   // Caches persistidos pelo import do Jira (nunca sobrescritos pelo Sheets)
@@ -2956,7 +2961,7 @@ function replaceFromSharedSource(rows){
   // não desapareçam para o time quando o Sheets não os contém.
   // (inIds já foi montado acima a partir de `incoming`.)
   allData.forEach(function(r){
-    if(r&&r.id&&!inIds[r.id]&&!jiraEpicSnapshot) incoming.push(r);
+    if(r&&r.id&&!inIds[r.id]&&(!jiraEpicSnapshot||isHistoricEpic(r))) incoming.push(r);
   });
 
   // Proteção: nunca substituir dados existentes por lista vazia
@@ -7591,7 +7596,10 @@ function loadXlsx(file){
         return;
       }
 
-      allData = merged;
+      // A nova carga representa os épicos em aberto; mantém somente os registros
+      // históricos que não reapareceram no arquivo para não zerar Medição/Dashboard.
+      var historical=(allData||[]).filter(function(old){ return old&&old.id&&!seenIds[old.id]&&isHistoricEpic(old); });
+      allData = merged.concat(historical);
       saveJiraEpicSnapshot(merged);
       saveResumoCache(merged);
       saveEpicMetaToCloud(merged);
