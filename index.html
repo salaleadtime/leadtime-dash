@@ -6054,6 +6054,8 @@ function emEnsureState(){
   if(!emergencyState||typeof emergencyState!=='object') emergencyState={rules:[],meta:{}};
   if(!Array.isArray(emergencyState.rules)) emergencyState.rules=[];
   if(!emergencyState.meta||typeof emergencyState.meta!=='object') emergencyState.meta={};
+  if(!emergencyState.config||typeof emergencyState.config!=='object') emergencyState.config={workdayHours:6};
+  if(!emergencyState.config.workdayHours) emergencyState.config.workdayHours=6;
   if(!emergencyState.rules.some(function(r){return r&&r.id==='credito-rural';})) emergencyState.rules.unshift(emDefaultRule());
   var creditoRule=emergencyState.rules.find(function(r){return r&&r.id==='credito-rural';});
   if(creditoRule&&creditoRule.type==='titleStarts'){
@@ -6201,10 +6203,15 @@ function emHours(v){
   var s=emNorm(v).replace(',','.');var days=0,hours=0,m=s.match(/([\d.]+)\s*(?:d|dia|day)/);if(m)days=parseFloat(m[1])||0;m=s.match(/([\d.]+)\s*(?:h|hora|hour)/);if(m)hours=parseFloat(m[1])||0;
   if(days||hours)return days*8+hours;var n=parseFloat(s);return isNaN(n)?0:n;
 }
+function emWorkdayHours(){
+  emEnsureState();
+  var hours=Number(emergencyState.config&&emergencyState.config.workdayHours);
+  return hours>0?hours:6;
+}
 function emForecast(story,meta){
   var hours=emHours(meta&&meta.estimateHours!==undefined?meta.estimateHours:story.estimativa);if(!hours)return '';
   var start=(meta&&meta.forecastStart)||story.atualizado||emTodayISO();
-  return emAddBusinessDaysInclusive(start,Math.max(1,Math.ceil(hours/8)));
+  return emAddBusinessDaysInclusive(start,Math.max(1,Math.ceil(hours/emWorkdayHours())));
 }
 function emIsHomologation(story){var s=emNorm(story.status);return s.indexOf('homolog')>=0&&s.indexOf('homologada')<0;}
 function emSla(story){
@@ -6399,7 +6406,7 @@ function emSelectRule(value){
 function emForecast(story,meta){
   var hours=emHours(meta&&meta.estimateHours!==undefined?meta.estimateHours:story.estimativa),start=meta&&meta.forecastStart||'';
   if(!hours||!start)return '';
-  return emAddBusinessDaysInclusive(start,Math.max(1,Math.ceil(hours/8)));
+  return emAddBusinessDaysInclusive(start,Math.max(1,Math.ceil(hours/emWorkdayHours())));
 }
 function emPreviewForecast(){
   var hours=emHours($id('emEditEstimate').value),start=$id('emEditStart').value;
@@ -9359,6 +9366,30 @@ function calSeedExample(){
   // Mantém o ícone coerente quando a página é recarregada na mesma sessão.
   if(impSenhaOk) setImpUnlocked(true);
 })();
+
+/* Demandas Emergenciais — visão Kanban compacta (fonte: histórias importadas). */
+function emOpenConfig(){
+  var labels=Array.from(new Set(getEmergencySourceStories().reduce(function(a,s){return a.concat(emSplitLabels(s.labels));},[]))).filter(Boolean).sort();
+  var selected=(emergencyState.config&&emergencyState.config.labels)||[];
+  var host=$id('emContent');
+  host.insertAdjacentHTML('afterbegin','<div class="ov on" id="emCfgOv"><div class="mdl" style="max-width:560px"><div class="mt">Configuração</div><div class="ms">Selecione ou adicione rótulos. Uma história entra se possuir qualquer rótulo salvo.</div><label class="em-field">Rótulos selecionados<input class="em-input" id="emCfgLabels" value="'+esc(selected.join(' | '))+'" placeholder="Ex.: Emergencial | Crédito Rural"></label><div class="em-label-picker-chips" style="margin:10px 0">'+labels.map(function(l){return'<button class="em-label-chip" type="button" onclick="var i=$id(\'emCfgLabels\');i.value=(i.value?i.value+\' | \':\'\')+this.textContent">'+esc(l)+'</button>';}).join('')+'</div><div class="em-rule-grid"><label class="em-field">Jornada de trabalho<select class="em-select" id="emCfgHours"><option value="6"'+(emWorkdayHours()===6?' selected':'')+'>6 horas por dia</option><option value="8"'+(emWorkdayHours()===8?' selected':'')+'>8 horas por dia</option></select></label><label class="em-field">Dias úteis<span class="em-input" style="display:flex;align-items:center">Segunda a sexta-feira</span></label></div><div class="mf" style="margin-top:14px"><button class="mb" onclick="$id(\'emCfgOv\').remove()">Cancelar</button><button class="mb p" onclick="emSaveConfig()">Salvar configuração</button></div></div></div>');
+}
+function emSaveConfig(){
+  var labels=($id('emCfgLabels').value||'').split(/[|,;]+/).map(function(x){return x.trim();}).filter(Boolean);
+  emergencyState.config=emergencyState.config||{};emergencyState.config.labels=labels;emergencyState.config.workdayHours=Number($id('emCfgHours').value)||6;
+  var rule=emergencyState.rules.find(function(r){return r.id==='manual-labels';});
+  if(!rule){rule={id:'manual-labels',name:'Demandas Emergenciais',type:'labelAny',value:'',active:true};emergencyState.rules.unshift(rule);}rule.value=labels.join(' | ');rule.updatedAt=new Date().toISOString();emergencyRuleId=rule.id;
+  emSaveState();$id('emCfgOv').remove();renderEmergencyView();
+}
+function renderEmergencyView(){
+  var host=$id('emContent');if(!host)return;emEnsureState();
+  var all=getEmergencyStories(),today=emTodayISO(),by=function(fn){return all.filter(fn);};
+  var backlog=by(function(s){return !emRefined(s);}),refined=by(emRefined),dev=by(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}),overdue=dev.filter(function(s){var d=emForecast(s,emergencyState.meta[s.id]||{});return d&&d<today;});
+  var next=all.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort()[0]||'';
+  function cards(items,kind){return items.slice(0,6).map(function(s){var m=emergencyState.meta[s.id]||{},d=emForecast(s,m),late=d&&d<today;return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a><button class="em-edit" title="Copiar" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button></div><div class="em-priority-title">'+esc(s.resumo||'Sem resumo')+'</div><div class="em-muted">'+esc(s.squad||'—')+' · '+esc(s.status||'—')+'</div><span class="em-badge '+(kind==='backlog'?'blue':'green')+'">'+(kind==='backlog'?'Backlog':'Refinada')+'</span>'+(late?'<button class="em-btn" style="float:right;padding:4px 7px;font-size:9px" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">Reprogramar</button>':'')+'</div>';}).join('')||'<div class="em-muted">Nenhuma história</div>';}
+  var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge blue">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td>'+esc(m.comment||'—')+'</td></tr>';}).join('');
+  host.innerHTML='<div class="em-modern-toolbar"><div class="em-toolbar-summary"><strong>Demandas Emergenciais</strong><span class="em-muted">Qtd Story/Épicos + Backlog/Refinamento</span></div><div class="em-toolbar-actions"><button class="em-btn modern" onclick="emOpenConfig()">⚙ Configuração</button></div></div><div class="em-kpis"><div class="em-kpi"><small>Na fila</small><strong>'+all.length+'</strong><span>labels configurados</span></div><div class="em-kpi"><small>Backlog · '+backlog.length+'</small><strong>'+backlog.length+'</strong><span>aguardam refinamento</span></div><div class="em-kpi"><small>Refinadas · '+refined.length+'</small><strong>'+refined.length+'</strong><span>prontas para avançar</span></div><div class="em-kpi"><small>Desenvolvimento · '+overdue.length+'</small><strong>'+overdue.length+'</strong><span>com prazo vencido</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(next)+'</strong><span>'+emWorkdayHours()+'h por dia útil</span></div></div><div class="em-priority-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="em-panel"><b>📋 Backlog · '+backlog.length+'</b>'+cards(backlog,'backlog')+'</div><div class="em-panel"><b>✓ Refinadas · '+refined.length+'</b>'+cards(refined,'refined')+'</div><div class="em-panel" style="border-top:3px solid #e57b00"><b>Desenvolvimento · '+overdue.length+'</b><div class="em-muted">prazo vencido</div>'+cards(overdue,'dev')+'</div></div><div class="em-table-wrap"><table class="em-table"><thead><tr><th>História / Labels</th><th>Squad</th><th>Status</th><th>Refinamento</th><th>Início dev.</th><th>Sprint</th><th>Estimativa</th><th>Data prevista</th><th>Comentário</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
 </script>
 </body>
 </html>
