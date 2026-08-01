@@ -13233,8 +13233,11 @@
     function formatBRDateTime(isoDate) {
       const parsed = isoDate ? new Date(isoDate) : null;
       if (!parsed || Number.isNaN(parsed.getTime())) return 'Não informado';
-      const dateLabel = formatBR(isoDate);
-      const timeLabel = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      // O timestamp vem em UTC. Data e hora precisam usar o mesmo fuso,
+      // senão 00:02 UTC aparecia como 01/08 às 21:02 no Brasil.
+      const brazilTimeZone = 'America/Fortaleza';
+      const dateLabel = parsed.toLocaleDateString('pt-BR', { timeZone: brazilTimeZone });
+      const timeLabel = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: brazilTimeZone });
       return `${dateLabel} às ${timeLabel}`;
     }
 
