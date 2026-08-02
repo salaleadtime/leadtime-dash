@@ -64,7 +64,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-31-jira-epic-snapshot-v15';
+var BACKLOG_SCRIPT_VERSION = '2026-08-02-v16-last-valid-vp-snapshot';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -93,6 +93,16 @@ var VP_SHEET_MAP = {
   vpSprintCalendar: '_vp_sprint_calendar',
   emergencyDemand: '_emergency_demand',
   discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
+};
+
+// Cargas Jira compartilhadas. Para essas bases, uma lista vazia não é uma
+// "nova fotografia": ela normalmente indica arquivo errado, filtro vazio ou
+// parsing incompleto. A última carga válida precisa continuar disponível para
+// todos os usuários, inclusive em um navegador novo sem cache local.
+var VP_SNAPSHOT_KEYS = {
+  vpGeral: true,
+  vpSprint: true,
+  vpHomologation: true
 };
 
 // ════════════════════════════════════════════════════════════════════════
@@ -199,6 +209,41 @@ function getVpSheet_(key) {
   return VP_SHEET_MAP[key] || null;
 }
 
+function hasVpSnapshotRows_(data) {
+  return !!data && Array.isArray(data.rows) && data.rows.length > 0;
+}
+
+// Retorna a cópia válida mais recente do ring buffer. bakIdx aponta para o
+// último slot gravado por snapshotIfNeeded_; percorremos a partir dele para
+// recuperar a última fotografia não vazia quando a aba principal foi zerada.
+function readLatestValidVpBackup_(sheetName) {
+  var lastIdx = Number(props_().getProperty('bakIdx_' + sheetName) || 0);
+  for (var offset = 0; offset < BACKUP_COPIES; offset++) {
+    var idx = ((lastIdx - offset - 1 + BACKUP_COPIES) % BACKUP_COPIES) + 1;
+    var candidate = readJsonFromSheet_(sheetName + BACKUP_SUFFIX + idx, null);
+    if (hasVpSnapshotRows_(candidate)) return candidate;
+  }
+  return null;
+}
+
+// A leitura compartilhada nunca devolve uma fotografia vazia quando existe um
+// backup válido. Isso dá o mesmo resultado para qualquer usuário, sem depender
+// de localStorage nem de alguém deixar uma aba antiga aberta.
+function readVpDataWithRecovery_(key) {
+  var sheetName = getVpSheet_(key);
+  var current = readJsonFromSheet_(sheetName, null);
+  if (!VP_SNAPSHOT_KEYS[key] || hasVpSnapshotRows_(current)) return current;
+
+  var recovered = readLatestValidVpBackup_(sheetName);
+  if (!recovered) return current;
+
+  var visible = {};
+  Object.keys(recovered).forEach(function(name) { visible[name] = recovered[name]; });
+  visible.recoveredFromBackup = true;
+  visible.recoveredAt = new Date().toISOString();
+  return visible;
+}
+
 function autorizarPlanilhaUmaVez() {
   var lock = LockService.getScriptLock();
   lock.waitLock(LOCK_TIMEOUT_MS);
@@ -272,7 +317,7 @@ function doGet(e) {
       if (!sheetName) {
         return jsonOut_({ ok: false, error: 'chave inválida: ' + key }, callback);
       }
-      var vpData = withLock_(function() { return readJsonFromSheet_(sheetName, null); });
+      var vpData = withLock_(function() { return readVpDataWithRecovery_(key); });
       return jsonOut_({ ok: true, data: vpData, revision: getRevision_(sheetName) }, callback);
     }
 
@@ -285,7 +330,7 @@ function doGet(e) {
         var out = {};
         var revisions = {};
         Object.keys(VP_SHEET_MAP).forEach(function(k) {
-          out[k] = readJsonFromSheet_(VP_SHEET_MAP[k], null);
+          out[k] = readVpDataWithRecovery_(k);
           revisions[k] = getRevision_(VP_SHEET_MAP[k]);
         });
         return { out: out, revisions: revisions };
@@ -400,6 +445,21 @@ function doPost(e) {
         // campo único areaResponsavel quando vier em um alias já conhecido.
         // Itens legados sem área continuam válidos e não são descartados.
         if (vpKey === 'discoveryPmo') vpData = normalizeDiscoveryRaidAreas_(vpData);
+        if (VP_SNAPSHOT_KEYS[vpKey] && !hasVpSnapshotRows_(vpData)) {
+          var existingSnapshot = withLock_(function() {
+            var currentSnapshot = readVpDataWithRecovery_(vpKey);
+            audit_('saveVpData/' + vpKey, vpPayload.length, countRecords_(currentSnapshot), 0, 'RECUSADO',
+              'carga compartilhada sem itens; última carga válida preservada');
+            return currentSnapshot;
+          });
+          return jsonOut_({
+            ok: false,
+            key: vpKey,
+            error: 'gravação recusada: a carga compartilhada não possui itens. A última carga válida foi preservada.',
+            saved: countRecords_(existingSnapshot),
+            revision: getRevision_(vpSheetName)
+          });
+        }
         var vpWrite = withLock_(function() {
           var chunks = readChunks_(vpSheetName);
           var before = chunksToData_(chunks, null);

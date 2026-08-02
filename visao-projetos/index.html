@@ -172,7 +172,7 @@
     .fab-cap svg{width:14px;height:14px;flex:0 0 auto}
     .page{
       max-width:1480px;
-      margin:16px auto 42px;
+      margin:32px auto 42px;
       padding:0 28px;
     }
     .nav-card{
@@ -6545,19 +6545,22 @@
 
       var vpHomologation = all.vpHomologation;
       var localHomolog = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
-      if(!vpHomologation || !Array.isArray(vpHomologation.rows)){
-        if(localHomolog && Array.isArray(localHomolog.rows) && localHomolog.rows.length){
-          gasSaveVpData('vpHomologation', localHomolog);
-        }
-      } else {
+      var hasLocalHomolog = !!(localHomolog && Array.isArray(localHomolog.rows) && localHomolog.rows.length);
+      var hasServerHomolog = !!(vpHomologation && Array.isArray(vpHomologation.rows) && vpHomologation.rows.length);
+      if(hasServerHomolog){
         var serverHomologTime = vpHomologation.importedAt ? Date.parse(vpHomologation.importedAt) : 0;
         var localHomologTime  = localHomolog && localHomolog.importedAt ? Date.parse(localHomolog.importedAt) : 0;
-        if(serverHomologTime > localHomologTime){
+        if(serverHomologTime > localHomologTime || !hasLocalHomolog){
           homologationRows = vpHomologation.rows.map(applyRefinementRule).filter(isHomologation);
           homologationSourceName = vpHomologation.sourceName || 'Homologação compartilhada';
           storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(vpHomologation));
           needsRender = true;
         }
+      } else if(hasLocalHomolog){
+        // Uma resposta vazia nunca pode apagar a última carga válida deste
+        // navegador. Reenvia a fotografia válida para que todos recebam a
+        // mesma fonte compartilhada na próxima abertura.
+        gasSaveVpData('vpHomologation', localHomolog);
       }
 
       var vpOpUpdates = all.vpOpUpdates;
@@ -8784,7 +8787,9 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     function isHomologation(row){
       // Apenas a etapa ativa entra em SLA/KPI de Homologação. "Homologada",
       // "Pós-Homologação" e textos de rota para Produção não podem permanecer nela.
-      return normalize(row?.situacao || '') === 'em homologacao';
+      const status = normalize(row?.situacao || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      return status === 'em homologacao';
     }
 
     function parseFlexibleDate(value){
