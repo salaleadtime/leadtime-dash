@@ -48,17 +48,40 @@ O mesmo bloco aparece tanto na imagem gerada pelo
 pipeline quanto na página `boletim-ds/index.html`, que busca os dados ao
 vivo no navegador.
 
-## Horário: aprovado — 09:00 todos os dias
+## Status atual: agendamento PAUSADO (reformulação)
 
-O workflow roda automaticamente **todos os dias às 09:00 (America/Sao_Paulo,
-UTC-3 fixo)** via `schedule: cron: '0 12 * * *'`. Continua também disponível
-por `workflow_dispatch` para testes manuais.
+O agendamento diário está **desativado por opção**, enquanto o boletim passa
+por reformulação. No `.github/workflows/boletim-diario-ds.yml` o bloco
+`schedule` está comentado, então o workflow **não roda sozinho** — só por
+`workflow_dispatch` (Actions → Boletim Diário DS → Run workflow), o que
+continua permitindo testar as mudanças sob demanda.
 
-## Status atual do e-mail: envio BLOQUEADO até configuração dos secrets
+Nada mais foi desligado por causa disso:
 
-O horário está ativo, mas o envio por e-mail em si só acontece se todos os
+- `boletim-ds/index.html` continua publicada e funcionando — ela busca os
+  dados ao vivo no navegador e não depende do workflow.
+- O atalho na aba **📰 Boletim DS** do painel Admin continua válido.
+- Nenhum dado, regra ou fonte foi alterado (o pipeline sempre foi só leitura).
+
+### Religar o agendamento
+
+Descomentar as duas linhas do `schedule` no workflow:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 12 * * *'   # 09:00 America/Sao_Paulo, todos os dias
+  workflow_dispatch:
+```
+
+Horário aprovado: **todos os dias às 09:00 (America/Sao_Paulo, UTC-3 fixo,
+sem horário de verão)** — 09:00 BRT = 12:00 UTC.
+
+## Status do e-mail: envio BLOQUEADO até configuração dos secrets
+
+Mesmo com o agendamento religado, o envio por e-mail em si só acontece se todos os
 secrets abaixo estiverem configurados (`Settings → Secrets and variables →
-Actions`). Sem eles, a execução diária roda, gera o HTML e o PNG
+Actions`). Sem eles, a execução roda, gera o HTML e o PNG
 normalmente, mas **não envia** e-mail — isso é intencional (seção 11/13 da
 especificação: destinatários e credenciais nunca ficam no código-fonte e o
 envio automático não deve ser ativado sem validação explícita).
@@ -86,6 +109,9 @@ para exibir o link "consultar o sistema" no rodapé do e-mail.
 
 ## Rollback
 
+- Pausar o agendamento (estado atual): comentar o bloco `schedule` no
+  workflow — o `workflow_dispatch` continua disponível para rodar sob
+  demanda.
 - Desativar o envio automático: apagar/renomear o secret
   `BOLETIM_DS_RECIPIENTS` (o pipeline volta a rodar em modo "seco").
 - Remover o módulo por completo: apagar a pasta `boletim-ds/`, o arquivo
