@@ -9270,13 +9270,15 @@ function calSeedExample(){
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
           <a class="adm-btn primary" href="./boletim-ds/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">📰 Abrir Boletim Diário DS</a>
         </div>
-        <div class="adm-sec" style="margin-top:20px">Envio automático</div>
+        <div class="adm-sec" style="margin-top:20px">Envio automático — pausado</div>
         <p style="font-size:11px;color:#64748b;line-height:1.5">
-          Geração e envio diário agendados para <strong>09:00 (America/São_Paulo)</strong>, todos os dias,
-          via GitHub Actions (<code>boletim-diario-ds.yml</code>). O e-mail só é enviado de fato quando os
-          secrets de SMTP e destinatários estiverem configurados no repositório — sem eles, o boletim é
-          gerado normalmente, mas o envio fica registrado como pendente, sem falso positivo.
-          Veja <code>boletim-ds/README-BOLETIM-DS.md</code> para configurar.
+          O agendamento diário das <strong>09:00 (America/São_Paulo)</strong> está
+          <strong>desativado</strong> enquanto o boletim passa por reformulação: o <code>schedule</code>
+          do workflow <code>boletim-diario-ds.yml</code> está comentado, então ele só roda sob demanda
+          (GitHub Actions → Boletim Diário DS → Run workflow). Esta página acima continua funcionando
+          normalmente — ela busca os dados ao vivo no navegador e não depende do workflow.
+          Para religar o envio diário, descomente o <code>schedule</code> e configure os secrets de SMTP
+          e destinatários; veja <code>boletim-ds/README-BOLETIM-DS.md</code>.
         </p>
       </div>
     </div>
