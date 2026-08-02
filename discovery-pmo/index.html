@@ -10263,8 +10263,19 @@
       'refinamento tecnico': 'refino'
     };
 
+    // Precisa existir antes de loadData() / normalizeData(): a base operacional
+    // pode trazer riscos e dependências já preenchidos.
+    const RAID_AREA_OPTIONS = [
+      'Arquitetura', 'Desenvolvimento', 'Negócio', 'Segurança e Compliance',
+      'Infraestrutura', 'Dados e Integrações', 'Jurídico',
+      'Fornecedor / Terceiro', 'Alocação / RTE'
+    ];
+
     let _cardsJustReset = false;
     let _scheduleLegacyCleanupJustRan = false;
+    // Fallback é apenas visual/local: nunca pode ser publicado como fonte oficial.
+    let _discUsingFallback = false;
+    let _discRemoteHydrated = false;
     let data = loadData();
     let activeProjectId = data.activeProjectId || data.projects[0]?.id;
     if (!data.projects.some(p => p.id === activeProjectId)) activeProjectId = data.projects[0]?.id || defaultData.activeProjectId;
@@ -10321,6 +10332,9 @@
     }
 
     function scheduleDiscGasSave() {
+      // Nunca publica o snapshot padrão enquanto a fonte compartilhada ainda
+      // não respondeu. Isso evita que um timeout transforme fallback em dado oficial.
+      if (_discUsingFallback && !_discRemoteHydrated) return;
       if (_discGasSaveTimer) clearTimeout(_discGasSaveTimer);
       _discGasSaveTimer = setTimeout(() => {
         _discGasSaveTimer = null;
@@ -10335,7 +10349,13 @@
         // apagar silenciosamente o que a primeira acabara de salvar, mesmo com
         // todo o merge por registro já existente (ele só rodava na leitura).
         discGasLoad((err, remote) => {
-          if (!err) mergeRemoteIntoData(remote);
+          if (err || !remote || !Array.isArray(remote.projects) || !remote.projects.length) {
+            _discGasSaving = false;
+            return;
+          }
+          _discRemoteHydrated = true;
+          _discUsingFallback = false;
+          mergeRemoteIntoData(remote);
           storageSet(STORAGE_KEY, JSON.stringify(data));
           discGasSave(data);
           setTimeout(() => { _discGasSaving = false; }, 800);
@@ -10510,6 +10530,11 @@
     function applyRemoteDiscData(remote) {
       if (isUserEditingNow()) return false;
 
+      if (remote && Array.isArray(remote.projects) && remote.projects.length) {
+        _discRemoteHydrated = true;
+        _discUsingFallback = false;
+      }
+
       const keepActiveId = activeProjectId;
       if (!mergeRemoteIntoData(remote)) return false;
 
@@ -10531,6 +10556,10 @@
     function discGasSyncPull(cb) {
       discGasLoad((err, remote) => {
         if (err) { if (cb) cb(err); return; }
+        if (remote && Array.isArray(remote.projects) && remote.projects.length) {
+          _discRemoteHydrated = true;
+          _discUsingFallback = false;
+        }
         const applied = applyRemoteDiscData(remote);
         if (cb) cb(null, applied);
       });
@@ -10550,7 +10579,7 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasSyncPull(); });
     // Migrações únicas só valem para toda a base quando chegam ao servidor — sem isso,
     // ficariam apenas no localStorage de quem abriu a página primeiro.
-    if (_cardsJustReset || _scheduleLegacyCleanupJustRan) {
+    if ((_cardsJustReset || _scheduleLegacyCleanupJustRan) && !_discUsingFallback) {
       data.updatedAt = new Date().toISOString();
       storageSet(STORAGE_KEY, JSON.stringify(data));
       scheduleDiscGasSave();
@@ -10618,6 +10647,7 @@
     function loadData() {
       try {
         const saved = storageGet(STORAGE_KEY);
+        if (!saved) _discUsingFallback = true;
         const parsed = saved ? JSON.parse(saved) : deepClone(defaultData);
         const normalized = normalizeData(parsed);
         if (!Array.isArray(normalized.projects) || !normalized.projects.length) {
@@ -10625,9 +10655,11 @@
         }
         return normalized;
       } catch (e) {
-        console.warn('Discovery PMO Tracker: base local inválida. Restaurando iniciativa padrão.', e);
+        console.warn('Discovery PMO Tracker: base local inválida. Aguardando fonte compartilhada.', e);
+        _discUsingFallback = true;
         const fallback = normalizeData(deepClone(defaultData));
-        storageSet(STORAGE_KEY, JSON.stringify(fallback));
+        // Não grava o fallback: a cópia local pode estar incompleta e jamais deve
+        // substituir a base compartilhada enquanto a sincronização está pendente.
         return fallback;
       }
     }
@@ -10848,18 +10880,6 @@
       return { changed };
     }
 
-    const RAID_AREA_OPTIONS = [
-      'Arquitetura',
-      'Desenvolvimento',
-      'Negócio',
-      'Segurança e Compliance',
-      'Infraestrutura',
-      'Dados e Integrações',
-      'Jurídico',
-      'Fornecedor / Terceiro',
-      'Alocação / RTE'
-    ];
-
     function normalizeRaidArea(value) {
       const raw = String(value || '').trim();
       if (!raw) return '';
@@ -11029,6 +11049,10 @@
     }
 
     function saveData(show = false) {
+      if (_discUsingFallback && !_discRemoteHydrated) {
+        if (show) toast('⌛ Aguardando a base compartilhada antes de salvar');
+        return;
+      }
       // Um atraso de ação é um risco operacional: mantém o registro vinculado à ação
       // sem exigir que o RTE o cadastre manualmente.
       (data.projects || []).forEach(syncAutomaticOverdueRisks);
@@ -11378,13 +11402,10 @@
         renderExecutiveRows(safeProject);
         updateViewMode(safeProject);
       } catch (e) {
-        console.error('Discovery PMO Tracker: falha ao renderizar. Restaurando visualização padrão.', e);
-        data = normalizeData(deepClone(defaultData));
-        activeProjectId = data.activeProjectId || data.projects[0]?.id || defaultData.activeProjectId;
-        storageSet(STORAGE_KEY, JSON.stringify(data));
+        console.error('Discovery PMO Tracker: falha ao renderizar. Dados preservados.', e);
         const main = document.querySelector('.main');
         if (main) {
-          main.innerHTML = '<section class="section"><div class="section-head"><div><h3 class="section-title">Discovery PMO Tracker</h3><p class="section-desc">A base local foi restaurada para evitar abertura vazia. Recarregue a página para visualizar a iniciativa padrão.</p></div></div></section>';
+          main.innerHTML = '<section class="section"><div class="section-head"><div><h3 class="section-title">Discovery PMO Tracker</h3><p class="section-desc">Não alteramos os dados. Recarregue a página para tentar renderizar novamente.</p></div></div></section>';
         }
       }
     }
@@ -17773,12 +17794,36 @@ Recomendação PMO: ${d.recommendation}`;
       </aside>`;
     }
 
-    render();
-    setTimeout(discGasSyncPull, 300);
+    function renderSharedDataPending(message) {
+      const overview = document.getElementById('squadOverview');
+      if (!overview) return;
+      overview.classList.remove('hidden');
+      overview.innerHTML = `<section class="section"><div class="section-head"><div><h3 class="section-title">Discovery PMO Tracker</h3><p class="section-desc">${escapeHtml(message)}</p></div></div></section>`;
+    }
 
-    // Aplica épicos propagados pelo "🌐 Importar em Todos" do SALA, se houver
-    // dados mais novos que o último aplicado aqui.
-    setTimeout(applyCrossImportEpicsFromSala, 500);
+    // A base padrão é só contingência técnica. Em navegador novo ou após falha
+    // local, não a renderizamos nem permitimos salvá-la antes de receber a fonte
+    // compartilhada — assim não há flash de squads/dados incorretos.
+    if (_discUsingFallback) renderSharedDataPending('Sincronizando com a base compartilhada…');
+    else render();
+
+    setTimeout(() => {
+      discGasSyncPull((err) => {
+        if (_discRemoteHydrated) {
+          render();
+          setTimeout(applyCrossImportEpicsFromSala, 0);
+          return;
+        }
+        if (_discUsingFallback) {
+          renderSharedDataPending(err
+            ? 'Não foi possível carregar a base compartilhada agora. Nenhum dado provisório foi exibido ou salvo.'
+            : 'A base compartilhada ainda não possui iniciativas válidas. Nenhum dado provisório foi exibido ou salvo.');
+          return;
+        }
+        render();
+        setTimeout(applyCrossImportEpicsFromSala, 0);
+      });
+    }, 300);
     // Escuta em tempo real: outra aba importou via SALA enquanto esta está aberta.
     window.addEventListener('storage', function(e){
       if (e.key === CROSS_IMPORT_EPICS_KEY) applyCrossImportEpicsFromSala();
