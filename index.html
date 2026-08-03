@@ -1463,7 +1463,7 @@ body{min-height:100vh}
   <input type="file" id="fi" accept=".xlsx,.xls,.csv">
   <input type="file" id="fiAllGlobal" accept=".xlsx,.xls,.csv" multiple>
   <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
-  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Ponto único de importação: detecta e importa todos os arquivos do Jira (Épicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas, Sprint_ativa, Acomp._Geral, Homologação) e propaga automaticamente para Visão de Projetos e Discovery PMO Tracker — inclusive nas abas que já estiverem abertas.">🌐 Importar Tudo</button>
+  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Ponto único de importação. Antes de gravar, valida todos os arquivos localmente; se houver erro, duplicidade ou arquivo não reconhecido, cancela a carga inteira e não envia dados ao sistema.">🔒 Importar Tudo</button>
   <span id="importLockBanner" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 10px;">
     <span class="imp-spinner" style="width:12px;height:12px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;display:inline-block;animation:imp-spin .7s linear infinite;"></span>
     Importação em andamento…
@@ -7027,7 +7027,84 @@ function loadMultipleFiles(files, propagate){
   var fileList=Array.from(files);
   if(!fileList.length){ releaseImportLock(); return; }
   var pending=fileList.length;
-  var detected={epics:null,stories:null,backlog:[],ops4ops:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[]};
+  // Fase 1: apenas leitura e validação local. Nada é salvo nem propagado até
+  // todos os arquivos passarem por esta fase.
+  var detected={epics:null,stories:null,backlog:[],ops4ops:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[],errors:[]};
+
+  function addSingleSource(type, entry){
+    if(detected[type]){
+      detected.errors.push('Há mais de um arquivo para "'+type+'": "'+detected[type].file.name+'" e "'+entry.file.name+'".');
+      return;
+    }
+    detected[type]=entry;
+  }
+  function addArraySource(type, entry){
+    // O botão Importar Tudo trabalha com uma carga atual por painel. Aceitar
+    // dois arquivos para o mesmo destino faria o segundo sobrescrever ou
+    // misturar o primeiro sem confirmação explícita.
+    if(detected[type].length){
+      detected.errors.push('Há mais de um arquivo para "'+type+'": "'+detected[type][0].file.name+'" e "'+entry.file.name+'".');
+      return;
+    }
+    detected[type].push(entry);
+  }
+  function hasImportRows(det, type){
+    if(!det || !det.rows || !det.map || det.map.id<0) return false;
+    for(var r=det.hrow+1;r<det.rows.length;r++){
+      var row=det.rows[r];
+      if(!row || !row.length) continue;
+      if(type==='epics' && det.format==='jira_tipo' && det.tipoIdx>=0){
+        var itemType=stripAcc((row[det.tipoIdx]||'').toString()).toLowerCase();
+        if(itemType.indexOf('pico')<0 && itemType!=='epic') continue;
+      }
+      var rawId=(row[det.map.id]||'').toString().trim();
+      if(type==='epics'){
+        if(isValidEpicId(rawId)) return true;
+        continue;
+      }
+      if(type!=='backlog'){
+        // As cargas de histórias só são aceitas se cada história realmente
+        // possuir o vínculo com o épico que o importador vai utilizar.
+        var rawParent=det.map.epic>=0 ? (row[det.map.epic]||'') : (det.map.parent>=0 ? (row[det.map.parent]||'') : '');
+        if(extractJiraKey(rawId) && extractJiraKey(rawParent)) return true;
+        continue;
+      }
+      if(rawId) return true;
+    }
+    return false;
+  }
+  function validateSource(type, entry){
+    var det;
+    if(type==='epics') det=detectImportFormat(entry.wb);
+    else if(type==='backlog') det=detectBacklogFormat(entry.wb);
+    else det=detectStoriesFormat(entry.wb);
+    if(!hasImportRows(det,type)){
+      detected.errors.push('"'+entry.file.name+'" não contém registros válidos para '+type+'.');
+    }
+  }
+  function validateLocalImport(){
+    if(detected.unknown.length){
+      detected.errors.push('Arquivo não reconhecido: '+detected.unknown.join(', ')+'.');
+    }
+    if(detected.epics) validateSource('epics',detected.epics);
+    if(detected.stories) validateSource('stories',detected.stories);
+    detected.backlog.forEach(function(entry){ validateSource('backlog',entry); });
+    detected.ops4ops.forEach(function(entry){ validateSource('ops4ops',entry); });
+    detected.sprint_visao.forEach(function(entry){ validateSource('sprint_visao',entry); });
+    detected.general_visao.forEach(function(entry){ validateSource('general_visao',entry); });
+    detected.homologation_visao.forEach(function(entry){ validateSource('homologation_visao',entry); });
+    return detected.errors.length===0;
+  }
+  function cancelUnsafeImport(){
+    var message=detected.errors.join(' ');
+    // Registra o bloqueio como erro de carga para que a sinalização fique
+    // visível no painel; nenhuma chamada de save é feita neste caminho.
+    ['epics','stories','backlog','homologation','ops4ops'].forEach(function(datasetId){
+      recordImportError(datasetId,'Importar Tudo bloqueado',message);
+    });
+    toast('Importação cancelada localmente','Nenhum dado foi enviado ao sistema. '+message,'err');
+    releaseImportLock();
+  }
 
   // Salva a base como matrix bruta no localStorage para a Visão de Projetos ler
   function _saveCrossImport(key, wb, fileName){
@@ -7057,6 +7134,12 @@ function loadMultipleFiles(files, propagate){
   }
 
   function processWhenReady(){
+    // Portão de segurança: somente depois de todos os arquivos serem lidos e
+    // validados localmente é permitido chamar handlers que gravam dados.
+    if(!validateLocalImport()){
+      cancelUnsafeImport();
+      return;
+    }
     var lines=[];
     if(detected.epics){
       loadXlsx(detected.epics.file);
@@ -7120,7 +7203,6 @@ function loadMultipleFiles(files, propagate){
         lines.push('🧪 Homologação detectada → Qtd Story/Épicos atualizada; use "🌐 Importar em Todos" para também atualizar a Visão de Projetos');
       }
     }
-    if(detected.unknown.length) lines.push('⚠️ Não identificado: '+detected.unknown.join(', '));
     if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.ops4ops.length&&!detected.sprint_visao.length&&!detected.general_visao.length&&!detected.homologation_visao.length){
       toast('Nenhum arquivo reconhecido','Verifique se os arquivos são exports do Jira (.xlsx ou .csv).','err');
     } else {
@@ -7139,16 +7221,17 @@ function loadMultipleFiles(files, propagate){
         var wb=readWorkbook(e.target.result,file.name);
         var type=detectUnifiedFileType(wb,file.name);
         // Armazena {file, wb} para poder extrair a matrix bruta na propagação
-        if(type==='epics') detected.epics={file:file,wb:wb};
-        else if(type==='stories') detected.stories={file:file,wb:wb};
-        else if(type==='backlog') detected.backlog.push({file:file,wb:wb});
-        else if(type==='ops4ops') detected.ops4ops.push({file:file,wb:wb});
-        else if(type==='sprint_visao') detected.sprint_visao.push({file:file,wb:wb});
-        else if(type==='general_visao') detected.general_visao.push({file:file,wb:wb});
-        else if(type==='homologation_visao') detected.homologation_visao.push({file:file,wb:wb});
+        var entry={file:file,wb:wb};
+        if(type==='epics') addSingleSource('epics',entry);
+        else if(type==='stories') addSingleSource('stories',entry);
+        else if(type==='backlog') addArraySource('backlog',entry);
+        else if(type==='ops4ops') addArraySource('ops4ops',entry);
+        else if(type==='sprint_visao') addArraySource('sprint_visao',entry);
+        else if(type==='general_visao') addArraySource('general_visao',entry);
+        else if(type==='homologation_visao') addArraySource('homologation_visao',entry);
         else detected.unknown.push(file.name);
       }catch(err){
-        detected.unknown.push(file.name+'(erro)');
+        detected.errors.push('Não foi possível ler "'+file.name+'": '+(err&&err.message?err.message:'arquivo inválido')+'.');
       }
       pending--;
       if(pending===0) processWhenReady();
