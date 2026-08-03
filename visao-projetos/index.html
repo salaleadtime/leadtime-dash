@@ -6494,24 +6494,20 @@
       hideLoadingOverlay();
     }
 
-    // Antes, cada chave (vpGeral, vpSprint, vpHomologation, ...) disparava um
-    // doGet próprio contra o Apps Script — 9 execuções serializadas pelo mesmo
-    // LockService.getScriptLock(), cada uma com cold-start + abertura de
-    // planilha, e cada uma chamando renderAll() de novo assim que chegava. Isso
-    // é o que fazia "Atualizar"/abrir o painel/carregar Homologação demorarem
-    // tanto. Agora tudo vem numa única chamada (action=getVpDataAll) e um só
-    // renderAll() no final, com fallback para o modo antigo (chamada por
-    // chamada) caso o Apps Script publicado ainda não tenha o novo action.
+    // A consolidação em action=getVpDataAll (1 chamada em vez de 9) quebrava o
+    // carregamento atrás do proxy corporativo do Bradesco: o payload combinado
+    // de todas as chaves numa única resposta JSONP (script tag) fica grande
+    // demais e chega truncado — o navegador reporta um ReferenceError não
+    // capturado porque o script de resposta é cortado antes de invocar o
+    // callback, e como _vpGasJsonp não tem timeout, o fallback abaixo nunca é
+    // acionado (nem err nem json chegam a existir). Direto no GitHub Pages
+    // funcionava; atrás do proxy, travava a sincronização silenciosamente para
+    // sempre. Revertido para chamadas separadas por chave (mais requisições,
+    // mas cada uma pequena o suficiente para não ser truncada) — mesmo
+    // diagnóstico e correção já aplicados em report-semanal-operacional.html.
     function gasLoadAndApplyVpAll(){
       if(!_VP_GAS_URL){ hideVpInitialSync(); return; }
-      _vpGasJsonp(_VP_GAS_URL+'?action=getVpDataAll&t='+Date.now(), function(err, json){
-        if(err || !json || !json.ok || !json.data){
-          gasLoadAndApplyVpAllLegacy();
-          return;
-        }
-        applyVpDataAll(json.data);
-        hideVpInitialSync();
-      });
+      gasLoadAndApplyVpAllLegacy();
     }
 
     function applyVpDataAll(all){
@@ -6608,8 +6604,9 @@
       if(needsRender){ try{ renderAll(); }catch(e){} }
     }
 
-    // Fallback: modo antigo (uma chamada por chave), usado só se o Apps Script
-    // publicado ainda não responder a action=getVpDataAll.
+    // Chamadas separadas por chave — mais requisições que um getVpDataAll
+    // único, mas cada resposta pequena o suficiente para não ser truncada
+    // pelo proxy corporativo do Bradesco (ver nota em gasLoadAndApplyVpAll).
     function gasLoadAndApplyVpAllLegacy(){
       var keys = ['vpGeral','vpSprint','vpHomologation','vpOpUpdates','vpQuickNotes','vpPlanningConfirmations','vpPlanningSnapshots','vpSprintObjectives','vpDeliveries'];
       var pending = keys.length;
