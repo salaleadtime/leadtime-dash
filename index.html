@@ -3099,7 +3099,7 @@ function saveJiraEpicSnapshot(rows){
     // continua como fonte dos campos, mas não pode ressuscitar épicos fora da carga Jira.
     if(BK_GAS_URL) fetch(BK_GAS_URL,{
       method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'action=saveVpData&key=jiraEpicSnapshot&payload='+encodeURIComponent(JSON.stringify(snapshot))
+      body:'action=saveVpData&key=jiraEpicSnapshot&source=jira-panel-snapshot-v1&sourceFile='+encodeURIComponent('Épicos pós-identificados')+'&payload='+encodeURIComponent(JSON.stringify(snapshot))
     }).catch(function(){});
   }catch(e){}
 }
@@ -5082,20 +5082,28 @@ function loadStoriesXlsx(file, mergeHomologation){
           'Reexporte do Jira incluindo a coluna do épico pai (Epic Link ou Parent).','err');
         return;
       }
-      // O export específico de Homologação é uma atualização complementar:
-      // preserva as demais histórias já exibidas e atualiza apenas as chaves recebidas.
+      // Homologação tem fonte própria (Visão de Projetos). Ela não pode entrar
+      // na fotografia oficial de QTD Story/Épicos, pois isso faria histórias de
+      // uma carga parcial reaparecerem quando não vierem no export principal.
       var isHomologationFeed=!!mergeHomologation||stripAcc((file.name||'').toLowerCase()).indexOf('homolog')>=0;
       if(isHomologationFeed){
-        // Uma única anexação também disponibiliza a mesma carga para a Visão
-        // de Projetos, que a lê automaticamente quando estiver aberta.
+        // Disponibiliza a matriz para a Visão de Projetos sem alterar allStories
+        // nem publicar uma mistura de fontes no servidor compartilhado.
         try{
           var homologSheet=wb.Sheets[wb.SheetNames[0]];
           storageSet(HOMOLOGATION_CROSS_KEY,JSON.stringify({matrix:XLSX.utils.sheet_to_json(homologSheet,{header:1,defval:''}),fileName:file.name,savedAt:new Date().toISOString()}));
         }catch(crossError){}
+        var hName=$id('svUpName'); if(hName) hName.textContent=file.name;
+        var hSub=$id('svUpSub'); if(hSub) hSub.textContent='Homologação encaminhada para o painel próprio · '+stories.length+' histórias';
+        toast('🧪 Homologação separada',stories.length+' histórias validadas para a Visão de Projetos; a base de QTD Story não foi misturada.');
+        recordImportEvent('homologation', file.name, stories.length);
+        return;
       }
-      mergeStoriesIntoAllStories(stories);
+      // QTD Story/Épicos é uma fotografia completa e autoritativa do Jira.
+      // Substituir — e não mesclar — remove histórias que saíram da carga.
+      allStories=stories;
       backfillEpicSquads();
-      saveStoriesLocal();
+      saveStoriesLocal({officialSnapshot:true,sourceFile:file.name});
       var upName=$id('svUpName'); if(upName) upName.textContent=file.name;
       var upSub=$id('svUpSub'); if(upSub) upSub.textContent=(isHomologationFeed?'Homologação atualizada · ':'')+stories.length+' estórias carregadas';
       var upSaved=$id('svUpSaved'); if(upSaved) upSaved.classList.remove('hidden');
@@ -5114,9 +5122,9 @@ function loadStoriesXlsx(file, mergeHomologation){
 }
 
 // Salva/carrega estórias no localStorage e na nuvem compartilhada
-function saveStoriesLocal(){
+function saveStoriesLocal(options){
   try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
-  gasSaveStories();
+  gasSaveStories(options||{});
 }
 function loadStoriesLocal(){
   try{
@@ -5125,8 +5133,9 @@ function loadStoriesLocal(){
   }catch(e){}
 }
 
-// Quando a carga é feita diretamente na Visão de Projetos, reutiliza a mesma
-// base local para atualizar a tabela Qtd Story/Épicos sem apagar as demais linhas.
+// Homologação é um painel separado. Só pode complementar uma história que já
+// exista na foto oficial; jamais cria história nova nem grava essa mistura na
+// fonte compartilhada de QTD Story/Épicos.
 function mergeHomologationFromVisual(){
   try{
     var saved=JSON.parse(storageGet(HOMOLOGATION_VISUAL_KEY)||'null');
@@ -5138,13 +5147,12 @@ function mergeHomologationFromVisual(){
       var id=extractJiraKey(row.chave||row.id);
       if(!id) return;
       var incoming={id:id,epic:extractJiraKey(row.epic),epicName:'',resumo:row.resumo||'',status:row.situacao||'',squad:normalizeSquad(row.squad||''),criado:parseD(row.criado),atualizado:parseD(row.atualizado),sprint:row.sprint||'',estimativa:row.estimativa||'',prazo:parseD(row.prazo),homologacaoData:parseD(row.homologacaoData),responsavel:row.responsavel||'',labels:Array.isArray(row.rotulos)?row.rotulos.join(' | '):(row.rotulos||'')};
-      if(byId[id]===undefined){ allStories.push(incoming); byId[id]=allStories.length-1; changed=true; }
-      else {
+      if(byId[id]!==undefined) {
         var merged=mergeRecordFields(allStories[byId[id]],incoming);
         if(JSON.stringify(merged)!==JSON.stringify(allStories[byId[id]])){allStories[byId[id]]=merged;changed=true;}
       }
     });
-    if(changed) saveStoriesLocal();
+    if(changed) try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
     return changed;
   }catch(e){return false;}
 }
@@ -5387,26 +5395,23 @@ var _gasStoriesSaving=false;
 // comportamento de antes desta versão) — evita falso conflito no primeiro
 // salvamento sem leitura prévia.
 var _storiesRevision=null;
-var _gasStoriesConflictRetry=false;
-function gasLoadStories(cb){
+function storiesSignature(stories){
+  return (stories||[]).map(function(s){return s&&s.id?s.id:'';}).filter(Boolean).sort().join('|');
+}
+function gasLoadStories(cb, options){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
     if(err){ if(cb) cb(err); return; }
     if(json && json.ok && Array.isArray(json.stories)){
       if(typeof json.revision==='number') _storiesRevision=json.revision;
-      // Servidor com menos estórias que as locais: NÃO sobrescreve (evita apagar
-      // uma importação local recém-feita que ainda não terminou de subir, ex. ao
-      // clicar Atualizar logo após importar). Em vez disso, sobe as locais para
-      // o servidor convergir — mesma proteção já usada em gasLoadBacklog.
-      if(json.stories.length<allStories.length){
-        if(!_gasStoriesSaving){ setTimeout(function(){ gasSaveStories(); },500); }
-        if(cb) cb(null, 0);
+      var expected=options&&options.expectedSignature;
+      if(expected && storiesSignature(json.stories)!==expected){
+        if(cb) cb('aguardando confirmação da carga oficial');
         return;
       }
-      // Merge em vez de substituição: o servidor pode estar um pouco atrasado
-      // (mesma contagem, mas sem a última edição local) — mesclar preserva o
-      // que já está na tela em vez de arriscar sobrescrever com dado mais velho.
-      mergeStoriesIntoAllStories(json.stories);
+      // O servidor é a fonte compartilhada. Nunca mesclar com cache local:
+      // registros ausentes da carga oficial precisam realmente desaparecer.
+      allStories=json.stories;
       try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
       renderStoryView();
       if(curTab==='em') renderEmergencyView();
@@ -5421,12 +5426,36 @@ function gasLoadStories(cb){
     }
   });
 }
-function gasSaveStories(){
+function gasSaveStories(options){
   if(!BK_GAS_URL || !allStories.length || _gasStoriesSaving) return;
+  options=options||{};
   _gasStoriesSaving=true;
   var sentBaseRevision=_storiesRevision;
+  var expectedSignature=storiesSignature(allStories);
   var body='action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories));
   if(sentBaseRevision!=null) body+='&baseRevision='+encodeURIComponent(sentBaseRevision);
+  if(options.officialSnapshot){
+    body+='&source=jira-story-snapshot-v1';
+    body+='&sourceFile='+encodeURIComponent(options.sourceFile||'');
+  }
+  function confirmSave(remaining){
+    setTimeout(function(){
+      gasLoadStories(function(err,n){
+        if(err==='aguardando confirmação da carga oficial' && remaining>0){
+          confirmSave(remaining-1);
+          return;
+        }
+        if(err){
+          // A cópia local é descartada nesta condição: o servidor não confirmou
+          // a foto, portanto ela não pode ser apresentada como compartilhada.
+          gasLoadStories(function(){},{});
+          toast('⚠️ Carga não confirmada','O servidor preservou a última carga válida. Nenhuma mistura local foi publicada.','warn');
+          return;
+        }
+        toast('☁️ Estórias publicadas',n+' estórias confirmadas no servidor.');
+      },{expectedSignature:expectedSignature});
+    },2500);
+  }
   fetch(BK_GAS_URL, {
     method:'POST',
     mode:'no-cors',
@@ -5434,25 +5463,14 @@ function gasSaveStories(){
     body:body
   })
   .then(function(){
-    toast('☁️ Estórias publicadas','Sincronizando com o servidor…');
-    setTimeout(function(){
-      gasLoadStories(function(err,n){
-        if(err) return;
-        renderStoryView();
-        // POST é no-cors (resposta opaca) — só descobrimos se o servidor recusou
-        // por conflito de revisão comparando com a releitura acima: se a revisão
-        // que voltou não é exatamente a que enviamos + 1, outra pessoa salvou no
-        // meio. gasLoadStories já mesclou por id; reenviamos uma vez para não
-        // perder a edição local em silêncio.
-        if(sentBaseRevision!=null && _storiesRevision!=null && _storiesRevision!==sentBaseRevision+1 && !_gasStoriesConflictRetry){
-          _gasStoriesConflictRetry=true;
-          toast('⚠️ Conflito de gravação','Outra pessoa salvou estórias ao mesmo tempo. Mesclando e reenviando…');
-          setTimeout(function(){ _gasStoriesConflictRetry=false; gasSaveStories(); }, 800);
-        }
-      });
-    }, 2500);
+    toast('☁️ Estórias publicadas','Aguardando confirmação do servidor…');
+    confirmSave(2);
   })
-  .catch(function(){ /* mantém salvo localmente */ })
+  .catch(function(){
+    // Falha de rede nunca transforma cache local em verdade compartilhada.
+    gasLoadStories(function(){},{});
+    toast('⚠️ Falha ao publicar','O servidor não confirmou a carga; a última carga válida foi mantida.','warn');
+  })
   .finally(function(){ _gasStoriesSaving=false; });
 }
 

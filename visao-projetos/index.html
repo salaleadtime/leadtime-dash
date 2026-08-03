@@ -6463,12 +6463,18 @@
       });
     }
 
-    function gasSaveVpData(key, data){
+    function gasSaveVpData(key, data, options){
       if(!_VP_GAS_URL) return;
+      options = options || {};
+      let body = 'action=saveVpData&key='+encodeURIComponent(key)+'&payload='+encodeURIComponent(JSON.stringify(data));
+      if(options.officialSnapshot){
+        body += '&source=jira-panel-snapshot-v1';
+        body += '&sourceFile='+encodeURIComponent(options.sourceFile || '');
+      }
       fetch(_VP_GAS_URL, {
         method:'POST', mode:'no-cors',
         headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:'action=saveVpData&key='+encodeURIComponent(key)+'&payload='+encodeURIComponent(JSON.stringify(data))
+        body:body
       }).catch(function(){});
     }
 
@@ -6812,7 +6818,7 @@
         importedAt: new Date().toISOString()
       };
       storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(data));
-      gasSaveVpData('vpHomologation', data);
+      gasSaveVpData('vpHomologation', data, {officialSnapshot:true, sourceFile:homologationSourceName});
     }
     function persistImportedBases(){
       try{
@@ -6821,8 +6827,8 @@
         const sprintData = {rows: sprintRows, sourceName: sprintSourceName, importedAt};
         storageSet(IMPORTED_GENERAL_KEY, JSON.stringify(geralData));
         storageSet(IMPORTED_SPRINT_KEY,  JSON.stringify(sprintData));
-        gasSaveVpData('vpGeral',  geralData);
-        gasSaveVpData('vpSprint', sprintData);
+        gasSaveVpData('vpGeral',  geralData,  {officialSnapshot:true, sourceFile:sourceName});
+        gasSaveVpData('vpSprint', sprintData, {officialSnapshot:true, sourceFile:sprintSourceName});
       }catch(err){
         console.warn('Não foi possível salvar a base importada no navegador.', err);
       }
@@ -9549,20 +9555,24 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
             const type = detectVisaoFileTypeExt(file, parsed);
             if(type === 'epics'){ skipped.push(file.name + ' (épicos — use no SALA)'); continue; }
             if(type === 'sprint'){
-              sprintRows = mergeRowsByChave(sprintRows, parsed.map(r => ({...r, sprintAtual:true})), true);
+              // Sprint é uma fotografia oficial: registros ausentes no novo
+              // export saíram da base e não podem reaparecer por merge local.
+              sprintRows = parsed.map(r => ({...r, sprintAtual:true}));
               sprintSourceName = file.name;
               importedSprint = true;
               lastImportAt.sprint = new Date();
               try{ storageSet(CROSS_IMPORT_SPRINT_KEY, JSON.stringify({rows: sprintRows, fileName: file.name, savedAt: new Date().toISOString()})); }catch(e){}
             } else if(type === 'homologation'){
-              homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation), true);
+              // Homologação também é uma fotografia independente do Jira.
+              homologationRows = parsed.filter(isHomologation);
               homologationSourceName = file.name;
               importedHomolog = true;
               lastImportAt.homologation = new Date();
               persistHomologationBase();
               try{ storageSet(CROSS_IMPORT_HOMOLOGATION_KEY, JSON.stringify({rows: homologationRows, fileName: file.name, savedAt: new Date().toISOString()})); }catch(e){}
             } else {
-              rows = mergeRowsByChave(rows, parsed, true);
+              // Acompanhamento Geral é a fonte oficial da carteira atual.
+              rows = parsed;
               sourceName = file.name;
               importedGeneral = true;
               lastImportAt.general = new Date();

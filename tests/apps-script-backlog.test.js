@@ -240,6 +240,13 @@ console.log('\n═══ 10. saveStories e saveBacklog ═══');
   t('corte de 80% em stories é RECUSADO', r.ok, false);
   t('stories intactas', lerAba(SHEETS,'_stories_chunks').length, 50);
 
+  const official = parse(ctx.doPost(post({
+    action:'saveStories', payload: st(10), source:'jira-story-snapshot-v1', sourceFile:'2. QTD Epicos atrelados a story.csv'
+  })));
+  t('foto Jira oficial pode reduzir a lista completa', official.ok, true);
+  t('redução oficial fica auditada', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'REDUCAO_FONTE_OFICIAL');
+  t('snapshot preserva stories antes da foto oficial', lerAba(SHEETS,'_stories_chunks__bak1').length, 50);
+
   const snaps = n => JSON.stringify(Array.from({length:n},(_,i)=>({id:'s'+i, seq:i, stories:[], importedAt:'2026-07-0'+(i%9+1)+'T00:00:00Z'})));
   t('saveBacklog grava', parse(ctx.doPost(post({action:'saveBacklog', payload: snaps(8)}))).ok, true);
   t('saveBacklog mescla (8 + 3 novos = 11)',
@@ -261,12 +268,25 @@ console.log('\n═══ 11. Janela de redução liberada pelo admin ═══')
   t('snapshot preservou os 50 anteriores', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 50);
 }
 
+console.log('\n═══ 11b. Fotografia Jira oficial de painéis ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const mk = n => JSON.stringify({ rows: Array.from({length:n}, (_,i)=>({id:i})) });
+  t('primeira carga de Geral', parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(30) }))).ok, true);
+  const r = parse(ctx.doPost(post({
+    action:'saveVpData', key:'vpGeral', payload: mk(8), source:'jira-panel-snapshot-v1', sourceFile:'4. Acomp. Geral Todas Squads.csv'
+  })));
+  t('Geral oficial pode reduzir', r.ok, true);
+  t('Geral oficial mantém rastreabilidade', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'REDUCAO_FONTE_OFICIAL');
+  t('snapshot de Geral preserva estado anterior', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 30);
+}
+
 console.log('\n═══ 12. health e chaves inválidas ═══');
 {
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-08-02-v16-last-valid-vp-snapshot');
+  t('versão correta', h.version, '2026-08-03-v17-official-story-snapshot');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);

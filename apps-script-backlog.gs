@@ -1,7 +1,9 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
- * v14 — concorrência otimista (baseRevision) para saveStories e saveVpData.
+ * v17 — snapshot oficial de Estórias: uma carga Jira completa pode substituir
+ * a fotografia anterior mesmo quando a quantidade reduz, sempre com backup e
+ * auditoria. Cargas comuns continuam protegidas contra redução anômala.
  * Cada aba (_stories_chunks e cada aba de VP_SHEET_MAP) tem um contador de
  * revisão em Script Properties, devolvido em getStories/getVpData/getVpDataAll
  * e incrementado a cada escrita OK. O cliente que leu revisão N manda
@@ -64,7 +66,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-02-v16-last-valid-vp-snapshot';
+var BACKLOG_SCRIPT_VERSION = '2026-08-03-v17-official-story-snapshot';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -103,6 +105,16 @@ var VP_SNAPSHOT_KEYS = {
   vpGeral: true,
   vpSprint: true,
   vpHomologation: true
+};
+
+// Só estas bases são fotografias integrais vindas do Jira. Discovery, backlog
+// e campos operacionais possuem semântica própria (merge, histórico ou edição
+// manual) e, portanto, nunca podem usar a exceção de redução oficial.
+var OFFICIAL_SNAPSHOT_VP_KEYS = {
+  vpGeral: true,
+  vpSprint: true,
+  vpHomologation: true,
+  jiraEpicSnapshot: true
 };
 
 // ════════════════════════════════════════════════════════════════════════
@@ -405,6 +417,8 @@ function doPost(e) {
     if (action === 'saveStories') {
       var payloadStories = getParam_(e, 'payload') || '[]';
       var baseRevisionStories = getParam_(e, 'baseRevision');
+      var storiesSource = getParam_(e, 'source');
+      var storiesSourceFile = getParam_(e, 'sourceFile');
       try {
         var parsedStoriesResult = parsePayload_(payloadStories, true);
         if (!parsedStoriesResult.ok) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: parsedStoriesResult.error });
@@ -416,7 +430,10 @@ function doPost(e) {
         var storiesWrite = withLock_(function() {
           var chunks = readChunks_(STORIES_SHEET);
           var before = chunksToData_(chunks, null);
-          return commitWrite_(STORIES_SHEET, 'saveStories', chunks, before, parsedStories, payloadStories.length, baseRevisionStories);
+          return commitWrite_(STORIES_SHEET, 'saveStories', chunks, before, parsedStories, payloadStories.length, baseRevisionStories, {
+            officialSnapshot: storiesSource === 'jira-story-snapshot-v1',
+            sourceFile: storiesSourceFile
+          });
         });
         if (!storiesWrite.ok) {
           return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: storiesWrite.error, conflict: !!storiesWrite.conflict, currentRevision: storiesWrite.currentRevision });
@@ -435,6 +452,8 @@ function doPost(e) {
       }
       var vpPayload = getParam_(e, 'payload') || 'null';
       var baseRevisionVp = getParam_(e, 'baseRevision');
+      var vpSource = getParam_(e, 'source');
+      var vpSourceFile = getParam_(e, 'sourceFile');
       try {
         var parsedVp = parsePayload_(vpPayload, false);
         if (!parsedVp.ok || parsedVp.data === null || typeof parsedVp.data !== 'object') {
@@ -470,7 +489,10 @@ function doPost(e) {
             toWrite = mergeMap_(before, toWrite);
             didMerge = true;
           }
-          var w = commitWrite_(vpSheetName, 'saveVpData/' + vpKey, chunks, before, toWrite, vpPayload.length, baseRevisionVp);
+          var w = commitWrite_(vpSheetName, 'saveVpData/' + vpKey, chunks, before, toWrite, vpPayload.length, baseRevisionVp, {
+            officialSnapshot: !!OFFICIAL_SNAPSHOT_VP_KEYS[vpKey] && vpSource === 'jira-panel-snapshot-v1',
+            sourceFile: vpSourceFile
+          });
           w.merged = didMerge;
           return w;
         });
@@ -496,7 +518,7 @@ function doPost(e) {
 
 // Ponto único por onde TODA escrita passa. Roda sempre dentro de withLock_ e
 // recebe os chunks já lidos, para não pagar uma segunda leitura da planilha.
-function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars, baseRevision) {
+function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars, baseRevision, options) {
   if (!writesEnabled_()) {
     var offMsg = 'gravação recusada: escritas desativadas no servidor (' + PROP_WRITES_ENABLED + '=false).';
     audit_(label, payloadChars, countRecords_(before), countRecords_(incoming), 'DESATIVADO', offMsg);
@@ -534,6 +556,13 @@ function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars, 
       // Modo observação: registra o que TERIA sido bloqueado e deixa passar.
       resultado = 'BLOQUEARIA (dry-run)';
       nota = verdict.error;
+    } else if (options && options.officialSnapshot && verdict.afterN > 0) {
+      // A fonte oficial de Estórias é uma fotografia completa do Jira. Ela pode
+      // encolher de forma legítima quando cards saem do recorte; nesse caso a
+      // escrita é permitida SOMENTE porque o estado anterior foi preservado no
+      // ring buffer abaixo e a auditoria registra a origem do evento.
+      resultado = 'REDUCAO_FONTE_OFICIAL';
+      nota = 'foto Jira oficial' + (options.sourceFile ? ': ' + String(options.sourceFile).slice(0, 180) : '');
     } else if (shrinkAllowed_()) {
       // Janela de redução aberta de propósito pelo editor: segue, mas fica registrado.
       resultado = 'REDUCAO_LIBERADA';
