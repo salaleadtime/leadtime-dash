@@ -8643,6 +8643,23 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       if(!alert) return;
       const sprint = detectActiveSprint();
       const squad = getSelectedSquad();
+
+      // Sprint Ativa é fotografia oficial (substitui a base inteira a cada
+      // importação): se a squad selecionada some da base recém-carregada, o
+      // painel inteiro fica zerado sem explicar o motivo. A causa mais comum
+      // é a coluna "Team"/"Squad" do export do Jira vazia ou com um nome
+      // diferente do cadastrado para a squad — avisa aqui em vez de silenciar.
+      if(!sameSquad(squad, 'Todas')){
+        const allSprintRows = effectiveSprintRows();
+        if(allSprintRows.length && !allSprintRows.some(r => sameSquad(r.squad, squad))){
+          const found = countBy(allSprintRows, r => r.squad).slice(0,5).map(([s,q]) => `${escapeHtml(s)} (${q})`).join(', ');
+          alert.className = 'sprint-calendar-alert is-warning';
+          alert.innerHTML = `<span><strong>Nenhuma história da squad "${escapeHtml(squad)}" na base de Sprint Ativa carregada (${escapeHtml(sprintSourceName)}).</strong> Squads presentes no arquivo: ${found || 'nenhuma identificada'}. Confira a coluna "Team"/"Squad" do export do Jira — provavelmente está vazia ou usa um nome diferente do cadastrado para esta squad.</span>`;
+          alert.style.display = 'flex';
+          return;
+        }
+      }
+
       if(!sprint || !sprint.start || !sprint.end){ alert.style.display = 'none'; return; }
 
       const start = parseIsoDateLocal(sprint.start);
