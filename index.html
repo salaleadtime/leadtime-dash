@@ -2399,6 +2399,9 @@ var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
 var emergencyState={rules:[],meta:{}};
 var emergencyRuleId='credito-rural';
+var _emergencyRevision=null;
+var _emergencyCloudHydrated=false;
+var _emergencyCloudVerifyTimer=null;
 var emergencyEditingId='';
 var emergencyServerBacklogStories=[];
 var stFilt={epic:'all',status:'all'};
@@ -5968,12 +5971,19 @@ function gasLoadOps4ops(cb){
 // O Ops4Ops é importado no Discovery PMO Tracker. Esta aba apenas consome
 // as histórias já sincronizadas em discoveryPmo, sem duplicar a importação
 // nem criar uma segunda base.
-function gasLoadOps4opsFromDiscovery(cb){
+function gasLoadOps4opsFromDiscovery(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  _gasOps4opsLoading=true;
+  var retries = (_retries === undefined) ? 2 : _retries;
+  if(!ops4opsSnaps.length){ _gasOps4opsLoading=true; renderOps4opsView(); }
   _gasOps4opsError=null;
-  renderOps4opsView();
   _gasJsonp(BK_GAS_URL+'?action=getVpData&key=discoveryPmo&t='+Date.now(), function(err,json){
+    if(err==='timeout' && retries>0){
+      // A base do Discovery já passa de alguns MB; um timeout aqui costuma ser
+      // só o servidor (ou um cold-start do Apps Script) demorando mais que o
+      // normal para responder — tenta de novo antes de expor erro ao usuário.
+      setTimeout(function(){ gasLoadOps4opsFromDiscovery(cb, retries-1); }, 3000);
+      return;
+    }
     _gasOps4opsLoading=false;
     if(err || !json || !json.ok || !json.data){ _gasOps4opsError=err||'sem dados'; renderOps4opsView(); if(cb) cb(err||'sem dados',0); return; }
     var projects=Array.isArray(json.data.projects)?json.data.projects:[];
@@ -6000,7 +6010,7 @@ function gasLoadOps4opsFromDiscovery(cb){
     ops4opsFromDiscovery=true;
     ops4opsSnaps=[{id:'discovery-pmo',seq:1,stories:stories,importedAt:json.data.updatedAt||new Date().toISOString()}];
     if(cb) cb(null,1,stories.length);
-  });
+  }, 45000);
 }
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
@@ -6156,8 +6166,9 @@ function emEnsureState(){
   if(!emergencyState||typeof emergencyState!=='object') emergencyState={rules:[],meta:{}};
   if(!Array.isArray(emergencyState.rules)) emergencyState.rules=[];
   if(!emergencyState.meta||typeof emergencyState.meta!=='object') emergencyState.meta={};
-  if(!emergencyState.config||typeof emergencyState.config!=='object') emergencyState.config={workdayHours:6};
+  if(!emergencyState.config||typeof emergencyState.config!=='object') emergencyState.config={workdayHours:6,activeRuleId:''};
   if(!emergencyState.config.workdayHours) emergencyState.config.workdayHours=6;
+  if(!emergencyState.config.activeRuleId) emergencyState.config.activeRuleId='';
   if(!emergencyState.rules.some(function(r){return r&&r.id==='credito-rural';})) emergencyState.rules.unshift(emDefaultRule());
   var creditoRule=emergencyState.rules.find(function(r){return r&&r.id==='credito-rural';});
   if(creditoRule&&creditoRule.type==='titleStarts'){
@@ -6195,6 +6206,16 @@ function emMergeState(incoming){
     var local=emergencyState.meta[id], remote=incomingMeta[id];
     if(!local||String(remote&&remote.updatedAt||'')>String(local&&local.updatedAt||'')) emergencyState.meta[id]=remote;
   });
+  // A configuração de quais rótulos definem uma demanda emergencial é única
+  // para toda a operação. Diferente dos complementos manuais por história,
+  // ela não pode ficar dependente do cache de cada navegador.
+  if(incoming.config&&typeof incoming.config==='object'){
+    emergencyState.config=Object.assign({},emergencyState.config||{},incoming.config);
+    if(incoming.config.activeRuleId) emergencyRuleId=incoming.config.activeRuleId;
+  }
+  // Compatibilidade com a configuração já gravada antes de activeRuleId existir.
+  // Se a regra coletiva de rótulos chegou do servidor, ela é a regra ativa.
+  if((!incoming.config||!incoming.config.activeRuleId)&&(incoming.rules||[]).some(function(r){return r&&r.id==='manual-labels'&&r.value;})) emergencyRuleId='manual-labels';
   emEnsureState();
 }
 function emSaveState(){
@@ -6208,13 +6229,24 @@ function emSaveState(){
 }
 function emSaveCloud(){
   if(!BK_GAS_URL) return;
-  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState))}).catch(function(){});
+  var body='action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState));
+  if(_emergencyRevision!==null) body+='&baseRevision='+encodeURIComponent(_emergencyRevision);
+  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
+    .catch(function(){})
+    .finally(function(){
+      // no-cors não devolve o resultado do POST. Releitura é a confirmação
+      // efetiva: em conflito, a configuração compartilhada volta a vencer.
+      clearTimeout(_emergencyCloudVerifyTimer);
+      _emergencyCloudVerifyTimer=setTimeout(emLoadCloud,900);
+    });
 }
 function emLoadCloud(){
   if(!BK_GAS_URL) return;
   _gasJsonp(BK_GAS_URL+'?action=getVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&t='+Date.now(),function(err,json){
-    if(err||!json||!json.ok||!json.data) return;
+    if(err||!json||!json.ok||!json.data){ _emergencyCloudHydrated=true; return; }
+    if(typeof json.revision==='number') _emergencyRevision=json.revision;
     emMergeState(json.data);
+    _emergencyCloudHydrated=true;
     try{storageSet(EMERGENCY_KEY,JSON.stringify(emergencyState));}catch(e){}
     if(curTab==='em') renderEmergencyView();
     updateTabCounts();
@@ -9621,6 +9653,7 @@ function emSaveConfig(){
   emergencyState.config=emergencyState.config||{};emergencyState.config.labels=labels;emergencyState.config.workdayHours=Number($id('emCfgHours').value)||6;
   var rule=emergencyState.rules.find(function(r){return r.id==='manual-labels';});
   if(!rule){rule={id:'manual-labels',name:'Demandas Emergenciais',type:'labelAny',value:'',active:true};emergencyState.rules.unshift(rule);}rule.value=labels.join(' | ');rule.updatedAt=new Date().toISOString();emergencyRuleId=rule.id;
+  emergencyState.config.activeRuleId=rule.id;emergencyState.config.updatedAt=rule.updatedAt;
   emSaveState();$id('emCfgOv').remove();renderEmergencyView();
 }
 function emEditComment(id){
@@ -9639,6 +9672,7 @@ function renderEmergencyView(){
     var emStyle=document.createElement('style');
     emStyle.id='emKanbanNoKpiCss';
     emStyle.textContent='#pane-em .em-kpis{display:none!important}'+
+      '#pane-em .em-priority-grid{display:none!important}'+
       '#pane-em .em-priority-grid{gap:8px!important;margin-bottom:10px!important}'+
       '#pane-em .em-priority-grid .em-panel{padding:10px!important;margin-bottom:0!important;border-radius:12px!important;box-shadow:0 3px 10px rgba(30,41,59,.04)!important}'+
       '#pane-em .em-priority-card{padding:8px 9px!important;margin-top:6px!important;border-radius:9px!important}'+
@@ -9649,10 +9683,12 @@ function renderEmergencyView(){
       '#pane-em .em-table{font-size:10px!important}'+
       '#pane-em .em-table th{padding:8px 7px!important;font-size:8px!important}'+
       '#pane-em .em-table td{padding:8px 7px!important}'+
-      '#pane-em .em-table th:nth-child(9),#pane-em .em-table td:nth-child(9){width:150px!important;max-width:150px!important}'+
-      '#pane-em .em-table td:nth-child(9){cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#51627f!important}'+
+      '#pane-em .em-table th:nth-child(9),#pane-em .em-table td:nth-child(9){width:320px!important;min-width:280px!important;max-width:380px!important}'+
+      '#pane-em .em-table td:nth-child(9){cursor:pointer;white-space:normal;overflow:visible;text-overflow:clip;color:#51627f!important;line-height:1.45!important}'+
       '#pane-em .em-table td:nth-child(9):hover{background:#fff8fa!important;color:#b42345!important}'+
       '#pane-em .em-story-title{font-size:10px!important;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-epic-name{font-size:9px;color:#71819a;margin-top:3px;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-editor-comment{grid-column:1 / -1}#pane-em .em-editor-comment .em-textarea{min-height:100px;height:100px;resize:vertical}'+
       '#pane-em .em-inline-input{height:28px!important;min-width:82px!important;font-size:9px!important}'+
       '#pane-em .em-modern-toolbar{padding:8px 10px!important;margin-bottom:10px!important;border-radius:11px!important}';
     document.head.appendChild(emStyle);
@@ -9665,7 +9701,7 @@ function renderEmergencyView(){
   var backlog=by(function(s){return !emRefined(s);}),refined=by(emRefined),dev=by(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}),overdue=dev.filter(function(s){var d=emForecast(s,emergencyState.meta[s.id]||{});return d&&d<today;});
   var next=all.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort()[0]||'';
   function cards(items,kind){return items.slice(0,6).map(function(s){var m=emergencyState.meta[s.id]||{},d=emForecast(s,m),late=d&&d<today;return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a><button class="em-edit" title="Copiar" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button></div><div class="em-priority-title">'+esc(s.resumo||'Sem resumo')+'</div><div class="em-muted">'+esc(s.squad||'—')+' · '+esc(s.status||'—')+'</div><span class="em-badge '+(kind==='backlog'?'blue':'green')+'">'+(kind==='backlog'?'Backlog':'Refinada')+'</span>'+(late?'<button class="em-btn" style="float:right;padding:4px 7px;font-size:9px" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">Reprogramar</button>':'')+'</div>';}).join('')||'<div class="em-muted">Nenhuma história</div>';}
-  var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge blue">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td title="Clique para escrever ou editar o comentário" onclick="emEditComment(\''+esc(jsq(s.id))+'\')">'+esc(m.comment||'—')+' <span aria-hidden="true">✎</span></td></tr>';}).join('');
+  var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-epic-name">Épico: '+esc(s.epic||'Não informado')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'amber')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td title="Clique para escrever ou editar o comentário" onclick="emEditComment(\''+esc(jsq(s.id))+'\')">'+esc(m.comment||'—')+' <span aria-hidden="true">✎</span></td></tr>';}).join('');
   // "Reprogramar" (botao dentro de cards()) seta emergencyEditingId e chama
   // renderEmergencyView() esperando ver o editor -- mas esta e a versao Kanban
   // que venceu a triplicacao de renderEmergencyView no arquivo, e ela nunca
