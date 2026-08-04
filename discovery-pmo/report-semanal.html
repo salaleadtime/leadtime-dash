@@ -1097,12 +1097,23 @@ function shiftWeek(n){const cur=boundsFromWeekStr(el('weekInput').value||weekStr
 function jsonp(url,ms=18000,retriesLeft=1){return new Promise((res,rej)=>{const cb='__r'+Date.now()+Math.random().toString(36).slice(2);const s=document.createElement('script');const retry=(err)=>{if(retriesLeft>0){setTimeout(()=>jsonp(url,ms,retriesLeft-1).then(res,rej),2000)}else{rej(err)}};const t=setTimeout(()=>{cl();retry(new Error('timeout'))},ms);function cl(){clearTimeout(t);delete window[cb];s.remove()}window[cb]=p=>{cl();res(p)};s.onerror=()=>{cl();retry(new Error('rede'))};s.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();document.head.appendChild(s)})}
 function normPayload(raw){let c=raw;if(c&&c.ok&&c.data!==undefined)c=c.data;if(c&&c.data&&!c.projects&&c.data.projects)c=c.data;if(Array.isArray(c))c={projects:c,squads:[]};if(!c||typeof c!=='object')throw new Error('formato');return{...c,projects:Array.isArray(c.projects)?c.projects:[],squads:Array.isArray(c.squads)?c.squads:[]}}
 function loadLocal(){for(const [k,l] of [[CFG.trackerKey,'Painel local'],[CFG.cacheKey,'Cache do report']]){try{const r=localStorage.getItem(k);if(r){const p=normPayload(JSON.parse(r));if(p.projects.length)return{data:p,source:l}}}catch(e){}}return null}
+// jsonp() já tenta de novo em falha de TRANSPORTE (timeout/rede). Uma resposta
+// tecnicamente OK mas com projects vazio (mesma contenção de lock do Apps
+// Script identificada no Ops4Ops) não passava por esse retry — numa sessão
+// nova sem cache local ainda, isso já bastava pra cair na tela de "falha".
+async function loadLiveDiscoveryData(retriesLeft=1){
+  const live=normPayload(await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.gasKey}`));
+  if(!live.projects.length){
+    if(retriesLeft>0){await new Promise(r=>setTimeout(r,2000));return loadLiveDiscoveryData(retriesLeft-1)}
+    throw new Error('vazio');
+  }
+  return live;
+}
 async function generate(){
   const b=el('genBtn');b.disabled=true;b.textContent='⟳ Atualizando dados…';
   const local=loadLocal();
   try{
-    const live=normPayload(await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.gasKey}`));
-    if(!live.projects.length)throw new Error('vazio');
+    const live=await loadLiveDiscoveryData();
     base=live;source='Servidor Discovery PMO';
     try{localStorage.setItem(CFG.cacheKey,JSON.stringify(live))}catch(e){}
     try{localStorage.setItem(CFG.syncKey,new Date().toISOString())}catch(e){}
