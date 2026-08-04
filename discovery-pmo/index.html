@@ -14193,8 +14193,26 @@ Recomendação PMO: ${d.recommendation}`;
       return Array.isArray(project?.subInitiatives) ? project.subInitiatives.length : 0;
     }
 
+    // Cada filha carrega o próprio campo "squad" (vindo da planilha), que pode
+    // divergir do squad da Mãe (ver projectCrossSquadChildren). Sem isso, uma
+    // filha já corretamente atribuída a outra Squad continuava contada em "Filhas"
+    // da Squad da Mãe pra sempre — reimportar/atualizar nunca corrigia o número
+    // porque a contagem nem olhava o squad da própria filha.
+    function squadIdForChild(child) {
+      const name = String(child?.squad || '').trim();
+      if (name) {
+        const match = (data.squads || []).find(s =>
+          normalizeSearchText(s.name || '') === normalizeSearchText(name) ||
+          (s.code && String(s.code).toLowerCase() === name.toLowerCase())
+        );
+        if (match) return match.id;
+      }
+      return asdSquad()?.id || '';
+    }
+
     function childCountForSquad(squadId) {
-      return squadProjects(squadId).reduce((acc, project) => acc + subInitiativeCount(project), 0);
+      return (data.projects || []).reduce((acc, project) =>
+        acc + (project.subInitiatives || []).filter(child => squadIdForChild(child) === squadId).length, 0);
     }
 
     function hoursForSquad(squadId) {
@@ -16185,6 +16203,21 @@ Recomendação PMO: ${d.recommendation}`;
       return String(h || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
     }
 
+    // Resolve o texto de Squad da planilha (Mãe/Única) contra a lista cadastrada,
+    // aceitando tanto o nome quanto o código (ex.: "EXP" para Expresso). Antes só
+    // comparava pelo nome — uma célula com o código, ou com o nome digitado de
+    // forma levemente diferente do cadastro, não batia com nada e a iniciativa
+    // ficava presa em ASD silenciosamente, mesmo já tendo Squad definida na planilha.
+    function resolveSquadFromImportText(text) {
+      const raw = String(text || '').trim();
+      if (!raw) return null;
+      const normalized = normalizeImportHeader(raw);
+      return (data.squads || []).find(s =>
+        normalizeImportHeader(s.name || '') === normalized ||
+        (s.code && String(s.code).toLowerCase() === raw.toLowerCase())
+      ) || null;
+    }
+
     function importTextKey(prefix, text) {
       return `${prefix}:${stripAccentsLower(text).replace(/\s+/g, ' ').trim()}`;
     }
@@ -16292,7 +16325,6 @@ Recomendação PMO: ${d.recommendation}`;
     function validateOps4OpsImport(records) {
       const errors = [], warnings = [];
       const seenMain = new Set(), seenChild = new Set();
-      const knownSquads = new Set(sortedSquadsList().map(s => normalizeImportHeader(s.name)));
       records.forEach((rec, index) => {
         const line = index + 1;
         const isChild = /filha/.test(normalizeImportHeader(rec.tipo));
@@ -16309,7 +16341,7 @@ Recomendação PMO: ${d.recommendation}`;
         if (start && end && start > end) errors.push(`Linha ${line}: Início Dev é posterior ao Término Dev.`);
         if (discovery && start && discovery > start) warnings.push(`Linha ${line}: Discovery está posterior ao Início Dev; confira o planejamento.`);
         if (String(rec.hours2026 || '').trim() && !Number.isFinite(Number(String(rec.hours2026).replace(',', '.')))) warnings.push(`Linha ${line}: Horas 2026 não é numérico e não será atualizado.`);
-        if (rec.squad && !knownSquads.has(normalizeImportHeader(rec.squad))) warnings.push(`Linha ${line}: Squad "${rec.squad}" não cadastrada; a iniciativa ficará em ASD.`);
+        if (rec.squad && !resolveSquadFromImportText(rec.squad)) warnings.push(`Linha ${line}: Squad "${rec.squad}" não cadastrada; a iniciativa ficará em ASD.`);
       });
       return { errors, warnings };
     }
@@ -16520,7 +16552,6 @@ Recomendação PMO: ${d.recommendation}`;
 
     function applyImportPlan(plan) {
       let cardsAdded = 0, depsAdded = 0, scheduleAdded = 0, timelineAdvanced = 0, projectsCreated = 0, projectsUpdated = 0, childrenUpserted = 0, fieldsPreserved = 0;
-      const squadsByName = new Map(sortedSquadsList().map(s => [normalizeImportHeader(s.name), s]));
       const historyItems = [];
 
       // Cada campo só entra na lista "changed" quando REALMENTE muda de valor — é isso
@@ -16530,7 +16561,7 @@ Recomendação PMO: ${d.recommendation}`;
         const preserved = [];
         applyImportedField(project, { key: 'name', label: 'Nome' }, rec.nome, changed, preserved);
         if (rec.squad) {
-          const sq = squadsByName.get(normalizeImportHeader(rec.squad));
+          const sq = resolveSquadFromImportText(rec.squad);
           if (sq) applyImportedField(project, {
             key: 'squadId',
             label: 'Squad',
@@ -16606,7 +16637,7 @@ Recomendação PMO: ${d.recommendation}`;
       });
 
       plan.creates.forEach(({ rec }) => {
-        const sq = (rec.squad && squadsByName.get(normalizeImportHeader(rec.squad))) || asdSquad();
+        const sq = (rec.squad && resolveSquadFromImportText(rec.squad)) || asdSquad();
         const project = {
           id: 'ini-' + slugify(rec.motherNumber || rec.nome) + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           initiativeNumber: rec.motherNumber,
