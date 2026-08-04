@@ -912,6 +912,7 @@ const CFG={
   trackerKey:'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3',
   cacheKey:'sala_rep_cache_v3', editKey:'sala_rep_edit_v4', snapKey:'sala_rep_snap_v4',
   syncKey:'sala_rep_last_sync_v1', resolveKey:'sala_rep_resolved_v1',
+  resolveGasKey:'discoveryPmoReportResolved',
   horizon:14, staleDays:10
 };
 const TL_STAGES=[{id:'entendimento',title:'Entendimento do Problema'},{id:'analise',title:'Levantamento e Análise'},{id:'desenho',title:'Desenho da Solução'},{id:'validacao',title:'Validação e Prontidão'}];
@@ -1436,7 +1437,31 @@ const rkSig=i=>norm(i.text).slice(0,60)+'|'+(i.due||'');
 let currentRk=[];
 let currentResolvedList=[];
 function resolvedMap(){try{return JSON.parse(localStorage.getItem(CFG.resolveKey)||'{}')}catch(e){return{}}}
-function saveResolvedMap(o){try{localStorage.setItem(CFG.resolveKey,JSON.stringify(o))}catch(e){}}
+/* Salva local sempre (resposta instantânea/offline) e propaga pro servidor
+   compartilhado, exceto quando a própria chamada resultou de um pull do
+   servidor (skipPush) — sem essa distinção, cada pull viraria um push
+   imediato de volta, inofensivo mas desnecessário. Antes disso, "excluir"/
+   "concluir" ficava só no localStorage de quem clicou: em outro navegador,
+   ou depois de limpar dados, o item "voltava do nada" — mesmo os comentários
+   deste arquivo já dizendo que a exclusão deveria "sumir de vez". */
+function saveResolvedMap(o,skipPush){try{localStorage.setItem(CFG.resolveKey,JSON.stringify(o))}catch(e){}if(!skipPush)pushResolvedMap(o)}
+function pushResolvedMap(map){
+  try{
+    fetch(CFG.gasUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'action=saveVpData&key='+CFG.resolveGasKey+'&payload='+encodeURIComponent(JSON.stringify(map))}).catch(()=>{});
+  }catch(e){}
+}
+/* Puxa o mapa compartilhado e mescla com o local (união simples — o servidor
+   já faz o mesmo merge por chave). Chamado na carga da página para que
+   exclusões feitas em outro navegador apareçam aqui sem precisar repeti-las. */
+async function pullResolvedMap(){
+  try{
+    const resp=await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.resolveGasKey}`);
+    const remote=resp&&resp.ok&&resp.data&&typeof resp.data==='object'?resp.data:null;
+    if(!remote)return;
+    saveResolvedMap({...resolvedMap(),...remote},true);
+  }catch(e){/* servidor indisponível — segue só com o que já está salvo localmente */}
+}
 function resolveRiskAt(idx){
   const row=currentRk[idx];if(!row)return;
   const sig=rkSig(row.i);
@@ -1465,7 +1490,12 @@ function dismissRiskAt(idx){
 function reopenResolvedAt(idx){
   const row=currentResolvedList[idx];if(!row)return;
   const R=resolvedMap();if(!(row[0] in R))return;
-  delete R[row[0]];saveResolvedMap(R);render();toast('Reaberto');
+  // Mantém a chave (marcada "reaberto") em vez de apagar: o servidor só faz
+  // merge aditivo por chave (nunca remove por ausência), então apagar aqui e
+  // sincronizar faria uma cópia remota desatualizada "ressuscitar" a exclusão
+  // no próximo pull de qualquer navegador.
+  R[row[0]]={...R[row[0]],kind:'reaberto',date:iso(new Date())};
+  saveResolvedMap(R);render();toast('Reaberto');
 }
 function snapOf(a){const p=a.p;return{pg:a.progress,lv:a.level,st:p.status,sq:p.squad,po:p.po,tl:p.techLead,
   dd:p.discoveryDate,sd:p.startDev,ed:p.endDev,tg:p.target,rk:a.risksOpen,
@@ -1687,7 +1717,7 @@ function render(){
      própria semana em vista não conta mais como aberto neste período */
   const RMAP=resolvedMap();
   const endIso=iso(end);
-  const notResolvedNow=i=>{const hit=RMAP[rkSig(i)];if(!hit)return true;if(hit.kind==='excluido')return false;return !(hit.date<=endIso)};
+  const notResolvedNow=i=>{const hit=RMAP[rkSig(i)];if(!hit||hit.kind==='reaberto')return true;if(hit.kind==='excluido')return false;return !(hit.date<=endIso)};
   const rk=[];
   scoped.forEach(a=>['risks','issues','dependencies'].forEach(g=>a.R[g].filter(i=>!i.done&&notResolvedNow(i)).forEach(i=>rk.push({a,g,i}))));
   /* Complementos manuais continuam visíveis na tabela detalhada, mas NÃO alteram
@@ -1775,7 +1805,7 @@ function render(){
     :'<tr><td colspan="9" class="empty">Nenhum risco, impedimento ou dependência em aberto.</td></tr>';
   /* excluído não aparece nem aqui — é para sumir de vez, sem deixar rastro visível.
      Só "concluído" fica reversível nesta lista. */
-  currentResolvedList=Object.entries(RMAP).filter(([,v])=>v.kind!=='excluido').sort((x,y)=>y[1].date.localeCompare(x[1].date)).slice(0,10);
+  currentResolvedList=Object.entries(RMAP).filter(([,v])=>v.kind!=='excluido'&&v.kind!=='reaberto').sort((x,y)=>y[1].date.localeCompare(x[1].date)).slice(0,10);
   const rkResBlk=el('rkResolvedBlk');
   if(rkResBlk){
     rkResBlk.classList.toggle('hide',!currentResolvedList.length);
@@ -2575,7 +2605,9 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 let __detState=null;
 window.addEventListener('beforeprint',()=>{const det=[...document.querySelectorAll('details.blk-more')];__detState=det.map(d=>d.open);det.forEach(d=>d.open=true)});
 window.addEventListener('afterprint',()=>{if(!__detState)return;[...document.querySelectorAll('details.blk-more')].forEach((d,i)=>d.open=__detState[i]);__detState=null});
-generate();
+// Puxa exclusões/conclusões de outros navegadores antes do primeiro render,
+// pra não mostrar por um instante um risco que outra pessoa já tratou.
+pullResolvedMap().catch(()=>{}).finally(generate);
 </script>
 
 

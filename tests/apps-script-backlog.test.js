@@ -113,7 +113,7 @@ console.log('\n═══ 2. O ataque: payload vazio contra base cheia ═══'
   ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify(base) }));
   const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: '{"rows":[]}' })));
   t('servidor RECUSA', r.ok, false);
-  t('mensagem é acionável', /zeraria 20 registro/.test(r.error), true);
+  t('mensagem explica que a última carga válida foi preservada', /última carga válida foi preservada/.test(r.error), true);
   t('DADOS INTACTOS após a recusa', lerAba(SHEETS,'_vp_geral').rows.length, 20);
   const audit = SHEETS.get('_audit')._rows;
   t('recusa registrada na auditoria', audit[audit.length-1][6], 'RECUSADO');
@@ -147,17 +147,29 @@ console.log('\n═══ 4. Ring buffer de snapshots (3 slots, sem estourar) ═
   t('índice do ring buffer circulou', PROPS['bakIdx__vp_geral'], '1');
 }
 
-console.log('\n═══ 5. Modo observação: NÃO pode bloquear nada ═══');
+console.log('\n═══ 5. Cargas Jira vazias nunca apagam a última fotografia válida ═══');
 {
   const { ctx, SHEETS } = novoAmbiente();
   const base = { rows: Array.from({length:20}, (_,i)=>({id:i})) };
   ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify(base) }));
   ctx.ativarModoObservacao();
   const r = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: '{"rows":[]}' })));
-  t('dry-run DEIXA PASSAR o que bloquearia', r.ok, true);
-  t('dado foi realmente zerado (comportamento igual ao de hoje)', lerAba(SHEETS,'_vp_geral').rows.length, 0);
-  t('auditoria marcou como BLOQUEARIA', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'BLOQUEARIA (dry-run)');
-  t('snapshot foi feito mesmo assim (rede de segurança)', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 20);
+  t('payload vazio é recusado mesmo em modo observação', r.ok, false);
+  t('última carga continua disponível', lerAba(SHEETS,'_vp_geral').rows.length, 20);
+  t('auditoria registra a recusa', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'RECUSADO');
+}
+
+console.log('\n═══ 4b. Leitura recupera a última carga válida do backup ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify({rows:Array.from({length:20},(_,i)=>({id:i}))}) }));
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: JSON.stringify({rows:Array.from({length:16},(_,i)=>({id:i}))}) }));
+  const current = SHEETS.get('_vp_geral');
+  current.clearContents();
+  current.getRange(1,1,1,1).setValue('{"rows":[]}');
+  const recovered = parse(ctx.doGet(post({ action:'getVpData', key:'vpGeral' }))).data;
+  t('retorna o snapshot anterior ao zero inesperado', recovered.rows.length, 20);
+  t('sinaliza que a leitura veio do backup', recovered.recoveredFromBackup, true);
 }
 
 console.log('\n═══ 6. Merge das 3 chaves de mapa puro ═══');
@@ -228,6 +240,13 @@ console.log('\n═══ 10. saveStories e saveBacklog ═══');
   t('corte de 80% em stories é RECUSADO', r.ok, false);
   t('stories intactas', lerAba(SHEETS,'_stories_chunks').length, 50);
 
+  const official = parse(ctx.doPost(post({
+    action:'saveStories', payload: st(10), source:'jira-story-snapshot-v1', sourceFile:'2. QTD Epicos atrelados a story.csv'
+  })));
+  t('foto Jira oficial pode reduzir a lista completa', official.ok, true);
+  t('redução oficial fica auditada', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'REDUCAO_FONTE_OFICIAL');
+  t('snapshot preserva stories antes da foto oficial', lerAba(SHEETS,'_stories_chunks__bak1').length, 50);
+
   const snaps = n => JSON.stringify(Array.from({length:n},(_,i)=>({id:'s'+i, seq:i, stories:[], importedAt:'2026-07-0'+(i%9+1)+'T00:00:00Z'})));
   t('saveBacklog grava', parse(ctx.doPost(post({action:'saveBacklog', payload: snaps(8)}))).ok, true);
   t('saveBacklog mescla (8 + 3 novos = 11)',
@@ -249,12 +268,25 @@ console.log('\n═══ 11. Janela de redução liberada pelo admin ═══')
   t('snapshot preservou os 50 anteriores', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 50);
 }
 
+console.log('\n═══ 11b. Fotografia Jira oficial de painéis ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const mk = n => JSON.stringify({ rows: Array.from({length:n}, (_,i)=>({id:i})) });
+  t('primeira carga de Geral', parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(30) }))).ok, true);
+  const r = parse(ctx.doPost(post({
+    action:'saveVpData', key:'vpGeral', payload: mk(8), source:'jira-panel-snapshot-v1', sourceFile:'4. Acomp. Geral Todas Squads.csv'
+  })));
+  t('Geral oficial pode reduzir', r.ok, true);
+  t('Geral oficial mantém rastreabilidade', SHEETS.get('_audit')._rows.slice(-1)[0][6], 'REDUCAO_FONTE_OFICIAL');
+  t('snapshot de Geral preserva estado anterior', lerAba(SHEETS,'_vp_geral__bak1').rows.length, 30);
+}
+
 console.log('\n═══ 12. health e chaves inválidas ═══');
 {
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-07-31-jira-epic-snapshot-v15');
+  t('versão correta', h.version, '2026-08-04-v18-ops4ops-lean-endpoint');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -319,6 +351,35 @@ console.log('\n═══ 14. baseRevision — concorrência otimista (v14) ═�
   const vpConflict = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(12), baseRevision: 1 })));
   t('saveVpData com revisão velha é RECUSADO', vpConflict.ok, false);
   t('saveVpData sinaliza conflito', vpConflict.conflict, true);
+}
+
+console.log('\n═══ 15. getOps4opsData: projeção enxuta do discoveryPmo ═══');
+{
+  const { ctx } = novoAmbiente();
+  const disc = {
+    updatedAt: '2026-08-04T00:00:00Z',
+    projects: [
+      // Sem jiraStories: no payload real isso é onde os attachments pesados
+      // moram (>1MB por projeto) sem nenhuma história — precisa ser descartado.
+      { id:'p-sem-historia', squad:'Contact', owner:'Fulano', updatedAt:'x', attachments:[{big:'x'.repeat(1000)}], jiraStories:[] },
+      { id:'p-com-historia', squad:'Expresso', owner:'Ciclano', updatedAt:'y', attachments:[{big:'y'.repeat(1000)}], cards:[{c:1}], jiraStories:[
+        { key:'ABC-1', summary:'Faz algo', status:'Done', team:'Expresso', labels:['a','b'], updated:'2026-08-01', tipo:'Story' },
+        { key:'ABC-2', summary:'Épico', status:'Aberto', tipo:'Epic' }
+      ]}
+    ]
+  };
+  ctx.doPost(post({ action:'saveVpData', key:'discoveryPmo', payload: JSON.stringify(disc) }));
+  const g = parse(ctx.doGet(post({ action:'getOps4opsData' })));
+  t('responde ok', g.ok, true);
+  t('descarta projeto sem jiraStories', g.data.projects.length, 1);
+  t('mantém só os campos usados pelo Ops4Ops', g.data.projects[0], {
+    squad:'Expresso', owner:'Ciclano', updatedAt:'y', jiraStories:[
+      { key:'ABC-1', summary:'Faz algo', status:'Done', team:'Expresso', labels:['a','b'], updated:'2026-08-01', tipo:'Story' },
+      { key:'ABC-2', summary:'Épico', status:'Aberto', team:'', labels:undefined, updated:'', tipo:'Epic' }
+    ]
+  });
+  t('não vaza attachments/cards', JSON.stringify(g.data).indexOf('attachments') === -1 && JSON.stringify(g.data).indexOf('cards') === -1, true);
+  t('updatedAt da base vem junto', g.data.updatedAt, '2026-08-04T00:00:00Z');
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);

@@ -1463,7 +1463,7 @@ body{min-height:100vh}
   <input type="file" id="fi" accept=".xlsx,.xls,.csv">
   <input type="file" id="fiAllGlobal" accept=".xlsx,.xls,.csv" multiple>
   <button class="up-btn" onclick="document.getElementById('fi').click()" title="Importar arquivo _Epicos_Pós-Identificado_por_Time">Selecionar arquivo</button>
-  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Ponto único de importação: detecta e importa todos os arquivos do Jira (Épicos, QTD_Epicos_atrelados_a_story, Story_no_Backlog_Refinadas, Sprint_ativa, Acomp._Geral, Homologação) e propaga automaticamente para Visão de Projetos e Discovery PMO Tracker — inclusive nas abas que já estiverem abertas.">🌐 Importar Tudo</button>
+  <button class="up-btn up-btn-global" onclick="document.getElementById('fiAllGlobal').click()" title="Ponto único de importação. Antes de gravar, valida todos os arquivos localmente; se houver erro, duplicidade ou arquivo não reconhecido, cancela a carga inteira e não envia dados ao sistema.">🔒 Importar Tudo</button>
   <span id="importLockBanner" style="display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#92400e;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:4px 10px;">
     <span class="imp-spinner" style="width:12px;height:12px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;display:inline-block;animation:imp-spin .7s linear infinite;"></span>
     Importação em andamento…
@@ -2399,6 +2399,9 @@ var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
 var emergencyState={rules:[],meta:{}};
 var emergencyRuleId='credito-rural';
+var _emergencyRevision=null;
+var _emergencyCloudHydrated=false;
+var _emergencyCloudVerifyTimer=null;
 var emergencyEditingId='';
 var emergencyServerBacklogStories=[];
 var stFilt={epic:'all',status:'all'};
@@ -2732,20 +2735,25 @@ function isValidIsoDate(value){
   return !isNaN(d.getTime()) && d.toISOString().slice(0,10) === value;
 }
 function isCancelled(rec){ return !!rec && String(rec.status||'').trim()==='Cancelado'; }
+// Uma foto Jira define a carteira atual, mas nunca pode apagar evidências de
+// entrega/cancelamento usadas na Medição e no histórico executivo.
+function isHistoricEpic(rec){
+  return !!rec && (isCancelled(rec)||isValidDate(rec.fim)||isValidDate(rec.fimAntes));
+}
 // Uma história sem épico conhecido continua elegível. Quando o épico existe no
 // painel, porém, Cancelado e concluído ficam restritos à aba Medição.
-function isStoryEpicVisible(epicId){
-  // Quando existe uma carga Jira oficial recente, histórias de épicos que não
-  // pertencem àquela foto são resíduos do servidor legado e não podem inflar a
-  // aba Qtd Story/Épicos em outro navegador.
+function isStoryEpicVisible(epicId, restrictToCurrentEpicSnapshot){
+  // A foto Jira vale somente para Qtd Story/Épicos. Backlog, Ops4Ops e os
+  // demais painéis possuem conjuntos de histórias próprios e não têm, em
+  // geral, o campo `epic`; aplicá-la ali zerava o painel em janela anônima.
   var jiraSnapshot=loadJiraEpicSnapshot();
-  if(jiraSnapshot && jiraSnapshot.ids.indexOf(epicId)<0) return false;
+  if(restrictToCurrentEpicSnapshot && jiraSnapshot && epicId && jiraSnapshot.ids.indexOf(epicId)<0) return false;
   var rec=allData.find(function(r){return r.id===epicId;});
   if(!rec) return true;
   return !isCancelled(rec) && !isValidDate(rec.fim);
 }
-function visibleStoryRows(stories){
-  return (stories||[]).filter(function(s){ return isStoryEpicVisible(s&&s.epic); });
+function visibleStoryRows(stories, restrictToCurrentEpicSnapshot){
+  return (stories||[]).filter(function(s){ return isStoryEpicVisible(s&&s.epic,restrictToCurrentEpicSnapshot); });
 }
 function activeEpics(){
   return allData.filter(function(r){ return !isCancelled(r) && !isValidDate(r.fim); });
@@ -2828,12 +2836,12 @@ function replaceFromSharedSource(rows){
   }catch(e){}
 
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
-  // Uma importação Jira recente é autoritativa para a carteira de épicos.
-  // Assim, o Sheets não reintroduz cartões históricos que não estão no arquivo atual.
+  // Uma importação Jira recente é autoritativa para a carteira ATUAL. Entregas
+  // e cancelamentos fora dela continuam no histórico e na aba Medição.
   var jiraEpicSnapshot=loadJiraEpicSnapshot();
   if(jiraEpicSnapshot){
     var currentIds={}; jiraEpicSnapshot.ids.forEach(function(id){currentIds[id]=true;});
-    incoming=incoming.filter(function(r){return currentIds[r.id];});
+    incoming=incoming.filter(function(r){return currentIds[r.id]||isHistoricEpic(r);});
   }
 
   // Caches persistidos pelo import do Jira (nunca sobrescritos pelo Sheets)
@@ -2956,7 +2964,7 @@ function replaceFromSharedSource(rows){
   // não desapareçam para o time quando o Sheets não os contém.
   // (inIds já foi montado acima a partir de `incoming`.)
   allData.forEach(function(r){
-    if(r&&r.id&&!inIds[r.id]&&!jiraEpicSnapshot) incoming.push(r);
+    if(r&&r.id&&!inIds[r.id]&&(!jiraEpicSnapshot||isHistoricEpic(r))) incoming.push(r);
   });
 
   // Proteção: nunca substituir dados existentes por lista vazia
@@ -3094,7 +3102,7 @@ function saveJiraEpicSnapshot(rows){
     // continua como fonte dos campos, mas não pode ressuscitar épicos fora da carga Jira.
     if(BK_GAS_URL) fetch(BK_GAS_URL,{
       method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'action=saveVpData&key=jiraEpicSnapshot&payload='+encodeURIComponent(JSON.stringify(snapshot))
+      body:'action=saveVpData&key=jiraEpicSnapshot&source=jira-panel-snapshot-v1&sourceFile='+encodeURIComponent('Épicos pós-identificados')+'&payload='+encodeURIComponent(JSON.stringify(snapshot))
     }).catch(function(){});
   }catch(e){}
 }
@@ -3568,7 +3576,7 @@ function goTab(id,btn){
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
-  else if(id==='em') renderEmergencyView();
+  else if(id==='em'){ renderEmergencyView(); if(BK_GAS_URL && !_gasBacklogSaving) try{ gasLoadBacklog(function(){}); }catch(e){} }
   else if(id==='cal') renderCalendar();
   updateTabCounts();
 }
@@ -3592,7 +3600,7 @@ function activateTab(id){
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
   else if(id==='bk') renderBacklogView();
-  else if(id==='em') renderEmergencyView();
+  else if(id==='em'){ renderEmergencyView(); if(BK_GAS_URL && !_gasBacklogSaving) try{ gasLoadBacklog(function(){}); }catch(e){} }
   else if(id==='cal') renderCalendar();
   updateTabCounts();
 }
@@ -4760,7 +4768,7 @@ function updateTabCounts(){
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
   var svEl=$id('tabCtSv');
-  var visibleStoryCount=visibleStoryRows(allStories).length;
+  var visibleStoryCount=visibleStoryRows(allStories,true).length;
   if(svEl) svEl.textContent=visibleStoryCount||'';
   var bkEl=$id('tabCtBk');
   if(bkEl){ var bkCurSnap=getCurrentBacklogSnapshot(); var bkCur=bkCurSnap?visibleStoryRows(bkCurSnap.stories).length:0; bkEl.textContent=bkCur||''; }
@@ -5121,20 +5129,28 @@ function loadStoriesXlsx(file, mergeHomologation){
           'Reexporte do Jira incluindo a coluna do épico pai (Epic Link ou Parent).','err');
         return;
       }
-      // O export específico de Homologação é uma atualização complementar:
-      // preserva as demais histórias já exibidas e atualiza apenas as chaves recebidas.
+      // Homologação tem fonte própria (Visão de Projetos). Ela não pode entrar
+      // na fotografia oficial de QTD Story/Épicos, pois isso faria histórias de
+      // uma carga parcial reaparecerem quando não vierem no export principal.
       var isHomologationFeed=!!mergeHomologation||stripAcc((file.name||'').toLowerCase()).indexOf('homolog')>=0;
       if(isHomologationFeed){
-        // Uma única anexação também disponibiliza a mesma carga para a Visão
-        // de Projetos, que a lê automaticamente quando estiver aberta.
+        // Disponibiliza a matriz para a Visão de Projetos sem alterar allStories
+        // nem publicar uma mistura de fontes no servidor compartilhado.
         try{
           var homologSheet=wb.Sheets[wb.SheetNames[0]];
           storageSet(HOMOLOGATION_CROSS_KEY,JSON.stringify({matrix:XLSX.utils.sheet_to_json(homologSheet,{header:1,defval:''}),fileName:file.name,savedAt:new Date().toISOString()}));
         }catch(crossError){}
+        var hName=$id('svUpName'); if(hName) hName.textContent=file.name;
+        var hSub=$id('svUpSub'); if(hSub) hSub.textContent='Homologação encaminhada para o painel próprio · '+stories.length+' histórias';
+        toast('🧪 Homologação separada',stories.length+' histórias validadas para a Visão de Projetos; a base de QTD Story não foi misturada.');
+        recordImportEvent('homologation', file.name, stories.length);
+        return;
       }
-      mergeStoriesIntoAllStories(stories);
+      // QTD Story/Épicos é uma fotografia completa e autoritativa do Jira.
+      // Substituir — e não mesclar — remove histórias que saíram da carga.
+      allStories=stories;
       backfillEpicSquads();
-      saveStoriesLocal();
+      saveStoriesLocal({officialSnapshot:true,sourceFile:file.name});
       var upName=$id('svUpName'); if(upName) upName.textContent=file.name;
       var upSub=$id('svUpSub'); if(upSub) upSub.textContent=(isHomologationFeed?'Homologação atualizada · ':'')+stories.length+' estórias carregadas';
       var upSaved=$id('svUpSaved'); if(upSaved) upSaved.classList.remove('hidden');
@@ -5153,9 +5169,9 @@ function loadStoriesXlsx(file, mergeHomologation){
 }
 
 // Salva/carrega estórias no localStorage e na nuvem compartilhada
-function saveStoriesLocal(){
+function saveStoriesLocal(options){
   try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
-  gasSaveStories();
+  gasSaveStories(options||{});
 }
 function loadStoriesLocal(){
   try{
@@ -5164,8 +5180,9 @@ function loadStoriesLocal(){
   }catch(e){}
 }
 
-// Quando a carga é feita diretamente na Visão de Projetos, reutiliza a mesma
-// base local para atualizar a tabela Qtd Story/Épicos sem apagar as demais linhas.
+// Homologação é um painel separado. Só pode complementar uma história que já
+// exista na foto oficial; jamais cria história nova nem grava essa mistura na
+// fonte compartilhada de QTD Story/Épicos.
 function mergeHomologationFromVisual(){
   try{
     var saved=JSON.parse(storageGet(HOMOLOGATION_VISUAL_KEY)||'null');
@@ -5177,13 +5194,12 @@ function mergeHomologationFromVisual(){
       var id=extractJiraKey(row.chave||row.id);
       if(!id) return;
       var incoming={id:id,epic:extractJiraKey(row.epic),epicName:'',resumo:row.resumo||'',status:row.situacao||'',squad:normalizeSquad(row.squad||''),criado:parseD(row.criado),atualizado:parseD(row.atualizado),sprint:row.sprint||'',estimativa:row.estimativa||'',prazo:parseD(row.prazo),homologacaoData:parseD(row.homologacaoData),responsavel:row.responsavel||'',labels:Array.isArray(row.rotulos)?row.rotulos.join(' | '):(row.rotulos||'')};
-      if(byId[id]===undefined){ allStories.push(incoming); byId[id]=allStories.length-1; changed=true; }
-      else {
+      if(byId[id]!==undefined) {
         var merged=mergeRecordFields(allStories[byId[id]],incoming);
         if(JSON.stringify(merged)!==JSON.stringify(allStories[byId[id]])){allStories[byId[id]]=merged;changed=true;}
       }
     });
-    if(changed) saveStoriesLocal();
+    if(changed) try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
     return changed;
   }catch(e){return false;}
 }
@@ -5251,6 +5267,15 @@ function loadBacklogSnaps(){
 function snapKey(s){ return (s&&s.id)?('id:'+s.id):('seq:'+(s?s.seq:'')); }
 function snapStoryCount(s){ return (s&&Array.isArray(s.stories)) ? s.stories.length : 0; }
 function snapTime(s){ var t=Date.parse((s&&s.importedAt)||''); return isNaN(t)?0:t; }
+// Ops4Ops usa o mesmo formato de export do Backlog, porém é outro conjunto e
+// tem o rótulo explícito. Snapshots legados dele nunca devem virar o Backlog atual.
+function isOps4opsBacklogSnapshot(snap){
+  var stories=(snap&&Array.isArray(snap.stories))?snap.stories:[];
+  if(!stories.length) return false;
+  var marked=stories.filter(function(s){ return /ops4ops/i.test(String((s&&s.labels)||'')+' '+String((s&&s.resumo)||'')); }).length;
+  return marked>=Math.ceil(stories.length*0.6);
+}
+function backlogOnlySnapshots(){ return (backlogSnaps||[]).filter(function(s){ return !isOps4opsBacklogSnapshot(s); }); }
 function compareBacklogSnaps(a,b){
   // Ordena CRONOLOGICAMENTE: a importação mais recente é a "atual".
   // Antes ordenava por quantidade de histórias (ca-cb), o que fazia uma
@@ -5265,8 +5290,8 @@ function compareBacklogSnaps(a,b){
   return snapStoryCount(a)-snapStoryCount(b);
 }
 function sortBacklogSnaps(){ backlogSnaps.sort(compareBacklogSnaps); }
-function getCurrentBacklogSnapshot(){ if(!backlogSnaps.length) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-1]; }
-function getPreviousBacklogSnapshot(){ if(backlogSnaps.length<2) return null; sortBacklogSnaps(); return backlogSnaps[backlogSnaps.length-2]; }
+function getCurrentBacklogSnapshot(){ var snaps=backlogOnlySnapshots(); if(!snaps.length) return null; snaps.sort(compareBacklogSnaps); return snaps[snaps.length-1]; }
+function getPreviousBacklogSnapshot(){ var snaps=backlogOnlySnapshots(); if(snaps.length<2) return null; snaps.sort(compareBacklogSnaps); return snaps[snaps.length-2]; }
 function maxBacklogStoryCount(snaps){ return (snaps||[]).reduce(function(m,s){ return Math.max(m,snapStoryCount(s)); },0); }
 
 // Merge NÃO-destrutivo: une snapshots vindos de qualquer fonte (servidor, nuvem, arquivo)
@@ -5323,6 +5348,19 @@ function _gasJsonp(url, cb, timeoutMs){
   document.head.appendChild(script);
 }
 
+// Fonte única e compartilhada das histórias de Demandas Emergenciais: o
+// snapshot de Backlog mais recente CONFIRMADO pelo servidor (Apps Script).
+// Antes emergencyServerBacklogStories só era atualizado em gasLoadBacklog;
+// como getEmergencySourceStories() agora depende dela como fonte primária
+// (em vez do snapshot só-local, que pode ainda não ter chegado ao servidor),
+// toda leitura confirmada do backlog — inclusive a confirmação pós-gravação
+// em gasSaveBacklog — precisa atualizá-la, senão quem acabou de importar
+// ficaria olhando para uma lista vazia até o próximo poll de 2min.
+function emSyncServerBacklogStories(backlogArray){
+  var serverOrdered=(backlogArray||[]).slice().filter(function(s){ return !isOps4opsBacklogSnapshot(s); }).sort(compareBacklogSnaps);
+  var serverCurrent=serverOrdered[serverOrdered.length-1];
+  emergencyServerBacklogStories=(serverCurrent&&Array.isArray(serverCurrent.stories))?serverCurrent.stories:[];
+}
 function gasLoadBacklog(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
   var retries = (_retries === undefined) ? 2 : _retries;
@@ -5343,9 +5381,7 @@ function gasLoadBacklog(cb, _retries){
     }
     if(json && json.ok && Array.isArray(json.backlog) && json.backlog.length){
       var serverMax=maxBacklogStoryCount(json.backlog);
-      var serverOrdered=json.backlog.slice().sort(compareBacklogSnaps);
-      var serverCurrent=serverOrdered[serverOrdered.length-1];
-      emergencyServerBacklogStories=(serverCurrent&&Array.isArray(serverCurrent.stories))?serverCurrent.stories:[];
+      emSyncServerBacklogStories(json.backlog);
       mergeBacklog(json.backlog);
       sortBacklogSnaps();
       try{ storageSet(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
@@ -5395,6 +5431,7 @@ function gasSaveBacklog(){
           _gasBacklogSaving=false;
           setTimeout(function(){ gasSaveBacklog(); }, 1000);
         } else {
+          emSyncServerBacklogStories(json.backlog||[]);
           mergeBacklog(json.backlog||[]);
           try{ storageSet(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
           renderBacklogView(); if(curTab==='em') renderEmergencyView(); updateTabCounts();
@@ -5417,26 +5454,31 @@ var _gasStoriesSaving=false;
 // comportamento de antes desta versão) — evita falso conflito no primeiro
 // salvamento sem leitura prévia.
 var _storiesRevision=null;
-var _gasStoriesConflictRetry=false;
-function gasLoadStories(cb){
+function storiesSignature(stories){
+  return (stories||[]).map(function(s){return s&&s.id?s.id:'';}).filter(Boolean).sort().join('|');
+}
+function gasLoadStories(cb, options, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  var retries = (_retries === undefined) ? 2 : _retries;
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
+    if(err==='timeout' && retries>0){
+      // Mesmo motivo do retry em gasLoadBacklog/gasLoadOps4opsFromDiscovery:
+      // cold-start do Apps Script (ou contenção do lock com as outras cargas
+      // simultâneas do boot) pode estourar o timeout sem que haja falha real.
+      setTimeout(function(){ gasLoadStories(cb, options, retries-1); }, 3000);
+      return;
+    }
     if(err){ if(cb) cb(err); return; }
     if(json && json.ok && Array.isArray(json.stories)){
       if(typeof json.revision==='number') _storiesRevision=json.revision;
-      // Servidor com menos estórias que as locais: NÃO sobrescreve (evita apagar
-      // uma importação local recém-feita que ainda não terminou de subir, ex. ao
-      // clicar Atualizar logo após importar). Em vez disso, sobe as locais para
-      // o servidor convergir — mesma proteção já usada em gasLoadBacklog.
-      if(json.stories.length<allStories.length){
-        if(!_gasStoriesSaving){ setTimeout(function(){ gasSaveStories(); },500); }
-        if(cb) cb(null, 0);
+      var expected=options&&options.expectedSignature;
+      if(expected && storiesSignature(json.stories)!==expected){
+        if(cb) cb('aguardando confirmação da carga oficial');
         return;
       }
-      // Merge em vez de substituição: o servidor pode estar um pouco atrasado
-      // (mesma contagem, mas sem a última edição local) — mesclar preserva o
-      // que já está na tela em vez de arriscar sobrescrever com dado mais velho.
-      mergeStoriesIntoAllStories(json.stories);
+      // O servidor é a fonte compartilhada. Nunca mesclar com cache local:
+      // registros ausentes da carga oficial precisam realmente desaparecer.
+      allStories=json.stories;
       try{ storageSet(STORIES_KEY,JSON.stringify(allStories)); }catch(e){}
       renderStoryView();
       if(curTab==='em') renderEmergencyView();
@@ -5451,12 +5493,36 @@ function gasLoadStories(cb){
     }
   });
 }
-function gasSaveStories(){
+function gasSaveStories(options){
   if(!BK_GAS_URL || !allStories.length || _gasStoriesSaving) return;
+  options=options||{};
   _gasStoriesSaving=true;
   var sentBaseRevision=_storiesRevision;
+  var expectedSignature=storiesSignature(allStories);
   var body='action=saveStories&payload='+encodeURIComponent(JSON.stringify(allStories));
   if(sentBaseRevision!=null) body+='&baseRevision='+encodeURIComponent(sentBaseRevision);
+  if(options.officialSnapshot){
+    body+='&source=jira-story-snapshot-v1';
+    body+='&sourceFile='+encodeURIComponent(options.sourceFile||'');
+  }
+  function confirmSave(remaining){
+    setTimeout(function(){
+      gasLoadStories(function(err,n){
+        if(err==='aguardando confirmação da carga oficial' && remaining>0){
+          confirmSave(remaining-1);
+          return;
+        }
+        if(err){
+          // A cópia local é descartada nesta condição: o servidor não confirmou
+          // a foto, portanto ela não pode ser apresentada como compartilhada.
+          gasLoadStories(function(){},{});
+          toast('⚠️ Carga não confirmada','O servidor preservou a última carga válida. Nenhuma mistura local foi publicada.','warn');
+          return;
+        }
+        toast('☁️ Estórias publicadas',n+' estórias confirmadas no servidor.');
+      },{expectedSignature:expectedSignature});
+    },2500);
+  }
   fetch(BK_GAS_URL, {
     method:'POST',
     mode:'no-cors',
@@ -5464,25 +5530,14 @@ function gasSaveStories(){
     body:body
   })
   .then(function(){
-    toast('☁️ Estórias publicadas','Sincronizando com o servidor…');
-    setTimeout(function(){
-      gasLoadStories(function(err,n){
-        if(err) return;
-        renderStoryView();
-        // POST é no-cors (resposta opaca) — só descobrimos se o servidor recusou
-        // por conflito de revisão comparando com a releitura acima: se a revisão
-        // que voltou não é exatamente a que enviamos + 1, outra pessoa salvou no
-        // meio. gasLoadStories já mesclou por id; reenviamos uma vez para não
-        // perder a edição local em silêncio.
-        if(sentBaseRevision!=null && _storiesRevision!=null && _storiesRevision!==sentBaseRevision+1 && !_gasStoriesConflictRetry){
-          _gasStoriesConflictRetry=true;
-          toast('⚠️ Conflito de gravação','Outra pessoa salvou estórias ao mesmo tempo. Mesclando e reenviando…');
-          setTimeout(function(){ _gasStoriesConflictRetry=false; gasSaveStories(); }, 800);
-        }
-      });
-    }, 2500);
+    toast('☁️ Estórias publicadas','Aguardando confirmação do servidor…');
+    confirmSave(2);
   })
-  .catch(function(){ /* mantém salvo localmente */ })
+  .catch(function(){
+    // Falha de rede nunca transforma cache local em verdade compartilhada.
+    gasLoadStories(function(){},{});
+    toast('⚠️ Falha ao publicar','O servidor não confirmou a carga; a última carga válida foi mantida.','warn');
+  })
   .finally(function(){ _gasStoriesSaving=false; });
 }
 
@@ -5767,8 +5822,10 @@ function buildSquadCards(stories,squads,prevSquadCnt,snapsHistory,curSeq,source)
 function renderBacklogView(){
   var bkContent=$id('bkContent');
   if(!bkContent) return;
+  var backlogHistory=backlogOnlySnapshots();
+  backlogHistory.sort(compareBacklogSnaps);
 
-  if(!backlogSnaps.length){
+  if(!backlogHistory.length){
     if(_gasBacklogLoading){
       bkContent.innerHTML=
         '<div class="empty" style="padding:3rem 2rem;text-align:center">'+
@@ -5803,7 +5860,7 @@ function renderBacklogView(){
 
   // Aviso quando o snapshot mais recente (por data) tem menos histórias que o maior
   // já visto — indica que o servidor pode estar desatualizado (save via no-cors falhou).
-  var maxKnown=backlogSnaps.reduce(function(max,snap){
+  var maxKnown=backlogHistory.reduce(function(max,snap){
     return Math.max(max,visibleStoryRows(snap&&snap.stories).length);
   },0);
   var curCount=stories.length;
@@ -5845,8 +5902,8 @@ function renderBacklogView(){
 
   // Import history — últimas 5 como chips
   var historyHtml='';
-  if(backlogSnaps.length>1){
-    var last5=backlogSnaps.slice(-5);
+  if(backlogHistory.length>1){
+    var last5=backlogHistory.slice(-5);
     var chips=last5.map(function(snap,idx){
       var isCur=idx===last5.length-1;
       var snapCount=visibleStoryRows(snap.stories).length;
@@ -5859,14 +5916,14 @@ function renderBacklogView(){
         (deltaStr?deltaStr:'')+
       '</div>';
     });
-    var totalLabel=backlogSnaps.length>5?'<span style="font-size:10px;color:#94a3b8;align-self:center">+' +(backlogSnaps.length-5)+' anteriores</span>':'';
+    var totalLabel=backlogHistory.length>5?'<span style="font-size:10px;color:#94a3b8;align-self:center">+' +(backlogHistory.length-5)+' anteriores</span>':'';
     historyHtml='<div class="bk-history">'+
       '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8">Últimas importações</span>'+
       '<div class="bk-hist-chips">'+totalLabel+chips.join('')+'</div>'+
     '</div>';
   }
 
-  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,backlogSnaps,cur.seq,'backlog');
+  var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,backlogHistory,cur.seq,'backlog');
 
   bkContent.innerHTML=
     staleWarningHtml+
@@ -5965,13 +6022,21 @@ function gasLoadOps4ops(cb){
 
 // O Ops4Ops é importado no Discovery PMO Tracker. Esta aba apenas consome
 // as histórias já sincronizadas em discoveryPmo, sem duplicar a importação
-// nem criar uma segunda base.
-function gasLoadOps4opsFromDiscovery(cb){
+// nem criar uma segunda base. getOps4opsData é uma projeção enxuta (só
+// squad/owner/updatedAt/jiraStories de cada projeto) — evita trazer a base
+// completa do Discovery (attachments, cards, checklist...), que passava de
+// alguns MB e estourava o timeout do JSONP mesmo com dados válidos.
+function gasLoadOps4opsFromDiscovery(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  _gasOps4opsLoading=true;
+  var retries = (_retries === undefined) ? 2 : _retries;
+  if(!ops4opsSnaps.length){ _gasOps4opsLoading=true; renderOps4opsView(); }
   _gasOps4opsError=null;
-  renderOps4opsView();
-  _gasJsonp(BK_GAS_URL+'?action=getVpData&key=discoveryPmo&t='+Date.now(), function(err,json){
+  _gasJsonp(BK_GAS_URL+'?action=getOps4opsData&t='+Date.now(), function(err,json){
+    if(err==='timeout' && retries>0){
+      // Cold-start do Apps Script: retry automático após breve pausa.
+      setTimeout(function(){ gasLoadOps4opsFromDiscovery(cb, retries-1); }, 3000);
+      return;
+    }
     _gasOps4opsLoading=false;
     if(err || !json || !json.ok || !json.data){ _gasOps4opsError=err||'sem dados'; renderOps4opsView(); if(cb) cb(err||'sem dados',0); return; }
     var projects=Array.isArray(json.data.projects)?json.data.projects:[];
@@ -5998,7 +6063,7 @@ function gasLoadOps4opsFromDiscovery(cb){
     ops4opsFromDiscovery=true;
     ops4opsSnaps=[{id:'discovery-pmo',seq:1,stories:stories,importedAt:json.data.updatedAt||new Date().toISOString()}];
     if(cb) cb(null,1,stories.length);
-  });
+  }, 45000);
 }
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
@@ -6154,8 +6219,9 @@ function emEnsureState(){
   if(!emergencyState||typeof emergencyState!=='object') emergencyState={rules:[],meta:{}};
   if(!Array.isArray(emergencyState.rules)) emergencyState.rules=[];
   if(!emergencyState.meta||typeof emergencyState.meta!=='object') emergencyState.meta={};
-  if(!emergencyState.config||typeof emergencyState.config!=='object') emergencyState.config={workdayHours:6};
+  if(!emergencyState.config||typeof emergencyState.config!=='object') emergencyState.config={workdayHours:6,activeRuleId:''};
   if(!emergencyState.config.workdayHours) emergencyState.config.workdayHours=6;
+  if(!emergencyState.config.activeRuleId) emergencyState.config.activeRuleId='';
   if(!emergencyState.rules.some(function(r){return r&&r.id==='credito-rural';})) emergencyState.rules.unshift(emDefaultRule());
   var creditoRule=emergencyState.rules.find(function(r){return r&&r.id==='credito-rural';});
   if(creditoRule&&creditoRule.type==='titleStarts'){
@@ -6193,6 +6259,16 @@ function emMergeState(incoming){
     var local=emergencyState.meta[id], remote=incomingMeta[id];
     if(!local||String(remote&&remote.updatedAt||'')>String(local&&local.updatedAt||'')) emergencyState.meta[id]=remote;
   });
+  // A configuração de quais rótulos definem uma demanda emergencial é única
+  // para toda a operação. Diferente dos complementos manuais por história,
+  // ela não pode ficar dependente do cache de cada navegador.
+  if(incoming.config&&typeof incoming.config==='object'){
+    emergencyState.config=Object.assign({},emergencyState.config||{},incoming.config);
+    if(incoming.config.activeRuleId) emergencyRuleId=incoming.config.activeRuleId;
+  }
+  // Compatibilidade com a configuração já gravada antes de activeRuleId existir.
+  // Se a regra coletiva de rótulos chegou do servidor, ela é a regra ativa.
+  if((!incoming.config||!incoming.config.activeRuleId)&&(incoming.rules||[]).some(function(r){return r&&r.id==='manual-labels'&&r.value;})) emergencyRuleId='manual-labels';
   emEnsureState();
 }
 function emSaveState(){
@@ -6206,13 +6282,24 @@ function emSaveState(){
 }
 function emSaveCloud(){
   if(!BK_GAS_URL) return;
-  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState))}).catch(function(){});
+  var body='action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState));
+  if(_emergencyRevision!==null) body+='&baseRevision='+encodeURIComponent(_emergencyRevision);
+  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
+    .catch(function(){})
+    .finally(function(){
+      // no-cors não devolve o resultado do POST. Releitura é a confirmação
+      // efetiva: em conflito, a configuração compartilhada volta a vencer.
+      clearTimeout(_emergencyCloudVerifyTimer);
+      _emergencyCloudVerifyTimer=setTimeout(emLoadCloud,900);
+    });
 }
 function emLoadCloud(){
   if(!BK_GAS_URL) return;
   _gasJsonp(BK_GAS_URL+'?action=getVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&t='+Date.now(),function(err,json){
-    if(err||!json||!json.ok||!json.data) return;
+    if(err||!json||!json.ok||!json.data){ _emergencyCloudHydrated=true; return; }
+    if(typeof json.revision==='number') _emergencyRevision=json.revision;
     emMergeState(json.data);
+    _emergencyCloudHydrated=true;
     try{storageSet(EMERGENCY_KEY,JSON.stringify(emergencyState));}catch(e){}
     if(curTab==='em') renderEmergencyView();
     updateTabCounts();
@@ -6259,9 +6346,16 @@ function emMergeStory(target,source){
 }
 function getEmergencySourceStories(){
   var map={};
-  var cur=getCurrentBacklogSnapshot();
-  ((cur&&cur.stories)||[]).forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory({id:s.id,status:'Product Backlog'},s);});
-  (emergencyServerBacklogStories||[]).forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory(map[s.id]||{id:s.id,status:'Product Backlog'},s);});
+  // Demandas Emergenciais precisa ser IGUAL para todo mundo: squad e rótulo
+  // de uma história não podem aparecer só para quem importou. Por isso a
+  // base é sempre o backlog CONFIRMADO no servidor (emergencyServerBacklogStories),
+  // e não o snapshot só-local (getCurrentBacklogSnapshot), que pode conter uma
+  // importação ainda não sincronizada e só existir no navegador de quem importou.
+  // O snapshot local só é usado como base enquanto o servidor nunca respondeu
+  // nesta sessão (ex.: primeira carga antes do primeiro sync), para a tela não
+  // ficar vazia.
+  var base=(emergencyServerBacklogStories&&emergencyServerBacklogStories.length)?emergencyServerBacklogStories:((getCurrentBacklogSnapshot()&&getCurrentBacklogSnapshot().stories)||[]);
+  base.forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory({id:s.id,status:'Product Backlog'},s);});
   (allStories||[]).forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory(map[s.id]||{id:s.id},s);});
   emParseCrossHomologation().forEach(function(s){if(s&&s.id)map[s.id]=emMergeStory(map[s.id]||{id:s.id},s);});
   return Object.keys(map).map(function(k){return map[k];}).filter(function(s){
@@ -6685,7 +6779,7 @@ function renderStoryView(){
   var faseFilter=svFase?svFase.value:'all';
   var activeStoryEpics=allData.filter(function(r){return isStoryEpicVisible(r.id);});
   var activeStoryEpicIds=activeStoryEpics.map(function(r){return r.id;});
-  var visibleStories=visibleStoryRows(allStories);
+  var visibleStories=visibleStoryRows(allStories,true);
 
   // Populate squad dropdown from active epics/stories only.
   var allSquads=Array.from(new Set(
@@ -7026,9 +7120,12 @@ function detectUnifiedFileType(wb, fileName){
         if(fn.indexOf('sprint')>=0) return 'sprint_visao';
         // 4. Acomp. Geral → Visão de Projetos (botão JIRA)
         if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
-        // 5. Story no Backlog → Tab Backlog/Refinamento
+        // 5. Ops4Ops tem a mesma estrutura e pode conter “Backlog” no nome,
+        // mas sua fonte é o Discovery PMO — nunca pode entrar no Backlog geral.
+        if(fn.indexOf('ops4ops')>=0) return 'ops4ops';
+        // 6. Story no Backlog → Tab Backlog/Refinamento
         if(fn.indexOf('backlog')>=0) return 'backlog';
-        // 6. QTD Epicos → Tab Qtd Story/Épicos
+        // 7. QTD Epicos → Tab Qtd Story/Épicos
         if(fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
         // Heurística de conteúdo: ≥90% Product Backlog → backlog; senão → stories
         return (pbCnt/historiaCnt>=0.9)?'backlog':'stories';
@@ -7052,7 +7149,84 @@ function loadMultipleFiles(files, propagate){
   var fileList=Array.from(files);
   if(!fileList.length){ releaseImportLock(); return; }
   var pending=fileList.length;
-  var detected={epics:null,stories:null,backlog:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[]};
+  // Fase 1: apenas leitura e validação local. Nada é salvo nem propagado até
+  // todos os arquivos passarem por esta fase.
+  var detected={epics:null,stories:null,backlog:[],ops4ops:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[],errors:[]};
+
+  function addSingleSource(type, entry){
+    if(detected[type]){
+      detected.errors.push('Há mais de um arquivo para "'+type+'": "'+detected[type].file.name+'" e "'+entry.file.name+'".');
+      return;
+    }
+    detected[type]=entry;
+  }
+  function addArraySource(type, entry){
+    // O botão Importar Tudo trabalha com uma carga atual por painel. Aceitar
+    // dois arquivos para o mesmo destino faria o segundo sobrescrever ou
+    // misturar o primeiro sem confirmação explícita.
+    if(detected[type].length){
+      detected.errors.push('Há mais de um arquivo para "'+type+'": "'+detected[type][0].file.name+'" e "'+entry.file.name+'".');
+      return;
+    }
+    detected[type].push(entry);
+  }
+  function hasImportRows(det, type){
+    if(!det || !det.rows || !det.map || det.map.id<0) return false;
+    for(var r=det.hrow+1;r<det.rows.length;r++){
+      var row=det.rows[r];
+      if(!row || !row.length) continue;
+      if(type==='epics' && det.format==='jira_tipo' && det.tipoIdx>=0){
+        var itemType=stripAcc((row[det.tipoIdx]||'').toString()).toLowerCase();
+        if(itemType.indexOf('pico')<0 && itemType!=='epic') continue;
+      }
+      var rawId=(row[det.map.id]||'').toString().trim();
+      if(type==='epics'){
+        if(isValidEpicId(rawId)) return true;
+        continue;
+      }
+      if(type!=='backlog'){
+        // As cargas de histórias só são aceitas se cada história realmente
+        // possuir o vínculo com o épico que o importador vai utilizar.
+        var rawParent=det.map.epic>=0 ? (row[det.map.epic]||'') : (det.map.parent>=0 ? (row[det.map.parent]||'') : '');
+        if(extractJiraKey(rawId) && extractJiraKey(rawParent)) return true;
+        continue;
+      }
+      if(rawId) return true;
+    }
+    return false;
+  }
+  function validateSource(type, entry){
+    var det;
+    if(type==='epics') det=detectImportFormat(entry.wb);
+    else if(type==='backlog') det=detectBacklogFormat(entry.wb);
+    else det=detectStoriesFormat(entry.wb);
+    if(!hasImportRows(det,type)){
+      detected.errors.push('"'+entry.file.name+'" não contém registros válidos para '+type+'.');
+    }
+  }
+  function validateLocalImport(){
+    if(detected.unknown.length){
+      detected.errors.push('Arquivo não reconhecido: '+detected.unknown.join(', ')+'.');
+    }
+    if(detected.epics) validateSource('epics',detected.epics);
+    if(detected.stories) validateSource('stories',detected.stories);
+    detected.backlog.forEach(function(entry){ validateSource('backlog',entry); });
+    detected.ops4ops.forEach(function(entry){ validateSource('ops4ops',entry); });
+    detected.sprint_visao.forEach(function(entry){ validateSource('sprint_visao',entry); });
+    detected.general_visao.forEach(function(entry){ validateSource('general_visao',entry); });
+    detected.homologation_visao.forEach(function(entry){ validateSource('homologation_visao',entry); });
+    return detected.errors.length===0;
+  }
+  function cancelUnsafeImport(){
+    var message=detected.errors.join(' ');
+    // Registra o bloqueio como erro de carga para que a sinalização fique
+    // visível no painel; nenhuma chamada de save é feita neste caminho.
+    ['epics','stories','backlog','homologation','ops4ops'].forEach(function(datasetId){
+      recordImportError(datasetId,'Importar Tudo bloqueado',message);
+    });
+    toast('Importação cancelada localmente','Nenhum dado foi enviado ao sistema. '+message,'err');
+    releaseImportLock();
+  }
 
   // Salva a base como matrix bruta no localStorage para a Visão de Projetos ler
   function _saveCrossImport(key, wb, fileName){
@@ -7082,6 +7256,12 @@ function loadMultipleFiles(files, propagate){
   }
 
   function processWhenReady(){
+    // Portão de segurança: somente depois de todos os arquivos serem lidos e
+    // validados localmente é permitido chamar handlers que gravam dados.
+    if(!validateLocalImport()){
+      cancelUnsafeImport();
+      return;
+    }
     var lines=[];
     if(detected.epics){
       loadXlsx(detected.epics.file);
@@ -7094,7 +7274,7 @@ function loadMultipleFiles(files, propagate){
       var jiraSources=[];
       if(detected.epics) jiraSources.push(detected.epics);
       if(detected.stories) jiraSources.push(detected.stories);
-      jiraSources=jiraSources.concat(detected.backlog, detected.sprint_visao, detected.general_visao, detected.homologation_visao);
+      jiraSources=jiraSources.concat(detected.backlog, detected.ops4ops, detected.sprint_visao, detected.general_visao, detected.homologation_visao);
       if(jiraSources.length){
         var okEp=_saveCrossImportSources('sala_cross_import_epics_v1',jiraSources,jiraSources[0].file.name);
         lines.push(okEp ? '🧭 Épicos & Histórias → propagado para Discovery PMO Tracker automaticamente'
@@ -7109,6 +7289,9 @@ function loadMultipleFiles(files, propagate){
       loadBacklogXlsx(entry.file);
       lines.push('📥 Backlog → Tab Backlog/Refinamento');
     });
+    if(detected.ops4ops.length){
+      lines.push('🔧 Ops4Ops → propagado para Discovery PMO Tracker (não mistura com Backlog)');
+    }
     if(detected.sprint_visao.length){
       if(propagate){
         var sv=detected.sprint_visao[0];
@@ -7142,8 +7325,7 @@ function loadMultipleFiles(files, propagate){
         lines.push('🧪 Homologação detectada → Qtd Story/Épicos atualizada; use "🌐 Importar em Todos" para também atualizar a Visão de Projetos');
       }
     }
-    if(detected.unknown.length) lines.push('⚠️ Não identificado: '+detected.unknown.join(', '));
-    if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.sprint_visao.length&&!detected.general_visao.length&&!detected.homologation_visao.length){
+    if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.ops4ops.length&&!detected.sprint_visao.length&&!detected.general_visao.length&&!detected.homologation_visao.length){
       toast('Nenhum arquivo reconhecido','Verifique se os arquivos são exports do Jira (.xlsx ou .csv).','err');
     } else {
       toast('📦 Importação Tudo',lines.join(' · '));
@@ -7161,15 +7343,17 @@ function loadMultipleFiles(files, propagate){
         var wb=readWorkbook(e.target.result,file.name);
         var type=detectUnifiedFileType(wb,file.name);
         // Armazena {file, wb} para poder extrair a matrix bruta na propagação
-        if(type==='epics') detected.epics={file:file,wb:wb};
-        else if(type==='stories') detected.stories={file:file,wb:wb};
-        else if(type==='backlog') detected.backlog.push({file:file,wb:wb});
-        else if(type==='sprint_visao') detected.sprint_visao.push({file:file,wb:wb});
-        else if(type==='general_visao') detected.general_visao.push({file:file,wb:wb});
-        else if(type==='homologation_visao') detected.homologation_visao.push({file:file,wb:wb});
+        var entry={file:file,wb:wb};
+        if(type==='epics') addSingleSource('epics',entry);
+        else if(type==='stories') addSingleSource('stories',entry);
+        else if(type==='backlog') addArraySource('backlog',entry);
+        else if(type==='ops4ops') addArraySource('ops4ops',entry);
+        else if(type==='sprint_visao') addArraySource('sprint_visao',entry);
+        else if(type==='general_visao') addArraySource('general_visao',entry);
+        else if(type==='homologation_visao') addArraySource('homologation_visao',entry);
         else detected.unknown.push(file.name);
       }catch(err){
-        detected.unknown.push(file.name+'(erro)');
+        detected.errors.push('Não foi possível ler "'+file.name+'": '+(err&&err.message?err.message:'arquivo inválido')+'.');
       }
       pending--;
       if(pending===0) processWhenReady();
@@ -7635,7 +7819,10 @@ function loadXlsx(file){
         return;
       }
 
-      allData = merged;
+      // A nova carga representa os épicos em aberto; mantém somente os registros
+      // históricos que não reapareceram no arquivo para não zerar Medição/Dashboard.
+      var historical=(allData||[]).filter(function(old){ return old&&old.id&&!seenIds[old.id]&&isHistoricEpic(old); });
+      allData = merged.concat(historical);
       saveJiraEpicSnapshot(merged);
       saveResumoCache(merged);
       saveEpicMetaToCloud(merged);
@@ -8435,8 +8622,13 @@ var SEED=[
     calLoad();
     calSaveToCloud();
 
-    // Pre-warm: dispara health check e aguarda resposta antes de carregar backlog/estórias,
-    // garantindo que o cold-start do Apps Script já esteja resolvido.
+    // Carrega backlog/Ops4Ops/estórias em paralelo com o health check, em vez de
+    // esperar a resposta dele primeiro. O health check existia para "pré-aquecer"
+    // um cold-start do Apps Script antes das cargas reais — mas isso serializava
+    // tudo atrás dele: se o health check demorasse (ou desse timeout), a tela
+    // ficava presa esperando mesmo com dados disponíveis. gasLoadBacklog e
+    // gasLoadOps4opsFromDiscovery já têm retry-em-timeout próprio para cold-start,
+    // então essa espera extra deixou de ser necessária.
     function _afterWarmup(){
       emLoadCloud();
       gasLoadBacklog(function(err, count){
@@ -8469,10 +8661,9 @@ var SEED=[
       });
     }
     if(BK_GAS_URL){
-      _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){ _afterWarmup(); });
-    } else {
-      _afterWarmup();
+      _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){});
     }
+    _afterWarmup();
     loadJiraEpicSnapshotFromCloud(function(){
       loadFromSheets(function(err, sheetsData){
         if(!err && Array.isArray(sheetsData) && sheetsData.length){
@@ -9288,13 +9479,15 @@ function calSeedExample(){
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
           <a class="adm-btn primary" href="./boletim-ds/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">📰 Abrir Boletim Diário DS</a>
         </div>
-        <div class="adm-sec" style="margin-top:20px">Envio automático</div>
+        <div class="adm-sec" style="margin-top:20px">Envio automático — pausado</div>
         <p style="font-size:11px;color:#64748b;line-height:1.5">
-          Geração e envio diário agendados para <strong>09:00 (America/São_Paulo)</strong>, todos os dias,
-          via GitHub Actions (<code>boletim-diario-ds.yml</code>). O e-mail só é enviado de fato quando os
-          secrets de SMTP e destinatários estiverem configurados no repositório — sem eles, o boletim é
-          gerado normalmente, mas o envio fica registrado como pendente, sem falso positivo.
-          Veja <code>boletim-ds/README-BOLETIM-DS.md</code> para configurar.
+          O agendamento diário das <strong>09:00 (America/São_Paulo)</strong> está
+          <strong>desativado</strong> enquanto o boletim passa por reformulação: o <code>schedule</code>
+          do workflow <code>boletim-diario-ds.yml</code> está comentado, então ele só roda sob demanda
+          (GitHub Actions → Boletim Diário DS → Run workflow). Esta página acima continua funcionando
+          normalmente — ela busca os dados ao vivo no navegador e não depende do workflow.
+          Para religar o envio diário, descomente o <code>schedule</code> e configure os secrets de SMTP
+          e destinatários; veja <code>boletim-ds/README-BOLETIM-DS.md</code>.
         </p>
       </div>
     </div>
@@ -9517,6 +9710,7 @@ function emSaveConfig(){
   emergencyState.config=emergencyState.config||{};emergencyState.config.labels=labels;emergencyState.config.workdayHours=Number($id('emCfgHours').value)||6;
   var rule=emergencyState.rules.find(function(r){return r.id==='manual-labels';});
   if(!rule){rule={id:'manual-labels',name:'Demandas Emergenciais',type:'labelAny',value:'',active:true};emergencyState.rules.unshift(rule);}rule.value=labels.join(' | ');rule.updatedAt=new Date().toISOString();emergencyRuleId=rule.id;
+  emergencyState.config.activeRuleId=rule.id;emergencyState.config.updatedAt=rule.updatedAt;
   emSaveState();$id('emCfgOv').remove();renderEmergencyView();
 }
 function emEditComment(id){
@@ -9535,6 +9729,7 @@ function renderEmergencyView(){
     var emStyle=document.createElement('style');
     emStyle.id='emKanbanNoKpiCss';
     emStyle.textContent='#pane-em .em-kpis{display:none!important}'+
+      '#pane-em .em-priority-grid{display:none!important}'+
       '#pane-em .em-priority-grid{gap:8px!important;margin-bottom:10px!important}'+
       '#pane-em .em-priority-grid .em-panel{padding:10px!important;margin-bottom:0!important;border-radius:12px!important;box-shadow:0 3px 10px rgba(30,41,59,.04)!important}'+
       '#pane-em .em-priority-card{padding:8px 9px!important;margin-top:6px!important;border-radius:9px!important}'+
@@ -9545,10 +9740,12 @@ function renderEmergencyView(){
       '#pane-em .em-table{font-size:10px!important}'+
       '#pane-em .em-table th{padding:8px 7px!important;font-size:8px!important}'+
       '#pane-em .em-table td{padding:8px 7px!important}'+
-      '#pane-em .em-table th:nth-child(9),#pane-em .em-table td:nth-child(9){width:150px!important;max-width:150px!important}'+
-      '#pane-em .em-table td:nth-child(9){cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#51627f!important}'+
+      '#pane-em .em-table th:nth-child(9),#pane-em .em-table td:nth-child(9){width:320px!important;min-width:280px!important;max-width:380px!important}'+
+      '#pane-em .em-table td:nth-child(9){cursor:pointer;white-space:normal;overflow:visible;text-overflow:clip;color:#51627f!important;line-height:1.45!important}'+
       '#pane-em .em-table td:nth-child(9):hover{background:#fff8fa!important;color:#b42345!important}'+
       '#pane-em .em-story-title{font-size:10px!important;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-epic-name{font-size:9px;color:#71819a;margin-top:3px;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-editor-comment{grid-column:1 / -1}#pane-em .em-editor-comment .em-textarea{min-height:100px;height:100px;resize:vertical}'+
       '#pane-em .em-inline-input{height:28px!important;min-width:82px!important;font-size:9px!important}'+
       '#pane-em .em-modern-toolbar{padding:8px 10px!important;margin-bottom:10px!important;border-radius:11px!important}';
     document.head.appendChild(emStyle);
@@ -9561,7 +9758,7 @@ function renderEmergencyView(){
   var backlog=by(function(s){return !emRefined(s);}),refined=by(emRefined),dev=by(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}),overdue=dev.filter(function(s){var d=emForecast(s,emergencyState.meta[s.id]||{});return d&&d<today;});
   var next=all.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort()[0]||'';
   function cards(items,kind){return items.slice(0,6).map(function(s){var m=emergencyState.meta[s.id]||{},d=emForecast(s,m),late=d&&d<today;return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a><button class="em-edit" title="Copiar" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button></div><div class="em-priority-title">'+esc(s.resumo||'Sem resumo')+'</div><div class="em-muted">'+esc(s.squad||'—')+' · '+esc(s.status||'—')+'</div><span class="em-badge '+(kind==='backlog'?'blue':'green')+'">'+(kind==='backlog'?'Backlog':'Refinada')+'</span>'+(late?'<button class="em-btn" style="float:right;padding:4px 7px;font-size:9px" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">Reprogramar</button>':'')+'</div>';}).join('')||'<div class="em-muted">Nenhuma história</div>';}
-  var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge blue">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td title="Clique para escrever ou editar o comentário" onclick="emEditComment(\''+esc(jsq(s.id))+'\')">'+esc(m.comment||'—')+' <span aria-hidden="true">✎</span></td></tr>';}).join('');
+  var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-epic-name">Épico: '+esc(s.epic||'Não informado')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'amber')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td title="Clique para escrever ou editar o comentário" onclick="emEditComment(\''+esc(jsq(s.id))+'\')">'+esc(m.comment||'—')+' <span aria-hidden="true">✎</span></td></tr>';}).join('');
   // "Reprogramar" (botao dentro de cards()) seta emergencyEditingId e chama
   // renderEmergencyView() esperando ver o editor -- mas esta e a versao Kanban
   // que venceu a triplicacao de renderEmergencyView no arquivo, e ela nunca

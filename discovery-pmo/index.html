@@ -10263,8 +10263,19 @@
       'refinamento tecnico': 'refino'
     };
 
+    // Precisa existir antes de loadData() / normalizeData(): a base operacional
+    // pode trazer riscos e dependências já preenchidos.
+    const RAID_AREA_OPTIONS = [
+      'Arquitetura', 'Desenvolvimento', 'Negócio', 'Segurança e Compliance',
+      'Infraestrutura', 'Dados e Integrações', 'Jurídico',
+      'Fornecedor / Terceiro', 'Alocação / RTE'
+    ];
+
     let _cardsJustReset = false;
     let _scheduleLegacyCleanupJustRan = false;
+    // Fallback é apenas visual/local: nunca pode ser publicado como fonte oficial.
+    let _discUsingFallback = false;
+    let _discRemoteHydrated = false;
     let data = loadData();
     let activeProjectId = data.activeProjectId || data.projects[0]?.id;
     if (!data.projects.some(p => p.id === activeProjectId)) activeProjectId = data.projects[0]?.id || defaultData.activeProjectId;
@@ -10321,6 +10332,9 @@
     }
 
     function scheduleDiscGasSave() {
+      // Nunca publica o snapshot padrão enquanto a fonte compartilhada ainda
+      // não respondeu. Isso evita que um timeout transforme fallback em dado oficial.
+      if (_discUsingFallback && !_discRemoteHydrated) return;
       if (_discGasSaveTimer) clearTimeout(_discGasSaveTimer);
       _discGasSaveTimer = setTimeout(() => {
         _discGasSaveTimer = null;
@@ -10335,7 +10349,13 @@
         // apagar silenciosamente o que a primeira acabara de salvar, mesmo com
         // todo o merge por registro já existente (ele só rodava na leitura).
         discGasLoad((err, remote) => {
-          if (!err) mergeRemoteIntoData(remote);
+          if (err || !remote || !Array.isArray(remote.projects) || !remote.projects.length) {
+            _discGasSaving = false;
+            return;
+          }
+          _discRemoteHydrated = true;
+          _discUsingFallback = false;
+          mergeRemoteIntoData(remote);
           storageSet(STORAGE_KEY, JSON.stringify(data));
           discGasSave(data);
           setTimeout(() => { _discGasSaving = false; }, 800);
@@ -10510,6 +10530,11 @@
     function applyRemoteDiscData(remote) {
       if (isUserEditingNow()) return false;
 
+      if (remote && Array.isArray(remote.projects) && remote.projects.length) {
+        _discRemoteHydrated = true;
+        _discUsingFallback = false;
+      }
+
       const keepActiveId = activeProjectId;
       if (!mergeRemoteIntoData(remote)) return false;
 
@@ -10531,6 +10556,10 @@
     function discGasSyncPull(cb) {
       discGasLoad((err, remote) => {
         if (err) { if (cb) cb(err); return; }
+        if (remote && Array.isArray(remote.projects) && remote.projects.length) {
+          _discRemoteHydrated = true;
+          _discUsingFallback = false;
+        }
         const applied = applyRemoteDiscData(remote);
         if (cb) cb(null, applied);
       });
@@ -10550,7 +10579,7 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasSyncPull(); });
     // Migrações únicas só valem para toda a base quando chegam ao servidor — sem isso,
     // ficariam apenas no localStorage de quem abriu a página primeiro.
-    if (_cardsJustReset || _scheduleLegacyCleanupJustRan) {
+    if ((_cardsJustReset || _scheduleLegacyCleanupJustRan) && !_discUsingFallback) {
       data.updatedAt = new Date().toISOString();
       storageSet(STORAGE_KEY, JSON.stringify(data));
       scheduleDiscGasSave();
@@ -10618,6 +10647,7 @@
     function loadData() {
       try {
         const saved = storageGet(STORAGE_KEY);
+        if (!saved) _discUsingFallback = true;
         const parsed = saved ? JSON.parse(saved) : deepClone(defaultData);
         const normalized = normalizeData(parsed);
         if (!Array.isArray(normalized.projects) || !normalized.projects.length) {
@@ -10625,9 +10655,11 @@
         }
         return normalized;
       } catch (e) {
-        console.warn('Discovery PMO Tracker: base local inválida. Restaurando iniciativa padrão.', e);
+        console.warn('Discovery PMO Tracker: base local inválida. Aguardando fonte compartilhada.', e);
+        _discUsingFallback = true;
         const fallback = normalizeData(deepClone(defaultData));
-        storageSet(STORAGE_KEY, JSON.stringify(fallback));
+        // Não grava o fallback: a cópia local pode estar incompleta e jamais deve
+        // substituir a base compartilhada enquanto a sincronização está pendente.
         return fallback;
       }
     }
@@ -10848,18 +10880,6 @@
       return { changed };
     }
 
-    const RAID_AREA_OPTIONS = [
-      'Arquitetura',
-      'Desenvolvimento',
-      'Negócio',
-      'Segurança e Compliance',
-      'Infraestrutura',
-      'Dados e Integrações',
-      'Jurídico',
-      'Fornecedor / Terceiro',
-      'Alocação / RTE'
-    ];
-
     function normalizeRaidArea(value) {
       const raw = String(value || '').trim();
       if (!raw) return '';
@@ -11029,6 +11049,10 @@
     }
 
     function saveData(show = false) {
+      if (_discUsingFallback && !_discRemoteHydrated) {
+        if (show) toast('⌛ Aguardando a base compartilhada antes de salvar');
+        return;
+      }
       // Um atraso de ação é um risco operacional: mantém o registro vinculado à ação
       // sem exigir que o RTE o cadastre manualmente.
       (data.projects || []).forEach(syncAutomaticOverdueRisks);
@@ -11378,13 +11402,10 @@
         renderExecutiveRows(safeProject);
         updateViewMode(safeProject);
       } catch (e) {
-        console.error('Discovery PMO Tracker: falha ao renderizar. Restaurando visualização padrão.', e);
-        data = normalizeData(deepClone(defaultData));
-        activeProjectId = data.activeProjectId || data.projects[0]?.id || defaultData.activeProjectId;
-        storageSet(STORAGE_KEY, JSON.stringify(data));
+        console.error('Discovery PMO Tracker: falha ao renderizar. Dados preservados.', e);
         const main = document.querySelector('.main');
         if (main) {
-          main.innerHTML = '<section class="section"><div class="section-head"><div><h3 class="section-title">Discovery PMO Tracker</h3><p class="section-desc">A base local foi restaurada para evitar abertura vazia. Recarregue a página para visualizar a iniciativa padrão.</p></div></div></section>';
+          main.innerHTML = '<section class="section"><div class="section-head"><div><h3 class="section-title">Discovery PMO Tracker</h3><p class="section-desc">Não alteramos os dados. Recarregue a página para tentar renderizar novamente.</p></div></div></section>';
         }
       }
     }
@@ -13233,8 +13254,11 @@
     function formatBRDateTime(isoDate) {
       const parsed = isoDate ? new Date(isoDate) : null;
       if (!parsed || Number.isNaN(parsed.getTime())) return 'Não informado';
-      const dateLabel = formatBR(isoDate);
-      const timeLabel = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      // O timestamp vem em UTC. Data e hora precisam usar o mesmo fuso,
+      // senão 00:02 UTC aparecia como 01/08 às 21:02 no Brasil.
+      const brazilTimeZone = 'America/Fortaleza';
+      const dateLabel = parsed.toLocaleDateString('pt-BR', { timeZone: brazilTimeZone });
+      const timeLabel = parsed.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: brazilTimeZone });
       return `${dateLabel} às ${timeLabel}`;
     }
 
@@ -14169,8 +14193,26 @@ Recomendação PMO: ${d.recommendation}`;
       return Array.isArray(project?.subInitiatives) ? project.subInitiatives.length : 0;
     }
 
+    // Cada filha carrega o próprio campo "squad" (vindo da planilha), que pode
+    // divergir do squad da Mãe (ver projectCrossSquadChildren). Sem isso, uma
+    // filha já corretamente atribuída a outra Squad continuava contada em "Filhas"
+    // da Squad da Mãe pra sempre — reimportar/atualizar nunca corrigia o número
+    // porque a contagem nem olhava o squad da própria filha.
+    function squadIdForChild(child) {
+      const name = String(child?.squad || '').trim();
+      if (name) {
+        const match = (data.squads || []).find(s =>
+          normalizeSearchText(s.name || '') === normalizeSearchText(name) ||
+          (s.code && String(s.code).toLowerCase() === name.toLowerCase())
+        );
+        if (match) return match.id;
+      }
+      return asdSquad()?.id || '';
+    }
+
     function childCountForSquad(squadId) {
-      return squadProjects(squadId).reduce((acc, project) => acc + subInitiativeCount(project), 0);
+      return (data.projects || []).reduce((acc, project) =>
+        acc + (project.subInitiatives || []).filter(child => squadIdForChild(child) === squadId).length, 0);
     }
 
     function hoursForSquad(squadId) {
@@ -16161,6 +16203,21 @@ Recomendação PMO: ${d.recommendation}`;
       return String(h || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
     }
 
+    // Resolve o texto de Squad da planilha (Mãe/Única) contra a lista cadastrada,
+    // aceitando tanto o nome quanto o código (ex.: "EXP" para Expresso). Antes só
+    // comparava pelo nome — uma célula com o código, ou com o nome digitado de
+    // forma levemente diferente do cadastro, não batia com nada e a iniciativa
+    // ficava presa em ASD silenciosamente, mesmo já tendo Squad definida na planilha.
+    function resolveSquadFromImportText(text) {
+      const raw = String(text || '').trim();
+      if (!raw) return null;
+      const normalized = normalizeImportHeader(raw);
+      return (data.squads || []).find(s =>
+        normalizeImportHeader(s.name || '') === normalized ||
+        (s.code && String(s.code).toLowerCase() === raw.toLowerCase())
+      ) || null;
+    }
+
     function importTextKey(prefix, text) {
       return `${prefix}:${stripAccentsLower(text).replace(/\s+/g, ' ').trim()}`;
     }
@@ -16268,7 +16325,6 @@ Recomendação PMO: ${d.recommendation}`;
     function validateOps4OpsImport(records) {
       const errors = [], warnings = [];
       const seenMain = new Set(), seenChild = new Set();
-      const knownSquads = new Set(sortedSquadsList().map(s => normalizeImportHeader(s.name)));
       records.forEach((rec, index) => {
         const line = index + 1;
         const isChild = /filha/.test(normalizeImportHeader(rec.tipo));
@@ -16285,7 +16341,7 @@ Recomendação PMO: ${d.recommendation}`;
         if (start && end && start > end) errors.push(`Linha ${line}: Início Dev é posterior ao Término Dev.`);
         if (discovery && start && discovery > start) warnings.push(`Linha ${line}: Discovery está posterior ao Início Dev; confira o planejamento.`);
         if (String(rec.hours2026 || '').trim() && !Number.isFinite(Number(String(rec.hours2026).replace(',', '.')))) warnings.push(`Linha ${line}: Horas 2026 não é numérico e não será atualizado.`);
-        if (rec.squad && !knownSquads.has(normalizeImportHeader(rec.squad))) warnings.push(`Linha ${line}: Squad "${rec.squad}" não cadastrada; a iniciativa ficará em ASD.`);
+        if (rec.squad && !resolveSquadFromImportText(rec.squad)) warnings.push(`Linha ${line}: Squad "${rec.squad}" não cadastrada; a iniciativa ficará em ASD.`);
       });
       return { errors, warnings };
     }
@@ -16496,7 +16552,6 @@ Recomendação PMO: ${d.recommendation}`;
 
     function applyImportPlan(plan) {
       let cardsAdded = 0, depsAdded = 0, scheduleAdded = 0, timelineAdvanced = 0, projectsCreated = 0, projectsUpdated = 0, childrenUpserted = 0, fieldsPreserved = 0;
-      const squadsByName = new Map(sortedSquadsList().map(s => [normalizeImportHeader(s.name), s]));
       const historyItems = [];
 
       // Cada campo só entra na lista "changed" quando REALMENTE muda de valor — é isso
@@ -16506,7 +16561,7 @@ Recomendação PMO: ${d.recommendation}`;
         const preserved = [];
         applyImportedField(project, { key: 'name', label: 'Nome' }, rec.nome, changed, preserved);
         if (rec.squad) {
-          const sq = squadsByName.get(normalizeImportHeader(rec.squad));
+          const sq = resolveSquadFromImportText(rec.squad);
           if (sq) applyImportedField(project, {
             key: 'squadId',
             label: 'Squad',
@@ -16582,7 +16637,7 @@ Recomendação PMO: ${d.recommendation}`;
       });
 
       plan.creates.forEach(({ rec }) => {
-        const sq = (rec.squad && squadsByName.get(normalizeImportHeader(rec.squad))) || asdSquad();
+        const sq = (rec.squad && resolveSquadFromImportText(rec.squad)) || asdSquad();
         const project = {
           id: 'ini-' + slugify(rec.motherNumber || rec.nome) + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
           initiativeNumber: rec.motherNumber,
@@ -17770,12 +17825,36 @@ Recomendação PMO: ${d.recommendation}`;
       </aside>`;
     }
 
-    render();
-    setTimeout(discGasSyncPull, 300);
+    function renderSharedDataPending(message) {
+      const overview = document.getElementById('squadOverview');
+      if (!overview) return;
+      overview.classList.remove('hidden');
+      overview.innerHTML = `<section class="section"><div class="section-head"><div><h3 class="section-title">Discovery PMO Tracker</h3><p class="section-desc">${escapeHtml(message)}</p></div></div></section>`;
+    }
 
-    // Aplica épicos propagados pelo "🌐 Importar em Todos" do SALA, se houver
-    // dados mais novos que o último aplicado aqui.
-    setTimeout(applyCrossImportEpicsFromSala, 500);
+    // A base padrão é só contingência técnica. Em navegador novo ou após falha
+    // local, não a renderizamos nem permitimos salvá-la antes de receber a fonte
+    // compartilhada — assim não há flash de squads/dados incorretos.
+    if (_discUsingFallback) renderSharedDataPending('Sincronizando com a base compartilhada…');
+    else render();
+
+    setTimeout(() => {
+      discGasSyncPull((err) => {
+        if (_discRemoteHydrated) {
+          render();
+          setTimeout(applyCrossImportEpicsFromSala, 0);
+          return;
+        }
+        if (_discUsingFallback) {
+          renderSharedDataPending(err
+            ? 'Não foi possível carregar a base compartilhada agora. Nenhum dado provisório foi exibido ou salvo.'
+            : 'A base compartilhada ainda não possui iniciativas válidas. Nenhum dado provisório foi exibido ou salvo.');
+          return;
+        }
+        render();
+        setTimeout(applyCrossImportEpicsFromSala, 0);
+      });
+    }, 300);
     // Escuta em tempo real: outra aba importou via SALA enquanto esta está aberta.
     window.addEventListener('storage', function(e){
       if (e.key === CROSS_IMPORT_EPICS_KEY) applyCrossImportEpicsFromSala();

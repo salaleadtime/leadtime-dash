@@ -1,15 +1,22 @@
 name: Boletim Diário DS
 
-# Horário aprovado: todos os dias às 09:00 (America/Sao_Paulo, UTC-3 fixo,
-# sem horário de verão). 09:00 BRT = 12:00 UTC.
+# AGENDAMENTO PAUSADO — o boletim está em reformulação e não roda sozinho.
+#
+# Enquanto o `schedule` abaixo estiver comentado, este workflow só executa por
+# `workflow_dispatch` (Actions → Boletim Diário DS → Run workflow), o que
+# continua permitindo testar as melhorias sob demanda.
+#
+# Para religar o agendamento diário, basta descomentar as duas linhas do
+# `schedule`. Horário aprovado: todos os dias às 09:00 (America/Sao_Paulo,
+# UTC-3 fixo, sem horário de verão). 09:00 BRT = 12:00 UTC.
 #
 # O envio de e-mail em si continua condicionado aos secrets de SMTP e
-# destinatários (ver boletim-ds/README-BOLETIM-DS.md) — sem eles, esta
-# execução diária gera o boletim normalmente, mas não envia nada e registra
-# o motivo no log, sem declarar sucesso falso.
+# destinatários (ver boletim-ds/README-BOLETIM-DS.md) — sem eles, a execução
+# gera o boletim normalmente, mas não envia nada e registra o motivo no log,
+# sem declarar sucesso falso.
 on:
-  schedule:
-    - cron: '0 12 * * *'   # 09:00 America/Sao_Paulo, todos os dias
+  # schedule:
+  #   - cron: '0 12 * * *'   # 09:00 America/Sao_Paulo, todos os dias
   workflow_dispatch:
     inputs:
       force:

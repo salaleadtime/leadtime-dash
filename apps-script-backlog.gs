@@ -1,7 +1,16 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
- * v14 — concorrência otimista (baseRevision) para saveStories e saveVpData.
+ * v18 — getOps4opsData: endpoint enxuto para a aba Ops4Ops. Antes ela lia
+ * getVpData&key=discoveryPmo, ou seja, a base COMPLETA do Discovery PMO
+ * Tracker (attachments, cards, checklist, timeline...) — um payload de
+ * alguns MB que estourava o timeout do JSONP no navegador mesmo com dados
+ * válidos. O novo endpoint devolve só squad/owner/updatedAt/jiraStories de
+ * cada projeto, filtrando no servidor os que não têm nenhuma história.
+ *
+ * v17 — snapshot oficial de Estórias: uma carga Jira completa pode substituir
+ * a fotografia anterior mesmo quando a quantidade reduz, sempre com backup e
+ * auditoria. Cargas comuns continuam protegidas contra redução anômala.
  * Cada aba (_stories_chunks e cada aba de VP_SHEET_MAP) tem um contador de
  * revisão em Script Properties, devolvido em getStories/getVpData/getVpDataAll
  * e incrementado a cada escrita OK. O cliente que leu revisão N manda
@@ -64,7 +73,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-07-31-jira-epic-snapshot-v15';
+var BACKLOG_SCRIPT_VERSION = '2026-08-04-v18-ops4ops-lean-endpoint';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -92,7 +101,32 @@ var VP_SHEET_MAP = {
   vpSprintObjectives: '_vp_sprint_objectives',
   vpSprintCalendar: '_vp_sprint_calendar',
   emergencyDemand: '_emergency_demand',
-  discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
+  discoveryPmo: '_discovery_pmo',  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
+  // Mapa de riscos/impedimentos excluídos ou concluídos manualmente no Report
+  // Semanal (discovery-pmo/report-semanal.html). Antes só existia no
+  // localStorage de quem clicou em "×" — em outro navegador o item "voltava
+  // do nada", mesmo o código já pretendendo que a exclusão fosse definitiva.
+  discoveryPmoReportResolved: '_discovery_pmo_report_resolved'
+};
+
+// Cargas Jira compartilhadas. Para essas bases, uma lista vazia não é uma
+// "nova fotografia": ela normalmente indica arquivo errado, filtro vazio ou
+// parsing incompleto. A última carga válida precisa continuar disponível para
+// todos os usuários, inclusive em um navegador novo sem cache local.
+var VP_SNAPSHOT_KEYS = {
+  vpGeral: true,
+  vpSprint: true,
+  vpHomologation: true
+};
+
+// Só estas bases são fotografias integrais vindas do Jira. Discovery, backlog
+// e campos operacionais possuem semântica própria (merge, histórico ou edição
+// manual) e, portanto, nunca podem usar a exceção de redução oficial.
+var OFFICIAL_SNAPSHOT_VP_KEYS = {
+  vpGeral: true,
+  vpSprint: true,
+  vpHomologation: true,
+  jiraEpicSnapshot: true
 };
 
 // ════════════════════════════════════════════════════════════════════════
@@ -128,7 +162,10 @@ var MERGE_MAP_KEYS = {
   vpPlanningConfirmations: true,
   vpPlanningSnapshots: true,
   vpSprintObjectives: true,
-  vpEpicMeta: true
+  vpEpicMeta: true,
+  // Mapa plano assinatura→estado (excluído/concluído); nunca uma fotografia
+  // completa, então merge por chave está certo aqui também.
+  discoveryPmoReportResolved: true
 };
 
 // Propriedades do Script (Configurações do projeto → Propriedades do script).
@@ -197,6 +234,41 @@ var RAID_RESPONSIBLE_AREAS = [
 
 function getVpSheet_(key) {
   return VP_SHEET_MAP[key] || null;
+}
+
+function hasVpSnapshotRows_(data) {
+  return !!data && Array.isArray(data.rows) && data.rows.length > 0;
+}
+
+// Retorna a cópia válida mais recente do ring buffer. bakIdx aponta para o
+// último slot gravado por snapshotIfNeeded_; percorremos a partir dele para
+// recuperar a última fotografia não vazia quando a aba principal foi zerada.
+function readLatestValidVpBackup_(sheetName) {
+  var lastIdx = Number(props_().getProperty('bakIdx_' + sheetName) || 0);
+  for (var offset = 0; offset < BACKUP_COPIES; offset++) {
+    var idx = ((lastIdx - offset - 1 + BACKUP_COPIES) % BACKUP_COPIES) + 1;
+    var candidate = readJsonFromSheet_(sheetName + BACKUP_SUFFIX + idx, null);
+    if (hasVpSnapshotRows_(candidate)) return candidate;
+  }
+  return null;
+}
+
+// A leitura compartilhada nunca devolve uma fotografia vazia quando existe um
+// backup válido. Isso dá o mesmo resultado para qualquer usuário, sem depender
+// de localStorage nem de alguém deixar uma aba antiga aberta.
+function readVpDataWithRecovery_(key) {
+  var sheetName = getVpSheet_(key);
+  var current = readJsonFromSheet_(sheetName, null);
+  if (!VP_SNAPSHOT_KEYS[key] || hasVpSnapshotRows_(current)) return current;
+
+  var recovered = readLatestValidVpBackup_(sheetName);
+  if (!recovered) return current;
+
+  var visible = {};
+  Object.keys(recovered).forEach(function(name) { visible[name] = recovered[name]; });
+  visible.recoveredFromBackup = true;
+  visible.recoveredAt = new Date().toISOString();
+  return visible;
 }
 
 function autorizarPlanilhaUmaVez() {
@@ -272,8 +344,47 @@ function doGet(e) {
       if (!sheetName) {
         return jsonOut_({ ok: false, error: 'chave inválida: ' + key }, callback);
       }
-      var vpData = withLock_(function() { return readJsonFromSheet_(sheetName, null); });
+      var vpData = withLock_(function() { return readVpDataWithRecovery_(key); });
       return jsonOut_({ ok: true, data: vpData, revision: getRevision_(sheetName) }, callback);
+    }
+
+    // getOps4opsData: projeção enxuta do discoveryPmo para a aba Ops4Ops.
+    // discoveryPmo carrega a base COMPLETA do Discovery PMO Tracker — inclusive
+    // attachments, cards, checklist e timeline de cada projeto — e um único
+    // projeto sem nenhuma história (jiraStories vazio) já respondia por mais de
+    // 1 MB só de anexos. Ops4Ops só usa squad/owner/updatedAt e jiraStories de
+    // cada projeto; filtrar aqui no servidor evita mandar o resto pela rede e
+    // reduz um payload de alguns MB (que estourava o timeout do JSONP) para
+    // poucos KB.
+    if (action === 'getOps4opsData') {
+      var discoveryData = withLock_(function() { return readVpDataWithRecovery_('discoveryPmo'); });
+      var leanProjects = (Array.isArray(discoveryData && discoveryData.projects) ? discoveryData.projects : [])
+        .map(function(project) {
+          var jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
+          if (!jiraStories.length) return null;
+          return {
+            squad: project.squad || '',
+            owner: project.owner || '',
+            updatedAt: project.updatedAt || '',
+            jiraStories: jiraStories.map(function(story) {
+              return {
+                key: story.key || story.id || '',
+                summary: story.summary || story.resumo || '',
+                status: story.status || '',
+                team: story.team || '',
+                labels: story.labels,
+                updated: story.updated || '',
+                tipo: story.tipo || story.type || ''
+              };
+            })
+          };
+        })
+        .filter(function(p) { return p; });
+      return jsonOut_({
+        ok: true,
+        data: { updatedAt: (discoveryData && discoveryData.updatedAt) || '', projects: leanProjects },
+        revision: getRevision_(getVpSheet_('discoveryPmo'))
+      }, callback);
     }
 
     // getVpDataAll: lê todas as chaves do VP_SHEET_MAP numa única execução/lock,
@@ -285,7 +396,7 @@ function doGet(e) {
         var out = {};
         var revisions = {};
         Object.keys(VP_SHEET_MAP).forEach(function(k) {
-          out[k] = readJsonFromSheet_(VP_SHEET_MAP[k], null);
+          out[k] = readVpDataWithRecovery_(k);
           revisions[k] = getRevision_(VP_SHEET_MAP[k]);
         });
         return { out: out, revisions: revisions };
@@ -360,6 +471,8 @@ function doPost(e) {
     if (action === 'saveStories') {
       var payloadStories = getParam_(e, 'payload') || '[]';
       var baseRevisionStories = getParam_(e, 'baseRevision');
+      var storiesSource = getParam_(e, 'source');
+      var storiesSourceFile = getParam_(e, 'sourceFile');
       try {
         var parsedStoriesResult = parsePayload_(payloadStories, true);
         if (!parsedStoriesResult.ok) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: parsedStoriesResult.error });
@@ -371,7 +484,10 @@ function doPost(e) {
         var storiesWrite = withLock_(function() {
           var chunks = readChunks_(STORIES_SHEET);
           var before = chunksToData_(chunks, null);
-          return commitWrite_(STORIES_SHEET, 'saveStories', chunks, before, parsedStories, payloadStories.length, baseRevisionStories);
+          return commitWrite_(STORIES_SHEET, 'saveStories', chunks, before, parsedStories, payloadStories.length, baseRevisionStories, {
+            officialSnapshot: storiesSource === 'jira-story-snapshot-v1',
+            sourceFile: storiesSourceFile
+          });
         });
         if (!storiesWrite.ok) {
           return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: storiesWrite.error, conflict: !!storiesWrite.conflict, currentRevision: storiesWrite.currentRevision });
@@ -390,6 +506,8 @@ function doPost(e) {
       }
       var vpPayload = getParam_(e, 'payload') || 'null';
       var baseRevisionVp = getParam_(e, 'baseRevision');
+      var vpSource = getParam_(e, 'source');
+      var vpSourceFile = getParam_(e, 'sourceFile');
       try {
         var parsedVp = parsePayload_(vpPayload, false);
         if (!parsedVp.ok || parsedVp.data === null || typeof parsedVp.data !== 'object') {
@@ -400,6 +518,21 @@ function doPost(e) {
         // campo único areaResponsavel quando vier em um alias já conhecido.
         // Itens legados sem área continuam válidos e não são descartados.
         if (vpKey === 'discoveryPmo') vpData = normalizeDiscoveryRaidAreas_(vpData);
+        if (VP_SNAPSHOT_KEYS[vpKey] && !hasVpSnapshotRows_(vpData)) {
+          var existingSnapshot = withLock_(function() {
+            var currentSnapshot = readVpDataWithRecovery_(vpKey);
+            audit_('saveVpData/' + vpKey, vpPayload.length, countRecords_(currentSnapshot), 0, 'RECUSADO',
+              'carga compartilhada sem itens; última carga válida preservada');
+            return currentSnapshot;
+          });
+          return jsonOut_({
+            ok: false,
+            key: vpKey,
+            error: 'gravação recusada: a carga compartilhada não possui itens. A última carga válida foi preservada.',
+            saved: countRecords_(existingSnapshot),
+            revision: getRevision_(vpSheetName)
+          });
+        }
         var vpWrite = withLock_(function() {
           var chunks = readChunks_(vpSheetName);
           var before = chunksToData_(chunks, null);
@@ -410,7 +543,10 @@ function doPost(e) {
             toWrite = mergeMap_(before, toWrite);
             didMerge = true;
           }
-          var w = commitWrite_(vpSheetName, 'saveVpData/' + vpKey, chunks, before, toWrite, vpPayload.length, baseRevisionVp);
+          var w = commitWrite_(vpSheetName, 'saveVpData/' + vpKey, chunks, before, toWrite, vpPayload.length, baseRevisionVp, {
+            officialSnapshot: !!OFFICIAL_SNAPSHOT_VP_KEYS[vpKey] && vpSource === 'jira-panel-snapshot-v1',
+            sourceFile: vpSourceFile
+          });
           w.merged = didMerge;
           return w;
         });
@@ -436,7 +572,7 @@ function doPost(e) {
 
 // Ponto único por onde TODA escrita passa. Roda sempre dentro de withLock_ e
 // recebe os chunks já lidos, para não pagar uma segunda leitura da planilha.
-function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars, baseRevision) {
+function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars, baseRevision, options) {
   if (!writesEnabled_()) {
     var offMsg = 'gravação recusada: escritas desativadas no servidor (' + PROP_WRITES_ENABLED + '=false).';
     audit_(label, payloadChars, countRecords_(before), countRecords_(incoming), 'DESATIVADO', offMsg);
@@ -474,6 +610,13 @@ function commitWrite_(sheetName, label, chunks, before, incoming, payloadChars, 
       // Modo observação: registra o que TERIA sido bloqueado e deixa passar.
       resultado = 'BLOQUEARIA (dry-run)';
       nota = verdict.error;
+    } else if (options && options.officialSnapshot && verdict.afterN > 0) {
+      // A fonte oficial de Estórias é uma fotografia completa do Jira. Ela pode
+      // encolher de forma legítima quando cards saem do recorte; nesse caso a
+      // escrita é permitida SOMENTE porque o estado anterior foi preservado no
+      // ring buffer abaixo e a auditoria registra a origem do evento.
+      resultado = 'REDUCAO_FONTE_OFICIAL';
+      nota = 'foto Jira oficial' + (options.sourceFile ? ': ' + String(options.sourceFile).slice(0, 180) : '');
     } else if (shrinkAllowed_()) {
       // Janela de redução aberta de propósito pelo editor: segue, mas fica registrado.
       resultado = 'REDUCAO_LIBERADA';
