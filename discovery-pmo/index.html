@@ -14193,8 +14193,26 @@ Recomendação PMO: ${d.recommendation}`;
       return Array.isArray(project?.subInitiatives) ? project.subInitiatives.length : 0;
     }
 
+    // Cada filha carrega o próprio campo "squad" (vindo da planilha), que pode
+    // divergir do squad da Mãe (ver projectCrossSquadChildren). Sem isso, uma
+    // filha já corretamente atribuída a outra Squad continuava contada em "Filhas"
+    // da Squad da Mãe pra sempre — reimportar/atualizar nunca corrigia o número
+    // porque a contagem nem olhava o squad da própria filha.
+    function squadIdForChild(child) {
+      const name = String(child?.squad || '').trim();
+      if (name) {
+        const match = (data.squads || []).find(s =>
+          normalizeSearchText(s.name || '') === normalizeSearchText(name) ||
+          (s.code && String(s.code).toLowerCase() === name.toLowerCase())
+        );
+        if (match) return match.id;
+      }
+      return asdSquad()?.id || '';
+    }
+
     function childCountForSquad(squadId) {
-      return squadProjects(squadId).reduce((acc, project) => acc + subInitiativeCount(project), 0);
+      return (data.projects || []).reduce((acc, project) =>
+        acc + (project.subInitiatives || []).filter(child => squadIdForChild(child) === squadId).length, 0);
     }
 
     function hoursForSquad(squadId) {
