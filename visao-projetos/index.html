@@ -6444,12 +6444,28 @@
     // ─── Sync com servidor (mesmo BK_GAS_URL do dashboard principal) ─────────
     var _VP_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
 
-    function _vpGasJsonp(url, cb){
+    function _vpGasJsonp(url, cb, _retriesLeft){
+      // Sem timeout, uma resposta que nunca chega (hop instável do Google entre
+      // script.google.com e o content-echo em googleusercontent.com) travava pra
+      // sempre sem erro nenhum. Agora tem timeout + 1 retry automático (2s de
+      // respiro), igual ao index.html/_gasJsonp e ao discovery-pmo/_discGasJsonp.
+      var retriesLeft = (_retriesLeft===undefined) ? 1 : _retriesLeft;
       var name='_vpGP_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
       var script=document.createElement('script');
       var done=false;
-      window[name]=function(data){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb(null,data); };
-      script.onerror=function(){ if(done) return; done=true; delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb('script error'); };
+      var timer=setTimeout(function(){
+        if(done) return; done=true;
+        delete window[name]; if(script.parentNode) script.parentNode.removeChild(script);
+        if(retriesLeft>0){ setTimeout(function(){ _vpGasJsonp(url, cb, retriesLeft-1); }, 2000); return; }
+        cb('timeout');
+      }, 20000);
+      window[name]=function(data){ if(done) return; done=true; clearTimeout(timer); delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb(null,data); };
+      script.onerror=function(){
+        if(done) return; done=true; clearTimeout(timer);
+        delete window[name]; if(script.parentNode) script.parentNode.removeChild(script);
+        if(retriesLeft>0){ setTimeout(function(){ _vpGasJsonp(url, cb, retriesLeft-1); }, 2000); return; }
+        cb('script error');
+      };
       script.src=url+'&callback='+name;
       document.head.appendChild(script);
     }
