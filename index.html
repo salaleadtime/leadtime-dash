@@ -5956,12 +5956,19 @@ function gasLoadOps4ops(cb){
 // O Ops4Ops é importado no Discovery PMO Tracker. Esta aba apenas consome
 // as histórias já sincronizadas em discoveryPmo, sem duplicar a importação
 // nem criar uma segunda base.
-function gasLoadOps4opsFromDiscovery(cb){
+function gasLoadOps4opsFromDiscovery(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  _gasOps4opsLoading=true;
+  var retries = (_retries === undefined) ? 2 : _retries;
+  if(!ops4opsSnaps.length){ _gasOps4opsLoading=true; renderOps4opsView(); }
   _gasOps4opsError=null;
-  renderOps4opsView();
   _gasJsonp(BK_GAS_URL+'?action=getVpData&key=discoveryPmo&t='+Date.now(), function(err,json){
+    if(err==='timeout' && retries>0){
+      // A base do Discovery já passa de alguns MB; um timeout aqui costuma ser
+      // só o servidor (ou um cold-start do Apps Script) demorando mais que o
+      // normal para responder — tenta de novo antes de expor erro ao usuário.
+      setTimeout(function(){ gasLoadOps4opsFromDiscovery(cb, retries-1); }, 3000);
+      return;
+    }
     _gasOps4opsLoading=false;
     if(err || !json || !json.ok || !json.data){ _gasOps4opsError=err||'sem dados'; renderOps4opsView(); if(cb) cb(err||'sem dados',0); return; }
     var projects=Array.isArray(json.data.projects)?json.data.projects:[];
@@ -5988,7 +5995,7 @@ function gasLoadOps4opsFromDiscovery(cb){
     ops4opsFromDiscovery=true;
     ops4opsSnaps=[{id:'discovery-pmo',seq:1,stories:stories,importedAt:json.data.updatedAt||new Date().toISOString()}];
     if(cb) cb(null,1,stories.length);
-  });
+  }, 45000);
 }
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
