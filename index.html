@@ -6609,7 +6609,13 @@ function emFilteredStories(){
   });
 }
 function emSelectRule(value){
-  emergencyRuleId=value;emViewFilters={search:'',status:'',squad:'',refined:''};storageSet(EMERGENCY_KEY+'_selected',value);emergencyEditingId='';renderEmergencyView();updateTabCounts();
+  emergencyRuleId=value;emViewFilters={search:'',status:'',squad:'',refined:''};emergencyEditingId='';
+  // Qual regra fica em exibição precisa valer pra todo mundo, não só ficar salva
+  // localmente (mesma lógica que emSaveConfig já aplica) — sem isso, o próximo
+  // navegador que carregar a página cai de volta numa regra desatualizada.
+  emergencyState.config=emergencyState.config||{};emergencyState.config.activeRuleId=value;emergencyState.config.updatedAt=new Date().toISOString();
+  emSaveState();
+  renderEmergencyView();updateTabCounts();
 }
 function emForecast(story,meta){
   var hours=emHours(meta&&meta.estimateHours!==undefined?meta.estimateHours:story.estimativa),start=meta&&meta.forecastStart||'';
