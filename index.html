@@ -5413,9 +5413,17 @@ var _storiesRevision=null;
 function storiesSignature(stories){
   return (stories||[]).map(function(s){return s&&s.id?s.id:'';}).filter(Boolean).sort().join('|');
 }
-function gasLoadStories(cb, options){
+function gasLoadStories(cb, options, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  var retries = (_retries === undefined) ? 2 : _retries;
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
+    if(err==='timeout' && retries>0){
+      // Mesmo motivo do retry em gasLoadBacklog/gasLoadOps4opsFromDiscovery:
+      // cold-start do Apps Script (ou contenção do lock com as outras cargas
+      // simultâneas do boot) pode estourar o timeout sem que haja falha real.
+      setTimeout(function(){ gasLoadStories(cb, options, retries-1); }, 3000);
+      return;
+    }
     if(err){ if(cb) cb(err); return; }
     if(json && json.ok && Array.isArray(json.stories)){
       if(typeof json.revision==='number') _storiesRevision=json.revision;
