@@ -1,6 +1,14 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v19 — cache (CacheService) da projeção do getOps4opsData. O v18 já reduzia
+ * o que TRAFEGA pela rede, mas cada chamada continuava lendo e fazendo
+ * JSON.parse do discoveryPmo inteiro (alguns MB) antes de enxugar — com
+ * várias pessoas na aba Ops4Ops, era chamada repetida, cold-start e disputa
+ * de lock em cima do mesmo trabalho pesado. Agora a projeção pronta fica em
+ * cache por até 10 min (OPS4OPS_LEAN_CACHE_TTL_SEC) e é invalidada na hora
+ * em qualquer saveVpData de discoveryPmo — sem planilha nem script novo.
+ *
  * v18 — getOps4opsData: endpoint enxuto para a aba Ops4Ops. Antes ela lia
  * getVpData&key=discoveryPmo, ou seja, a base COMPLETA do Discovery PMO
  * Tracker (attachments, cards, checklist, timeline...) — um payload de
@@ -73,7 +81,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-04-v18-ops4ops-lean-endpoint';
+var BACKLOG_SCRIPT_VERSION = '2026-08-04-v19-ops4ops-lean-cache';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -108,6 +116,13 @@ var VP_SHEET_MAP = {
   // do nada", mesmo o código já pretendendo que a exclusão fosse definitiva.
   discoveryPmoReportResolved: '_discovery_pmo_report_resolved'
 };
+
+// v19 — cache da projeção enxuta do getOps4opsData (CacheService, nativo do
+// Apps Script; some sozinho ao expirar, sem planilha/aba extra). Invalidado
+// ativamente em saveVpData/discoveryPmo (ver commitWrite_ da chave abaixo),
+// então o TTL alto aqui é só uma rede de segurança.
+var OPS4OPS_LEAN_CACHE_KEY = 'ops4opsLeanV1';
+var OPS4OPS_LEAN_CACHE_TTL_SEC = 600;
 
 // Cargas Jira compartilhadas. Para essas bases, uma lista vazia não é uma
 // "nova fotografia": ela normalmente indica arquivo errado, filtro vazio ou
@@ -356,7 +371,18 @@ function doGet(e) {
     // cada projeto; filtrar aqui no servidor evita mandar o resto pela rede e
     // reduz um payload de alguns MB (que estourava o timeout do JSONP) para
     // poucos KB.
+    //
+    // v19 — o corte acima só reduz o que TRAFEGA; a leitura+parse do JSON de
+    // alguns MB (chunksToData_/JSON.parse) continuava rodando por completo a
+    // cada chamada, e isso repetido por todo mundo que abre a aba Ops4Ops era
+    // o gargalo real (cold start + Sheets API + parse, tudo dentro do lock).
+    // Cacheia a projeção já pronta no CacheService (nativo do próprio Apps
+    // Script — sem planilha nova, sem outro script) por alguns minutos;
+    // chamadas repetidas nessa janela nem tocam a planilha.
     if (action === 'getOps4opsData') {
+      var ops4opsCache = CacheService.getScriptCache();
+      var cachedLean = ops4opsCache.get(OPS4OPS_LEAN_CACHE_KEY);
+      if (cachedLean) return jsonOut_(JSON.parse(cachedLean), callback);
       var discoveryData = withLock_(function() { return readVpDataWithRecovery_('discoveryPmo'); });
       var leanProjects = (Array.isArray(discoveryData && discoveryData.projects) ? discoveryData.projects : [])
         .map(function(project) {
@@ -380,11 +406,13 @@ function doGet(e) {
           };
         })
         .filter(function(p) { return p; });
-      return jsonOut_({
+      var leanResult = {
         ok: true,
         data: { updatedAt: (discoveryData && discoveryData.updatedAt) || '', projects: leanProjects },
         revision: getRevision_(getVpSheet_('discoveryPmo'))
-      }, callback);
+      };
+      try { ops4opsCache.put(OPS4OPS_LEAN_CACHE_KEY, JSON.stringify(leanResult), OPS4OPS_LEAN_CACHE_TTL_SEC); } catch (cacheErr) {}
+      return jsonOut_(leanResult, callback);
     }
 
     // getVpDataAll: lê todas as chaves do VP_SHEET_MAP numa única execução/lock,
@@ -552,6 +580,10 @@ function doPost(e) {
         });
         if (!vpWrite.ok) {
           return jsonOut_({ ok: false, key: vpKey, error: vpWrite.error, conflict: !!vpWrite.conflict, currentRevision: vpWrite.currentRevision });
+        }
+        if (vpKey === 'discoveryPmo') {
+          // Dado mudou: a projeção cacheada do getOps4opsData ficou desatualizada.
+          try { CacheService.getScriptCache().remove(OPS4OPS_LEAN_CACHE_KEY); } catch (cacheErr) {}
         }
         return jsonOut_({ ok: true, key: vpKey, before: vpWrite.beforeN, after: vpWrite.afterN, merged: !!vpWrite.merged, revision: vpWrite.revision });
       } catch (vpErr) {

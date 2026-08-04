@@ -62,18 +62,25 @@ var ContentService = {
     o.setContent=function(c){o._c=c;return o;}; o.setMimeType=function(m){o._m=m;return o;};
     o.getContent=function(){return o._c;}; return o; }
 };
+var CacheService = { getScriptCache: function(){ return {
+  get: function(k){ return Object.prototype.hasOwnProperty.call(__CACHE__, k) ? __CACHE__[k] : null; },
+  put: function(k, v){ __CACHE__[k] = v; },
+  remove: function(k){ delete __CACHE__[k]; }
+};}};
 `;
   const LOGS = [];
+  const CACHE = {};
   const sandbox = {
     console,
     __PROPS__: PROPS,
     __LOGS__: LOGS,
+    __CACHE__: CACHE,
     __GET__: (n) => SHEETS.get(n) || null,
     __INS__: (n) => { const s = makeSheet(n); SHEETS.set(n, s); return s; }
   };
   const ctx = vm.createContext(sandbox);
   vm.runInContext(stub + '\n' + fs.readFileSync(SP + 'apps-script-backlog.gs', 'utf8'), ctx);
-  return { ctx, SHEETS, PROPS, LOGS, makeSheet };
+  return { ctx, SHEETS, PROPS, LOGS, CACHE, makeSheet };
 }
 
 let pass = 0, fail = 0;
@@ -286,7 +293,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-08-04-v18-ops4ops-lean-endpoint');
+  t('versão correta', h.version, '2026-08-04-v19-ops4ops-lean-cache');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -355,7 +362,7 @@ console.log('\n═══ 14. baseRevision — concorrência otimista (v14) ═�
 
 console.log('\n═══ 15. getOps4opsData: projeção enxuta do discoveryPmo ═══');
 {
-  const { ctx } = novoAmbiente();
+  const { ctx, CACHE } = novoAmbiente();
   const disc = {
     updatedAt: '2026-08-04T00:00:00Z',
     projects: [
@@ -380,6 +387,34 @@ console.log('\n═══ 15. getOps4opsData: projeção enxuta do discoveryPmo �
   });
   t('não vaza attachments/cards', JSON.stringify(g.data).indexOf('attachments') === -1 && JSON.stringify(g.data).indexOf('cards') === -1, true);
   t('updatedAt da base vem junto', g.data.updatedAt, '2026-08-04T00:00:00Z');
+  t('resposta ficou cacheada (CacheService)', !!CACHE.ops4opsLeanV1, true);
+}
+
+console.log('\n═══ 16. getOps4opsData: cache evita reler a planilha, e é invalidado ao salvar ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const mkDisc = (owner) => JSON.stringify({
+    updatedAt: '2026-08-04T00:00:00Z',
+    projects: [{ squad:'Expresso', owner, updatedAt:'y', jiraStories:[{ key:'ABC-1', summary:'x', status:'Done', team:'Expresso', updated:'', tipo:'Story' }] }]
+  });
+  ctx.doPost(post({ action:'saveVpData', key:'discoveryPmo', payload: mkDisc('Ciclano') }));
+  const first = parse(ctx.doGet(post({ action:'getOps4opsData' })));
+  t('primeira chamada traz owner atual', first.data.projects[0].owner, 'Ciclano');
+
+  // Mutação direta na planilha (sem passar por saveVpData) simula o que uma
+  // segunda chamada LERIA se o cache não estivesse sendo servido.
+  const sheet = SHEETS.get('_discovery_pmo');
+  const raw = sheet._rows.map(r => r[0]).join('');
+  const mutated = raw.replace('Ciclano', 'MudouDireto');
+  sheet.clearContents();
+  sheet.getRange(1, 1, 1, 1).setValues([[mutated]]);
+  const second = parse(ctx.doGet(post({ action:'getOps4opsData' })));
+  t('segunda chamada dentro do TTL serve do cache (não reflete a mutação direta)', second.data.projects[0].owner, 'Ciclano');
+
+  // saveVpData/discoveryPmo real invalida o cache — a próxima leitura reflete o novo dado.
+  ctx.doPost(post({ action:'saveVpData', key:'discoveryPmo', payload: mkDisc('Beltrano') }));
+  const third = parse(ctx.doGet(post({ action:'getOps4opsData' })));
+  t('gravação em discoveryPmo invalida o cache — próxima leitura já reflete o novo dado', third.data.projects[0].owner, 'Beltrano');
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
