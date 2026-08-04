@@ -5980,8 +5980,12 @@ function gasLoadOps4opsFromDiscovery(cb, _retries){
   if(!ops4opsSnaps.length){ _gasOps4opsLoading=true; renderOps4opsView(); }
   _gasOps4opsError=null;
   _gasJsonp(BK_GAS_URL+'?action=getOps4opsData&t='+Date.now(), function(err,json){
-    if(err==='timeout' && retries>0){
-      // Cold-start do Apps Script: retry automático após breve pausa.
+    // Cold-start (JSONP nunca respondeu) ou lock global do Apps Script ocupado
+    // por outra ação (o script inteiro usa um único LockService.getScriptLock(),
+    // então qualquer leitura/gravação concorrente pode segurar a vez por alguns
+    // segundos): os dois são transitórios, então tentamos de novo antes de expor erro.
+    var lockBusy = !err && json && json.ok===false && /lock de escrita/i.test(String(json.error||''));
+    if((err==='timeout' || lockBusy) && retries>0){
       setTimeout(function(){ gasLoadOps4opsFromDiscovery(cb, retries-1); }, 3000);
       return;
     }

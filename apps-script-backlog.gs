@@ -1,6 +1,14 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v20 — LOCK_TIMEOUT_MS 10s → 20s. O lock é ÚNICO pro script inteiro
+ * (LockService.getScriptLock()), compartilhado por TODAS as ações — leitura
+ * e escrita, das 13+ chaves diferentes. Com várias pessoas usando o painel
+ * ao mesmo tempo, até um health check simples podia esperar mais que 10s e
+ * falhar com "Não foi possível obter lock de escrita". Também: retry no
+ * cliente (index.html) quando o servidor responde esse erro específico de
+ * lock, além do retry por timeout de JSONP que já existia.
+ *
  * v19 — cache (CacheService) da projeção do getOps4opsData. O v18 já reduzia
  * o que TRAFEGA pela rede, mas cada chamada continuava lendo e fazendo
  * JSON.parse do discoveryPmo inteiro (alguns MB) antes de enxugar — com
@@ -81,7 +89,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-04-v19-ops4ops-lean-cache';
+var BACKLOG_SCRIPT_VERSION = '2026-08-04-v20-lock-timeout-20s';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -444,7 +452,14 @@ function doGet(e) {
 // duas gravações concorrentes (dois usuários salvando ao mesmo tempo) podem se sobrepor e
 // uma apaga silenciosamente o que a outra acabou de salvar. withLock_ serializa essas
 // gravações por planilha, então a segunda espera a primeira terminar em vez de colidir.
-var LOCK_TIMEOUT_MS = 10000;
+//
+// v19 — este é um ÚNICO lock global (LockService.getScriptLock()), compartilhado por
+// TODAS as ações (leitura e escrita, das 13+ chaves diferentes: backlog, stories,
+// discoveryPmo, cada chave de VP_SHEET_MAP...). Com várias pessoas usando o painel ao
+// mesmo tempo, até uma leitura simples como health podia esperar mais que os 10s
+// antigos e falhar com "Não foi possível obter lock de escrita". 20s dá mais fôlego
+// pra absorver contenção sem esbarrar no limite de execução do Apps Script (minutos).
+var LOCK_TIMEOUT_MS = 20000;
 
 function withLock_(fn) {
   var lock = LockService.getScriptLock();
