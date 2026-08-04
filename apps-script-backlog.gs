@@ -94,7 +94,12 @@ var VP_SHEET_MAP = {
   vpSprintObjectives: '_vp_sprint_objectives',
   vpSprintCalendar: '_vp_sprint_calendar',
   emergencyDemand: '_emergency_demand',
-  discoveryPmo: '_discovery_pmo'  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
+  discoveryPmo: '_discovery_pmo',  // base completa do Discovery PMO Tracker (projetos, squads, cards, etc.)
+  // Mapa de riscos/impedimentos excluídos ou concluídos manualmente no Report
+  // Semanal (discovery-pmo/report-semanal.html). Antes só existia no
+  // localStorage de quem clicou em "×" — em outro navegador o item "voltava
+  // do nada", mesmo o código já pretendendo que a exclusão fosse definitiva.
+  discoveryPmoReportResolved: '_discovery_pmo_report_resolved'
 };
 
 // Cargas Jira compartilhadas. Para essas bases, uma lista vazia não é uma
@@ -150,7 +155,10 @@ var MERGE_MAP_KEYS = {
   vpPlanningConfirmations: true,
   vpPlanningSnapshots: true,
   vpSprintObjectives: true,
-  vpEpicMeta: true
+  vpEpicMeta: true,
+  // Mapa plano assinatura→estado (excluído/concluído); nunca uma fotografia
+  // completa, então merge por chave está certo aqui também.
+  discoveryPmoReportResolved: true
 };
 
 // Propriedades do Script (Configurações do projeto → Propriedades do script).
