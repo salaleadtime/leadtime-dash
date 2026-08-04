@@ -5970,17 +5970,18 @@ function gasLoadOps4ops(cb){
 
 // O Ops4Ops é importado no Discovery PMO Tracker. Esta aba apenas consome
 // as histórias já sincronizadas em discoveryPmo, sem duplicar a importação
-// nem criar uma segunda base.
+// nem criar uma segunda base. getOps4opsData é uma projeção enxuta (só
+// squad/owner/updatedAt/jiraStories de cada projeto) — evita trazer a base
+// completa do Discovery (attachments, cards, checklist...), que passava de
+// alguns MB e estourava o timeout do JSONP mesmo com dados válidos.
 function gasLoadOps4opsFromDiscovery(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
   var retries = (_retries === undefined) ? 2 : _retries;
   if(!ops4opsSnaps.length){ _gasOps4opsLoading=true; renderOps4opsView(); }
   _gasOps4opsError=null;
-  _gasJsonp(BK_GAS_URL+'?action=getVpData&key=discoveryPmo&t='+Date.now(), function(err,json){
+  _gasJsonp(BK_GAS_URL+'?action=getOps4opsData&t='+Date.now(), function(err,json){
     if(err==='timeout' && retries>0){
-      // A base do Discovery já passa de alguns MB; um timeout aqui costuma ser
-      // só o servidor (ou um cold-start do Apps Script) demorando mais que o
-      // normal para responder — tenta de novo antes de expor erro ao usuário.
+      // Cold-start do Apps Script: retry automático após breve pausa.
       setTimeout(function(){ gasLoadOps4opsFromDiscovery(cb, retries-1); }, 3000);
       return;
     }

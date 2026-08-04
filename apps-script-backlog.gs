@@ -1,6 +1,13 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v18 — getOps4opsData: endpoint enxuto para a aba Ops4Ops. Antes ela lia
+ * getVpData&key=discoveryPmo, ou seja, a base COMPLETA do Discovery PMO
+ * Tracker (attachments, cards, checklist, timeline...) — um payload de
+ * alguns MB que estourava o timeout do JSONP no navegador mesmo com dados
+ * válidos. O novo endpoint devolve só squad/owner/updatedAt/jiraStories de
+ * cada projeto, filtrando no servidor os que não têm nenhuma história.
+ *
  * v17 — snapshot oficial de Estórias: uma carga Jira completa pode substituir
  * a fotografia anterior mesmo quando a quantidade reduz, sempre com backup e
  * auditoria. Cargas comuns continuam protegidas contra redução anômala.
@@ -66,7 +73,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-03-v17-official-story-snapshot';
+var BACKLOG_SCRIPT_VERSION = '2026-08-04-v18-ops4ops-lean-endpoint';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -339,6 +346,45 @@ function doGet(e) {
       }
       var vpData = withLock_(function() { return readVpDataWithRecovery_(key); });
       return jsonOut_({ ok: true, data: vpData, revision: getRevision_(sheetName) }, callback);
+    }
+
+    // getOps4opsData: projeção enxuta do discoveryPmo para a aba Ops4Ops.
+    // discoveryPmo carrega a base COMPLETA do Discovery PMO Tracker — inclusive
+    // attachments, cards, checklist e timeline de cada projeto — e um único
+    // projeto sem nenhuma história (jiraStories vazio) já respondia por mais de
+    // 1 MB só de anexos. Ops4Ops só usa squad/owner/updatedAt e jiraStories de
+    // cada projeto; filtrar aqui no servidor evita mandar o resto pela rede e
+    // reduz um payload de alguns MB (que estourava o timeout do JSONP) para
+    // poucos KB.
+    if (action === 'getOps4opsData') {
+      var discoveryData = withLock_(function() { return readVpDataWithRecovery_('discoveryPmo'); });
+      var leanProjects = (Array.isArray(discoveryData && discoveryData.projects) ? discoveryData.projects : [])
+        .map(function(project) {
+          var jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
+          if (!jiraStories.length) return null;
+          return {
+            squad: project.squad || '',
+            owner: project.owner || '',
+            updatedAt: project.updatedAt || '',
+            jiraStories: jiraStories.map(function(story) {
+              return {
+                key: story.key || story.id || '',
+                summary: story.summary || story.resumo || '',
+                status: story.status || '',
+                team: story.team || '',
+                labels: story.labels,
+                updated: story.updated || '',
+                tipo: story.tipo || story.type || ''
+              };
+            })
+          };
+        })
+        .filter(function(p) { return p; });
+      return jsonOut_({
+        ok: true,
+        data: { updatedAt: (discoveryData && discoveryData.updatedAt) || '', projects: leanProjects },
+        revision: getRevision_(getVpSheet_('discoveryPmo'))
+      }, callback);
     }
 
     // getVpDataAll: lê todas as chaves do VP_SHEET_MAP numa única execução/lock,

@@ -286,7 +286,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-08-03-v17-official-story-snapshot');
+  t('versão correta', h.version, '2026-08-04-v18-ops4ops-lean-endpoint');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -351,6 +351,35 @@ console.log('\n═══ 14. baseRevision — concorrência otimista (v14) ═�
   const vpConflict = parse(ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(12), baseRevision: 1 })));
   t('saveVpData com revisão velha é RECUSADO', vpConflict.ok, false);
   t('saveVpData sinaliza conflito', vpConflict.conflict, true);
+}
+
+console.log('\n═══ 15. getOps4opsData: projeção enxuta do discoveryPmo ═══');
+{
+  const { ctx } = novoAmbiente();
+  const disc = {
+    updatedAt: '2026-08-04T00:00:00Z',
+    projects: [
+      // Sem jiraStories: no payload real isso é onde os attachments pesados
+      // moram (>1MB por projeto) sem nenhuma história — precisa ser descartado.
+      { id:'p-sem-historia', squad:'Contact', owner:'Fulano', updatedAt:'x', attachments:[{big:'x'.repeat(1000)}], jiraStories:[] },
+      { id:'p-com-historia', squad:'Expresso', owner:'Ciclano', updatedAt:'y', attachments:[{big:'y'.repeat(1000)}], cards:[{c:1}], jiraStories:[
+        { key:'ABC-1', summary:'Faz algo', status:'Done', team:'Expresso', labels:['a','b'], updated:'2026-08-01', tipo:'Story' },
+        { key:'ABC-2', summary:'Épico', status:'Aberto', tipo:'Epic' }
+      ]}
+    ]
+  };
+  ctx.doPost(post({ action:'saveVpData', key:'discoveryPmo', payload: JSON.stringify(disc) }));
+  const g = parse(ctx.doGet(post({ action:'getOps4opsData' })));
+  t('responde ok', g.ok, true);
+  t('descarta projeto sem jiraStories', g.data.projects.length, 1);
+  t('mantém só os campos usados pelo Ops4Ops', g.data.projects[0], {
+    squad:'Expresso', owner:'Ciclano', updatedAt:'y', jiraStories:[
+      { key:'ABC-1', summary:'Faz algo', status:'Done', team:'Expresso', labels:['a','b'], updated:'2026-08-01', tipo:'Story' },
+      { key:'ABC-2', summary:'Épico', status:'Aberto', team:'', labels:undefined, updated:'', tipo:'Epic' }
+    ]
+  });
+  t('não vaza attachments/cards', JSON.stringify(g.data).indexOf('attachments') === -1 && JSON.stringify(g.data).indexOf('cards') === -1, true);
+  t('updatedAt da base vem junto', g.data.updatedAt, '2026-08-04T00:00:00Z');
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
