@@ -9653,16 +9653,7 @@ function renderEmergencyView(){
     var emStyle=document.createElement('style');
     emStyle.id='emKanbanNoKpiCss';
     emStyle.textContent='#pane-em .em-kpis{display:none!important}'+
-      '#pane-em .em-list-panel{margin-bottom:10px;padding:0!important;overflow:hidden;border-radius:12px!important;box-shadow:0 3px 10px rgba(30,41,59,.04)!important}'+
-      '#pane-em .em-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e7edf4;font-size:11px;color:#344054}'+
-      '#pane-em .em-list-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #edf1f5;background:#fff}'+
-      '#pane-em .em-list-row:last-child{border-bottom:0}#pane-em .em-list-row:hover{background:#fafcff}'+
-      '#pane-em .em-list-story{min-width:0}#pane-em .em-list-story-top{display:flex;align-items:center;gap:7px;min-width:0}'+
-      '#pane-em .em-list-key{font-size:11px;font-weight:850;color:#a0001d;text-decoration:none;white-space:nowrap}'+
-      '#pane-em .em-list-title{font-size:11px;color:#344054;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
-      '#pane-em .em-list-epic{font-size:10px;color:#748197;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
-      '#pane-em .em-list-meta{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}'+
-      '@media(max-width:680px){#pane-em .em-list-row{grid-template-columns:1fr}#pane-em .em-list-meta{justify-content:flex-start}}'+
+      '#pane-em .em-priority-grid{display:none!important}'+
       '#pane-em .em-priority-grid{gap:8px!important;margin-bottom:10px!important}'+
       '#pane-em .em-priority-grid .em-panel{padding:10px!important;margin-bottom:0!important;border-radius:12px!important;box-shadow:0 3px 10px rgba(30,41,59,.04)!important}'+
       '#pane-em .em-priority-card{padding:8px 9px!important;margin-top:6px!important;border-radius:9px!important}'+
@@ -9673,10 +9664,12 @@ function renderEmergencyView(){
       '#pane-em .em-table{font-size:10px!important}'+
       '#pane-em .em-table th{padding:8px 7px!important;font-size:8px!important}'+
       '#pane-em .em-table td{padding:8px 7px!important}'+
-      '#pane-em .em-table th:nth-child(9),#pane-em .em-table td:nth-child(9){width:150px!important;max-width:150px!important}'+
-      '#pane-em .em-table td:nth-child(9){cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#51627f!important}'+
+      '#pane-em .em-table th:nth-child(9),#pane-em .em-table td:nth-child(9){width:320px!important;min-width:280px!important;max-width:380px!important}'+
+      '#pane-em .em-table td:nth-child(9){cursor:pointer;white-space:normal;overflow:visible;text-overflow:clip;color:#51627f!important;line-height:1.45!important}'+
       '#pane-em .em-table td:nth-child(9):hover{background:#fff8fa!important;color:#b42345!important}'+
       '#pane-em .em-story-title{font-size:10px!important;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-epic-name{font-size:9px;color:#71819a;margin-top:3px;max-width:250px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#pane-em .em-editor-comment{grid-column:1 / -1}#pane-em .em-editor-comment .em-textarea{min-height:100px;height:100px;resize:vertical}'+
       '#pane-em .em-inline-input{height:28px!important;min-width:82px!important;font-size:9px!important}'+
       '#pane-em .em-modern-toolbar{padding:8px 10px!important;margin-bottom:10px!important;border-radius:11px!important}';
     document.head.appendChild(emStyle);
@@ -9689,7 +9682,7 @@ function renderEmergencyView(){
   var backlog=by(function(s){return !emRefined(s);}),refined=by(emRefined),dev=by(function(s){return emNorm(s.status).indexOf('desenvolv')>=0;}),overdue=dev.filter(function(s){var d=emForecast(s,emergencyState.meta[s.id]||{});return d&&d<today;});
   var next=all.map(function(s){return emForecast(s,emergencyState.meta[s.id]||{});}).filter(Boolean).sort()[0]||'';
   function cards(items,kind){return items.slice(0,6).map(function(s){var m=emergencyState.meta[s.id]||{},d=emForecast(s,m),late=d&&d<today;return'<div class="em-priority-card"><div class="em-priority-top"><a href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a><button class="em-edit" title="Copiar" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button></div><div class="em-priority-title">'+esc(s.resumo||'Sem resumo')+'</div><div class="em-muted">'+esc(s.squad||'—')+' · '+esc(s.status||'—')+'</div><span class="em-badge '+(kind==='backlog'?'blue':'green')+'">'+(kind==='backlog'?'Backlog':'Refinada')+'</span>'+(late?'<button class="em-btn" style="float:right;padding:4px 7px;font-size:9px" onclick="emOpenEditor(\''+esc(jsq(s.id))+'\')">Reprogramar</button>':'')+'</div>';}).join('')||'<div class="em-muted">Nenhuma história</div>';}
-  var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge blue">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td title="Clique para escrever ou editar o comentário" onclick="emEditComment(\''+esc(jsq(s.id))+'\')">'+esc(m.comment||'—')+' <span aria-hidden="true">✎</span></td></tr>';}).join('');
+  var rows=all.map(function(s){var m=emergencyState.meta[s.id]||{},hours=m.estimateHours||emHours(s.estimativa)||'',start=m.forecastStart||'',date=emForecast(s,m),labels=emSplitLabels(s.labels);return'<tr><td><a class="sv-story-key" href="'+jiraUrl(s.id)+'" target="_blank">'+esc(s.id)+'</a> <button class="em-edit" onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+esc(jsq(s.id))+'\')">⧉</button><div class="em-story-title">'+esc(s.resumo||'—')+'</div><div class="em-epic-name">Épico: '+esc(s.epic||'Não informado')+'</div><div class="em-labels">'+labels.map(function(l){return'<span class="em-label">'+esc(l)+'</span>';}).join('')+'</div></td><td>'+esc(s.squad||'—')+'</td><td><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'—')+'</span></td><td><span class="em-badge '+(emRefined(s)?'green':'amber')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></td><td><input class="em-inline-input em-inline-date" type="date" value="'+esc(start)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'start\',this.value)"></td><td>'+esc(s.sprint||'—')+'</td><td><input class="em-inline-input em-inline-estimate" value="'+esc(hours)+'" onchange="emSaveInline(\''+esc(jsq(s.id))+'\',\'estimate\',this.value)"></td><td><b>'+emFmtDate(date)+'</b></td><td title="Clique para escrever ou editar o comentário" onclick="emEditComment(\''+esc(jsq(s.id))+'\')">'+esc(m.comment||'—')+' <span aria-hidden="true">✎</span></td></tr>';}).join('');
   // "Reprogramar" (botao dentro de cards()) seta emergencyEditingId e chama
   // renderEmergencyView() esperando ver o editor -- mas esta e a versao Kanban
   // que venceu a triplicacao de renderEmergencyView no arquivo, e ela nunca
@@ -9710,21 +9703,6 @@ function renderEmergencyView(){
     }
   }
   host.innerHTML=editor+'<div class="em-modern-toolbar"><div class="em-toolbar-summary"><strong>Demandas Emergenciais</strong><span class="em-muted">Qtd Story/Épicos + Backlog/Refinamento</span></div><div class="em-toolbar-actions"><button class="em-btn modern" onclick="emOpenConfig()">⚙ Configuração</button></div></div><div class="em-kpis"><div class="em-kpi"><small>Na fila</small><strong>'+all.length+'</strong><span>labels configurados</span></div><div class="em-kpi"><small>Backlog · '+backlog.length+'</small><strong>'+backlog.length+'</strong><span>aguardam refinamento</span></div><div class="em-kpi"><small>Refinadas · '+refined.length+'</small><strong>'+refined.length+'</strong><span>prontas para avançar</span></div><div class="em-kpi"><small>Desenvolvimento · '+overdue.length+'</small><strong>'+overdue.length+'</strong><span>com prazo vencido</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(next)+'</strong><span>'+emWorkdayHours()+'h por dia útil</span></div></div><div class="em-priority-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="em-panel"><b>📋 Backlog · '+backlog.length+'</b>'+cards(backlog,'backlog')+'</div><div class="em-panel"><b>✓ Refinadas · '+refined.length+'</b>'+cards(refined,'refined')+'</div><div class="em-panel" style="border-top:3px solid #e57b00"><b>Desenvolvimento · '+overdue.length+'</b><div class="em-muted">prazo vencido</div>'+cards(overdue,'dev')+'</div></div><div class="em-table-wrap"><table class="em-table"><thead><tr><th>História / Labels</th><th>Squad</th><th>Status</th><th>Refinamento</th><th>Início dev.</th><th>Sprint</th><th>Estimativa</th><th>Data prevista</th><th>Comentário</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  // Lista única: substitui o Kanban. Cada linha conserva o contexto necessário
-  // para a decisão sem obrigar o usuário a navegar entre colunas.
-  var emergencyList=all.map(function(s){
-    return '<div class="em-list-row">'+
-      '<div class="em-list-story"><div class="em-list-story-top">'+
-      '<a class="em-list-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
-      '<span class="em-list-title">'+esc(s.resumo||'Sem resumo')+'</span></div>'+
-      '<div class="em-list-epic">Épico: '+esc(s.epic||'Não informado')+'</div></div>'+
-      '<div class="em-list-meta"><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'Sem status')+'</span>'+
-      '<span class="em-badge blue">'+esc(s.squad||'Sem squad')+'</span>'+
-      '<span class="em-badge '+(emRefined(s)?'green':'amber')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></div></div>';
-  }).join('')||'<div class="em-empty">Nenhuma história corresponde aos rótulos compartilhados.</div>';
-  host.innerHTML=editor+
-    '<div class="em-modern-toolbar"><div class="em-toolbar-summary"><strong>Demandas Emergenciais</strong><span class="em-muted">Configuração compartilhada · '+all.length+' história'+(all.length===1?'':'s')+'</span></div><div class="em-toolbar-actions"><button class="em-btn modern" onclick="emOpenConfig()">⚙ Rótulos compartilhados</button></div></div>'+
-    '<div class="em-list-panel"><div class="em-list-head"><b>Histórias elegíveis</b><span class="em-muted">Status, squad e épico</span></div>'+emergencyList+'</div>';
 }
 var _renderEmergencyWithFilters=renderEmergencyView;
 function emKanbanSetFilter(field,value){
