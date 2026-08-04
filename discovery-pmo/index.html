@@ -10322,7 +10322,7 @@
         delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
         if (retriesLeft > 0) { setTimeout(() => _discGasJsonp(url, cb, retriesLeft - 1), 2000); return; }
         cb('timeout');
-      }, 20000);
+      }, 28000);
       window[name] = (payload) => {
         if (done) return; done = true; clearTimeout(timer);
         delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
