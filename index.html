@@ -2399,6 +2399,9 @@ var EMERGENCY_KEY='leadtime_sala_emergency_v1';
 var EMERGENCY_CLOUD_KEY='emergencyDemand';
 var emergencyState={rules:[],meta:{}};
 var emergencyRuleId='credito-rural';
+var _emergencyRevision=null;
+var _emergencyCloudHydrated=false;
+var _emergencyCloudVerifyTimer=null;
 var emergencyEditingId='';
 var emergencyServerBacklogStories=[];
 var stFilt={epic:'all',status:'all'};
@@ -6151,8 +6154,9 @@ function emEnsureState(){
   if(!emergencyState||typeof emergencyState!=='object') emergencyState={rules:[],meta:{}};
   if(!Array.isArray(emergencyState.rules)) emergencyState.rules=[];
   if(!emergencyState.meta||typeof emergencyState.meta!=='object') emergencyState.meta={};
-  if(!emergencyState.config||typeof emergencyState.config!=='object') emergencyState.config={workdayHours:6};
+  if(!emergencyState.config||typeof emergencyState.config!=='object') emergencyState.config={workdayHours:6,activeRuleId:''};
   if(!emergencyState.config.workdayHours) emergencyState.config.workdayHours=6;
+  if(!emergencyState.config.activeRuleId) emergencyState.config.activeRuleId='';
   if(!emergencyState.rules.some(function(r){return r&&r.id==='credito-rural';})) emergencyState.rules.unshift(emDefaultRule());
   var creditoRule=emergencyState.rules.find(function(r){return r&&r.id==='credito-rural';});
   if(creditoRule&&creditoRule.type==='titleStarts'){
@@ -6190,6 +6194,16 @@ function emMergeState(incoming){
     var local=emergencyState.meta[id], remote=incomingMeta[id];
     if(!local||String(remote&&remote.updatedAt||'')>String(local&&local.updatedAt||'')) emergencyState.meta[id]=remote;
   });
+  // A configuração de quais rótulos definem uma demanda emergencial é única
+  // para toda a operação. Diferente dos complementos manuais por história,
+  // ela não pode ficar dependente do cache de cada navegador.
+  if(incoming.config&&typeof incoming.config==='object'){
+    emergencyState.config=Object.assign({},emergencyState.config||{},incoming.config);
+    if(incoming.config.activeRuleId) emergencyRuleId=incoming.config.activeRuleId;
+  }
+  // Compatibilidade com a configuração já gravada antes de activeRuleId existir.
+  // Se a regra coletiva de rótulos chegou do servidor, ela é a regra ativa.
+  if((!incoming.config||!incoming.config.activeRuleId)&&(incoming.rules||[]).some(function(r){return r&&r.id==='manual-labels'&&r.value;})) emergencyRuleId='manual-labels';
   emEnsureState();
 }
 function emSaveState(){
@@ -6203,13 +6217,24 @@ function emSaveState(){
 }
 function emSaveCloud(){
   if(!BK_GAS_URL) return;
-  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState))}).catch(function(){});
+  var body='action=saveVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&payload='+encodeURIComponent(JSON.stringify(emergencyState));
+  if(_emergencyRevision!==null) body+='&baseRevision='+encodeURIComponent(_emergencyRevision);
+  fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
+    .catch(function(){})
+    .finally(function(){
+      // no-cors não devolve o resultado do POST. Releitura é a confirmação
+      // efetiva: em conflito, a configuração compartilhada volta a vencer.
+      clearTimeout(_emergencyCloudVerifyTimer);
+      _emergencyCloudVerifyTimer=setTimeout(emLoadCloud,900);
+    });
 }
 function emLoadCloud(){
   if(!BK_GAS_URL) return;
   _gasJsonp(BK_GAS_URL+'?action=getVpData&key='+encodeURIComponent(EMERGENCY_CLOUD_KEY)+'&t='+Date.now(),function(err,json){
-    if(err||!json||!json.ok||!json.data) return;
+    if(err||!json||!json.ok||!json.data){ _emergencyCloudHydrated=true; return; }
+    if(typeof json.revision==='number') _emergencyRevision=json.revision;
     emMergeState(json.data);
+    _emergencyCloudHydrated=true;
     try{storageSet(EMERGENCY_KEY,JSON.stringify(emergencyState));}catch(e){}
     if(curTab==='em') renderEmergencyView();
     updateTabCounts();
@@ -9609,6 +9634,7 @@ function emSaveConfig(){
   emergencyState.config=emergencyState.config||{};emergencyState.config.labels=labels;emergencyState.config.workdayHours=Number($id('emCfgHours').value)||6;
   var rule=emergencyState.rules.find(function(r){return r.id==='manual-labels';});
   if(!rule){rule={id:'manual-labels',name:'Demandas Emergenciais',type:'labelAny',value:'',active:true};emergencyState.rules.unshift(rule);}rule.value=labels.join(' | ');rule.updatedAt=new Date().toISOString();emergencyRuleId=rule.id;
+  emergencyState.config.activeRuleId=rule.id;emergencyState.config.updatedAt=rule.updatedAt;
   emSaveState();$id('emCfgOv').remove();renderEmergencyView();
 }
 function emEditComment(id){
@@ -9627,6 +9653,16 @@ function renderEmergencyView(){
     var emStyle=document.createElement('style');
     emStyle.id='emKanbanNoKpiCss';
     emStyle.textContent='#pane-em .em-kpis{display:none!important}'+
+      '#pane-em .em-list-panel{margin-bottom:10px;padding:0!important;overflow:hidden;border-radius:12px!important;box-shadow:0 3px 10px rgba(30,41,59,.04)!important}'+
+      '#pane-em .em-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e7edf4;font-size:11px;color:#344054}'+
+      '#pane-em .em-list-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid #edf1f5;background:#fff}'+
+      '#pane-em .em-list-row:last-child{border-bottom:0}#pane-em .em-list-row:hover{background:#fafcff}'+
+      '#pane-em .em-list-story{min-width:0}#pane-em .em-list-story-top{display:flex;align-items:center;gap:7px;min-width:0}'+
+      '#pane-em .em-list-key{font-size:11px;font-weight:850;color:#a0001d;text-decoration:none;white-space:nowrap}'+
+      '#pane-em .em-list-title{font-size:11px;color:#344054;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+      '#pane-em .em-list-epic{font-size:10px;color:#748197;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+      '#pane-em .em-list-meta{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}'+
+      '@media(max-width:680px){#pane-em .em-list-row{grid-template-columns:1fr}#pane-em .em-list-meta{justify-content:flex-start}}'+
       '#pane-em .em-priority-grid{gap:8px!important;margin-bottom:10px!important}'+
       '#pane-em .em-priority-grid .em-panel{padding:10px!important;margin-bottom:0!important;border-radius:12px!important;box-shadow:0 3px 10px rgba(30,41,59,.04)!important}'+
       '#pane-em .em-priority-card{padding:8px 9px!important;margin-top:6px!important;border-radius:9px!important}'+
@@ -9674,6 +9710,21 @@ function renderEmergencyView(){
     }
   }
   host.innerHTML=editor+'<div class="em-modern-toolbar"><div class="em-toolbar-summary"><strong>Demandas Emergenciais</strong><span class="em-muted">Qtd Story/Épicos + Backlog/Refinamento</span></div><div class="em-toolbar-actions"><button class="em-btn modern" onclick="emOpenConfig()">⚙ Configuração</button></div></div><div class="em-kpis"><div class="em-kpi"><small>Na fila</small><strong>'+all.length+'</strong><span>labels configurados</span></div><div class="em-kpi"><small>Backlog · '+backlog.length+'</small><strong>'+backlog.length+'</strong><span>aguardam refinamento</span></div><div class="em-kpi"><small>Refinadas · '+refined.length+'</small><strong>'+refined.length+'</strong><span>prontas para avançar</span></div><div class="em-kpi"><small>Desenvolvimento · '+overdue.length+'</small><strong>'+overdue.length+'</strong><span>com prazo vencido</span></div><div class="em-kpi"><small>Próxima entrega</small><strong>'+emFmtDate(next)+'</strong><span>'+emWorkdayHours()+'h por dia útil</span></div></div><div class="em-priority-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px"><div class="em-panel"><b>📋 Backlog · '+backlog.length+'</b>'+cards(backlog,'backlog')+'</div><div class="em-panel"><b>✓ Refinadas · '+refined.length+'</b>'+cards(refined,'refined')+'</div><div class="em-panel" style="border-top:3px solid #e57b00"><b>Desenvolvimento · '+overdue.length+'</b><div class="em-muted">prazo vencido</div>'+cards(overdue,'dev')+'</div></div><div class="em-table-wrap"><table class="em-table"><thead><tr><th>História / Labels</th><th>Squad</th><th>Status</th><th>Refinamento</th><th>Início dev.</th><th>Sprint</th><th>Estimativa</th><th>Data prevista</th><th>Comentário</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  // Lista única: substitui o Kanban. Cada linha conserva o contexto necessário
+  // para a decisão sem obrigar o usuário a navegar entre colunas.
+  var emergencyList=all.map(function(s){
+    return '<div class="em-list-row">'+
+      '<div class="em-list-story"><div class="em-list-story-top">'+
+      '<a class="em-list-key" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+esc(s.id)+'</a>'+
+      '<span class="em-list-title">'+esc(s.resumo||'Sem resumo')+'</span></div>'+
+      '<div class="em-list-epic">Épico: '+esc(s.epic||'Não informado')+'</div></div>'+
+      '<div class="em-list-meta"><span class="em-badge '+emStatusClass(s.status)+'">'+esc(s.status||'Sem status')+'</span>'+
+      '<span class="em-badge blue">'+esc(s.squad||'Sem squad')+'</span>'+
+      '<span class="em-badge '+(emRefined(s)?'green':'amber')+'">'+(emRefined(s)?'Refinada':'Backlog')+'</span></div></div>';
+  }).join('')||'<div class="em-empty">Nenhuma história corresponde aos rótulos compartilhados.</div>';
+  host.innerHTML=editor+
+    '<div class="em-modern-toolbar"><div class="em-toolbar-summary"><strong>Demandas Emergenciais</strong><span class="em-muted">Configuração compartilhada · '+all.length+' história'+(all.length===1?'':'s')+'</span></div><div class="em-toolbar-actions"><button class="em-btn modern" onclick="emOpenConfig()">⚙ Rótulos compartilhados</button></div></div>'+
+    '<div class="em-list-panel"><div class="em-list-head"><b>Histórias elegíveis</b><span class="em-muted">Status, squad e épico</span></div>'+emergencyList+'</div>';
 }
 var _renderEmergencyWithFilters=renderEmergencyView;
 function emKanbanSetFilter(field,value){
