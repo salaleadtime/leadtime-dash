@@ -6212,6 +6212,23 @@
       font-weight: 750;
     }
 
+    .ux-v6-date-row .ux-v6-date-edit {
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      cursor: pointer;
+      text-align: left;
+      border-radius: 4px;
+    }
+
+    .ux-v6-date-row .ux-v6-date-edit:hover,
+    .ux-v6-date-row .ux-v6-date-edit:focus-visible {
+      text-decoration: underline;
+      outline: 2px solid var(--red, #c8102e);
+      outline-offset: 2px;
+    }
+
     .ux-v6-date-row .ux-v6-date-note {
       color: #6b7788;
     }
@@ -11366,7 +11383,7 @@
       const breadcrumbCode = document.getElementById('breadcrumbProjectCode');
       if (breadcrumbCode) {
         if (normalizedMode === 'project') breadcrumbCode.textContent = initiativeCodeLabel(project);
-        else if (dashboardSquadId && squadById(dashboardSquadId)) breadcrumbCode.textContent = `Squad ${squadById(dashboardSquadId).name}`;
+        else if (dashboardSquadId && squadById(dashboardSquadId)) breadcrumbCode.textContent = `Squad ${squadDisplayName(squadById(dashboardSquadId))}`;
         else breadcrumbCode.textContent = 'Dashboard';
       }
 
@@ -13522,7 +13539,7 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function squadOptions(selectedId = '') {
-      return sortedSquadsList().map(s => `<option value="${escapeAttr(s.id)}" ${s.id === selectedId ? 'selected' : ''}>${escapeHtml(s.name)}${s.business ? ' · ' + escapeHtml(s.business) : ''}</option>`).join('');
+      return sortedSquadsList().map(s => `<option value="${escapeAttr(s.id)}" ${s.id === selectedId ? 'selected' : ''}>${escapeHtml(squadDisplayName(s))}${s.business ? ' · ' + escapeHtml(s.business) : ''}</option>`).join('');
     }
 
     function setSuggestedProjectFieldsFromSquad(forceCode = false) {
@@ -14149,11 +14166,11 @@ Recomendação PMO: ${d.recommendation}`;
       return n.toLocaleString('pt-BR') + 'h';
     }
 
-    function squadNameValue(project, fallback = 'A validar') {
+    function squadNameValue(project, fallback = 'ASD / Sem Squad') {
       return String(squadForProject(project)?.name || project?.squad || '').trim() || fallback;
     }
 
-    function techLeadValue(project, fallback = 'A validar') {
+    function techLeadValue(project, fallback = '-') {
       // A iniciativa só deixa de herdar quando tem um Tech Lead próprio preenchido.
       return String(project?.techLead || squadForProject(project)?.techLead || '').trim() || fallback;
     }
@@ -14184,9 +14201,9 @@ Recomendação PMO: ${d.recommendation}`;
       return manualNote ? `${reading} Observação executiva: ${manualNote}` : reading;
     }
 
-    function peopleValue(project, key, fallback = 'A validar') {
-      if (key === 'techLead') return techLeadValue(project, fallback);
-      return String(project?.[key] || '').trim() || fallback;
+    function peopleValue(project, key, fallback) {
+      if (key === 'techLead') return techLeadValue(project, fallback === undefined ? '-' : fallback);
+      return String(project?.[key] || '').trim() || (fallback === undefined ? 'A validar' : fallback);
     }
 
     function subInitiativeCount(project) {
@@ -14269,7 +14286,7 @@ Recomendação PMO: ${d.recommendation}`;
       const name = String(squad?.name || '').trim();
       const code = String(squad?.code || '').trim().toUpperCase();
       const normalized = normalizeSearchText(name);
-      if (squad?.id === 'squad-asd' || code === 'ASD' || normalized === normalizeSearchText('Ainda Sem Definição')) return 'ASD';
+      if (squad?.id === 'squad-asd' || code === 'ASD' || normalized === normalizeSearchText('Ainda Sem Definição')) return 'ASD / Sem Squad';
       return name || 'Squad sem nome';
     }
 
@@ -14402,6 +14419,38 @@ Recomendação PMO: ${d.recommendation}`;
         .filter(p => p.discoveryDate && p.discoveryDate >= monthStart && p.discoveryDate <= monthEnd)
         .sort((a, b) => String(a.discoveryDate).localeCompare(String(b.discoveryDate)))
         .slice(0, limit);
+    }
+
+    // Iniciativas ainda sem data de Discovery — exibidas no card "Próximos Discoveries"
+    // com "-" no lugar da data, pra dar visibilidade e permitir parametrizar ali mesmo.
+    function projectsMissingDiscoveryDate(limit = 4) {
+      return (data.projects || []).filter(p => !p.discoveryDate).slice(0, limit);
+    }
+
+    function openDiscoveryDateQuickEdit(projectId) {
+      const project = (data.projects || []).find(p => p.id === projectId);
+      if (!project) return;
+      modalState = { type: 'discovery-date', project };
+      openModal('Data do Discovery', `${initiativeCodeLabel(project)} · ${displayProjectTitle(project)}`, `
+        <div class="form-grid">
+          <div class="form-field full">
+            <label>Data de Discovery</label>
+            <input id="quick-discovery-date" type="date" value="${escapeAttr(project.discoveryDate || '')}" />
+          </div>
+        </div>
+      `, [
+        `<button type="button" class="btn" onclick="closeModal()">Cancelar</button>`,
+        `<button type="button" class="btn primary" onclick="saveDiscoveryDateQuickEdit()">Salvar</button>`
+      ]);
+    }
+
+    function saveDiscoveryDateQuickEdit() {
+      const project = modalState?.project;
+      if (!project) { closeModal(); return; }
+      project.discoveryDate = document.getElementById('quick-discovery-date').value || '';
+      project.updatedAt = new Date().toISOString();
+      closeModal();
+      saveData(true);
     }
 
     function topSquadsByHours(limit = 5) {
@@ -14684,7 +14733,7 @@ Recomendação PMO: ${d.recommendation}`;
         }
         const sq = squadForProject(project);
         const tipo = project.initiativeType === 'MÃE' ? `<span class="pmo-badge mae">MÃE</span>` : '—';
-        const techLead = techLeadValue(project, '—');
+        const techLead = techLeadValue(project, '-');
         const asdTechLead = String(techLead).toUpperCase() === 'ASD';
         return `<tr class="${project.initiativeType==='MÃE'?'pmo-mae-row':''}">
           <td class="pmo-num">${escapeHtml(String(project.initiativeNumber||''))}</td>
@@ -15714,7 +15763,7 @@ Recomendação PMO: ${d.recommendation}`;
           textCell(squad?.name || project.squad || 'A validar'),
           textCell(project.rteOwner || squad?.rteOwner || project.owner || 'A definir'),
           textCell(project.frontLeader || project.initiativeOwner || 'A definir'),
-          textCell(techLeadValue(project, 'A definir')),
+          textCell(techLeadValue(project, '-')),
           textCell(project.po || 'A definir'),
           textCell(project.dataArea || 'A definir'),
           textCell(reportPhase(project)),
@@ -15832,7 +15881,7 @@ Recomendação PMO: ${d.recommendation}`;
         return `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(squad?.name || project.squad || 'A validar')}</td><td>${projectAlertCount(project)}</td></tr>`;
       }).join('') || `<tr><td colspan="4" class="ux-v6-report-empty">Nenhuma iniciativa com alertas PMO/RTE em aberto.</td></tr>`;
 
-      const rankingReportRows = rankedSquads.map((item, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(item.squad.name)}</td><td>${formatHours(item.hours)}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Sem horas cadastradas.</td></tr>`;
+      const rankingReportRows = rankedSquads.map((item, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(squadDisplayName(item.squad))}</td><td>${formatHours(item.hours)}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Sem horas cadastradas.</td></tr>`;
 
       const unassignedRows = unassignedProjects.map(project => `<tr><td>${initiativeCodeHtml(project)}</td><td>${escapeHtml(displayProjectTitle(project))}</td><td>${escapeHtml(project.theme || project.business || 'Não informado')}</td></tr>`).join('') || `<tr><td colspan="3" class="ux-v6-report-empty">Todas as iniciativas têm Squad definida.</td></tr>`;
 
@@ -17699,11 +17748,11 @@ Recomendação PMO: ${d.recommendation}`;
       const currentDiscoveryMonthLabel = formatMonthYearPT(new Date());
       const nextDiscoveriesHtml = currentMonthDiscoveries(5).map(project => {
         const squad = squadForProject(project);
-        const dateLabel = formatBR(project.discoveryDate).slice(0, 5);
-        const numLabel = initiativeNumber(project) || '—';
+        const dateLabel = project.discoveryDate ? formatBR(project.discoveryDate).slice(0, 5) : '-';
+        const numLabel = initiativeCodeLabel(project);
         const automaticStatus = automaticProjectStatus(project);
         return `<div class="ux-v6-date-row">
-          <span class="ux-v6-date">${escapeHtml(dateLabel)}</span>
+          <button type="button" class="ux-v6-date ux-v6-date-edit" onclick="openDiscoveryDateQuickEdit('${escapeAttr(project.id)}')" title="Editar a data do Discovery">${escapeHtml(dateLabel)}</button>
           <span>
             <span class="ux-v6-date-title-row"><strong>${escapeHtml(numLabel)}</strong> · ${escapeHtml(squad?.name || project.squad || 'A validar')}<span class="ux-v6-date-status-pill" style="color:${statusColor(automaticStatus)};border-color:${statusColor(automaticStatus)}">${escapeHtml(automaticStatus)}</span></span>
             <span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span>
@@ -17711,12 +17760,24 @@ Recomendação PMO: ${d.recommendation}`;
         </div>`;
       }).join('') || `<div class="ux-v6-empty"><div><strong>Nenhum Discovery em ${escapeHtml(currentDiscoveryMonthLabel)}.</strong>Consulte o calendário para ver outros meses.</div></div>`;
 
+      const missingDiscoveryDateHtml = projectsMissingDiscoveryDate(4).map(project => {
+        const squad = squadForProject(project);
+        const numLabel = initiativeCodeLabel(project);
+        return `<div class="ux-v6-date-row">
+          <button type="button" class="ux-v6-date ux-v6-date-edit" onclick="openDiscoveryDateQuickEdit('${escapeAttr(project.id)}')" title="Definir a data do Discovery">-</button>
+          <span>
+            <span class="ux-v6-date-title-row"><strong>${escapeHtml(numLabel)}</strong> · ${escapeHtml(squad?.name || project.squad || 'A validar')}</span>
+            <span class="ux-v6-date-note">${escapeHtml(displayProjectTitle(project))}</span>
+          </span>
+        </div>`;
+      }).join('');
+
       const donutGradient = buildDonutGradient(healthCounts, squads.length);
       const legendHtml = ['good', 'warn', 'crit'].filter(key => healthCounts[key] > 0).map(key => `<div class="ux-v6-legend-row"><span class="ux-v6-legend-dot" style="background:${healthLegendColors[key]}"></span><span>${healthLabels[key]}</span><strong>${healthCounts[key]}</strong></div>`).join('');
 
       const topSquadsList = topSquadsByHours(5);
       const maxSquadHours = Math.max(...topSquadsList.map(item => item.hours), 1);
-      const topSquadsHtml = topSquadsList.map((item, index) => `<div class="ux-v6-bar-row"><strong>${index + 1}</strong><span>${escapeHtml(item.squad.name)}</span><div class="ux-v6-bar-track"><span style="width:${Math.max(6, (item.hours / maxSquadHours) * 100)}%"></span></div><strong>${formatHours(item.hours)}</strong></div>`).join('') || `<div class="ux-v6-empty"><div><strong>Sem horas cadastradas.</strong></div></div>`;
+      const topSquadsHtml = topSquadsList.map((item, index) => `<div class="ux-v6-bar-row"><strong>${index + 1}</strong><span>${escapeHtml(squadDisplayName(item.squad))}</span><div class="ux-v6-bar-track"><span style="width:${Math.max(6, (item.hours / maxSquadHours) * 100)}%"></span></div><strong>${formatHours(item.hours)}</strong></div>`).join('') || `<div class="ux-v6-empty"><div><strong>Sem horas cadastradas.</strong></div></div>`;
 
       const topInitiativesList = topInitiativesByHours(5);
       const topInitiativesHtml = topInitiativesList.map((project, index) => {
@@ -17796,6 +17857,7 @@ Recomendação PMO: ${d.recommendation}`;
             <section class="ux-v6-side-card" id="uxV6NextDiscoveriesCard">
               <div class="ux-v6-side-title"><div class="ux-v6-side-title-label"><strong>Próximos Discoveries</strong><span class="ux-v6-side-month">Mês atual: ${escapeHtml(currentDiscoveryMonthLabel)}</span></div><span class="ux-v6-side-link" onclick="openCalendarModal()" style="cursor:pointer" title="Abrir calendário de Discoveries">📅 Ver calendário</span></div>
               <div class="ux-v6-date-list">${nextDiscoveriesHtml}</div>
+              ${missingDiscoveryDateHtml ? `<div class="ux-v6-side-title" style="margin-top:12px"><div class="ux-v6-side-title-label"><strong>Sem data definida</strong></div></div><div class="ux-v6-date-list">${missingDiscoveryDateHtml}</div>` : ''}
             </section>
             <section class="ux-v6-side-card">
               <div class="ux-v6-side-title"><strong>Top iniciativas por esforço</strong><span class="ux-v6-side-link">Ver ranking completo</span></div>
