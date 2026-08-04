@@ -5274,7 +5274,15 @@ function mergeBacklog(incoming){
 
 // JSONP helper — evita bloqueio CORS; GAS responde com callback(data)
 var _gasJsonpSeq=0;
-function _gasJsonp(url, cb, timeoutMs){
+function _gasJsonp(url, cb, timeoutMs, _retriesLeft){
+  // O hop script.google.com -> script.googleusercontent.com/macros/echo (que entrega
+  // o conteúdo de fato) ocasionalmente chega atrasado ou falha com 404 sozinho, sem
+  // relação com o payload — sintoma: "Uncaught ReferenceError: _gasJP_... is not
+  // defined" no console (o callback já tinha sido apagado pelo timeout quando a
+  // resposta atrasada finalmente chegou e tentou chamá-lo). Isolado ao _gasJsonp,
+  // 1 retry automático (com um respiro de 2s) cobre todo mundo que já chama esta
+  // função, sem precisar duplicar lógica de retry em cada chamador.
+  var retriesLeft = (_retriesLeft===undefined) ? 1 : _retriesLeft;
   // Date.now() sozinho colidia quando Backlog e Stories eram carregados no mesmo
   // milissegundo. O contador garante um callback exclusivo para cada resposta.
   var name='_gasJP_'+Date.now()+'_'+(++_gasJsonpSeq);
@@ -5284,6 +5292,7 @@ function _gasJsonp(url, cb, timeoutMs){
     if(done) return; done=true;
     delete window[name];
     if(script.parentNode) script.parentNode.removeChild(script);
+    if(retriesLeft>0){ setTimeout(function(){ _gasJsonp(url, cb, timeoutMs, retriesLeft-1); }, 2000); return; }
     cb('timeout');
   }, timeoutMs||28000);
   window[name]=function(data){
@@ -5298,6 +5307,7 @@ function _gasJsonp(url, cb, timeoutMs){
     clearTimeout(timer);
     delete window[name];
     if(script.parentNode) script.parentNode.removeChild(script);
+    if(retriesLeft>0){ setTimeout(function(){ _gasJsonp(url, cb, timeoutMs, retriesLeft-1); }, 2000); return; }
     cb('script error');
   };
   script.src=url+'&callback='+name;
