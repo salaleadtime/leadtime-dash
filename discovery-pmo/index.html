@@ -10306,13 +10306,21 @@
     let _discGasSaveTimer = null;
     let _discGasApplyingRemote = false;
 
-    function _discGasJsonp(url, cb) {
+    function _discGasJsonp(url, cb, _retriesLeft) {
+      // O hop script.google.com -> script.googleusercontent.com/macros/echo (que
+      // entrega o conteúdo de fato) ocasionalmente atrasa ou falha sozinho, sem
+      // relação com o payload — mesma causa identificada no dashboard principal
+      // (index.html/_gasJsonp) para o erro "Não foi possível sincronizar". Sem
+      // retry aqui, qualquer navegador que pegasse essa falha transitória ficava
+      // com a base do Discovery divergente da dos outros até um F5 na hora certa.
+      const retriesLeft = (_retriesLeft === undefined) ? 1 : _retriesLeft;
       const name = '_discGP_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
       const script = document.createElement('script');
       let done = false;
       const timer = setTimeout(() => {
         if (done) return; done = true;
         delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
+        if (retriesLeft > 0) { setTimeout(() => _discGasJsonp(url, cb, retriesLeft - 1), 2000); return; }
         cb('timeout');
       }, 20000);
       window[name] = (payload) => {
@@ -10323,6 +10331,7 @@
       script.onerror = () => {
         if (done) return; done = true; clearTimeout(timer);
         delete window[name]; if (script.parentNode) script.parentNode.removeChild(script);
+        if (retriesLeft > 0) { setTimeout(() => _discGasJsonp(url, cb, retriesLeft - 1), 2000); return; }
         cb('script error');
       };
       script.src = url + '&callback=' + name;
