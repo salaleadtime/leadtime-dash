@@ -6458,7 +6458,7 @@
         delete window[name]; if(script.parentNode) script.parentNode.removeChild(script);
         if(retriesLeft>0){ setTimeout(function(){ _vpGasJsonp(url, cb, retriesLeft-1); }, 2000); return; }
         cb('timeout');
-      }, 20000);
+      }, 28000);
       window[name]=function(data){ if(done) return; done=true; clearTimeout(timer); delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb(null,data); };
       script.onerror=function(){
         if(done) return; done=true; clearTimeout(timer);
