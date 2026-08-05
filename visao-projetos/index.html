@@ -6470,10 +6470,16 @@
       document.head.appendChild(script);
     }
 
+    // v21: gasLoadVpData guarda a revisão devolvida por getVpData a cada carga bem
+    // sucedida (boot, refresh manual, ou o polling gated abaixo) — _vpLastKnownRevisions
+    // é o que gasCheckVpRevisionsAndApply usa pra saber quais das 9 chaves realmente
+    // mudaram antes de buscar cada uma.
+    var _vpLastKnownRevisions={};
     function gasLoadVpData(key, cb){
       if(!_VP_GAS_URL){ if(cb) cb('no url'); return; }
       _vpGasJsonp(_VP_GAS_URL+'?action=getVpData&key='+encodeURIComponent(key)+'&t='+Date.now(), function(err,json){
         if(err){ if(cb) cb(err); return; }
+        if(json && typeof json.revision==='number') _vpLastKnownRevisions[key]=json.revision;
         if(json && json.ok){ if(cb) cb(null, json.data); }
         else { if(cb) cb(null, null); }
       });
@@ -6644,6 +6650,38 @@
         gasLoadVpData(key, function(err, serverData){
           if(!err) collected[key] = serverData;
           done();
+        });
+      });
+    }
+
+    // v21: ping barato (action=getRevisions, só números) para decidir quais das 9 chaves
+    // realmente mudaram, em vez de buscar as 9 sempre, no ritmo fixo do polling automático
+    // (ver setInterval mais abaixo). Continua usando gasLoadVpData por chave — NÃO
+    // consolidar num único getVpDataAll: já foi tentado e revertido, porque o payload
+    // combinado é grande demais e chega truncado atrás do proxy corporativo (ver
+    // gasLoadAndApplyVpAll acima). applyVpDataAll já tolera receber só um subconjunto das
+    // chaves — cada bloco dela é protegido por "if(chave && ...)", então chaves que não
+    // mudaram (e por isso não entram em collected) simplesmente não são tocadas.
+    function gasCheckVpRevisionsAndApply(cb){
+      if(!_VP_GAS_URL){ if(cb) cb('no url'); return; }
+      var keys = ['vpGeral','vpSprint','vpHomologation','vpOpUpdates','vpQuickNotes','vpPlanningConfirmations','vpPlanningSnapshots','vpSprintObjectives','vpDeliveries'];
+      _vpGasJsonp(_VP_GAS_URL+'?action=getRevisions&t='+Date.now(), function(err,json){
+        if(err || !json || !json.ok || !json.revisions){ if(cb) cb(err||'sem dados'); return; }
+        var changedKeys = keys.filter(function(k){
+          var rev=json.revisions[k];
+          return _vpLastKnownRevisions[k]===undefined || rev!==_vpLastKnownRevisions[k];
+        });
+        if(!changedKeys.length){ if(cb) cb(null, 0); return; }
+        var pending = changedKeys.length, collected = {};
+        function done(){
+          pending--;
+          if(pending <= 0){ applyVpDataAll(collected); if(cb) cb(null, changedKeys.length); }
+        }
+        changedKeys.forEach(function(key){
+          gasLoadVpData(key, function(err2, serverData){
+            if(!err2) collected[key] = serverData;
+            done();
+          });
         });
       });
     }
@@ -10135,10 +10173,25 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     applyActiveSprint();
     // Pre-warm do GAS para reduzir o cold-start antes de gasLoadAndApplyVpAll()
     if(_VP_GAS_URL){ try{ _vpGasJsonp(_VP_GAS_URL+'?action=health&t='+Date.now(), function(){}); }catch(e){} }
-    // Sincroniza com o servidor ao abrir e a cada 2 min — dados importados por
-    // qualquer usuário ficam visíveis para todo o time sem re-importar.
+    // Sincroniza com o servidor ao abrir — dados importados por qualquer usuário ficam
+    // visíveis para todo o time sem re-importar. Essa primeira carga continua completa
+    // (as 9 chaves), sem gate de revisão, pra garantir hidratação correta no boot.
     gasLoadAndApplyVpAll();
-    setInterval(gasLoadAndApplyVpAll, 120000);
+    // v21: o polling recorrente passa a usar o ping barato de revisão em vez de buscar
+    // as 9 chaves sempre, no ritmo fixo de 2min — ver gasCheckVpRevisionsAndApply acima.
+    // Pausa quando a aba está em segundo plano; resincroniza na hora ao voltar o foco.
+    // Resync completo incondicional a cada ~15min funciona como rede de segurança.
+    var _vpPollTicks = 0;
+    setInterval(function(){
+      if(document.hidden || !_VP_GAS_URL) return;
+      _vpPollTicks++;
+      if(_vpPollTicks % 15 === 0){ gasLoadAndApplyVpAll(); return; }
+      gasCheckVpRevisionsAndApply(function(){});
+    }, 60000);
+    document.addEventListener('visibilitychange', function(){
+      if(document.hidden || !_VP_GAS_URL) return;
+      gasCheckVpRevisionsAndApply(function(){});
+    });
   </script>
 </body>
 </html>

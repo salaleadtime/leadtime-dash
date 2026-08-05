@@ -10348,8 +10348,24 @@
       if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
       _discGasJsonp(DISC_GAS_URL + '?action=getVpData&key=' + DISC_GAS_KEY + '&t=' + Date.now(), (err, json) => {
         if (err) { if (cb) cb(err); return; }
+        if (json && typeof json.revision === 'number') _discLastKnownRevision = json.revision;
         if (json && json.ok && json.data) { if (cb) cb(null, json.data); }
         else { if (cb) cb(null, null); }
+      });
+    }
+
+    // v21: ping barato (action=getRevisions, só números, sem tocar planilha) para saber
+    // se vale a pena puxar a base completa do Discovery de novo. discGasLoad já atualiza
+    // _discLastKnownRevision a cada carga bem-sucedida, então essa referência fica certa
+    // logo depois do boot, do refresh manual ou de qualquer outra chamada normal.
+    let _discLastKnownRevision = null;
+    function discGasCheckRevision(cb) {
+      if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
+      _discGasJsonp(DISC_GAS_URL + '?action=getRevisions&t=' + Date.now(), (err, json) => {
+        if (err || !json || !json.ok || !json.revisions) { if (cb) cb(err || 'sem dados'); return; }
+        const rev = json.revisions[DISC_GAS_KEY];
+        if (_discLastKnownRevision !== null && rev === _discLastKnownRevision) { if (cb) cb(null, false); return; }
+        discGasSyncPull((err2, applied) => { if (cb) cb(err2, true); });
       });
     }
 
@@ -10607,8 +10623,20 @@
       });
     }
 
-    setInterval(discGasSyncPull, 15000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasSyncPull(); });
+    // v21: ping barato (getRevisions) no lugar de puxar a base completa do Discovery a
+    // cada 15s — esse timer era, de longe, a maior fonte de chamadas do projeto (240x
+    // mais chamadas/hora que os outros paineis). Agora só busca a base completa quando a
+    // revisão de 'discoveryPmo' realmente mudou. Pausa quando a aba está em segundo
+    // plano; resincroniza na hora ao voltar o foco (igual ao comportamento anterior).
+    // Resync completo incondicional a cada ~10min funciona como rede de segurança.
+    let _discPollTicks = 0;
+    setInterval(() => {
+      if (document.hidden) return;
+      _discPollTicks++;
+      if (_discPollTicks % 20 === 0) { discGasSyncPull(); return; }
+      discGasCheckRevision();
+    }, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasCheckRevision(); });
     // Migrações únicas só valem para toda a base quando chegam ao servidor — sem isso,
     // ficariam apenas no localStorage de quem abriu a página primeiro.
     if ((_cardsJustReset || _scheduleLegacyCleanupJustRan) && !_discUsingFallback) {

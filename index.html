@@ -5399,11 +5399,29 @@ function gasLoadBacklog(cb, _retries){
       if(curTab==='em') renderEmergencyView();
       updateTabCounts();
       if(localMax>serverMax && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
+      if(typeof json.revision==='number') _bkLastKnownRevision=json.revision;
       if(cb) cb(null, json.backlog.length);
     } else {
       if(backlogSnaps.length && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
       if(cb) cb(null, 0);
     }
+  }, 28000, 0);
+}
+
+// v21: ping barato (action=getRevisions, só números, sem tocar planilha) para decidir
+// se vale a pena buscar o backlog completo de novo. Usado pelo polling automático no
+// lugar de gasLoadBacklog direto — ver setInterval mais abaixo e o comentário de
+// motivação no apps-script-backlog.gs (v21). _bkLastKnownRevision começa null (nunca
+// checado) e é atualizado tanto aqui quanto dentro de gasLoadBacklog, então qualquer
+// carga bem-sucedida (boot, refresh manual, troca de aba) já deixa a referência correta.
+var _bkLastKnownRevision=null;
+function gasCheckBacklogRevision(cb){
+  if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
+  _gasJsonp(BK_GAS_URL+'?action=getRevisions&t='+Date.now(), function(err,json){
+    if(err || !json || !json.ok || !json.revisions){ if(cb) cb(err||'sem dados'); return; }
+    var rev=json.revisions.backlog;
+    if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
+    gasLoadBacklog(function(err2){ if(cb) cb(err2,true); });
   }, 28000, 0);
 }
 
@@ -8765,8 +8783,26 @@ setTimeout(function(){ try{ flushPendingWrites(); }catch(e){} }, 5000);
 // Pré-carrega o html2canvas para que "Copiar" funcione já no 1º clique (sem perder o gesto do usuário)
 setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL); }catch(e){} }, 2500);
 
-// Reconfere o backlog com o servidor periodicamente — janelas abertas convergem sozinhas
-setInterval(function(){ try{ if(BK_GAS_URL) gasLoadBacklog(function(){}); }catch(e){} }, 120000);
+// Reconfere o backlog com o servidor periodicamente — janelas abertas convergem sozinhas.
+// v21: em vez de buscar os dados completos a cada tick, faz um ping barato de revisão
+// (getRevisions) e só busca de verdade quando algo mudou. Pausa quando a aba está em
+// segundo plano (ninguém olhando = não vale nem o ping) e resincroniza na hora quando a
+// aba volta a ficar visível. Um resync completo incondicional a cada 15min (a cada 15
+// ticks de 1min) funciona como rede de segurança caso a revisão fique presa por algum
+// motivo — mesmo espírito do "janelas abertas convergem sozinhas" original.
+var _bkPollTicks=0;
+setInterval(function(){
+  if(document.hidden || !BK_GAS_URL) return;
+  try{
+    _bkPollTicks++;
+    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){}); return; }
+    gasCheckBacklogRevision(function(){});
+  }catch(e){}
+}, 60000);
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden || !BK_GAS_URL) return;
+  try{ gasCheckBacklogRevision(function(){}); }catch(e){}
+});
 
 // ═══════════════════════════════════════
 // CALENDÁRIO — Planejamento Anual (acordeão de trimestres)

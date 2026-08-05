@@ -293,7 +293,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-08-04-v20-lock-timeout-20s');
+  t('versão correta', h.version, '2026-08-05-v21-getrevisions-ping');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -415,6 +415,37 @@ console.log('\n═══ 16. getOps4opsData: cache evita reler a planilha, e é 
   ctx.doPost(post({ action:'saveVpData', key:'discoveryPmo', payload: mkDisc('Beltrano') }));
   const third = parse(ctx.doGet(post({ action:'getOps4opsData' })));
   t('gravação em discoveryPmo invalida o cache — próxima leitura já reflete o novo dado', third.data.projects[0].owner, 'Beltrano');
+}
+
+console.log('\n═══ 17. getRevisions: ping barato para o polling automático (v21) ═══');
+{
+  const { ctx } = novoAmbiente();
+  const first = parse(ctx.doGet(post({ action:'getRevisions' })));
+  t('responde ok', first.ok, true);
+  t('base nova: backlog começa em 0', first.revisions.backlog, 0);
+  t('base nova: stories começa em 0', first.revisions.stories, 0);
+  t('traz revisão de toda chave de VP_SHEET_MAP (ex.: vpGeral)', typeof first.revisions.vpGeral, 'number');
+  t('traz discoveryPmo também (usado pelo discovery-pmo/index.html)', typeof first.revisions.discoveryPmo, 'number');
+  t('payload fica pequeno (só números, nunca esbarra na truncagem de proxy)',
+    JSON.stringify(first).length < 2000, true);
+  t('não devolve dado nenhum, só revisão (ping tem que ficar barato)', first.data, undefined);
+
+  const snaps = n => JSON.stringify(Array.from({length:n},(_,i)=>({id:'s'+i, seq:i, stories:[], importedAt:'2026-08-0'+(i%9+1)+'T00:00:00Z'})));
+  ctx.doPost(post({ action:'saveBacklog', payload: snaps(2) }));
+  const afterBacklogSave = parse(ctx.doGet(post({ action:'getRevisions' })));
+  t('salvar backlog incrementa só a revisão do backlog', afterBacklogSave.revisions.backlog, 1);
+  t('stories não é afetado por um save de backlog', afterBacklogSave.revisions.stories, 0);
+
+  const mk = n => JSON.stringify({ rows: Array.from({length:n}, (_,i)=>({id:i})) });
+  ctx.doPost(post({ action:'saveVpData', key:'vpGeral', payload: mk(5) }));
+  const afterVpSave = parse(ctx.doGet(post({ action:'getRevisions' })));
+  t('salvar vpGeral incrementa só a revisão de vpGeral', afterVpSave.revisions.vpGeral, 1);
+  t('vpQuickNotes (outra chave) não é afetado', afterVpSave.revisions.vpQuickNotes, 0);
+  t('backlog mantém a revisão anterior', afterVpSave.revisions.backlog, 1);
+
+  const bk = parse(ctx.doGet(post({ action:'getBacklog' })));
+  t('getBacklog agora também devolve revision', bk.revision, 1);
+  t('revision de getBacklog bate com a de getRevisions', bk.revision, afterVpSave.revisions.backlog);
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
