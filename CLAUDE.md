@@ -17,6 +17,12 @@ aqui. Concretamente, isso significa:
   você achar um lugar que devia sincronizar e não sincroniza, é bug, corrija.
 - Antes de considerar uma correção de sincronização "pronta", teste como
   descrito em "Como validar" abaixo — não é suficiente o diff "parecer certo".
+- Este repositório é **público**. Nunca commitar segredo, token, senha,
+  chave de API, nome de cliente/empresa ou qualquer URL de produção que não
+  devesse ser pública em nenhum arquivo aqui (incluindo este `CLAUDE.md`) —
+  nem mesmo em comentário ou mensagem de commit. Se precisar registrar algo
+  sensível para uma sessão futura, avise a pessoa responsável em vez de
+  escrever no repositório.
 
 ## Arquitetura
 
@@ -95,6 +101,69 @@ o início — não espere reproduzir a falha em produção para adicionar retry.
   aparecer divergente, é sinal de que `main` avançou em paralelo; reconstrua o
   branch a partir de `origin/main` e reaplique (cherry-pick) só os commits
   realmente novos antes de abrir/mesclar o PR.
+
+## Histórico: incidente de sincronização de 04–05/08
+
+Registro técnico do que foi investigado e corrigido, para não precisar
+reconstruir esse raciocínio do zero numa próxima sessão.
+
+**Sintomas relatados**: "Não foi possível sincronizar o Ops4Ops", painéis com
+números divergentes entre navegadores/abas, "Demandas Emergenciais" vazio em
+um navegador e populado em outro, Discovery PMO Tracker preso em
+"Sincronizando…" por vários minutos.
+
+**Causas identificadas, em ordem de investigação**:
+
+1. Endpoint novo (`getOps4opsData`) chamado pelo cliente antes do backend
+   correspondente ser reimplantado manualmente no Apps Script (ver "não tem
+   deploy automático" acima) — corrigido redeploy manual.
+2. `getOps4opsData` lia e reprocessava a base completa do Discovery a cada
+   chamada mesmo depois de enxugar a resposta — corrigido com cache
+   (`CacheService`) de ~10 min, invalidado ativamente a cada gravação.
+3. `LockService.getScriptLock()` é um lock único pra todo o script (ver
+   "Padrão de resiliência" acima); 10s de espera era pouco sob uso
+   concorrente — aumentado para 20s.
+4. Nenhum dos 5 clientes JSONP tinha retry; um deles (`_vpGasJsonp`) nem
+   tinha timeout — o hop instável do content-echo do Google (ver "Padrão de
+   resiliência") deixava qualquer chamada vulnerável a uma falha transitória
+   definitiva. Corrigido com as duas camadas de retry descritas acima.
+5. Timeout do cliente (18–20s em alguns arquivos) menor que o novo
+   `LOCK_TIMEOUT_MS` do servidor (20s) — o cliente podia desistir antes do
+   servidor terminar de esperar a vez. Todos os clientes agora usam 28s.
+6. **Empilhamento de retry**: 3 funções em `index.html`
+   (`gasLoadBacklog`/`gasLoadStories`/`gasLoadOps4opsFromDiscovery`) já
+   tinham retry externo próprio (2 tentativas) antes do retry genérico
+   entrar no `_gasJsonp` (mais 1 tentativa) — as duas camadas se
+   multiplicaram sem que isso fosse percebido, gerando um pior caso de quase
+   5 minutos antes de desistir. **Lição**: ao adicionar retry num nível mais
+   baixo/genérico, sempre auditar se os chamadores já não tinham o próprio
+   retry por cima — nunca empilhar duas camadas de retry sem querer. Essas
+   três funções agora desligam o retry interno do `_gasJsonp`
+   (`retriesLeft=0` explícito) e mantêm só uma camada.
+7. `renderSquadOverview()` do Discovery PMO Tracker, ao proteger contra
+   mostrar dado local desatualizado (ver item seguinte), reescrevia a tela
+   pra "Sincronizando…" em **todo** redesenho enquanto não sincronizasse —
+   inclusive depois de uma tentativa já ter falhado de vez, escondendo o
+   erro real e dando a falsa impressão de que ainda estava tentando.
+   Corrigido guardando o último status real conhecido
+   (`_discSyncStatusMessage`) em vez de um texto fixo.
+8. Causa de fundo (não corrigível por código): o volume de testes do dia
+   (dezenas de redeploys manuais, centenas de chamadas, os retries
+   multiplicados do item 6) esgotou a cota diária de execução do Apps
+   Script, que só resolveu sozinha depois do reset diário do Google.
+
+**Outros achados de robustez, aplicados durante a mesma investigação**:
+
+- Regra ativa de "Demandas Emergenciais" (`emergencyRuleId`) era salva só em
+  `localStorage`, nunca em `emergencyState.config.activeRuleId` no servidor
+  — cada navegador podia ficar preso numa regra diferente da do resto do
+  time. Corrigido: `emSelectRule` agora sincroniza essa escolha.
+- Dashboard de Squads do Discovery PMO Tracker renderizava com o que
+  estivesse salvo localmente (mesmo desatualizado) antes de confirmar a
+  sincronização, por velocidade — sob lentidão do servidor essa janela
+  ficou perceptível o bastante para parecer perda de dado. Corrigido:
+  `renderSquadOverview()` não desenha nada até `_discRemoteHydrated` ser
+  `true`.
 
 ## Como validar antes de dizer que está pronto
 
