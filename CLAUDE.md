@@ -49,6 +49,19 @@ automático**. Alterá-lo aqui não basta: alguém precisa colar o arquivo
 atualizado no editor do Apps Script (script.google.com) e reimplantar como
 "Nova versão" na implantação **existente** (nunca "Nova implantação" — isso
 gera uma URL `/exec` diferente e quebra todo mundo que aponta pra URL antiga).
+
+**Fluxo de entrega de qualquer arquivo que exija passo manual em produção**
+(hoje isso é só `apps-script-backlog.gs`, mas vale para qualquer arquivo
+futuro que não seja publicado pelo `Deploy GitHub Pages` automático):
+
+1. A pessoa responsável decide quando aplicar em produção e pede o arquivo
+   quando quiser — não presuma que "commitei/mesclei" significa "já está em
+   produção" para esse tipo de arquivo.
+2. Toda alteração em `apps-script-backlog.gs` precisa ser informada
+   explicitamente (o que mudou e por quê) e o arquivo completo e atualizado
+   enviado para substituição, mesmo sem ser pedido — não deixe a pessoa
+   descobrir sozinha que havia uma mudança pendente de aplicar.
+
 `BACKLOG_SCRIPT_VERSION` no topo do arquivo deve ser incrementado a cada
 mudança, e conferido via `?action=health` depois do redeploy.
 
