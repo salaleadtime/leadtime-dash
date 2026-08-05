@@ -1,6 +1,21 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v21 — action=getRevisions: devolve só os contadores de revisão (backlog,
+ * stories, cada chave de VP_SHEET_MAP), sem ler planilha nem disputar lock.
+ * Motivação: os 3 painéis (index.html a cada 2min, visao-projetos a cada
+ * 2min x9 chaves, discovery-pmo a cada 15s!) buscavam os dados COMPLETOS
+ * naquele ritmo fixo, mesmo quando nada tinha mudado desde a última vez —
+ * com várias pessoas de aba aberta o dia todo, isso é exatamente o padrão
+ * de disputa de lock que já causou o esgotamento de cota do incidente de
+ * 04–05/08. Agora o cliente faz esse ping barato no lugar da leitura
+ * pesada, e só busca os dados completos quando a revisão realmente mudou.
+ * getBacklog também passa a devolver revision, para o cliente saber a que
+ * revisão os dados que acabou de buscar correspondem. Resposta do ping é só
+ * números — de propósito pequena, para nunca esbarrar na truncagem de proxy
+ * corporativo que já derrubou a consolidação em getVpDataAll (ver v17 e o
+ * revert em visao-projetos/index.html / report-semanal-operacional.html).
+ *
  * v20 — LOCK_TIMEOUT_MS 10s → 20s. O lock é ÚNICO pro script inteiro
  * (LockService.getScriptLock()), compartilhado por TODAS as ações — leitura
  * e escrita, das 13+ chaves diferentes. Com várias pessoas usando o painel
@@ -89,7 +104,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-04-v20-lock-timeout-20s';
+var BACKLOG_SCRIPT_VERSION = '2026-08-05-v21-getrevisions-ping';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -347,8 +362,26 @@ function doGet(e) {
         version: BACKLOG_SCRIPT_VERSION,
         backlog: backlog,
         snapshots: backlog.length,
-        maxStories: maxStoryCount_(backlog)
+        maxStories: maxStoryCount_(backlog),
+        revision: getRevision_(BACKLOG_SHEET)
       }, callback);
+    }
+
+    // getRevisions: ping bem barato para o cliente decidir se vale a pena
+    // buscar os dados completos de novo. Só lê contadores em Script
+    // Properties (getRevision_) — sem tocar planilha, sem lock — então pode
+    // rodar com muito mais frequência que as leituras "pesadas" que ele
+    // substitui no polling automático de index.html/discovery-pmo/
+    // visao-projetos. A resposta é só números (poucas dezenas de bytes por
+    // chave), então nunca esbarra na truncagem de proxy corporativo que já
+    // derrubou a tentativa de consolidar em getVpDataAll (ver v17 acima e o
+    // revert em visao-projetos/index.html e report-semanal-operacional.html).
+    if (action === 'getRevisions') {
+      var revisions = { backlog: getRevision_(BACKLOG_SHEET), stories: getRevision_(STORIES_SHEET) };
+      Object.keys(VP_SHEET_MAP).forEach(function(k) {
+        revisions[k] = getRevision_(VP_SHEET_MAP[k]);
+      });
+      return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, revisions: revisions }, callback);
     }
 
     if (action === 'getStories') {

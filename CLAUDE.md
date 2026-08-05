@@ -95,6 +95,58 @@ Duas camadas de proteção, aplicadas em toda chamada nova:
 Ao escrever uma chamada nova ao Apps Script, implemente as duas camadas desde
 o início — não espere reproduzir a falha em produção para adicionar retry.
 
+## Padrão de polling: ping de revisão em vez de buscar tudo (histórico: 05/08)
+
+Motivação: os 3 painéis com sincronização automática (`index.html`,
+`discovery-pmo/index.html`, `visao-projetos/index.html`) buscavam os dados
+COMPLETOS num relógio fixo, mesmo quando nada tinha mudado desde a última vez
+— pior caso encontrado: Discovery PMO Tracker a cada **15 segundos**;
+`index.html` e Visão de Projetos a cada 2 min (a Visão de Projetos, além
+disso, disparava 9 chamadas separadas por ciclo, uma por chave de
+`VP_SHEET_MAP`). Com várias pessoas de aba aberta o dia todo, isso multiplica
+exatamente o padrão de disputa de lock que já causou o esgotamento de cota do
+incidente de 04–05/08 acima — mesmo sem nenhum bug, só de rodar o relógio.
+
+**Correção (v21 do `apps-script-backlog.gs`)**: cada aba já tinha um contador
+de revisão em Script Properties (`REV_<sheet>`, incrementado a cada escrita —
+ver `bumpRevision_`), só não era exposto de forma barata. `action=getRevisions`
+devolve SÓ esses contadores (backlog, stories, cada chave de `VP_SHEET_MAP`) —
+sem ler planilha, sem lock. O polling automático dos 3 painéis passou a fazer
+esse ping barato primeiro, e só busca os dados completos (a chamada de sempre,
+inalterada) quando a revisão relevante realmente mudou:
+
+- `index.html`: `gasCheckBacklogRevision()` no lugar de `gasLoadBacklog()`
+  direto no `setInterval`.
+- `discovery-pmo/index.html`: `discGasCheckRevision()` no lugar de
+  `discGasSyncPull()` direto — era o maior consumidor de longe.
+- `visao-projetos/index.html`: `gasCheckVpRevisionsAndApply()` — um único
+  ping cobre as 9 chaves, e só as que mudaram disparam `gasLoadVpData`
+  individual.
+
+Todos os três: pausam quando `document.hidden` (aba em segundo plano não
+gasta nem o ping), resincronizam na hora em `visibilitychange` ao voltar o
+foco, e mantêm um resync completo incondicional bem espaçado (10–15 min) como
+rede de segurança — mesmo espírito do "janelas abertas convergem sozinhas"
+já usado no backlog. Os relatórios semanais (`report-semanal.html`,
+`report-semanal-operacional.html`) não têm polling automático nenhum — só
+carregam ao abrir a página — então não entram nesse padrão.
+
+**Armadilha a NÃO repetir**: já existe um endpoint `getVpDataAll` que
+consolida as 9 chaves da Visão de Projetos numa única chamada — parece a
+solução óbvia para reduzir chamadas, mas **foi tentado e revertido duas
+vezes** (`visao-projetos/index.html` e `report-semanal-operacional.html`,
+ver `git log`): o payload combinado fica grande demais e chega truncado no
+meio para quem acessa atrás de proxy corporativo, travando a sincronização em
+silêncio (JSONP via `<script>` não detecta resposta cortada no meio — sem
+timeout específico pra esse caso, trava pra sempre). Por isso
+`action=getRevisions` devolve só números (payload sempre pequeno) e o
+ping-e-busca continua usando as chamadas pequenas de sempre, uma por chave —
+nunca consolide múltiplas chaves ou dados grandes numa única resposta JSONP
+sem confirmar que ela não estoura esse limite.
+
+Se adicionar um novo polling automático no futuro, siga o mesmo padrão: ping
+de revisão + busca condicional, nunca um relógio fixo buscando tudo.
+
 ## Armadilhas conhecidas deste repositório
 
 - **Funções duplicadas**: vários arquivos aqui têm a mesma função declarada
