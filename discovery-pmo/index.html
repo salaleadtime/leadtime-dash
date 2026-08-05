@@ -10293,6 +10293,12 @@
     // Fallback é apenas visual/local: nunca pode ser publicado como fonte oficial.
     let _discUsingFallback = false;
     let _discRemoteHydrated = false;
+    // Última mensagem de status conhecida enquanto _discRemoteHydrated ainda é
+    // false. Sem isso, qualquer render() no meio do caminho reescrevia a tela
+    // de volta pra "Sincronizando…" mesmo depois de uma tentativa já ter
+    // falhado de vez — parecia que ainda estava tentando quando já tinha
+    // desistido. renderSquadOverview() sempre reflete este valor.
+    let _discSyncStatusMessage = 'Sincronizando com a base compartilhada…';
     let data = loadData();
     let activeProjectId = data.activeProjectId || data.projects[0]?.id;
     if (!data.projects.some(p => p.id === activeProjectId)) activeProjectId = data.projects[0]?.id || defaultData.activeProjectId;
@@ -17638,7 +17644,7 @@ Recomendação PMO: ${d.recommendation}`;
       // chamada a render()/renderSquadOverview(), não só a carga inicial da
       // página (ex.: usuário clica em "Discovery PMO Tracker" ou troca de aba
       // antes do primeiro sync terminar).
-      if (!_discRemoteHydrated) { renderSharedDataPending('Sincronizando com a base compartilhada…'); return; }
+      if (!_discRemoteHydrated) { renderSharedDataPending(_discSyncStatusMessage); return; }
       data = enhanceSquadData(data);
 
       // Squad sem nenhuma iniciativa vinculada não aparece no painel executivo;
@@ -17914,7 +17920,7 @@ Recomendação PMO: ${d.recommendation}`;
     // estar desatualizado — squads/riscos/contagens de uma carga anterior)
     // antes de confirmar a sincronização com a base compartilhada. Sempre
     // espera a carga mais recente do servidor primeiro; só então renderiza.
-    renderSharedDataPending('Sincronizando com a base compartilhada…');
+    renderSharedDataPending(_discSyncStatusMessage);
 
     setTimeout(() => {
       discGasSyncPull((err) => {
@@ -17923,9 +17929,10 @@ Recomendação PMO: ${d.recommendation}`;
           setTimeout(applyCrossImportEpicsFromSala, 0);
           return;
         }
-        renderSharedDataPending(err
+        _discSyncStatusMessage = err
           ? 'Não foi possível carregar a base compartilhada agora. Clique em "↻ Atualizar" para tentar de novo.'
-          : 'A base compartilhada ainda não possui iniciativas válidas.');
+          : 'A base compartilhada ainda não possui iniciativas válidas.';
+        renderSharedDataPending(_discSyncStatusMessage);
       });
     }, 300);
     // Escuta em tempo real: outra aba importou via SALA enquanto esta está aberta.
