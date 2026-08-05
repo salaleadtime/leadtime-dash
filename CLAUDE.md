@@ -52,24 +52,52 @@ gera uma URL `/exec` diferente e quebra todo mundo que aponta pra URL antiga).
 
 **GitHub Pages não é o único lugar onde as páginas HTML são servidas.** Existe
 também uma cópia hospedada no ambiente do cliente (fora deste repositório),
-mantida por substituição manual de arquivo — é essa cópia que os usuários
-reais normalmente acessam, não necessariamente a URL pública do GitHub Pages.
-Por isso, "mesclou em `main`" não é o mesmo que "chegou em quem usa de
-verdade": qualquer `.html` alterado aqui também precisa ser enviado
-completo, junto com o `.gs` quando for o caso, para a pessoa responsável
-poder substituir manualmente nesse ambiente.
+mantida por substituição manual de arquivo, espelhando **a mesma estrutura de
+pastas deste repositório** (ex.: `visao-projetos/index.html` daqui vai na
+pasta `visao-projetos/` de lá, `discovery-pmo/index.html` vai em
+`discovery-pmo/`, etc.). É essa cópia que os usuários reais normalmente
+acessam, não necessariamente a URL pública do GitHub Pages. Por isso,
+"mesclou em `main`" não é o mesmo que "chegou em quem usa de verdade".
 
-**Fluxo de entrega de qualquer arquivo que exija passo manual em produção**
-(hoje isso é `apps-script-backlog.gs` sempre, e qualquer `.html` alterado
-sempre que a mudança também precisa valer no ambiente espelhado do cliente):
+**Checklist de entrega ao final de QUALQUER alteração de código neste
+projeto** (pedido explícito da pessoa responsável — sempre, mesmo sem ser
+pedido de novo a cada vez):
 
-1. A pessoa responsável decide quando aplicar em produção e pede o arquivo
-   quando quiser — não presuma que "commitei/mesclei" significa "já está em
-   produção" para esse tipo de arquivo.
-2. Toda alteração relevante precisa ser informada explicitamente (o que
-   mudou e por quê) e o(s) arquivo(s) completo(s) e atualizado(s)
-   enviado(s) para substituição, mesmo sem ser pedido — não deixe a pessoa
-   descobrir sozinha que havia uma mudança pendente de aplicar.
+1. O arquivo completo alterado (nunca só o trecho/diff) — pronto pra baixar e
+   substituir direto.
+2. O caminho exato da pasta de destino, espelhando a estrutura deste repo
+   (ver acima).
+3. Se a alteração for em `apps-script-backlog.gs`: avisar explicitamente que
+   esse arquivo **não é upload direto** — precisa colar o conteúdo no editor
+   do Google Apps Script e criar uma **Nova versão** de implantação (nunca
+   "Nova implantação").
+4. Um resumo curto e direto do que mudou e por quê — sem economizar nos
+   detalhes técnicos se algo for crítico (bug de perda de dado, travamento,
+   etc.).
+5. Se mais de um arquivo mudou, entregar todos juntos, prontos pra
+   substituir de uma vez — não em rodadas separadas.
+
+**Formato validado pela pessoa responsável para o item 1+2**: uma tabela
+`# | Arquivo | Onde substituir no ambiente do cliente`, uma linha por
+arquivo tocado na sessão, com a pasta de destino na 2ª coluna — e um
+destaque em texto na mesma linha quando aquele arquivo carrega a correção
+de algo crítico (ex.: "este tem a correção do bug de X"). Exemplo real já
+validado:
+
+| # | Arquivo | Onde substituir no ambiente do cliente |
+|---|---|---|
+| 1 | `index.html` | Raiz do projeto |
+| 2 | `apps-script-backlog.gs` | Não é arquivo de pasta — precisa ser colado no editor do Google Apps Script e implantado como Nova versão (não é upload de arquivo) |
+| 3 | `visao-projetos/index.html` | Pasta `visao-projetos/` |
+| 4 | `discovery-pmo/index.html` | Pasta `discovery-pmo/` |
+
+Arquivos deste repositório que **não fazem parte do espelho** (não precisam
+ser entregues, mesmo que alterados) — confirmado pela pessoa responsável:
+`.github/workflows/*` (automação interna do GitHub, não se aplica),
+`tests/apps-script-backlog.test.js` (só usado em desenvolvimento) e
+`boletim-ds/**` (ferramenta interna separada, com seu próprio README). Se um
+arquivo novo/desconhecido entrar em um diff, pergunte antes de presumir se
+ele faz parte do espelho ou não — não adivinhe.
 
 `BACKLOG_SCRIPT_VERSION` no topo do arquivo deve ser incrementado a cada
 mudança, e conferido via `?action=health` depois do redeploy.
