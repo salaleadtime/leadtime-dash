@@ -17630,9 +17630,16 @@ Recomendação PMO: ${d.recommendation}`;
     }
 
     function renderSquadOverview() {
-      data = enhanceSquadData(data);
       const el = document.getElementById('squadOverview');
       if (!el) return;
+      // Nunca desenha o painel com o que estava salvo localmente (pode ser de uma
+      // carga anterior — squads/riscos/contagens desatualizados) antes de
+      // confirmar a sincronização com a base compartilhada. Isso cobre qualquer
+      // chamada a render()/renderSquadOverview(), não só a carga inicial da
+      // página (ex.: usuário clica em "Discovery PMO Tracker" ou troca de aba
+      // antes do primeiro sync terminar).
+      if (!_discRemoteHydrated) { renderSharedDataPending('Sincronizando com a base compartilhada…'); return; }
+      data = enhanceSquadData(data);
 
       // Squad sem nenhuma iniciativa vinculada não aparece no painel executivo;
       // assim que uma iniciativa é cadastrada nela, passa a aparecer para todos.
@@ -17903,11 +17910,11 @@ Recomendação PMO: ${d.recommendation}`;
       overview.innerHTML = `<section class="section"><div class="section-head"><div><h3 class="section-title">Discovery PMO Tracker</h3><p class="section-desc">${escapeHtml(message)}</p></div></div></section>`;
     }
 
-    // A base padrão é só contingência técnica. Em navegador novo ou após falha
-    // local, não a renderizamos nem permitimos salvá-la antes de receber a fonte
-    // compartilhada — assim não há flash de squads/dados incorretos.
-    if (_discUsingFallback) renderSharedDataPending('Sincronizando com a base compartilhada…');
-    else render();
+    // Nunca renderiza o dashboard com o que estava salvo localmente (que pode
+    // estar desatualizado — squads/riscos/contagens de uma carga anterior)
+    // antes de confirmar a sincronização com a base compartilhada. Sempre
+    // espera a carga mais recente do servidor primeiro; só então renderiza.
+    renderSharedDataPending('Sincronizando com a base compartilhada…');
 
     setTimeout(() => {
       discGasSyncPull((err) => {
@@ -17916,14 +17923,9 @@ Recomendação PMO: ${d.recommendation}`;
           setTimeout(applyCrossImportEpicsFromSala, 0);
           return;
         }
-        if (_discUsingFallback) {
-          renderSharedDataPending(err
-            ? 'Não foi possível carregar a base compartilhada agora. Nenhum dado provisório foi exibido ou salvo.'
-            : 'A base compartilhada ainda não possui iniciativas válidas. Nenhum dado provisório foi exibido ou salvo.');
-          return;
-        }
-        render();
-        setTimeout(applyCrossImportEpicsFromSala, 0);
+        renderSharedDataPending(err
+          ? 'Não foi possível carregar a base compartilhada agora. Clique em "↻ Atualizar" para tentar de novo.'
+          : 'A base compartilhada ainda não possui iniciativas válidas.');
       });
     }, 300);
     // Escuta em tempo real: outra aba importou via SALA enquanto esta está aberta.
