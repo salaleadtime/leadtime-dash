@@ -5373,7 +5373,7 @@ function emSyncServerBacklogStories(backlogArray){
 }
 function gasLoadBacklog(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  var retries = (_retries === undefined) ? 2 : _retries;
+  var retries = (_retries === undefined) ? 1 : _retries;
   if(!backlogSnaps.length){ _gasBacklogLoading=true; renderBacklogView(); }
   var localMax=maxBacklogStoryCount(backlogSnaps);
   _gasJsonp(BK_GAS_URL+'?action=getBacklog&t='+Date.now(), function(err,json){
@@ -5404,7 +5404,7 @@ function gasLoadBacklog(cb, _retries){
       if(backlogSnaps.length && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
       if(cb) cb(null, 0);
     }
-  });
+  }, 28000, 0);
 }
 
 function gasSaveBacklog(){
@@ -5469,7 +5469,7 @@ function storiesSignature(stories){
 }
 function gasLoadStories(cb, options, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  var retries = (_retries === undefined) ? 2 : _retries;
+  var retries = (_retries === undefined) ? 1 : _retries;
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
     if(err==='timeout' && retries>0){
       // Mesmo motivo do retry em gasLoadBacklog/gasLoadOps4opsFromDiscovery:
@@ -5501,7 +5501,7 @@ function gasLoadStories(cb, options, _retries){
     } else {
       if(cb) cb(null, 0);
     }
-  });
+  }, 28000, 0);
 }
 function gasSaveStories(options){
   if(!BK_GAS_URL || !allStories.length || _gasStoriesSaving) return;
@@ -6038,7 +6038,7 @@ function gasLoadOps4ops(cb){
 // alguns MB e estourava o timeout do JSONP mesmo com dados válidos.
 function gasLoadOps4opsFromDiscovery(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  var retries = (_retries === undefined) ? 2 : _retries;
+  var retries = (_retries === undefined) ? 1 : _retries;
   if(!ops4opsSnaps.length){ _gasOps4opsLoading=true; renderOps4opsView(); }
   _gasOps4opsError=null;
   _gasJsonp(BK_GAS_URL+'?action=getOps4opsData&t='+Date.now(), function(err,json){
@@ -6077,7 +6077,7 @@ function gasLoadOps4opsFromDiscovery(cb, _retries){
     ops4opsFromDiscovery=true;
     ops4opsSnaps=[{id:'discovery-pmo',seq:1,stories:stories,importedAt:json.data.updatedAt||new Date().toISOString()}];
     if(cb) cb(null,1,stories.length);
-  }, 45000);
+  }, 45000, 0);
 }
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
