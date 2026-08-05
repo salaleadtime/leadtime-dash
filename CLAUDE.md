@@ -50,16 +50,25 @@ atualizado no editor do Apps Script (script.google.com) e reimplantar como
 "Nova versão" na implantação **existente** (nunca "Nova implantação" — isso
 gera uma URL `/exec` diferente e quebra todo mundo que aponta pra URL antiga).
 
+**GitHub Pages não é o único lugar onde as páginas HTML são servidas.** Existe
+também uma cópia hospedada no ambiente do cliente (fora deste repositório),
+mantida por substituição manual de arquivo — é essa cópia que os usuários
+reais normalmente acessam, não necessariamente a URL pública do GitHub Pages.
+Por isso, "mesclou em `main`" não é o mesmo que "chegou em quem usa de
+verdade": qualquer `.html` alterado aqui também precisa ser enviado
+completo, junto com o `.gs` quando for o caso, para a pessoa responsável
+poder substituir manualmente nesse ambiente.
+
 **Fluxo de entrega de qualquer arquivo que exija passo manual em produção**
-(hoje isso é só `apps-script-backlog.gs`, mas vale para qualquer arquivo
-futuro que não seja publicado pelo `Deploy GitHub Pages` automático):
+(hoje isso é `apps-script-backlog.gs` sempre, e qualquer `.html` alterado
+sempre que a mudança também precisa valer no ambiente espelhado do cliente):
 
 1. A pessoa responsável decide quando aplicar em produção e pede o arquivo
    quando quiser — não presuma que "commitei/mesclei" significa "já está em
    produção" para esse tipo de arquivo.
-2. Toda alteração em `apps-script-backlog.gs` precisa ser informada
-   explicitamente (o que mudou e por quê) e o arquivo completo e atualizado
-   enviado para substituição, mesmo sem ser pedido — não deixe a pessoa
+2. Toda alteração relevante precisa ser informada explicitamente (o que
+   mudou e por quê) e o(s) arquivo(s) completo(s) e atualizado(s)
+   enviado(s) para substituição, mesmo sem ser pedido — não deixe a pessoa
    descobrir sozinha que havia uma mudança pendente de aplicar.
 
 `BACKLOG_SCRIPT_VERSION` no topo do arquivo deve ser incrementado a cada
