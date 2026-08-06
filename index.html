@@ -5426,6 +5426,13 @@ function gasCheckBacklogRevision(cb){
   _gasJsonp(BK_GAS_URL+'?action=getRevisions&t='+Date.now(), function(err,json){
     if(err || !json || !json.ok || !json.revisions){ if(cb) cb(err||'sem dados'); return; }
     var rev=json.revisions.backlog;
+    // Demandas Emergenciais (bloqueio, estimativa, comentário) usa a mesma
+    // chave emergencyDemand do VP_SHEET_MAP — o ping de getRevisions já
+    // devolve essa revisão de graça na mesma resposta. Reaproveita aqui em
+    // vez de abrir um polling novo: outra aba que bloqueou uma história
+    // aparece sozinha, sem precisar de F5 manual.
+    var emRev=json.revisions.emergencyDemand;
+    if(typeof emRev==='number' && _emergencyRevision!==null && emRev!==_emergencyRevision){ emLoadCloud(); }
     if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
     gasLoadBacklog(function(err2){ if(cb) cb(err2,true); });
   }, 28000, 0);
