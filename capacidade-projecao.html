@@ -185,11 +185,14 @@ canvas{max-width:100%}
         <h2>Cenários por número de devs <span class="info-ic" data-tip="Roda só sobre itens elegíveis (refinados, sem impedimento ativo, não concluídos). Fila por squad: itens do mesmo squad disputam a mesma capacidade.">ⓘ</span></h2>
         <button class="btn primary" onclick="cpExportExcel()">⬇ Exportar Excel</button>
       </div>
+      <p style="font-size:14px;margin:2px 0 12px"><b>O que essa aba responde:</b> com 1, 2, 3… devs, quando as histórias que já estão prontas pra desenvolver ficam entregues? (as bloqueadas por refino/impedimento não entram aqui — elas estão na aba "4. Bloqueios", porque a resposta pra elas não é "quantos devs".)</p>
       <div class="grid cols-4" id="cenKpis" style="margin:10px 0"></div>
+      <p class="help" style="margin-bottom:2px">↓ O gráfico mostra quantos dias você antecipa a entrega a cada dev que adiciona — repare que o ganho fica menor conforme aumenta (por isso a curva "acha" um teto).</p>
       <canvas id="cenChart" height="90"></canvas>
     </div>
     <div class="card">
       <h3 style="margin-top:0">Outras alavancas de antecipação <span class="info-ic" data-tip="Além de simular N devs (tabela abaixo), duas outras formas de antecipar a entrega: horas extras por dia, e priorizar manualmente um item já refinado (aba Itens) pra ver o efeito de furar a fila.">ⓘ</span></h3>
+      <p class="help" style="margin-top:0">Duas perguntas além de "quantos devs": e se trabalhássemos horas extras? e se priorizássemos algo que já está pronto?</p>
       <div class="grid cols-3" style="align-items:end">
         <label class="field">Horas extras por dia (todos os squads, mantendo os devs baseline)
           <input type="number" id="extraHoursInput" min="0" max="8" step="0.5" value="2">
@@ -201,10 +204,12 @@ canvas{max-width:100%}
     </div>
     <div class="card">
       <h3>Cenários por iniciativa × squad</h3>
+      <p class="help" style="margin-top:0">Uma linha por iniciativa+squad. Cada coluna (N=1, N=2…) é a data em que aquela iniciativa termina <i>naquele squad</i> se tivesse aquele número de devs.</p>
       <div class="tbl-wrap"><table id="cenTable"><thead></thead><tbody></tbody></table></div>
     </div>
     <div class="card">
       <h3>Fila detalhada (item a item, formato largo)</h3>
+      <p class="help" style="margin-top:0">A mesma coisa da tabela acima, mas história por história do Jira em vez de somada por iniciativa — use essa se quiser ver a data de um item específico.</p>
       <div class="tbl-wrap" style="max-height:480px;overflow-y:auto"><table id="filaTable"><thead></thead><tbody></tbody></table></div>
     </div>
   </section>
