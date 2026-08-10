@@ -81,6 +81,16 @@ canvas{max-width:100%}
 .exec-note{border:1px dashed var(--navy-border);border-radius:8px;padding:14px;color:var(--text-muted);font-size:13px}
 ::-webkit-scrollbar{height:8px;width:8px}
 ::-webkit-scrollbar-thumb{background:var(--navy-border);border-radius:4px}
+.info-ic{cursor:help;color:var(--text-muted);border:1px solid var(--navy-border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;margin-left:6px;position:relative;vertical-align:middle;font-weight:600}
+.info-ic:hover{color:var(--text);border-color:var(--text-muted)}
+.info-ic::after{content:attr(data-tip);position:absolute;left:0;top:22px;z-index:80;background:#0c141d;border:1px solid var(--navy-border);color:var(--text);padding:9px 11px;border-radius:8px;font-size:12px;font-weight:400;line-height:1.45;width:min(340px,80vw);white-space:normal;display:none;box-shadow:0 10px 28px rgba(0,0,0,.55)}
+.info-ic:hover::after{display:block}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:40px 16px;overflow-y:auto}
+.modal-overlay.on{display:flex}
+.modal-box{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;max-width:760px;width:100%;padding:20px 22px}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.priority-input{width:56px}
+.manual-badge{color:var(--yellow);margin-right:4px;cursor:help}
 </style>
 </head>
 <body>
@@ -92,6 +102,7 @@ canvas{max-width:100%}
   <div class="hdr-right">
     <span class="badge">SALA TRANSFORMAÇÃO</span>
     <span id="lastUpdate">Sem dados importados</span>
+    <button class="btn ghost" onclick="cpOpenConfig()" title="Parâmetros do motor de cálculo">⚙ Configuração</button>
   </div>
 </header>
 <main>
@@ -102,16 +113,14 @@ canvas{max-width:100%}
     <button class="tab-btn" data-tab="bloqueios">4. Bloqueios</button>
     <button class="tab-btn" data-tab="risco">5. Risco cruzado</button>
     <button class="tab-btn" data-tab="status">6. Histórias × Status</button>
-    <button class="tab-btn" data-tab="config">7. Configuração</button>
-    <button class="tab-btn" data-tab="alvo">8. Data Alvo</button>
+    <button class="tab-btn" data-tab="alvo">7. Data Alvo</button>
     <button class="tab-btn" data-tab="executivo">Modo Executivo</button>
   </div>
 
   <!-- 1. IMPORTAR -->
   <section class="panel active" id="p-importar">
     <div class="card">
-      <h2>Fonte A — Ops4Ops Sprint Board</h2>
-      <p class="muted">Import diário (v2 é alimentado dia a dia, não semanalmente). Aceita .xlsx ou .csv exportado do Jira — mesmas colunas do extrato usado no v1: Chave, Epic Link/Parent, Situação, Squad/Team, Rótulos (Labels), Sprint(s), Criado, Atualizado, Resumo.</p>
+      <h2>Fonte A — Ops4Ops Sprint Board <span class="info-ic" data-tip="Import diário (v2 é alimentado dia a dia, não semanalmente). Aceita .xlsx ou .csv exportado do Jira — mesmas colunas do extrato usado no v1: Chave, Epic Link/Parent, Situação, Squad/Team, Rótulos (Labels), Sprint(s), Criado, Atualizado, Resumo.">ⓘ</span></h2>
       <div class="grid cols-2">
         <label class="field">Arquivo (.xlsx / .csv)
           <input type="file" id="opsFile" accept=".xlsx,.xls,.csv">
@@ -129,8 +138,8 @@ canvas{max-width:100%}
     </div>
 
     <div class="card">
-      <h2>Fonte B — Discovery PMO Tracker</h2>
-      <p class="muted">Endpoint ao vivo ainda não confirmado (pendência aberta) — ponte manual por enquanto: cole abaixo o JSON com as iniciativas e os RAID/riscos ativos de cada uma. Formato esperado (ajustável):</p>
+      <h2>Fonte B — Discovery PMO Tracker <span class="info-ic" data-tip="Endpoint ao vivo ainda não confirmado (pendência aberta) — ponte manual por enquanto: cole abaixo o JSON com as iniciativas e os RAID/riscos ativos de cada uma.">ⓘ</span></h2>
+      <p class="help">Formato esperado (ajustável):</p>
       <pre class="mono" style="background:#0c141d;border:1px solid var(--navy-border);border-radius:6px;padding:10px;font-size:11px;overflow-x:auto">[
   {
     "initiativeId": "98434",
@@ -149,8 +158,7 @@ canvas{max-width:100%}
     </div>
 
     <div class="card">
-      <h2>Estado local</h2>
-      <p class="muted">Os dados desta ferramenta ficam salvos só neste navegador (localStorage) — é uma ferramenta de simulação pessoal, não um painel compartilhado entre usuários. Snapshots diários também ficam salvos localmente (<code>capproj_v2_snapshot_AAAA-MM-DD</code>) para reconstruir cycle time real quando houver histórico suficiente (seção 3.7 do briefing) — ainda não usados no cálculo.</p>
+      <h2>Estado local <span class="info-ic" data-tip="Os dados desta ferramenta ficam salvos só neste navegador (localStorage) — é uma ferramenta de simulação pessoal, não um painel compartilhado entre usuários. Snapshots diários também ficam salvos localmente (capproj_v2_snapshot_AAAA-MM-DD) para reconstruir cycle time real quando houver histórico suficiente — ainda não usados no cálculo.">ⓘ</span></h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" onclick="cpLoadSampleData()">▶ Carregar dados de exemplo (ver a ferramenta funcionando)</button>
         <button class="btn ghost" onclick="cpClearAll()">Limpar todos os dados desta ferramenta</button>
@@ -162,8 +170,7 @@ canvas{max-width:100%}
   <!-- 2. ITENS -->
   <section class="panel" id="p-itens">
     <div class="card">
-      <h2>Itens importados &amp; dados manuais</h2>
-      <p class="muted">Campos que não vêm do extrato do Jira precisam ser preenchidos aqui: estimativa (SP ou horas direto), início real/previsto de desenvolvimento, e impedimento ativo. Sem <b>início</b> e <b>horas</b>, o item não entra na fila de cenários (seção 3.5).</p>
+      <h2>Itens importados &amp; dados manuais <span class="info-ic" data-tip="Campos que não vêm do extrato do Jira precisam ser preenchidos aqui: estimativa (SP ou horas direto), início real/previsto de desenvolvimento, e impedimento ativo. Sem início e horas, o item não entra na fila de cenários. Prioridade manual: force um item já refinado pra frente da fila do squad dele, pra ver se antecipa o início dele.">ⓘ</span></h2>
       <div class="tbl-wrap" style="max-height:560px;overflow-y:auto">
         <table id="itensTable"><thead></thead><tbody></tbody></table>
       </div>
@@ -174,12 +181,22 @@ canvas{max-width:100%}
   <section class="panel" id="p-cenarios">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <h2>Cenários por número de devs</h2>
+        <h2>Cenários por número de devs <span class="info-ic" data-tip="Roda só sobre itens elegíveis (refinados, sem impedimento ativo, não concluídos). Fila por squad: itens do mesmo squad disputam a mesma capacidade.">ⓘ</span></h2>
         <button class="btn primary" onclick="cpExportExcel()">⬇ Exportar Excel</button>
       </div>
-      <p class="muted">Roda <b>só</b> sobre itens elegíveis (refinados, sem impedimento ativo, não concluídos). Fila por squad: itens do mesmo squad disputam a mesma capacidade.</p>
       <div class="grid cols-4" id="cenKpis" style="margin:10px 0"></div>
       <canvas id="cenChart" height="90"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Outras alavancas de antecipação <span class="info-ic" data-tip="Além de simular N devs (tabela abaixo), duas outras formas de antecipar a entrega: horas extras por dia, e priorizar manualmente um item já refinado (aba Itens) pra ver o efeito de furar a fila.">ⓘ</span></h3>
+      <div class="grid cols-3" style="align-items:end">
+        <label class="field">Horas extras por dia (todos os squads, mantendo os devs baseline)
+          <input type="number" id="extraHoursInput" min="0" max="8" step="0.5" value="2">
+        </label>
+        <button class="btn" onclick="cpSimulateOvertime()">Simular — quantos dias ganhamos?</button>
+        <span class="help">Compara a data geral com hora extra vs. sem, nos devs baseline configurados por squad.</span>
+      </div>
+      <div id="overtimeResult" style="margin-top:10px"></div>
     </div>
     <div class="card">
       <h3>Cenários por iniciativa × squad</h3>
@@ -195,10 +212,9 @@ canvas{max-width:100%}
   <section class="panel" id="p-bloqueios">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <h2>Bloqueios — independem do número de devs</h2>
+        <h2>Bloqueios — independem do número de devs <span class="info-ic" data-tip="Itens aqui nunca entram na simulação de N devs, nem em N=1 nem no teto configurado. São dois problemas com donos e prazos diferentes — não misture os dois blocos.">ⓘ</span></h2>
         <button class="btn primary" onclick="cpExportExcel()">⬇ Exportar Excel</button>
       </div>
-      <p class="muted">Itens aqui <b>nunca</b> entram na simulação de N devs, nem em N=1 nem no teto configurado. São dois problemas com donos e prazos diferentes — não misture os dois blocos.</p>
     </div>
     <div class="card">
       <h3>🟡 Bloqueado por refinamento — ação é do time/PO</h3>
@@ -218,18 +234,15 @@ canvas{max-width:100%}
   <!-- 5. RISCO CRUZADO -->
   <section class="panel" id="p-risco">
     <div class="card">
-      <h2>Painel de risco cruzado (Discovery × Ops4Ops)</h2>
-      <p class="muted">Por iniciativa: RAID/riscos ativos do Discovery Tracker ao lado dos itens Ops4Ops daquela iniciativa — contexto que explica atraso que a matemática de capacidade sozinha não captura.</p>
+      <h2>Painel de risco cruzado (Discovery × Ops4Ops) <span class="info-ic" data-tip="Por iniciativa: RAID/riscos ativos do Discovery Tracker ao lado dos itens Ops4Ops daquela iniciativa, mais uma análise automática combinando bloqueios e riscos — contexto que explica atraso que a matemática de capacidade sozinha não captura.">ⓘ</span></h2>
       <div id="crossPanel"></div>
     </div>
     <div class="card">
-      <h2>Padrões de risco detectados (motor squad-agnóstico)</h2>
-      <p class="muted">Roda sobre qualquer squad/iniciativa da base — nenhum nome fixo no código. Só gera risco quando a ocorrência do padrão atinge o limiar configurado (aba Configuração).</p>
+      <h2>Padrões de risco detectados (motor squad-agnóstico) <span class="info-ic" data-tip="Roda sobre qualquer squad/iniciativa da base — nenhum nome fixo no código. Só gera risco quando a ocorrência do padrão atinge o limiar configurado (⚙ Configuração).">ⓘ</span></h2>
       <div id="patternPanel"></div>
     </div>
     <div class="card">
-      <h2>Rastreabilidade quebrada</h2>
-      <p class="muted">Itens sem rótulo <code>#ID_iniciativa</code> — não é possível cruzar com o Discovery nem agrupar por iniciativa.</p>
+      <h2>Rastreabilidade quebrada <span class="info-ic" data-tip="Itens sem rótulo #ID_iniciativa — não é possível cruzar com o Discovery nem agrupar por iniciativa.">ⓘ</span></h2>
       <div id="tracePanel"></div>
     </div>
   </section>
@@ -237,17 +250,20 @@ canvas{max-width:100%}
   <!-- 6. STATUS CHART -->
   <section class="panel" id="p-status">
     <div class="card">
-      <h2>Histórias × Refinamento × Status</h2>
-      <p class="muted">Status lidos dinamicamente da base carregada — se amanhã aparecer um status novo, o gráfico absorve sem precisar editar código.</p>
+      <h2>Histórias × Refinamento × Status <span class="info-ic" data-tip="Status lidos dinamicamente da base carregada — se amanhã aparecer um status novo, o gráfico absorve sem precisar editar código.">ⓘ</span></h2>
       <canvas id="statusChart" height="110"></canvas>
       <div class="tbl-wrap" style="margin-top:12px"><table id="statusTable"><thead></thead><tbody></tbody></table></div>
     </div>
   </section>
 
-  <!-- 7. CONFIG -->
-  <section class="panel" id="p-config">
-    <div class="card">
-      <h2>Parâmetros do motor de cálculo</h2>
+  <!-- CONFIG (modal, não é aba — acessível pelo botão ⚙ no header) -->
+  <div class="modal-overlay" id="configModal">
+    <div class="modal-box">
+      <div class="modal-hd">
+        <h2 style="margin:0">⚙ Configuração — parâmetros do motor de cálculo</h2>
+        <button class="close-x" style="font-size:20px" onclick="cpCloseConfig()" title="Fechar">✕</button>
+      </div>
+      <p class="help">Esses parâmetros afetam todas as abas — cenários, bloqueios, risco cruzado e data alvo são recalculados ao salvar.</p>
       <div class="grid cols-3">
         <label class="field">Horas por dia útil
           <input type="number" id="cfgHoursDay" min="1" max="12" step="0.5">
@@ -284,23 +300,24 @@ canvas{max-width:100%}
       <button class="btn ghost" onclick="cpAddEffRow()">+ faixa</button>
       <h3>Status considerados "concluído" (saem do cálculo, mesmo já refinados)</h3>
       <div id="terminalStatusRows"></div>
-      <div style="margin-top:16px"><button class="btn primary" onclick="cpSaveConfigForm()">Salvar configuração</button></div>
+      <div style="margin-top:16px;display:flex;gap:8px">
+        <button class="btn primary" onclick="cpSaveConfigForm()">Salvar configuração</button>
+        <button class="btn ghost" onclick="cpCloseConfig()">Fechar</button>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <!-- 8. DATA ALVO -->
+  <!-- 7. DATA ALVO -->
   <section class="panel" id="p-alvo">
     <div class="card">
-      <h2>Data alvo por iniciativa</h2>
-      <p class="muted">Defina quando você quer entregar todas as histórias de uma iniciativa (passando por dev e homologação) e o motor calcula: se a data é viável só com o que já está elegível, se depende de refinar histórias a tempo, se depende de mais devs, e até quantos dias antes de cada história precisar entrar na fila ela tem que estar refinada. Números derivados do mesmo motor de fila validado nas abas 3/4 — "probabilidade" aqui é uma heurística de 5 faixas baseada em quais alavancas resolvem a data (refino / devs / nenhuma), não uma estatística.</p>
+      <h2>Data alvo por iniciativa <span class="info-ic" data-tip="Defina quando você quer entregar todas as histórias de uma iniciativa (dev + homologação) e o motor calcula: se a data é viável só com o que já está elegível, se depende de refinar histórias a tempo, se depende de mais devs, e até quando cada história bloqueada precisa estar refinada. 'Probabilidade' aqui é uma heurística de 5 faixas baseada em qual alavanca resolve a data (refino / devs / nenhuma) — não é estatística.">ⓘ</span></h2>
       <div class="grid cols-2" id="alvoKpis" style="margin:10px 0"></div>
     </div>
     <div class="card">
       <div class="tbl-wrap"><table id="alvoTable"><thead></thead><tbody></tbody></table></div>
     </div>
     <div class="card">
-      <h3>Prazo de refinamento por história (detalhe)</h3>
-      <p class="muted">Para cada iniciativa com histórias bloqueadas por refinamento: a data em que aquela história "entraria na fila" do squad se já estivesse refinada — ou seja, o prazo pra refinar antes de virar gargalo. Assume que os itens bloqueados vão para o fim da fila atual do squad (elegíveis primeiro), com os devs baseline configurados.</p>
+      <h3>Prazo de refinamento por história (detalhe) <span class="info-ic" data-tip="Para cada iniciativa com histórias bloqueadas por refinamento: a data em que aquela história 'entraria na fila' do squad se já estivesse refinada — o prazo pra refinar antes de virar gargalo. Assume que os itens bloqueados vão para o fim da fila atual do squad (elegíveis primeiro), com os devs baseline configurados.">ⓘ</span></h3>
       <div id="alvoDeadlines"></div>
     </div>
   </section>
@@ -481,7 +498,7 @@ function rowsToItems(matrix,det){
 function mergeImportedItems(items){
   items.forEach(function(it){
     state.items[it.id]=Object.assign({},state.items[it.id]||{},it);
-    if(!state.meta[it.id]) state.meta[it.id]={sp:'',hoursOverride:'',refinedOverride:null,impedAtivo:false,impedDesde:'',impedDono:'',impedDetalhe:'',dataInicioDev:'',dataPrevistaInicio:''};
+    if(!state.meta[it.id]) state.meta[it.id]={sp:'',hoursOverride:'',refinedOverride:null,impedAtivo:false,impedDesde:'',impedDono:'',impedDetalhe:'',dataInicioDev:'',dataPrevistaInicio:'',priority:''};
   });
 }
 
@@ -537,7 +554,7 @@ function cpAddManualItem(){
   var squad=prompt('Squad:','Sem squad')||'Sem squad';
   var status=prompt('Status:','Product Backlog')||'Product Backlog';
   state.items[id]=Object.assign({},state.items[id]||{},{id:id,squad:squad,status:status,epic:'',labels:'',initiativeId:'',sprint:'',criado:'',atualizado:'',resumo:'',spFromImport:null});
-  if(!state.meta[id]) state.meta[id]={sp:'',hoursOverride:'',refinedOverride:null,impedAtivo:false,impedDesde:'',impedDono:'',impedDetalhe:'',dataInicioDev:'',dataPrevistaInicio:''};
+  if(!state.meta[id]) state.meta[id]={sp:'',hoursOverride:'',refinedOverride:null,impedAtivo:false,impedDesde:'',impedDono:'',impedDetalhe:'',dataInicioDev:'',dataPrevistaInicio:'',priority:''};
   saveState(); cpRecalcAndRender();
   toast('Item adicionado',id+' criado manualmente — preencha os dados na aba "Itens & dados manuais".');
 }
@@ -708,11 +725,19 @@ function buildSquadQueues(elegivelEntries){
   });
   Object.keys(bySquad).forEach(function(sq){
     bySquad[sq].sort(function(a,b){
+      // Prioridade manual ("antecipar o início de algo já refinado"): item com prioridade definida
+      // vai pra frente da fila do squad, furando a ordem natural de início. Sem prioridade em nenhum
+      // dos dois, cai na ordem natural (já em dev primeiro, depois por data de início/previsão).
+      var pa=a.meta.priority, pb=b.meta.priority;
+      var hasPa=pa!=null&&pa!==''&&!isNaN(Number(pa)), hasPb=pb!=null&&pb!==''&&!isNaN(Number(pb));
+      if(hasPa&&hasPb) return Number(pa)-Number(pb);
+      if(hasPa&&!hasPb) return -1;
+      if(!hasPa&&hasPb) return 1;
       if(a.emDev!==b.emDev) return a.emDev?-1:1;
       return a.effectiveStart<b.effectiveStart?-1:(a.effectiveStart>b.effectiveStart?1:0);
     });
     var cum=0;
-    bySquad[sq].forEach(function(e){ cum+=e.hours; e.cumHours=cum; });
+    bySquad[sq].forEach(function(e){ cum+=e.hours; e.cumHours=cum; e.manualPriority=e.meta.priority!=null&&e.meta.priority!==''&&!isNaN(Number(e.meta.priority)); });
   });
   return bySquad;
 }
@@ -737,7 +762,7 @@ function computeScenarios(){
     queues[sq].forEach(function(e){
       var datesByN={};
       Ns.forEach(function(N){ datesByN[N]=dateForCumHours(e.cumHours,N,cfg,from); });
-      perItem.push({id:e.item.id,initiativeId:e.item.initiativeId||'',squad:sq,hours:e.hours,emDev:e.emDev,start:e.effectiveStart,datesByN:datesByN});
+      perItem.push({id:e.item.id,initiativeId:e.item.initiativeId||'',squad:sq,hours:e.hours,emDev:e.emDev,start:e.effectiveStart,manualPriority:e.manualPriority,datesByN:datesByN});
     });
   });
 
@@ -1028,7 +1053,7 @@ function renderHeader(){
 /* ---- Itens tab ---- */
 function renderItensTab(){
   var items=allItemsArr().sort(function(a,b){return a.id<b.id?-1:1;});
-  var head='<tr><th>Chave</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Refinada</th><th>SP</th><th>Horas (override)</th><th>Horas usadas</th><th>Início dev (real)</th><th>Previsto início</th><th>Impedimento?</th><th>Desde</th><th>Dono</th><th>Detalhe</th></tr>';
+  var head='<tr><th>Chave</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Refinada</th><th>SP</th><th>Horas (override)</th><th>Horas usadas</th><th>Início dev (real)</th><th>Previsto início</th><th>Prioridade manual<span class="info-ic" data-tip="Opcional. Preencha com um número (1, 2, 3…) pra forçar um item já refinado pra frente da fila do squad dele, furando a ordem natural de início — útil pra testar «dá pra antecipar algo que já está pronto?». Menor número = mais prioridade. Deixe em branco pra manter a ordem natural.">ⓘ</span></th><th>Impedimento?</th><th>Desde</th><th>Dono</th><th>Detalhe</th></tr>';
   var rows=items.map(function(it){
     var meta=state.meta[it.id]||{};
     var refined=meta.refinedOverride!=null?meta.refinedOverride:isRefinedLabel(it.labels);
@@ -1044,6 +1069,7 @@ function renderItensTab(){
       '<td>'+(hoursUsed==null?'<span class="badge-pill b-yellow">sem estimativa</span>':hoursUsed+'h')+'</td>'+
       '<td><input type="date" class="date-input" value="'+esc(meta.dataInicioDev||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'dataInicioDev\',this.value)"></td>'+
       '<td><input type="date" class="date-input" value="'+esc(meta.dataPrevistaInicio||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'dataPrevistaInicio\',this.value)"></td>'+
+      '<td><input class="priority-input" type="number" value="'+esc(meta.priority||'')+'" placeholder="—" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'priority\',this.value)"></td>'+
       '<td><input type="checkbox" '+(meta.impedAtivo?'checked':'')+' onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'impedAtivo\',this.checked)"></td>'+
       '<td><input type="date" class="date-input" value="'+esc(meta.impedDesde||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'impedDesde\',this.value)"></td>'+
       '<td><input class="small-input" style="width:100px" value="'+esc(meta.impedDono||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'impedDono\',this.value)"></td>'+
@@ -1099,13 +1125,53 @@ function renderCenariosTab(){
 
   var fhead='<tr><th>Chave</th><th>Iniciativa</th><th>Squad</th><th>Horas</th><th>Início</th>'+s.Ns.map(function(n){return '<th>N='+n+'</th>';}).join('')+'</tr>';
   var frows=s.perItem.slice().sort(function(a,b){return a.squad===b.squad?(a.id<b.id?-1:1):(a.squad<b.squad?-1:1);}).map(function(pi){
-    return '<tr><td>'+esc(pi.id)+'</td><td>'+esc(initiativeLabel(pi.initiativeId))+'</td><td>'+esc(pi.squad)+'</td><td>'+pi.hours+'h</td><td>'+fmtDateBR(pi.start)+(pi.emDev?' (em dev)':' (previsto)')+'</td>'+
+    return '<tr><td>'+(pi.manualPriority?'<span class="manual-badge" title="Prioridade manual — furou a fila natural">⚡</span>':'')+esc(pi.id)+'</td><td>'+esc(initiativeLabel(pi.initiativeId))+'</td><td>'+esc(pi.squad)+'</td><td>'+pi.hours+'h</td><td>'+fmtDateBR(pi.start)+(pi.emDev?' (em dev)':' (previsto)')+'</td>'+
       s.Ns.map(function(n){return '<td>'+fmtDateBR(pi.datesByN[n])+'</td>';}).join('')+'</tr>';
   }).join('');
   var ftbl=$id('filaTable');
   ftbl.querySelector('thead').innerHTML=fhead;
   ftbl.querySelector('tbody').innerHTML=frows||'<tr><td colspan="99" class="muted">Fila vazia.</td></tr>';
 }
+
+// Alavanca "hora extra": mesma fila/mesmos devs baseline por squad, só troca horas/dia por
+// horas/dia+extra na mesma função dateForCumHours já validada — sem fórmula nova.
+function computeOvertimeScenario(extraHours){
+  var cfg=state.config, cls=computeClassification();
+  var queues=buildSquadQueues(cls.elegivel);
+  var from=todayISO();
+  var cfgExtra=Object.assign({},cfg,{hoursPerDay:(cfg.hoursPerDay||0)+extraHours});
+  var groupsBase={}, groupsExtra={};
+  Object.keys(queues).forEach(function(sq){
+    var N=baselineNForSquad(sq,cfg);
+    queues[sq].forEach(function(e){
+      var key=(e.item.initiativeId||'sem-iniciativa')+'||'+sq;
+      var dBase=dateForCumHours(e.cumHours,N,cfg,from);
+      var dExtra=dateForCumHours(e.cumHours,N,cfgExtra,from);
+      if(dBase&&(!groupsBase[key]||dBase>groupsBase[key])) groupsBase[key]=dBase;
+      if(dExtra&&(!groupsExtra[key]||dExtra>groupsExtra[key])) groupsExtra[key]=dExtra;
+    });
+  });
+  var rows=Object.keys(groupsBase).map(function(k){
+    var parts=k.split('||'), iniId=parts[0]==='sem-iniciativa'?'':parts[0], sq=parts[1];
+    var dBase=groupsBase[k], dExtra=groupsExtra[k];
+    return {initiativeId:iniId,squad:sq,base:dBase,extra:dExtra,daysGained:(dBase&&dExtra)?daysBetweenCalendar(dExtra,dBase):null};
+  });
+  var overallBase=null,overallExtra=null;
+  rows.forEach(function(r){ if(r.base&&(!overallBase||r.base>overallBase)) overallBase=r.base; if(r.extra&&(!overallExtra||r.extra>overallExtra)) overallExtra=r.extra; });
+  return {rows:rows,overallBase:overallBase,overallExtra:overallExtra,overallDaysGained:(overallBase&&overallExtra)?daysBetweenCalendar(overallExtra,overallBase):null,extraHours:extraHours};
+}
+window.cpSimulateOvertime=function(){
+  var extra=Number($id('extraHoursInput').value)||0;
+  if(extra<=0){ $id('overtimeResult').innerHTML='<p class="muted">Informe um valor de hora extra maior que zero.</p>'; return; }
+  var r=computeOvertimeScenario(extra);
+  if(!r.rows.length){ $id('overtimeResult').innerHTML='<p class="muted">Nenhum item elegível na fila ainda.</p>'; return; }
+  var head='<tr><th>Iniciativa</th><th>Squad</th><th>Sem hora extra</th><th>Com +'+extra+'h/dia</th><th>Dias ganhos</th></tr>';
+  var rows=r.rows.map(function(row){
+    return '<tr><td>'+esc(initiativeLabel(row.initiativeId))+'</td><td>'+esc(row.squad)+'</td><td>'+fmtDateBR(row.base)+'</td><td>'+fmtDateBR(row.extra)+'</td><td>'+(row.daysGained!=null?row.daysGained+' dia(s)':'—')+'</td></tr>';
+  }).join('');
+  var summary='<div class="kpi" style="margin-bottom:10px"><div class="lbl">Geral (todos os squads/iniciativas)</div><div class="val">'+(r.overallDaysGained!=null?r.overallDaysGained+' dia(s) ganho(s)':'—')+'</div><div class="sub">'+fmtDateBR(r.overallBase)+' → '+fmtDateBR(r.overallExtra)+' com +'+extra+'h/dia, mantendo os devs baseline de cada squad</div></div>';
+  $id('overtimeResult').innerHTML=summary+'<div class="tbl-wrap"><table><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>';
+};
 
 /* ---- Bloqueios tab ---- */
 function renderBloqueiosTab(){
@@ -1245,6 +1311,8 @@ function renderConfigTab(){
     return '<label style="display:inline-flex;align-items:center;gap:6px;margin:4px 12px 4px 0"><input type="checkbox" data-term-status="'+esc(st)+'" '+(checked?'checked':'')+'> '+esc(st)+'</label>';
   }).join(''):'<p class="muted">Importe itens para listar os status existentes.</p>';
 }
+window.cpOpenConfig=function(){ renderConfigTab(); $id('configModal').classList.add('on'); };
+window.cpCloseConfig=function(){ $id('configModal').classList.remove('on'); };
 window.cpAddEffRow=function(){ state.config.efficiencyCurve.push({minDev:1,maxDev:1,pct:100}); renderConfigTab(); };
 window.cpRemoveEffRow=function(i){ state.config.efficiencyCurve.splice(i,1); renderConfigTab(); };
 
@@ -1356,10 +1424,10 @@ function cpExportExcel(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aba2),'Bloqueados');
 
   // Aba 3 — Fila detalhada (formato largo)
-  var aba3Head=['Chave Jira','Iniciativa','Squad','Horas'].concat(s.Ns.map(function(n){return 'Data entrega (N='+n+')';}));
+  var aba3Head=['Chave Jira','Iniciativa','Squad','Horas','Prioridade manual'].concat(s.Ns.map(function(n){return 'Data entrega (N='+n+')';}));
   var aba3=[aba3Head];
   s.perItem.forEach(function(pi){
-    aba3.push([pi.id,initiativeLabel(pi.initiativeId),pi.squad,pi.hours].concat(s.Ns.map(function(n){return pi.datesByN[n]?fmtDateBR(pi.datesByN[n]):'';})));
+    aba3.push([pi.id,initiativeLabel(pi.initiativeId),pi.squad,pi.hours,pi.manualPriority?'Sim':''].concat(s.Ns.map(function(n){return pi.datesByN[n]?fmtDateBR(pi.datesByN[n]):'';})));
   });
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aba3),'Fila detalhada');
 
@@ -1390,7 +1458,7 @@ window.cpSaveConfigForm=cpSaveConfigForm;
 cpRecalcAndRender();
 
 // Debug/test hook — read-only introspection for the calc engine, no UI impact.
-window.__cpDebug={getState:function(){return state;},computeScenarios:computeScenarios,estimateHoursForItem:estimateHoursForItem,classifyItem:classifyItem,buildSquadQueues:buildSquadQueues,dateForCumHours:dateForCumHours,addBusinessDaysInclusive:addBusinessDaysInclusive,capDaily:capDaily,effFactor:effFactor,computeTargetPlan:computeTargetPlan,computeRefinementDeadlines:computeRefinementDeadlines,buildIniciativaAnalysis:buildIniciativaAnalysis,sprintIndexForDate:sprintIndexForDate,sprintWindow:sprintWindow,isTransbordoRisk:isTransbordoRisk,sprintBizDaysPerSprint:sprintBizDaysPerSprint,detectPatterns:detectPatterns};
+window.__cpDebug={getState:function(){return state;},computeScenarios:computeScenarios,estimateHoursForItem:estimateHoursForItem,classifyItem:classifyItem,buildSquadQueues:buildSquadQueues,dateForCumHours:dateForCumHours,addBusinessDaysInclusive:addBusinessDaysInclusive,capDaily:capDaily,effFactor:effFactor,computeTargetPlan:computeTargetPlan,computeRefinementDeadlines:computeRefinementDeadlines,buildIniciativaAnalysis:buildIniciativaAnalysis,sprintIndexForDate:sprintIndexForDate,sprintWindow:sprintWindow,isTransbordoRisk:isTransbordoRisk,sprintBizDaysPerSprint:sprintBizDaysPerSprint,detectPatterns:detectPatterns,computeOvertimeScenario:computeOvertimeScenario};
 })();
 </script>
 </body>
