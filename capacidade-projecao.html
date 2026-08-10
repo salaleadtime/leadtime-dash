@@ -103,6 +103,7 @@ canvas{max-width:100%}
     <button class="tab-btn" data-tab="risco">5. Risco cruzado</button>
     <button class="tab-btn" data-tab="status">6. Histórias × Status</button>
     <button class="tab-btn" data-tab="config">7. Configuração</button>
+    <button class="tab-btn" data-tab="alvo">8. Data Alvo</button>
     <button class="tab-btn" data-tab="executivo">Modo Executivo</button>
   </div>
 
@@ -266,6 +267,15 @@ canvas{max-width:100%}
         <label class="field">Aging alto = mais de X dias úteis sem atualização
           <input type="number" id="cfgAgingDays" min="1">
         </label>
+        <label class="field">Duração da sprint (dias corridos)
+          <input type="number" id="cfgSprintLen" min="1">
+        </label>
+        <label class="field">Início da sprint atual (âncora p/ numerar sprints)
+          <input type="date" id="cfgSprintAnchor">
+        </label>
+        <label class="field">Janela de prontidão p/ "Gap de refinamento" (nº de sprints)
+          <input type="number" id="cfgReadinessWindow" min="1">
+        </label>
       </div>
       <h3>Devs atuais por squad (baseline "hoje" para calcular dias antecipados)</h3>
       <div id="baselineRows"></div>
@@ -275,6 +285,23 @@ canvas{max-width:100%}
       <h3>Status considerados "concluído" (saem do cálculo, mesmo já refinados)</h3>
       <div id="terminalStatusRows"></div>
       <div style="margin-top:16px"><button class="btn primary" onclick="cpSaveConfigForm()">Salvar configuração</button></div>
+    </div>
+  </section>
+
+  <!-- 8. DATA ALVO -->
+  <section class="panel" id="p-alvo">
+    <div class="card">
+      <h2>Data alvo por iniciativa</h2>
+      <p class="muted">Defina quando você quer entregar todas as histórias de uma iniciativa (passando por dev e homologação) e o motor calcula: se a data é viável só com o que já está elegível, se depende de refinar histórias a tempo, se depende de mais devs, e até quantos dias antes de cada história precisar entrar na fila ela tem que estar refinada. Números derivados do mesmo motor de fila validado nas abas 3/4 — "probabilidade" aqui é uma heurística de 5 faixas baseada em quais alavancas resolvem a data (refino / devs / nenhuma), não uma estatística.</p>
+      <div class="grid cols-2" id="alvoKpis" style="margin:10px 0"></div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table id="alvoTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>Prazo de refinamento por história (detalhe)</h3>
+      <p class="muted">Para cada iniciativa com histórias bloqueadas por refinamento: a data em que aquela história "entraria na fila" do squad se já estivesse refinada — ou seja, o prazo pra refinar antes de virar gargalo. Assume que os itens bloqueados vão para o fim da fila atual do squad (elegíveis primeiro), com os devs baseline configurados.</p>
+      <div id="alvoDeadlines"></div>
     </div>
   </section>
 
@@ -311,7 +338,8 @@ function defaultConfig(){
     nextRefinementDate:'',
     baselineDevsBySquad:{}, defaultBaselineDevs:2,
     efficiencyCurve:[{minDev:1,maxDev:2,pct:100},{minDev:3,maxDev:3,pct:90},{minDev:4,maxDev:4,pct:80},{minDev:5,maxDev:99,pct:70}],
-    terminalStatuses:[]
+    terminalStatuses:[],
+    sprintLengthDays:14, sprintAnchorDate:todayISO(), readinessSprintsWindow:2
   };
 }
 
@@ -326,10 +354,11 @@ function loadState(){
       p.items=p.items||{}; p.meta=p.meta||{};
       p.discovery=p.discovery||{initiatives:[]};
       p.importedAt=p.importedAt||{ops4ops:null,discovery:null};
+      p.targetDates=p.targetDates||{};
       return p;
     }
   }catch(e){}
-  return {items:{},meta:{},discovery:{initiatives:[]},config:defaultConfig(),importedAt:{ops4ops:null,discovery:null}};
+  return {items:{},meta:{},discovery:{initiatives:[]},config:defaultConfig(),importedAt:{ops4ops:null,discovery:null},targetDates:{}};
 }
 function saveState(){
   try{ localStorage.setItem(LS_STATE,JSON.stringify(state)); }
@@ -617,7 +646,7 @@ function cpLoadSampleData(){
 function cpClearAll(){
   if(!confirm('Apagar todos os dados salvos localmente desta ferramenta (itens, metadados manuais, config, snapshots)?')) return;
   Object.keys(localStorage).forEach(function(k){ if(k.indexOf('capproj_v2_')===0) localStorage.removeItem(k); });
-  state={items:{},meta:{},discovery:{initiatives:[]},config:defaultConfig(),importedAt:{ops4ops:null,discovery:null}};
+  state={items:{},meta:{},discovery:{initiatives:[]},config:defaultConfig(),importedAt:{ops4ops:null,discovery:null},targetDates:{}};
   cpRecalcAndRender();
   toast('Dados apagados','Estado local reiniciado.');
 }
@@ -735,6 +764,188 @@ function computeScenarios(){
   return {Ns:Ns,cfg:cfg,perItem:perItem,groups:groups,overallByN:overallByN,elegivel:cls.elegivel,bloqueio_refino:cls.bloqueio_refino,bloqueio_impedimento:cls.bloqueio_impedimento,concluido:cls.concluido,semDadosSuficientes:cls.elegivel.filter(function(e){return e.semDadosSuficientes;})};
 }
 
+/* ===================== Sprint helpers (parametrizado: sprint de N dias corridos) ===================== */
+function sprintBizDaysPerSprint(cfg){
+  var anchor=parseLocalDate(cfg.sprintAnchorDate||todayISO());
+  var len=cfg.sprintLengthDays||14;
+  if(!anchor) return Math.round(len*5/7)||1;
+  var end=new Date(anchor); end.setDate(end.getDate()+len-1);
+  var n=0,d=new Date(anchor);
+  while(d<=end){ if(isBusinessDay(d)) n++; d.setDate(d.getDate()+1); }
+  return n||1;
+}
+function sprintIndexForDate(iso,cfg){
+  var anchor=parseLocalDate(cfg.sprintAnchorDate||todayISO()), d=parseLocalDate(iso);
+  if(!anchor||!d) return null;
+  var diffDays=Math.floor((d-anchor)/86400000);
+  return Math.floor(diffDays/(cfg.sprintLengthDays||14))+1;
+}
+function sprintWindow(index,cfg){
+  var anchor=parseLocalDate(cfg.sprintAnchorDate||todayISO()), len=cfg.sprintLengthDays||14;
+  var start=new Date(anchor); start.setDate(start.getDate()+(index-1)*len);
+  var end=new Date(start); end.setDate(end.getDate()+len-1);
+  return {start:isoFromDate(start),end:isoFromDate(end)};
+}
+// Risco de transbordo: a data calculada cai nos últimos 2 dias úteis da sprint em que ela aterrissa —
+// pouca folga antes da virada, então uma variação pequena de estimativa já joga pra sprint seguinte.
+function isTransbordoRisk(iso,cfg){
+  var idx=sprintIndexForDate(iso,cfg); if(idx==null) return false;
+  var win=sprintWindow(idx,cfg);
+  var d=parseLocalDate(win.end), count=0, flagFrom=null;
+  while(d&&count<2){ if(isBusinessDay(d)){ flagFrom=isoFromDate(d); count++; } d.setDate(d.getDate()-1); }
+  return flagFrom?iso>=flagFrom:false;
+}
+
+/* ===================== Planejamento por data alvo (seção "3 — data target" do briefing) ===================== */
+function initiativeIds(){ return Array.from(new Set(allItemsArr().map(function(it){return it.initiativeId;}).filter(Boolean))); }
+
+function baselineNForSquad(sq,cfg){ return cfg.baselineDevsBySquad[sq]!=null?cfg.baselineDevsBySquad[sq]:cfg.defaultBaselineDevs; }
+
+function computeTargetPlan(){
+  var cfg=state.config, cls=computeClassification();
+  var queues=buildSquadQueues(cls.elegivel);
+  var from=todayISO();
+  var ceiling=cfg.devCeiling||8;
+  var sprintBiz=sprintBizDaysPerSprint(cfg);
+
+  // ---- Gap de refinamento: quantas histórias faltam refinar pra cobrir os próximos N sprints, por squad ----
+  var squads=Array.from(new Set(allItemsArr().map(function(it){return it.squad||'Sem squad';})));
+  var refinoBySquad={};
+  cls.bloqueio_refino.forEach(function(e){ var sq=e.item.squad||'Sem squad'; (refinoBySquad[sq]=refinoBySquad[sq]||[]).push(e); });
+  Object.keys(refinoBySquad).forEach(function(sq){ refinoBySquad[sq].sort(function(a,b){return a.item.id<b.item.id?-1:1;}); });
+
+  var gapBySquad={}, totalGapStories=0;
+  squads.forEach(function(sq){
+    var N=baselineNForSquad(sq,cfg);
+    var neededHours=capDaily(N,cfg)*sprintBiz*(cfg.readinessSprintsWindow||2);
+    var availableHours=(queues[sq]&&queues[sq].length)?queues[sq][queues[sq].length-1].cumHours:0;
+    var gapHours=Math.max(0,neededHours-availableHours);
+    var list=refinoBySquad[sq]||[];
+    var acc=0,count=0;
+    for(var i=0;i<list.length&&acc<gapHours;i++){ var h=list[i].hours; if(h==null) continue; acc+=h; count++; }
+    gapBySquad[sq]={neededHours:neededHours,availableHours:availableHours,gapHours:gapHours,storiesNeeded:count,insufficient:gapHours>0&&acc<gapHours};
+    totalGapStories+=count;
+  });
+
+  // ---- Plano por iniciativa: viável com o que já está elegível? só refinando? só ampliando? os dois? nada no teto? ----
+  var rows=initiativeIds().map(function(iniId){
+    var iniItems=allItemsArr().filter(function(it){return it.initiativeId===iniId;});
+    var squadsInvolved=Array.from(new Set(iniItems.map(function(it){return it.squad||'Sem squad';})));
+    var concluidas=iniItems.filter(function(it){return isTerminalStatus(it.status,cfg.terminalStatuses);}).length;
+    var elegiveis=cls.elegivel.filter(function(e){return e.item.initiativeId===iniId;}).length;
+    var refinoItems=cls.bloqueio_refino.filter(function(e){return e.item.initiativeId===iniId;});
+    var impedItems=cls.bloqueio_impedimento.filter(function(e){return e.item.initiativeId===iniId;});
+
+    // Data de conclusão da iniciativa assumindo N devs por squad (Nfor pode ser número fixo ou função(sq)->N).
+    // Bloqueados por refino entram no fim da fila (elegíveis do squad inteiro primeiro) quando includeRefino=true.
+    function dateAtN(Nfor,includeRefino){
+      var max=null;
+      squadsInvolved.forEach(function(sq){
+        var refinoHere=refinoItems.filter(function(e){return (e.item.squad||'Sem squad')===sq;});
+        var elegivelHereCount=cls.elegivel.filter(function(e){return e.item.initiativeId===iniId&&(e.item.squad||'Sem squad')===sq;}).length;
+        // Sem item elegível (nem, no passo estendido, bloqueado por refino) desta iniciativa nesse squad:
+        // não existe sinal de conclusão pra projetar aqui — só impedimento resolve, não é data de fila.
+        if(elegivelHereCount===0&&!(includeRefino&&refinoHere.length)) return;
+        var cum=(queues[sq]&&queues[sq].length)?queues[sq][queues[sq].length-1].cumHours:0;
+        if(includeRefino){
+          refinoHere.slice().sort(function(a,b){return a.item.id<b.item.id?-1:1;})
+            .forEach(function(e){ if(e.hours!=null) cum+=e.hours; });
+        }
+        var N=typeof Nfor==='function'?Nfor(sq):Nfor;
+        var d=dateForCumHours(Math.max(cum,0.0001),N,cfg,from);
+        if(d&&(!max||d>max)) max=d;
+      });
+      return max;
+    }
+
+    var baselineFn=function(sq){ return baselineNForSquad(sq,cfg); };
+    var elegivelOnlyBaseline=dateAtN(baselineFn,false);
+    var extendedBaseline=dateAtN(baselineFn,true);
+
+    var target=state.targetDates[iniId]||'';
+    var prob=null, decision='Defina uma data alvo', minNElegivelOnly=null, minNExtended=null;
+
+    if(target){
+      if(elegivelOnlyBaseline&&elegivelOnlyBaseline<=target){ prob=100; decision='Dentro do prazo'; }
+      else if(extendedBaseline&&extendedBaseline<=target){ prob=80; decision='Refinar antes de ampliar'; }
+      else{
+        for(var N=1;N<=ceiling&&minNElegivelOnly==null;N++){ var d=dateAtN(N,false); if(d&&d<=target) minNElegivelOnly=N; }
+        for(var N2=1;N2<=ceiling&&minNExtended==null;N2++){ var d2=dateAtN(N2,true); if(d2&&d2<=target) minNExtended=N2; }
+        if(minNElegivelOnly!=null){ prob=60; decision='Ampliar o time (sem refino extra)'; }
+        else if(minNExtended!=null){ prob=40; decision='Refinar e ampliar'; }
+        else{ prob=0; decision='Meta inviável no teto atual ('+ceiling+' devs)'; }
+      }
+    }
+
+    return {
+      initiativeId:iniId, name:initiativeName(iniId), squads:squadsInvolved,
+      concluidas:concluidas, elegiveis:elegiveis, refinoCount:refinoItems.length, impedCount:impedItems.length,
+      target:target, projected:elegivelOnlyBaseline||extendedBaseline||null, probability:prob, decision:decision,
+      minNElegivelOnly:minNElegivelOnly, minNExtended:minNExtended
+    };
+  });
+
+  return {rows:rows,gapBySquad:gapBySquad,totalGapStories:totalGapStories,sprintBiz:sprintBiz};
+}
+
+// Prazo de refinamento por história: a data em que a fila do squad (só elegíveis, na frente dela) chegaria
+// na vez dela — ou seja, o prazo pra ela estar refinada antes de virar o item que está segurando o squad ocioso.
+function computeRefinementDeadlines(iniId){
+  var cfg=state.config, cls=computeClassification();
+  var queues=buildSquadQueues(cls.elegivel);
+  var from=todayISO();
+  var refinoItems=cls.bloqueio_refino.filter(function(e){return e.item.initiativeId===iniId;});
+  var bySquad={};
+  refinoItems.forEach(function(e){ var sq=e.item.squad||'Sem squad'; (bySquad[sq]=bySquad[sq]||[]).push(e); });
+  var rows=[];
+  Object.keys(bySquad).forEach(function(sq){
+    var list=bySquad[sq].slice().sort(function(a,b){return a.item.id<b.item.id?-1:1;});
+    var N=baselineNForSquad(sq,cfg);
+    var cum=(queues[sq]&&queues[sq].length)?queues[sq][queues[sq].length-1].cumHours:0;
+    list.forEach(function(e){
+      var turnStart=cum;
+      var deadline=e.hours!=null?dateForCumHours(Math.max(turnStart,0.0001),N,cfg,from):null;
+      if(e.hours!=null) cum+=e.hours;
+      rows.push({id:e.item.id,squad:sq,hours:e.hours,deadline:deadline,transbordo:deadline?isTransbordoRisk(deadline,cfg):false,sprintIndex:deadline?sprintIndexForDate(deadline,cfg):null});
+    });
+  });
+  return rows;
+}
+
+function buildIniciativaAnalysis(iniId,planRow,patternsResult){
+  var cls=computeClassification();
+  var refino=cls.bloqueio_refino.filter(function(e){return e.item.initiativeId===iniId;});
+  var imped=cls.bloqueio_impedimento.filter(function(e){return e.item.initiativeId===iniId;});
+  var elegivel=cls.elegivel.filter(function(e){return e.item.initiativeId===iniId;});
+  var parts=[];
+
+  if(refino.length) parts.push(refino.length+' história(s) bloqueada(s) por refinamento — aumentar o número de devs não muda a data de nenhuma delas até serem refinadas.');
+  if(imped.length){
+    var owners=Array.from(new Set(imped.filter(function(e){return e.meta.impedDono;}).map(function(e){return e.meta.impedDono;})));
+    parts.push(imped.length+' história(s) travada(s) por impedimento'+(owners.length?' (depende de '+owners.join(', ')+')':'')+' — independe de headcount.');
+  }
+  if(!refino.length&&!imped.length&&elegivel.length) parts.push('Todas as '+elegivel.length+' história(s) elegível(is) estão livres pra entrar na fila de devs.');
+
+  var disc=(state.discovery.initiatives||[]).find(function(i){return i.initiativeId===iniId;});
+  if(disc){
+    disc.raids.filter(function(r){return normStr(r.status)!=='resolvido'&&normStr(r.status)!=='fechado'&&normStr(r.status)!=='closed';})
+      .forEach(function(r){ parts.push('Risco Discovery: '+r.description+(r.owner?' (dono: '+r.owner+')':'')+'.'); });
+  }
+
+  (patternsResult&&patternsResult.risks||[]).filter(function(r){return r.initiativeId===iniId;})
+    .forEach(function(r){ parts.push('Padrão detectado: '+r.text); });
+
+  if(planRow&&planRow.target){
+    if(planRow.probability===100) parts.push('Meta de '+fmtDateBR(planRow.target)+' batida com a fila atual — projeção em '+fmtDateBR(planRow.projected)+'.');
+    else if(planRow.probability===80) parts.push('Meta de '+fmtDateBR(planRow.target)+' só é batida se as histórias bloqueadas por refinamento forem refinadas a tempo — o número de devs atual já é suficiente.');
+    else if(planRow.probability===60) parts.push('Só refinar não basta pra bater '+fmtDateBR(planRow.target)+' — precisa de pelo menos '+planRow.minNElegivelOnly+' dev(s) no(s) squad(s) envolvido(s).');
+    else if(planRow.probability===40) parts.push('Só bate '+fmtDateBR(planRow.target)+' refinando a tempo E ampliando pra '+planRow.minNExtended+' dev(s).');
+    else if(planRow.probability===0) parts.push('Meta de '+fmtDateBR(planRow.target)+' não é alcançável nem no teto de devs configurado, mesmo com tudo refinado a tempo — revisar escopo ou prazo.');
+  }
+
+  return parts.length?parts.join(' '):'Sem dados suficientes para análise (importe itens e preencha início/horas).';
+}
+
 /* ===================== Risk pattern engine (squad-agnostic) ===================== */
 function detectPatterns(){
   var cfg=state.config, items=allItemsArr(), threshold=cfg.patternThreshold||3, risks=[];
@@ -797,6 +1008,7 @@ function cpRecalcAndRender(){
   renderRiscoTab();
   renderStatusTab();
   renderConfigTab();
+  renderAlvoTab();
 }
 
 function initiativeName(id){
@@ -937,6 +1149,8 @@ function renderRiscoTab(){
   var byIniciativa={};
   allItemsArr().forEach(function(it){ if(it.initiativeId){ (byIniciativa[it.initiativeId]=byIniciativa[it.initiativeId]||[]).push(it); } });
   var iniIds=Array.from(new Set((state.discovery.initiatives||[]).map(function(i){return i.initiativeId;}).concat(Object.keys(byIniciativa))));
+  var plan=computeTargetPlan();
+  var planById={}; plan.rows.forEach(function(r){planById[r.initiativeId]=r;});
 
   var cross=iniIds.map(function(id){
     var disc=(state.discovery.initiatives||[]).find(function(i){return i.initiativeId===id;});
@@ -946,6 +1160,7 @@ function renderRiscoTab(){
     var cls=opsItems.reduce(function(acc,it){
       var meta=state.meta[it.id]||{}; var c=classifyItem(it,meta,state.config); acc[c]=(acc[c]||0)+1; return acc;
     },{});
+    var analysis=buildIniciativaAnalysis(id,planById[id],patterns);
     return '<div class="risk-card">'+
       '<h4>'+esc(initiativeLabel(id))+'</h4>'+
       '<div class="pill-row">'+
@@ -954,6 +1169,7 @@ function renderRiscoTab(){
         '<span class="badge-pill b-red">'+(cls.bloqueio_impedimento||0)+' bloq. impedimento</span>'+
         '<span class="badge-pill b-muted">'+(cls.concluido||0)+' concluídos</span>'+
       '</div>'+
+      '<div class="muted" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--navy-border)"><b>Análise:</b> '+esc(analysis)+'</div>'+
       (raidsActive.length?raidsActive.map(function(r){return '<div class="raid-item"><b>'+esc(r.description)+'</b><br>Dono: '+esc(r.owner||'—')+' · Status: '+esc(r.status)+(r.since?' · desde '+fmtDateBR(r.since):'')+'</div>';}).join('')
         :'<p class="muted" style="margin:6px 0 0">Nenhum RAID ativo importado do Discovery para esta iniciativa.</p>')+
       '</div>';
@@ -1008,6 +1224,9 @@ function renderConfigTab(){
   $id('cfgHoursSprint').value=cfg.hoursPerSprint;
   $id('cfgPatternThreshold').value=cfg.patternThreshold;
   $id('cfgAgingDays').value=cfg.agingThresholdDays;
+  $id('cfgSprintLen').value=cfg.sprintLengthDays;
+  $id('cfgSprintAnchor').value=cfg.sprintAnchorDate;
+  $id('cfgReadinessWindow').value=cfg.readinessSprintsWindow;
 
   var squads=Array.from(new Set(allItemsArr().map(function(it){return it.squad||'Sem squad';})));
   $id('baselineRows').innerHTML=squads.length?squads.map(function(sq){
@@ -1037,6 +1256,9 @@ function cpSaveConfigForm(){
   cfg.hoursPerSprint=Number($id('cfgHoursSprint').value)||80;
   cfg.patternThreshold=Math.max(1,Number($id('cfgPatternThreshold').value)||3);
   cfg.agingThresholdDays=Math.max(1,Number($id('cfgAgingDays').value)||5);
+  cfg.sprintLengthDays=Math.max(1,Number($id('cfgSprintLen').value)||14);
+  cfg.sprintAnchorDate=$id('cfgSprintAnchor').value||todayISO();
+  cfg.readinessSprintsWindow=Math.max(1,Number($id('cfgReadinessWindow').value)||2);
 
   cfg.baselineDevsBySquad={};
   document.querySelectorAll('#baselineRows [data-squad]').forEach(function(inp){
@@ -1059,6 +1281,49 @@ function cpSaveConfigForm(){
   cpRecalcAndRender();
   toast('Configuração salva','O motor de cálculo foi recalculado com os novos parâmetros.');
 }
+
+/* ---- Data Alvo tab ---- */
+function renderAlvoTab(){
+  var plan=computeTargetPlan();
+  var viavelCount=plan.rows.filter(function(r){return r.probability!=null&&r.probability>=80;}).length;
+
+  $id('alvoKpis').innerHTML=
+    '<div class="kpi"><div class="lbl">Plano viável</div><div class="val">'+viavelCount+'</div><div class="sub">iniciativa(s) com data alvo definida e probabilidade ≥ 80% de cumprir</div></div>'+
+    '<div class="kpi"><div class="lbl">Gap de refinamento</div><div class="val">'+plan.totalGapStories+'</div><div class="sub">história(s) a refinar pra cobrir os próximos '+state.config.readinessSprintsWindow+' sprint(s) de capacidade, somando todos os squads</div></div>';
+
+  var head='<tr><th>Iniciativa</th><th>Squad(s)</th><th>Concluídas</th><th>Elegíveis</th><th>Bloq. refino</th><th>Bloq. impedimento</th><th>Target manual</th><th>Conclusão projetada</th><th>Probabilidade</th><th>Decisão</th></tr>';
+  var rows=plan.rows.map(function(r){
+    var probBadge=r.probability==null?'<span class="badge-pill b-muted">—</span>':
+      '<span class="badge-pill '+(r.probability>=80?'b-green':r.probability>=40?'b-yellow':'b-red')+'">'+r.probability+'%</span>';
+    return '<tr><td>'+esc(initiativeLabel(r.initiativeId))+'</td><td>'+esc(r.squads.join(', '))+'</td><td>'+r.concluidas+'</td><td>'+r.elegiveis+'</td><td>'+r.refinoCount+'</td><td>'+r.impedCount+'</td>'+
+      '<td><input type="date" class="date-input" value="'+esc(r.target)+'" onchange="cpSetTargetDate(\''+esc(r.initiativeId)+'\',this.value)"></td>'+
+      '<td>'+fmtDateBR(r.projected)+'</td><td>'+probBadge+'</td><td><b>'+esc(r.decision)+'</b></td></tr>';
+  }).join('');
+  var tbl=$id('alvoTable');
+  tbl.querySelector('thead').innerHTML=head;
+  tbl.querySelector('tbody').innerHTML=rows||'<tr><td colspan="10" class="muted">Nenhuma iniciativa identificada ainda — importe itens com rótulo #ID_iniciativa.</td></tr>';
+
+  var gapPart=Object.keys(plan.gapBySquad).map(function(sq){
+    var g=plan.gapBySquad[sq];
+    if(g.gapHours<=0) return '';
+    return '<div class="risk-card"><h4>Squad '+esc(sq)+'</h4><div>Precisa de '+Math.round(g.neededHours)+'h pros próximos '+state.config.readinessSprintsWindow+' sprint(s) (com o baseline de devs configurado), tem '+Math.round(g.availableHours)+'h já elegíveis — gap de '+Math.round(g.gapHours)+'h ≈ '+g.storiesNeeded+' história(s) a refinar'+(g.insufficient?' <span class="badge-pill b-red">backlog de refino insuficiente pra cobrir o gap</span>':'')+'.</div></div>';
+  }).filter(Boolean).join('');
+  if(gapPart) gapPart='<h3>Gap de refinamento por squad</h3>'+gapPart;
+
+  var deadlinesPart=plan.rows.filter(function(r){return r.refinoCount>0;}).map(function(r){
+    var deadlines=computeRefinementDeadlines(r.initiativeId);
+    var dRows=deadlines.map(function(d){
+      return '<tr><td>'+esc(d.id)+'</td><td>'+esc(d.squad)+'</td><td>'+(d.hours!=null?d.hours+'h':'<span class="badge-pill b-yellow">sem estimativa</span>')+'</td>'+
+        '<td>'+(d.deadline?fmtDateBR(d.deadline):'—')+'</td><td>'+(d.sprintIndex!=null?'Sprint '+d.sprintIndex:'—')+'</td>'+
+        '<td>'+(d.transbordo?'<span class="badge-pill b-yellow">risco de transbordo</span>':'')+'</td></tr>';
+    }).join('');
+    return '<div class="block-card refino"><h4>'+esc(initiativeLabel(r.initiativeId))+'</h4>'+
+      '<div class="tbl-wrap"><table><thead><tr><th>Chave</th><th>Squad</th><th>Horas</th><th>Refinar até</th><th>Sprint</th><th>Risco</th></tr></thead><tbody>'+dRows+'</tbody></table></div></div>';
+  }).join('');
+
+  $id('alvoDeadlines').innerHTML=(gapPart+deadlinesPart)||'<p class="muted">Nenhuma história bloqueada por refinamento no momento.</p>';
+}
+window.cpSetTargetDate=function(id,val){ state.targetDates[id]=val; saveState(); renderAlvoTab(); renderRiscoTab(); };
 
 /* ===================== Excel export (SheetJS, 3 abas) ===================== */
 function cpExportExcel(){
@@ -1125,7 +1390,7 @@ window.cpSaveConfigForm=cpSaveConfigForm;
 cpRecalcAndRender();
 
 // Debug/test hook — read-only introspection for the calc engine, no UI impact.
-window.__cpDebug={getState:function(){return state;},computeScenarios:computeScenarios,estimateHoursForItem:estimateHoursForItem,classifyItem:classifyItem,buildSquadQueues:buildSquadQueues,dateForCumHours:dateForCumHours,addBusinessDaysInclusive:addBusinessDaysInclusive,capDaily:capDaily,effFactor:effFactor};
+window.__cpDebug={getState:function(){return state;},computeScenarios:computeScenarios,estimateHoursForItem:estimateHoursForItem,classifyItem:classifyItem,buildSquadQueues:buildSquadQueues,dateForCumHours:dateForCumHours,addBusinessDaysInclusive:addBusinessDaysInclusive,capDaily:capDaily,effFactor:effFactor,computeTargetPlan:computeTargetPlan,computeRefinementDeadlines:computeRefinementDeadlines,buildIniciativaAnalysis:buildIniciativaAnalysis,sprintIndexForDate:sprintIndexForDate,sprintWindow:sprintWindow,isTransbordoRisk:isTransbordoRisk,sprintBizDaysPerSprint:sprintBizDaysPerSprint,detectPatterns:detectPatterns};
 })();
 </script>
 </body>
