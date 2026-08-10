@@ -150,7 +150,11 @@ canvas{max-width:100%}
     <div class="card">
       <h2>Estado local</h2>
       <p class="muted">Os dados desta ferramenta ficam salvos só neste navegador (localStorage) — é uma ferramenta de simulação pessoal, não um painel compartilhado entre usuários. Snapshots diários também ficam salvos localmente (<code>capproj_v2_snapshot_AAAA-MM-DD</code>) para reconstruir cycle time real quando houver histórico suficiente (seção 3.7 do briefing) — ainda não usados no cálculo.</p>
-      <button class="btn ghost" onclick="cpClearAll()">Limpar todos os dados desta ferramenta</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="cpLoadSampleData()">▶ Carregar dados de exemplo (ver a ferramenta funcionando)</button>
+        <button class="btn ghost" onclick="cpClearAll()">Limpar todos os dados desta ferramenta</button>
+      </div>
+      <p class="help">Dados fictícios — inclui exatamente o exemplo numérico da seção 3.6 do briefing (squad Contact), um bloqueio por refinamento, um bloqueio por impedimento cruzado com um RAID de exemplo do Discovery, e itens com aging alto pra ilustrar o motor de padrões. Substitui os dados atuais desta ferramenta.</p>
     </div>
   </section>
 
@@ -538,6 +542,76 @@ function cpDownloadDiscoverySample(){
   var sample=[{initiativeId:'98434',name:'Nome da iniciativa',raids:[{description:'DATI atrasado entregando Solution Design',owner:'DATI',status:'aberto',severity:'alto',since:todayISO()}]}];
   var blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='discovery-exemplo.json'; a.click();
+}
+
+function relDate(offsetDays){ var d=new Date(); d.setDate(d.getDate()+offsetDays); return isoFromDate(d); }
+
+function cpLoadSampleData(){
+  if(Object.keys(state.items).length&&!confirm('Isso substitui os dados atuais desta ferramenta por dados de exemplo. Continuar?')) return;
+
+  state.items={}; state.meta={};
+
+  // Squad Contact — reproduz exatamente o exemplo numérico da seção 3.6 do briefing.
+  var contactItems=[
+    {id:'SLOPC-41232',squad:'Contact',status:'Em Desenvolvimento',resumo:'Ajuste de fluxo de retenção — etapa 1',labels:'Refinada, #98434',sprint:'Sprint 14',hours:16,dataInicioDev:relDate(-6)},
+    {id:'SLOPC-41894',squad:'Contact',status:'Em Desenvolvimento',resumo:'Ajuste de fluxo de retenção — etapa 2',labels:'Refinada, #98434',sprint:'Sprint 14',hours:12,dataInicioDev:relDate(-4)},
+    {id:'SLOPC-41893',squad:'Contact',status:'Em Desenvolvimento',resumo:'Integração de discador — validação',labels:'Refinada, #98434',sprint:'Sprint 14',hours:12,dataInicioDev:relDate(-2)},
+    {id:'SLOPC-41812',squad:'Contact',status:'Product Backlog',resumo:'Relatório de abandono de chamada',labels:'Refinada, #98434',sprint:'Sprint 15',hours:24,dataPrevistaInicio:relDate(7)},
+    {id:'SLOPC-42092',squad:'Contact',status:'Product Backlog',resumo:'Ajuste de SLA de retorno de contato',labels:'Refinada, #98434',sprint:'Sprint 15',hours:8,dataPrevistaInicio:relDate(8)},
+    {id:'SLOPC-41892',squad:'Contact',status:'Desenvolvida',resumo:'Correção de timeout no discador',labels:'Refinada, #98434',sprint:'Sprint 13',hours:8}
+  ];
+
+  // Squad Guardiões — bloqueio por refinamento (ação do time/PO).
+  var guardioesItems=[
+    {id:'SLOPC-40011',squad:'Guardiões',status:'Product Backlog',resumo:'Revisão de política de senha',labels:'#116596',sprint:'Sprint 14'},
+    {id:'SLOPC-40012',squad:'Guardiões',status:'Product Backlog',resumo:'Auditoria de acessos privilegiados',labels:'#116596',sprint:'Sprint 14'},
+    {id:'SLOPC-40013',squad:'Guardiões',status:'Selecionado para Grooming',resumo:'Rotina de expurgo de logs',labels:'#116596',sprint:'Sprint 14'}
+  ];
+
+  // Squad Inter — bloqueio por impedimento externo (DATI), cruzado com RAID do Discovery.
+  var interItems=[
+    {id:'SLOPC-39900',squad:'Inter',status:'Em Homologação',resumo:'Portabilidade de conta — desenho de arquitetura',labels:'Refinada, #100000',sprint:'Sprint 13',impedAtivo:true,impedDesde:relDate(-15),impedDono:'DATI',impedDetalhe:'Aguardando Solution Design da DATI para prosseguir'}
+  ];
+
+  // Squad Expresso-1 — sem impedimento formal, mas aging alto (motor de padrões deve sinalizar).
+  var expressoItems=[
+    {id:'SLOPC-38801',squad:'Expresso-1',status:'Em Desenvolvimento',resumo:'Cadastro de subsídio — regra de elegibilidade',labels:'Refinada, #98434',sprint:'Sprint 12, Sprint 13, Sprint 14',atualizado:relDate(-12)},
+    {id:'SLOPC-38802',squad:'Expresso-1',status:'Em Desenvolvimento',resumo:'Cadastro de subsídio — validação de documentos',labels:'Refinada, #98434',sprint:'Sprint 12, Sprint 13',atualizado:relDate(-10)},
+    {id:'SLOPC-38803',squad:'Expresso-1',status:'Product Backlog',resumo:'Cadastro de subsídio — reprocessamento',labels:'Refinada, #98434',sprint:'Sprint 13, Sprint 14',atualizado:relDate(-9)}
+  ];
+
+  contactItems.concat(guardioesItems,interItems,expressoItems).forEach(function(it){
+    state.items[it.id]={
+      id:it.id, squad:it.squad, status:it.status, resumo:it.resumo||'', labels:it.labels||'',
+      initiativeId:extractInitiativeId(it.labels), epic:'', sprint:it.sprint||'',
+      criado:it.criado||relDate(-40), atualizado:it.atualizado||relDate(-1), spFromImport:null
+    };
+    state.meta[it.id]={
+      sp:'', hoursOverride:it.hours!=null?String(it.hours):'', refinedOverride:null,
+      impedAtivo:!!it.impedAtivo, impedDesde:it.impedDesde||'', impedDono:it.impedDono||'', impedDetalhe:it.impedDetalhe||'',
+      dataInicioDev:it.dataInicioDev||'', dataPrevistaInicio:it.dataPrevistaInicio||''
+    };
+  });
+
+  state.discovery.initiatives=[
+    {initiativeId:'98434',name:'Modernização Atendimento Contact',squad:'Contact',raids:[
+      {description:'Volume de chamados de retenção acima do previsto — pode pressionar prazo de homologação',owner:'PO Contact',status:'monitorando',severity:'medio',since:relDate(-20)}
+    ]},
+    {initiativeId:'116596',name:'Guardiões — Reforço de Segurança de Acessos',squad:'Guardiões',raids:[]},
+    {initiativeId:'100000',name:'Portabilidade de Conta',squad:'Inter',raids:[
+      {description:'DATI atrasado entregando Solution Design',owner:'DATI',status:'aberto',severity:'alto',since:relDate(-15)}
+    ]}
+  ];
+
+  state.config.nextRefinementDate=state.config.nextRefinementDate||relDate(5);
+  state.importedAt.ops4ops=new Date().toISOString();
+  state.importedAt.discovery=new Date().toISOString();
+
+  saveState(); saveSnapshotToday();
+  $id('opsImportStatus').textContent='Dados de exemplo carregados em '+new Date().toLocaleString('pt-BR')+'.';
+  $id('discImportStatus').textContent='Dados de exemplo (Discovery) carregados em '+new Date().toLocaleString('pt-BR')+'.';
+  cpRecalcAndRender();
+  toast('Dados de exemplo carregados','Navegue pelas abas 2 a 6 para ver a ferramenta funcionando com esses dados.');
 }
 
 function cpClearAll(){
@@ -1041,6 +1115,7 @@ document.getElementById('tabs').addEventListener('click',function(e){
 window.cpImportOpsFile=cpImportOpsFile;
 window.cpImportOpsPaste=cpImportOpsPaste;
 window.cpAddManualItem=cpAddManualItem;
+window.cpLoadSampleData=cpLoadSampleData;
 window.cpImportDiscovery=cpImportDiscovery;
 window.cpDownloadDiscoverySample=cpDownloadDiscoverySample;
 window.cpClearAll=cpClearAll;
