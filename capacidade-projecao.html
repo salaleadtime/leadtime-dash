@@ -185,7 +185,8 @@ canvas{max-width:100%}
         <h2>Cenários por número de devs <span class="info-ic" data-tip="Roda só sobre itens elegíveis (refinados, sem impedimento ativo, não concluídos). Fila por squad: itens do mesmo squad disputam a mesma capacidade.">ⓘ</span></h2>
         <button class="btn primary" onclick="cpExportExcel()">⬇ Exportar Excel</button>
       </div>
-      <p style="font-size:14px;margin:2px 0 12px"><b>O que essa aba responde:</b> com 1, 2, 3… devs, quando as histórias que já estão prontas pra desenvolver ficam entregues? (as bloqueadas por refino/impedimento não entram aqui — elas estão na aba "4. Bloqueios", porque a resposta pra elas não é "quantos devs".)</p>
+      <p class="help" style="margin:2px 0 10px">Com 1, 2, 3… devs, quando as histórias que já estão prontas pra desenvolver ficam entregues? (as bloqueadas por refino/impedimento não entram aqui — estão na aba "4. Bloqueios", porque a resposta pra elas não é "quantos devs".)</p>
+      <div id="portfolioNarrative"></div>
       <div class="grid cols-4" id="cenKpis" style="margin:10px 0"></div>
       <p class="help" style="margin-bottom:2px">↓ O gráfico mostra quantos dias você antecipa a entrega a cada dev que adiciona — repare que o ganho fica menor conforme aumenta (por isso a curva "acha" um teto).</p>
       <canvas id="cenChart" height="90"></canvas>
@@ -795,6 +796,85 @@ function computeScenarios(){
   return {Ns:Ns,cfg:cfg,perItem:perItem,groups:groups,overallByN:overallByN,elegivel:cls.elegivel,bloqueio_refino:cls.bloqueio_refino,bloqueio_impedimento:cls.bloqueio_impedimento,concluido:cls.concluido,semDadosSuficientes:cls.elegivel.filter(function(e){return e.semDadosSuficientes;})};
 }
 
+// Resumo executivo em 6 linhas (Cenário atual / Principal gargalo / Arquitetura / Impacto / Exemplo /
+// Recomendação) — gerado dos dados carregados, nunca hardcoded pra uma squad/iniciativa específica.
+// Duas evidências independentes decidem "vale a pena adicionar dev agora": (1) que fração do backlog
+// ativo está bloqueada por refino/impedimento (não resolve com headcount), e (2) o ganho marginal real
+// de +1 dev sobre o baseline, na própria tabela de cenários — se o ganho já é pequeno, o gargalo não é
+// capacidade, é fila vazia.
+function buildPortfolioNarrative(){
+  var cfg=state.config, cls=computeClassification();
+  var totalElig=cls.elegivel.length, totalRefino=cls.bloqueio_refino.length, totalImped=cls.bloqueio_impedimento.length;
+  var totalActive=totalElig+totalRefino+totalImped;
+  if(!totalActive) return null;
+
+  var blockedRatio=(totalRefino+totalImped)/totalActive;
+  var scn=computeScenarios();
+  var baselineN=cfg.defaultBaselineDevs||2, nextN=Math.min(baselineN+1,cfg.devCeiling||8);
+  var dateBase=scn.overallByN[baselineN], dateNext=scn.overallByN[nextN];
+  var marginalGainDays=(dateBase&&dateNext)?daysBetweenCalendar(dateNext,dateBase):null;
+
+  var poucoGanho=marginalGainDays!=null&&marginalGainDays<=1;
+  var muitoBloqueio=blockedRatio>=0.3;
+  var naoRecomendado=muitoBloqueio||poucoGanho;
+
+  var cenarioAtual=naoRecomendado
+    ? 'Neste momento, não é recomendada a inclusão de novos desenvolvedores'+(muitoBloqueio?' — '+(totalRefino+totalImped)+' de '+totalActive+' história(s) do backlog ativo ('+Math.round(blockedRatio*100)+'%) está fora da fila por refinamento ou impedimento, não por falta de gente':(poucoGanho?' — de '+baselineN+' pra '+nextN+' dev(s), o ganho projetado é de só '+marginalGainDays+' dia(s), sinal de que o backlog elegível já é pequeno pro squad':''))+'.'
+    : 'Capacidade adicional (mais devs) tende a gerar ganho real agora — '+totalElig+' de '+totalActive+' história(s) do backlog ativo já está pronta pra fila de desenvolvimento'+(marginalGainDays!=null?', e o ganho projetado de '+baselineN+' pra '+nextN+' dev(s) é de '+marginalGainDays+' dia(s)':'')+'.';
+
+  var gargaloTipo=totalRefino===0&&totalImped===0?'nenhum':(totalRefino>=totalImped?'refino':'impedimento');
+  var gargalo;
+  if(gargaloTipo==='refino'){
+    gargalo='Alto volume de histórias ainda sem refinamento ('+totalRefino+' de '+totalActive+'), reduzindo a quantidade de itens prontos para desenvolvimento.';
+  }else if(gargaloTipo==='impedimento'){
+    var owners=Array.from(new Set(cls.bloqueio_impedimento.map(function(e){return e.meta.impedDono;}).filter(Boolean)));
+    gargalo=totalImped+' história(s) travada(s) por impedimento externo'+(owners.length?' (dono principal: '+owners.join(', ')+')':'')+', fora do controle direto do time.';
+  }else{
+    gargalo='Nenhum bloqueio relevante identificado no momento — o backlog ativo está majoritariamente pronto para desenvolvimento.';
+  }
+
+  var allRaids=[];
+  (state.discovery.initiatives||[]).forEach(function(ini){
+    (ini.raids||[]).filter(function(r){return normStr(r.status)!=='resolvido'&&normStr(r.status)!=='fechado'&&normStr(r.status)!=='closed';})
+      .forEach(function(r){ allRaids.push(Object.assign({initiativeId:ini.initiativeId,initiativeName:ini.name},r)); });
+  });
+  var archRaids=allRaids.filter(function(r){ var t=normStr(r.description); return t.indexOf('arquitet')>=0||t.indexOf('solution design')>=0||t.indexOf('desenho')>=0||t.indexOf('design')>=0; });
+  var arquitetura;
+  if(archRaids.length){
+    var r0=archRaids[0];
+    arquitetura='Risco ativo de arquitetura/desenho de solução no Discovery ('+initiativeLabel(r0.initiativeId)+'): "'+r0.description+'"'+(r0.owner?' — dono: '+r0.owner:'')+(archRaids.length>1?'; +'+(archRaids.length-1)+' outro(s) risco(s) semelhante(s)':'')+', gerando ciclos de retorno que impactam o fluxo do time.';
+  }else if(allRaids.length){
+    arquitetura=allRaids.length+' risco(s) ativo(s) importado(s) do Discovery, sem menção direta a arquitetura/desenho de solução — ver aba "5. Risco cruzado" para o detalhe por iniciativa.';
+  }else{
+    arquitetura='Nenhum risco de arquitetura/desenho de solução importado do Discovery até agora.';
+  }
+
+  var impacto=gargaloTipo==='refino'
+    ? 'O desenvolvimento fica aguardando o backlog ser refinado, o que reduz a eficiência da capacidade já disponível — adicionar dev nesse cenário não acelera a entrega.'
+    : gargaloTipo==='impedimento'
+    ? 'O desenvolvimento fica aguardando definições/desbloqueios de terceiros, o que reduz a eficiência da capacidade já disponível — adicionar dev não resolve uma dependência externa.'
+    : 'A capacidade disponível está sendo usada com o backlog atual; ganho adicional depende de mais devs ou hora extra (ver tabela de cenários abaixo).';
+
+  var byIni={};
+  cls.bloqueio_refino.concat(cls.bloqueio_impedimento).forEach(function(e){
+    var id=e.item.initiativeId||''; if(!id) return;
+    byIni[id]=(byIni[id]||0)+1;
+  });
+  var iniKeys=Object.keys(byIni).sort(function(a,b){return byIni[b]-byIni[a];});
+  var topIniId=iniKeys[0];
+  var exemplo=topIniId
+    ? 'A '+initiativeLabel(topIniId)+' evidencia esse cenário, com '+byIni[topIniId]+' história(s) bloqueada(s) por refino/impedimento antes da entrada efetiva em desenvolvimento.'
+    : 'Nenhum exemplo concreto disponível ainda — importe itens com rótulo #ID_iniciativa pra essa linha citar um caso real.';
+
+  var recomendacao=gargaloTipo==='refino'
+    ? 'Priorizar o refinamento do backlog (aba "4. Bloqueios") antes de avaliar aumento de capacidade.'
+    : gargaloTipo==='impedimento'
+    ? 'Priorizar a resolução dos impedimentos externos (aba "4. Bloqueios") antes de avaliar aumento de capacidade.'
+    : 'Backlog pronto — avaliar aumento de capacidade ou hora extra é razoável agora (tabela de cenários abaixo).';
+
+  return {cenarioAtual:cenarioAtual,gargalo:gargalo,arquitetura:arquitetura,impacto:impacto,exemplo:exemplo,recomendacao:recomendacao,naoRecomendado:naoRecomendado};
+}
+
 /* ===================== Sprint helpers (parametrizado: sprint de N dias corridos) ===================== */
 function sprintBizDaysPerSprint(cfg){
   var anchor=parseLocalDate(cfg.sprintAnchorDate||todayISO());
@@ -1094,11 +1174,40 @@ window.cpUpdateMeta=function(id,field,value){
 
 /* ---- Cenários tab ---- */
 var cenChartRef=null, statusChartRef=null;
+function renderPortfolioNarrative(){
+  var n=buildPortfolioNarrative();
+  var host=$id('portfolioNarrative');
+  if(!n){ host.innerHTML='<p class="muted">Sem dados suficientes ainda pra gerar o resumo — importe itens primeiro.</p>'; return; }
+  host.innerHTML=
+    (n.naoRecomendado?'<div class="warn-banner" style="margin-bottom:10px">⚠ Recomendação automática: '+esc(n.recomendacao)+'</div>':'')+
+    '<ul style="margin:0 0 10px;padding-left:20px;line-height:1.65;font-size:13.5px">'+
+      '<li><b>Cenário atual:</b> '+esc(n.cenarioAtual)+'</li>'+
+      '<li><b>Principal gargalo:</b> '+esc(n.gargalo)+'</li>'+
+      '<li><b>Arquitetura / riscos externos:</b> '+esc(n.arquitetura)+'</li>'+
+      '<li><b>Impacto:</b> '+esc(n.impacto)+'</li>'+
+      '<li><b>Exemplo:</b> '+esc(n.exemplo)+'</li>'+
+      '<li><b>Recomendação:</b> '+esc(n.recomendacao)+'</li>'+
+    '</ul>'+
+    '<div><button class="btn ghost" onclick="cpCopyPortfolioNarrative()">📋 Copiar resumo</button> '+
+    '<span class="help">Gerado a partir dos dados carregados agora — não é uma resposta pronta tipo "contrate N devs", é o racional exposto pra você levar pra liderança. Reavalie sempre que reimportar dados.</span></div>';
+}
+window.cpCopyPortfolioNarrative=function(){
+  var n=buildPortfolioNarrative(); if(!n){ toast('Sem dados','Importe itens antes de copiar o resumo.','warn'); return; }
+  var lines=['Cenário atual: '+n.cenarioAtual,'Principal gargalo: '+n.gargalo,'Arquitetura / riscos externos: '+n.arquitetura,'Impacto: '+n.impacto,'Exemplo: '+n.exemplo,'Recomendação: '+n.recomendacao];
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(lines.join('\n')).then(function(){ toast('Resumo copiado','Cole no e-mail, Teams ou apresentação.'); });
+  }else{
+    toast('Cópia indisponível','Selecione o texto manualmente.','warn');
+  }
+};
+
 function renderCenariosTab(){
   var s=scenarios, cfg=s.cfg;
   var baselineN=cfg.defaultBaselineDevs||2;
   var baselineDate=s.overallByN[baselineN]||null;
   var atualN=Object.values(cfg.baselineDevsBySquad||{})[0]||baselineN;
+
+  renderPortfolioNarrative();
 
   $id('cenKpis').innerHTML=
     '<div class="kpi"><div class="lbl">Itens elegíveis</div><div class="val">'+s.elegivel.length+'</div><div class="sub">'+s.semDadosSuficientes.length+' sem início/horas — fora da fila até completar</div></div>'+
@@ -1464,7 +1573,7 @@ window.cpSaveConfigForm=cpSaveConfigForm;
 cpRecalcAndRender();
 
 // Debug/test hook — read-only introspection for the calc engine, no UI impact.
-window.__cpDebug={getState:function(){return state;},computeScenarios:computeScenarios,estimateHoursForItem:estimateHoursForItem,classifyItem:classifyItem,buildSquadQueues:buildSquadQueues,dateForCumHours:dateForCumHours,addBusinessDaysInclusive:addBusinessDaysInclusive,capDaily:capDaily,effFactor:effFactor,computeTargetPlan:computeTargetPlan,computeRefinementDeadlines:computeRefinementDeadlines,buildIniciativaAnalysis:buildIniciativaAnalysis,sprintIndexForDate:sprintIndexForDate,sprintWindow:sprintWindow,isTransbordoRisk:isTransbordoRisk,sprintBizDaysPerSprint:sprintBizDaysPerSprint,detectPatterns:detectPatterns,computeOvertimeScenario:computeOvertimeScenario};
+window.__cpDebug={getState:function(){return state;},computeScenarios:computeScenarios,estimateHoursForItem:estimateHoursForItem,classifyItem:classifyItem,buildSquadQueues:buildSquadQueues,dateForCumHours:dateForCumHours,addBusinessDaysInclusive:addBusinessDaysInclusive,capDaily:capDaily,effFactor:effFactor,computeTargetPlan:computeTargetPlan,computeRefinementDeadlines:computeRefinementDeadlines,buildIniciativaAnalysis:buildIniciativaAnalysis,sprintIndexForDate:sprintIndexForDate,sprintWindow:sprintWindow,isTransbordoRisk:isTransbordoRisk,sprintBizDaysPerSprint:sprintBizDaysPerSprint,detectPatterns:detectPatterns,computeOvertimeScenario:computeOvertimeScenario,buildPortfolioNarrative:buildPortfolioNarrative};
 })();
 </script>
 </body>
