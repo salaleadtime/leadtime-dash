@@ -607,7 +607,8 @@
     hidden: false,
     filters: { squad: '', status: '', phase: '', responsible: '', search: '', withRisk: false, withImpediment: false, withDelay: false, withDecision: false },
     sort: { key: 'status', dir: 'asc' },
-    route: { view: 'home', projectId: null, tab: 'timeline' }
+    route: { view: 'home', projectId: null, tab: 'timeline' },
+    _modalRegistry: {}
   };
 
   // ============================================================================
@@ -623,6 +624,7 @@
   function goDetail(id) { location.hash = '#/i/' + encodeURIComponent(id); }
 
   window.addEventListener('hashchange', () => {
+    closeModal();
     state.route = { ...state.route, ...parseHash() };
     render();
   });
@@ -749,12 +751,11 @@
 
   function renderHomeView() {
     const kpis = buildHealthKpis();
-    const attention = applySharedFilters(buildAttentionList().map(a => ({ ...a, _kind: 'attn' })), a => a.project)
-      .map(a => a); // attention already project-scoped rows
+    const attention = applySharedFilters(buildAttentionList(), a => a.project);
     const risks = applySharedFilters(buildRiskRows(), r => r.project);
     const impediments = applySharedFilters(buildImpedimentRows(), r => r.project);
     const decisions = applySharedFilters(buildDecisionRows(), r => r.project);
-    const observations = applySharedFilters(buildObservationsFeed(), o => o.project).slice(0, 12);
+    const observations = applySharedFilters(buildObservationsFeed(), o => o.project);
     const portfolio = applySharedFilters(buildPortfolioRows(), r => r.project);
 
     root().innerHTML = `
@@ -778,18 +779,42 @@
         ${healthBarHtml(kpis)}
         ${filtersBarHtml(portfolio.length, buildPortfolioRows().length)}
 
-        ${sectionHtml('Visão do Portfólio', portfolio.length, 'Clique numa linha para abrir o detalhe da iniciativa', portfolioTableHtml(portfolio))}
-
-        ${sectionHtml('Atenção Executiva', attention.length, 'Iniciativas com risco alto/crítico, impedimento, atraso, dependência crítica ou decisão pendente', attentionListHtml(attention))}
-
-        <div class="v2-two-col">
-          ${sectionHtml('Riscos Prioritários', risks.length, 'Todos os riscos abertos do portfólio, vencidos primeiro', riskTableHtml(risks), true)}
-          ${sectionHtml('Impedimentos Ativos', impediments.length, 'Bloqueios ativos — nunca misturados com risco', impedimentTableHtml(impediments), true)}
-        </div>
-
-        <div class="v2-two-col">
-          ${sectionHtml('Decisões Pendentes', decisions.length, 'Marcos de cronograma que hoje exigem decisão de replanejamento ou destrave (atraso/atenção/datas inconsistentes)', decisionTableHtml(decisions), true)}
-          ${sectionHtml('Observações Executivas', observations.length, 'Registros de observação já existentes na base (RAID, cronograma, ações, resumo)', observationsFeedHtml(observations), true)}
+        <div class="v2-home-grid">
+          <div>
+            ${sectionHtml('Visão do Portfólio', portfolio.length, 'Clique numa linha para abrir o detalhe da iniciativa', portfolioTableHtml(portfolio))}
+          </div>
+          <aside class="v2-sidebar">
+            ${widgetHtml({
+              key: 'attention', title: 'Atenção Executiva', rows: attention,
+              itemHtml: a => widgetItemHtml(a.project.id, a.status === 'Crítico' ? 'red' : 'amber', `${statusEmoji(a.status)} ${a.project.name}`, `${squadName(a.project)} · ${a.reasons[0] ? a.reasons[0].text : a.status}`),
+              emptyNote: 'Nada precisa de atenção agora.',
+              modalTitle: 'Atenção Executiva', modalBody: () => attentionListHtml(attention)
+            })}
+            ${widgetHtml({
+              key: 'risks', title: 'Riscos Prioritários', rows: risks,
+              itemHtml: r => widgetItemHtml(r.project.id, r.late ? 'red' : '', r.item.text || 'Risco sem descrição', initiativeLabel(r.project)),
+              emptyNote: 'Nenhum risco aberto registrado.',
+              modalTitle: 'Riscos Prioritários', modalBody: () => riskTableHtml(risks)
+            })}
+            ${widgetHtml({
+              key: 'impediments', title: 'Impedimentos Ativos', rows: impediments,
+              itemHtml: r => widgetItemHtml(r.project.id, r.escalate ? 'red' : (r.late ? 'amber' : ''), r.item.text || 'Impedimento sem descrição', initiativeLabel(r.project)),
+              emptyNote: 'Nenhum impedimento ativo.',
+              modalTitle: 'Impedimentos Ativos', modalBody: () => impedimentTableHtml(impediments)
+            })}
+            ${widgetHtml({
+              key: 'decisions', title: 'Decisões Pendentes', rows: decisions,
+              itemHtml: r => widgetItemHtml(r.project.id, r.status.cls === 'late' ? 'red' : 'amber', r.decision, initiativeLabel(r.project)),
+              emptyNote: 'Nenhum marco exige decisão agora.',
+              modalTitle: 'Decisões Pendentes', modalBody: () => decisionTableHtml(decisions)
+            })}
+            ${widgetHtml({
+              key: 'observations', title: 'Observações Executivas', rows: observations,
+              itemHtml: o => widgetItemHtml(o.project.id, '', o.text, `${o.source} · ${initiativeLabel(o.project)}`),
+              emptyNote: 'Nenhuma observação registrada.',
+              modalTitle: 'Observações Executivas', modalBody: () => observationsFeedHtml(observations)
+            })}
+          </aside>
         </div>
 
         <div class="v2-footer">Discovery PMO V2 · fonte de dados compartilhada com o Tracker operacional · <a href="${V1_URL}" style="color:var(--brand);font-weight:600">abrir Tracker (V1) para editar →</a></div>
@@ -807,6 +832,61 @@
       ${bodyHtml}
     </section>`;
   }
+
+  // ── widgets do rail lateral + modal "ver todos" ───────────────────────────
+  const WIDGET_PREVIEW_LIMIT = 3;
+
+  function widgetItemHtml(id, dot, title, sub) {
+    return `<button type="button" class="v2-widget-item" data-goto="${escapeAttr(id)}">
+      <span class="dot ${dot}"></span>
+      <span class="txt"><span class="t" title="${escapeAttr(title)}">${escapeHtml(title)}</span><span class="s">${escapeHtml(sub)}</span></span>
+    </button>`;
+  }
+
+  function widgetHtml({ key, title, rows, itemHtml, emptyNote, modalTitle, modalBody }) {
+    state._modalRegistry[key] = { title: modalTitle, body: modalBody };
+    const preview = rows.slice(0, WIDGET_PREVIEW_LIMIT);
+    const body = preview.length
+      ? preview.map(itemHtml).join('')
+      : `<div class="v2-widget-empty">${escapeHtml(emptyNote)}</div>`;
+    return `<div class="v2-widget">
+      <div class="v2-widget-head"><span class="t">${escapeHtml(title)}</span><span class="count ${rows.length ? '' : 'zero'}">${rows.length}</span></div>
+      <div class="v2-widget-body">${body}</div>
+      ${rows.length > WIDGET_PREVIEW_LIMIT ? `<button type="button" class="v2-widget-more" data-widget-open="${key}">Ver todos (${rows.length}) →</button>` : ''}
+    </div>`;
+  }
+
+  function openModal(title, bodyHtml) {
+    let overlayRoot = document.getElementById('modalRoot');
+    if (!overlayRoot) { overlayRoot = document.createElement('div'); overlayRoot.id = 'modalRoot'; document.body.appendChild(overlayRoot); }
+    overlayRoot.innerHTML = `<div class="v2-modal-overlay" id="modalOverlay">
+      <div class="v2-modal" role="dialog" aria-modal="true" aria-label="${escapeAttr(title)}">
+        <div class="v2-modal-head"><h2>${escapeHtml(title)}</h2><button type="button" class="v2-modal-close" data-modal-close aria-label="Fechar">✕</button></div>
+        <div class="v2-modal-body">${bodyHtml}</div>
+      </div>
+    </div>`;
+    document.addEventListener('keydown', onModalKeydown);
+  }
+  function closeModal() {
+    const overlayRoot = document.getElementById('modalRoot');
+    if (overlayRoot) overlayRoot.innerHTML = '';
+    document.removeEventListener('keydown', onModalKeydown);
+  }
+  function onModalKeydown(e) { if (e.key === 'Escape') closeModal(); }
+
+  // Delegação global: cobre cliques dentro do modal (conteúdo re-injetado fora
+  // da árvore de #app) sem precisar re-atar listeners a cada render.
+  document.addEventListener('click', (e) => {
+    const gotoEl = e.target.closest('[data-goto]');
+    if (gotoEl) { closeModal(); goDetail(gotoEl.dataset.goto); return; }
+    const widgetEl = e.target.closest('[data-widget-open]');
+    if (widgetEl) {
+      const entry = state._modalRegistry[widgetEl.dataset.widgetOpen];
+      if (entry) openModal(entry.title, entry.body());
+      return;
+    }
+    if (e.target.id === 'modalOverlay' || e.target.closest('[data-modal-close]')) { closeModal(); return; }
+  });
 
   function healthBarHtml(k) {
     const kpi = (label, val, tone, key) => `<div class="v2-kpi ${tone ? 'tone-' + tone : ''} clickable" data-kpi="${key}">
@@ -1024,7 +1104,6 @@
       state.filters = { squad: '', status: '', phase: '', responsible: '', search: '', withRisk: false, withImpediment: false, withDelay: false, withDecision: false };
       render();
     });
-    document.querySelectorAll('[data-goto]').forEach(el => el.addEventListener('click', () => goDetail(el.dataset.goto)));
     document.querySelectorAll('th[data-sort]').forEach(el => el.addEventListener('click', () => {
       const key = el.dataset.sort;
       if (state.sort.key === key) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';

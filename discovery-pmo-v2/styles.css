@@ -289,16 +289,68 @@ table.v2-table tr.row-late td { background: var(--red-tint); }
 .v2-feed-item .meta { margin-top: 3px; font-size: 11px; color: var(--muted-2); display: flex; gap: 8px; flex-wrap: wrap; }
 .v2-feed-item .meta a { color: var(--brand); font-weight: 600; }
 
+/* ── home layout: portfólio principal + rail lateral de insights ──────────
+   Pedido explícito: Atenção/Riscos/Impedimentos/Decisões/Observações saem de
+   blocos largos empilhados e viram widgets compactos numa coluna à direita,
+   com "ver todos" abrindo modal em vez de ocupar a tela toda. ── */
+.v2-home-grid { display: grid; grid-template-columns: 1fr 328px; gap: 18px; align-items: start; }
+@media (max-width: 1180px) { .v2-home-grid { grid-template-columns: 1fr; } }
+.v2-sidebar { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 74px; }
+@media (max-width: 1180px) { .v2-sidebar { position: static; } }
+
+.v2-widget { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+.v2-widget-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px 9px; }
+.v2-widget-head .t { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+.v2-widget-head .count { font-size: 10.5px; font-weight: 700; color: var(--brand); background: var(--brand-tint); border-radius: 999px; padding: 1px 7px; }
+.v2-widget-head .count.zero { color: var(--muted-2); background: var(--grey-tint); }
+.v2-widget-body { display: flex; flex-direction: column; }
+.v2-widget-empty { padding: 4px 14px 12px; font-size: 11.5px; color: var(--muted-2); }
+.v2-widget-item {
+  display: flex; align-items: flex-start; gap: 9px; width: 100%; text-align: left;
+  border: 0; background: none; padding: 7px 14px; cursor: pointer; transition: background .12s;
+}
+.v2-widget-item:hover { background: var(--bg-subtle); }
+.v2-widget-item .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; background: var(--muted-2); }
+.v2-widget-item .dot.red { background: var(--red); }
+.v2-widget-item .dot.amber { background: var(--amber); }
+.v2-widget-item .dot.green { background: var(--green); }
+.v2-widget-item .txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.v2-widget-item .t { font-size: 12px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v2-widget-item .s { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v2-widget-more {
+  display: block; width: 100%; border: 0; border-top: 1px solid var(--border); background: var(--bg-subtle);
+  color: var(--brand); font-size: 11.5px; font-weight: 700; padding: 8px 14px; text-align: center; cursor: pointer;
+}
+.v2-widget-more:hover { background: var(--brand-tint); }
+
+/* ── modal ──────────────────────────────────────────────────────────────── */
+.v2-modal-overlay {
+  position: fixed; inset: 0; background: rgba(20, 24, 31, .45); z-index: 200;
+  display: flex; align-items: flex-start; justify-content: center; padding: 6vh 20px;
+  animation: v2fade .12s ease-out;
+}
+@keyframes v2fade { from { opacity: 0; } to { opacity: 1; } }
+.v2-modal {
+  background: var(--bg-raised); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 760px; max-height: 86vh; display: flex; flex-direction: column; overflow: hidden;
+}
+.v2-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); flex: 0 0 auto; }
+.v2-modal-head h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
+.v2-modal-close { border: 0; background: var(--bg-subtle); width: 28px; height: 28px; border-radius: 999px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.v2-modal-close:hover { background: var(--grey-tint); color: var(--ink); }
+.v2-modal-body { overflow-y: auto; flex: 1 1 auto; }
+
 /* ── portfolio card / table hybrid ─────────────────────────────────────── */
-table.v2-table td.name-cell { max-width: 0; width: 26%; }
-.v2-portfolio-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+table.v2-table td.name-cell { max-width: 280px; }
+.v2-portfolio-name { display: flex; align-items: center; gap: 10px; }
 .v2-portfolio-name .avatar {
   flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px; background: var(--blue-tint); color: var(--blue);
   display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700;
 }
 .v2-portfolio-name .txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .v2-portfolio-name .n {
-  font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  display: block; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-width: 210px;
 }
 .v2-portfolio-name .sub { font-size: 10.5px; color: var(--muted-2); font-family: var(--font-mono); }
 
