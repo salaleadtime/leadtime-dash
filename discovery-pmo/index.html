@@ -5233,6 +5233,8 @@
     .ops4ops-table a:hover { text-decoration: underline; }
     .ops4ops-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: #f4f2fd; font-size: 10px; font-weight: 700; white-space: nowrap; }
     .ops4ops-status-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--jira-status-color); }
+    .ops4ops-link-row { display: flex; gap: 5px; margin-top: 5px; }
+    .ops4ops-link-select { max-width: 220px; font-size: 10.5px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: #344054; }
 
     .jira-overview-list {
       display: grid;
@@ -17005,11 +17007,21 @@ Recomendação PMO: ${d.recommendation}`;
       // pra elas poderem aparecer (sem iniciativa) em painéis como o "Ops4Ops —
       // Histórias por Squad", em vez de sumir silenciosamente do import.
       const unassignedRecords = [];
+      const overrides = data.jiraStoryInitiativeOverrides || {};
       let untagged = 0;
       records.forEach(rec => {
-        if (!rec.tag) { untagged++; unassignedRecords.push(rec); return; }
-        const project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, rec.tag));
-        if (!project) { unmatchedTags.add(rec.tag); unassignedRecords.push(rec); return; }
+        // O rótulo #Nº do Jira manda por padrão; só recorre ao vínculo manual
+        // (feito em "Ver detalhes" do painel Ops4Ops) quando o rótulo falta ou
+        // não bate com nenhuma iniciativa cadastrada — assim uma correção feita
+        // uma vez continua valendo nas próximas cargas, mesmo sem o Jira corrigido.
+        let tag = rec.tag || '';
+        let project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
+        if (!project && overrides[rec.key]) {
+          tag = overrides[rec.key];
+          project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag));
+        }
+        if (!tag) { untagged++; unassignedRecords.push(rec); return; }
+        if (!project) { unmatchedTags.add(tag); unassignedRecords.push(rec); return; }
         if (!groups.has(project.id)) groups.set(project.id, { project, records: [] });
         groups.get(project.id).records.push(rec);
       });
@@ -17035,7 +17047,7 @@ Recomendação PMO: ${d.recommendation}`;
         records.forEach(rec => {
           resolvedKeys.add(rec.key);
           const existing = project.jiraStories.find(s => s.key === rec.key);
-          const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated };
+          const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated, tipo: rec.tipo };
           if (existing) { Object.assign(existing, fields); updated++; }
           else { project.jiraStories.push(fields); added++; }
         });
@@ -17056,7 +17068,7 @@ Recomendação PMO: ${d.recommendation}`;
       data.unassignedJiraStories = (Array.isArray(data.unassignedJiraStories) ? data.unassignedJiraStories : [])
         .filter(s => !resolvedKeys.has(s.key));
       (plan.unassignedRecords || []).forEach(rec => {
-        const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated, tag: rec.tag };
+        const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated, tag: rec.tag, tipo: rec.tipo };
         const existing = data.unassignedJiraStories.find(s => s.key === rec.key);
         if (existing) Object.assign(existing, fields);
         else data.unassignedJiraStories.push(fields);
@@ -17347,17 +17359,58 @@ Recomendação PMO: ${d.recommendation}`;
         </section>`;
     }
 
+    // Vincula manualmente uma história órfã (rótulo Ops4Ops sem #Nº válido) a uma
+    // iniciativa. O vínculo fica salvo em data.jiraStoryInitiativeOverrides (por
+    // chave da história), sincronizado como o resto da base — então passa a valer
+    // também nas próximas importações desse mesmo arquivo, mesmo que o rótulo #Nº
+    // continue errado ou ausente no Jira (ver planJiraImportChanges).
+    function linkOrphanJiraStoryToInitiative(key, projectId) {
+      if (!projectId) { toast('Selecione uma iniciativa antes de vincular.'); return; }
+      const project = data.projects.find(p => p.id === projectId);
+      const story = (data.unassignedJiraStories || []).find(s => s.key === key);
+      if (!project || !story) return;
+      const ini = initiativeNumber(project);
+      if (!ini) { toast('Essa iniciativa não tem nº oficial cadastrado — não é possível vincular por aqui.'); return; }
+      data.jiraStoryInitiativeOverrides = data.jiraStoryInitiativeOverrides || {};
+      data.jiraStoryInitiativeOverrides[key] = ini;
+      project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
+      const existing = project.jiraStories.find(s => s.key === key);
+      const fields = { key: story.key, epicKey: story.epicKey, summary: story.summary, status: story.status, team: story.team, labels: story.labels, created: story.created, updated: story.updated, tipo: story.tipo };
+      if (existing) Object.assign(existing, fields); else project.jiraStories.push(fields);
+      data.unassignedJiraStories = (data.unassignedJiraStories || []).filter(s => s.key !== key);
+      saveData(true);
+      toast(`✅ ${key} vinculada à iniciativa ${ini}. As próximas importações desse item já caem direto nela.`);
+      openOps4opsModal();
+    }
+
+    function ops4opsInitiativePickerHtml(story) {
+      const options = (data.projects || [])
+        .slice()
+        .sort((a, b) => displayProjectTitle(a).localeCompare(displayProjectTitle(b), 'pt-BR'))
+        .map(p => `<option value="${escapeAttr(p.id)}">${escapeHtml(initiativeNumber(p) || '—')} · ${escapeHtml(displayProjectTitle(p))}</option>`)
+        .join('');
+      const selectId = `ops4opsLinkSel_${escapeAttr(story.key)}`;
+      return `<div class="ops4ops-link-row">
+          <select id="${selectId}" class="ops4ops-link-select">
+            <option value="">Vincular a...</option>
+            ${options}
+          </select>
+          <button type="button" class="btn soft" style="padding:3px 9px;font-size:10px" onclick="linkOrphanJiraStoryToInitiative('${escapeAttr(story.key)}', document.getElementById('${selectId}').value)">Vincular</button>
+        </div>`;
+    }
+
     function openOps4opsModal() {
       const rows = collectOps4opsRows();
       const body = rows.length ? `<div class="ops4ops-table-wrap"><table class="ops4ops-table">
-          <thead><tr><th>Squad</th><th>Status</th><th>Épico</th><th>Iniciativa</th><th>História</th></tr></thead>
+          <thead><tr><th>Squad</th><th>Tipo</th><th>Status</th><th>Épico</th><th>Iniciativa</th><th>História</th></tr></thead>
           <tbody>${rows.map(({ project, story }) => {
             const cls = jiraStatusClass(story.status);
             const initiativeCell = project
               ? `${escapeHtml(initiativeNumber(project) || '—')} · ${escapeHtml(displayProjectTitle(project))}`
-              : `<span title="Rótulo #Nº ausente ou sem iniciativa correspondente no Jira. Corrija e reimporte." style="color:#a15c00;font-weight:700">⚠ Sem iniciativa vinculada</span>`;
+              : `<span title="Rótulo #Nº ausente ou sem iniciativa correspondente no Jira." style="color:#a15c00;font-weight:700">⚠ Sem iniciativa vinculada</span>${ops4opsInitiativePickerHtml(story)}`;
             return `<tr>
               <td>${escapeHtml(story.team || '—')}</td>
+              <td>${escapeHtml(story.tipo || '—')}</td>
               <td><span class="ops4ops-status-pill" style="--jira-status-color:${JIRA_STATUS_COLORS[cls]}">${escapeHtml(story.status || '—')}</span></td>
               <td>${story.epicKey ? `<a href="${jiraUrl(story.epicKey)}" target="_blank" rel="noopener" title="Abrir épico ${escapeAttr(story.epicKey)} no Jira">${escapeHtml(story.epicKey)}</a>` : '—'}</td>
               <td>${initiativeCell}</td>
