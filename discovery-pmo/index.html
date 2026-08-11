@@ -5233,6 +5233,8 @@
     .ops4ops-table a:hover { text-decoration: underline; }
     .ops4ops-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: #f4f2fd; font-size: 10px; font-weight: 700; white-space: nowrap; }
     .ops4ops-status-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--jira-status-color); }
+    .ops4ops-copy-btn { border: none; background: transparent; cursor: pointer; padding: 0 0 0 5px; font-size: 11px; line-height: 1; color: #8a97ab; opacity: .45; vertical-align: middle; }
+    .ops4ops-copy-btn:hover { opacity: 1; color: #344054; }
     .ops4ops-link-row { display: flex; gap: 5px; margin-top: 5px; }
     .ops4ops-link-select { max-width: 220px; font-size: 10.5px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: #344054; }
 
@@ -17438,6 +17440,36 @@ Recomendação PMO: ${d.recommendation}`;
         </div>`;
     }
 
+    // Botão discreto de copiar (chave do épico/história) nas células da tabela.
+    // stopPropagation/preventDefault porque o botão fica dentro do <td> ao lado
+    // de um <a> que abre o Jira — sem isso, um clique mal colocado abriria a aba.
+    function ops4opsCopyBtnHtml(text) {
+      return `<button type="button" class="ops4ops-copy-btn" title="Copiar ${escapeAttr(text)}" onclick="event.stopPropagation();event.preventDefault();ops4opsCopyToClipboard('${escapeAttr(text)}')">⧉</button>`;
+    }
+
+    function ops4opsCopyToClipboard(text) {
+      const done = () => toast(`📋 ${text} copiado`);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => ops4opsCopyFallback(text, done));
+      } else {
+        ops4opsCopyFallback(text, done);
+      }
+    }
+
+    // Fallback pra navegador/contexto sem Clipboard API (ex.: acesso não-https no
+    // ambiente do cliente) — textarea temporária + document.execCommand('copy').
+    function ops4opsCopyFallback(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); }
+      catch (e) { toast('Não foi possível copiar automaticamente — selecione o texto manualmente.'); }
+      document.body.removeChild(ta);
+    }
+
     function openOps4opsModal() {
       const rows = collectOps4opsRows();
       const body = rows.length ? `<div class="ops4ops-table-wrap"><table class="ops4ops-table">
@@ -17452,9 +17484,9 @@ Recomendação PMO: ${d.recommendation}`;
               <td>${escapeHtml(story.team || '—')}</td>
               <td>${escapeHtml(story.tipo || '—')}</td>
               <td><span class="ops4ops-status-pill" style="--jira-status-color:${JIRA_STATUS_COLORS[cls]}">${escapeHtml(story.status || '—')}</span></td>
-              <td>${story.epicKey ? `<a href="${jiraUrl(story.epicKey)}" target="_blank" rel="noopener" title="Abrir épico ${escapeAttr(story.epicKey)} no Jira">${escapeHtml(story.epicKey)}</a>` : '—'}</td>
+              <td>${story.epicKey ? `<a href="${jiraUrl(story.epicKey)}" target="_blank" rel="noopener" title="Abrir épico ${escapeAttr(story.epicKey)} no Jira">${escapeHtml(story.epicKey)}</a>${ops4opsCopyBtnHtml(story.epicKey)}` : '—'}</td>
               <td>${initiativeCell}</td>
-              <td><a href="${jiraUrl(story.key)}" target="_blank" rel="noopener" title="${escapeAttr(story.summary || '')}">${escapeHtml(story.key)} — ${escapeHtml(truncateText(story.summary, 70))}</a></td>
+              <td><a href="${jiraUrl(story.key)}" target="_blank" rel="noopener" title="${escapeAttr(story.summary || '')}">${escapeHtml(story.key)} — ${escapeHtml(truncateText(story.summary, 70))}</a>${ops4opsCopyBtnHtml(story.key)}</td>
             </tr>`;
           }).join('')}</tbody>
         </table></div>`
