@@ -18181,7 +18181,7 @@ Recomendação PMO: ${d.recommendation}`;
   <script>
     /* Compatibilidade de publicação: mantém a carteira navegável mesmo quando o
        navegador bloqueia o arquivo externo recém-publicado. Não cria nova base. */
-    if (typeof window.openSeniorInitiativesView !== 'function') (function () {
+    (function () {
       const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const cut = (v, n = 100) => { const t = String(v || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
       const state = s => ({'Crítico':'crit','Atenção':'warn','Concluído':'good'})[s] || 'good';
