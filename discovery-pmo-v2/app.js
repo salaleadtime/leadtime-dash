@@ -888,19 +888,38 @@
     if (e.target.id === 'modalOverlay' || e.target.closest('[data-modal-close]')) { closeModal(); return; }
   });
 
+  const KPI_ICONS = {
+    total: '<svg viewBox="0 0 20 20" fill="none"><rect x="2.5" y="2.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/></svg>',
+    andamento: '<svg viewBox="0 0 20 20" fill="none"><path d="M2.5 10.5h3.2l1.8-5 3 9 1.8-4h5.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    atencao: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 3.2l7.5 13H2.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8.4v3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="14.2" r=".8" fill="currentColor"/></svg>',
+    critico: '<svg viewBox="0 0 20 20" fill="none"><path d="M6.5 2.5h7l4 4v7l-4 4h-7l-4-4v-7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 6.5v4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="13.3" r=".9" fill="currentColor"/></svg>',
+    impedidas: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.5"/><path d="M5.3 5.3l9.4 9.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    concluidas: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.5"/><path d="M6.7 10.2l2.2 2.2 4.4-4.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    risco: '<svg viewBox="0 0 20 20" fill="none"><path d="M10 2.6l6 2.2v5c0 4-2.6 6.7-6 7.6-3.4-.9-6-3.6-6-7.6v-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 6.6v3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="12.6" r=".85" fill="currentColor"/></svg>',
+    impedimento: '<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.5"/><path d="M8 6.8v6.4M12 6.8v6.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  };
+
   function healthBarHtml(k) {
-    const kpi = (label, val, tone, key) => `<div class="v2-kpi ${tone ? 'tone-' + tone : ''} clickable" data-kpi="${key}">
-      <div class="val">${val}</div><div class="lbl">${escapeHtml(label)}</div>
+    const f = state.filters;
+    const isActive = {
+      total: !f.squad && !f.status && !f.phase && !f.responsible && !f.search && !f.withRisk && !f.withImpediment && !f.withDelay && !f.withDecision,
+      andamento: false,
+      atencao: f.status === 'Atenção', critico: f.status === 'Crítico', concluidas: f.status === 'Concluído',
+      impedidas: f.withImpediment, risco: f.withRisk, impedimento: f.withImpediment
+    };
+    const kpi = (label, val, tone, key, clickable) => `<div class="v2-kpi ${tone ? 'tone-' + tone : ''} ${clickable ? 'clickable' : ''} ${isActive[key] ? 'active' : ''}" data-kpi="${key}">
+      <span class="icon-chip">${KPI_ICONS[key] || ''}</span>
+      <div class="figures"><div class="val">${val}</div><div class="lbl">${escapeHtml(label)}</div></div>
     </div>`;
     return `<div class="v2-healthbar">
-      ${kpi('Total de iniciativas', k.total, '', 'total')}
-      ${kpi('Em andamento', k.emAndamento, '', 'andamento')}
-      ${kpi('Atenção', k.atencao, 'amber', 'atencao')}
-      ${kpi('Críticas', k.criticas, 'red', 'critico')}
-      ${kpi('Impedidas', k.impedidas, 'red', 'impedidas')}
-      ${kpi('Concluídas', k.concluidas, 'green', 'concluidas')}
-      ${kpi('Riscos abertos', k.riscosAbertos, 'brand', 'risco')}
-      ${kpi('Impedimentos ativos', k.impedimentosAtivos, 'brand', 'impedimento')}
+      ${kpi('Total de iniciativas', k.total, '', 'total', true)}
+      ${kpi('Em andamento', k.emAndamento, 'blue', 'andamento', false)}
+      ${kpi('Atenção', k.atencao, 'amber', 'atencao', true)}
+      ${kpi('Críticas', k.criticas, 'red', 'critico', true)}
+      ${kpi('Impedidas', k.impedidas, 'red', 'impedidas', true)}
+      ${kpi('Concluídas', k.concluidas, 'green', 'concluidas', true)}
+      ${kpi('Riscos abertos', k.riscosAbertos, 'brand', 'risco', true)}
+      ${kpi('Impedimentos ativos', k.impedimentosAtivos, 'brand', 'impedimento', true)}
     </div>`;
   }
 
@@ -1110,8 +1129,12 @@
       else state.sort = { key, dir: 'asc' };
       render();
     }));
-    document.querySelectorAll('[data-kpi]').forEach(el => el.addEventListener('click', () => {
+    document.querySelectorAll('[data-kpi].clickable').forEach(el => el.addEventListener('click', () => {
       const key = el.dataset.kpi;
+      if (key === 'total') {
+        state.filters = { squad: '', status: '', phase: '', responsible: '', search: '', withRisk: false, withImpediment: false, withDelay: false, withDecision: false };
+        render(); return;
+      }
       const map = { atencao: 'Atenção', critico: 'Crítico', concluidas: 'Concluído' };
       if (map[key]) { state.filters.status = state.filters.status === map[key] ? '' : map[key]; render(); }
       if (key === 'risco') { state.filters.withRisk = !state.filters.withRisk; render(); }

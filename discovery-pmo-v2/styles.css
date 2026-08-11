@@ -151,29 +151,35 @@ button { cursor: pointer; }
 .v2-empty strong { display: block; color: var(--ink-soft); font-size: 13px; margin-bottom: 3px; font-weight: 600; }
 
 /* ── health bar (KPI strip) ─────────────────────────────────────────────── */
-.v2-healthbar {
-  display: grid; grid-template-columns: repeat(8, 1fr);
-  background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm); overflow: hidden;
-}
+.v2-healthbar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; }
 @media (max-width: 1180px) { .v2-healthbar { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 620px) { .v2-healthbar { grid-template-columns: repeat(2, 1fr); } }
 .v2-kpi {
-  padding: 14px 16px; border-right: 1px solid var(--border); border-bottom: 1px solid transparent;
-  display: flex; flex-direction: column; gap: 3px; position: relative;
+  background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); padding: 14px 15px; display: flex; flex-direction: column; gap: 10px;
+  transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
 }
-.v2-healthbar .v2-kpi:nth-child(4n) { border-right: 1px solid var(--border); }
-.v2-healthbar .v2-kpi:last-child { border-right: 0; }
-@media (max-width: 1180px) { .v2-kpi:nth-child(4n) { border-right: 0; } .v2-kpi:nth-child(n) { border-bottom: 1px solid var(--border); } }
-@media (max-width: 620px) { .v2-kpi:nth-child(2n) { border-right: 0; } }
-.v2-kpi .val { font-size: 25px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
-.v2-kpi .lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+.v2-kpi .icon-chip {
+  width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+  background: var(--grey-tint); color: var(--muted);
+}
+.v2-kpi .icon-chip svg { width: 16px; height: 16px; }
+.v2-kpi .figures { display: flex; flex-direction: column; gap: 2px; }
+.v2-kpi .val { font-size: 26px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; color: var(--ink); }
+.v2-kpi .lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.v2-kpi.tone-brand .icon-chip { background: var(--brand-tint); color: var(--brand-dark); }
 .v2-kpi.tone-brand .val { color: var(--brand); }
+.v2-kpi.tone-amber .icon-chip { background: var(--amber-tint); color: var(--amber); }
 .v2-kpi.tone-amber .val { color: var(--amber); }
+.v2-kpi.tone-red .icon-chip { background: var(--red-tint); color: var(--red); }
 .v2-kpi.tone-red .val { color: var(--red); }
+.v2-kpi.tone-green .icon-chip { background: var(--green-tint); color: var(--green); }
 .v2-kpi.tone-green .val { color: var(--green); }
-.v2-kpi.clickable { cursor: pointer; transition: background .12s; }
-.v2-kpi.clickable:hover { background: var(--bg-subtle); }
+.v2-kpi.tone-blue .icon-chip { background: var(--blue-tint); color: var(--blue); }
+.v2-kpi.tone-blue .val { color: var(--blue); }
+.v2-kpi.clickable { cursor: pointer; }
+.v2-kpi.clickable:hover { box-shadow: var(--shadow); border-color: var(--border-strong); transform: translateY(-1px); }
+.v2-kpi.active { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
 
 /* ── semáforo ───────────────────────────────────────────────────────────── */
 .dot-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
