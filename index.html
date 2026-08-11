@@ -8673,14 +8673,10 @@ var SEED=[
     calLoad();
     calSaveToCloud();
 
-    // Carrega backlog/Ops4Ops/estórias em paralelo com o health check, em vez de
-    // esperar a resposta dele primeiro. O health check existia para "pré-aquecer"
-    // um cold-start do Apps Script antes das cargas reais — mas isso serializava
-    // tudo atrás dele: se o health check demorasse (ou desse timeout), a tela
-    // ficava presa esperando mesmo com dados disponíveis. gasLoadBacklog e
-    // gasLoadOps4opsFromDiscovery já têm retry-em-timeout próprio para cold-start,
-    // então essa espera extra deixou de ser necessária.
-    function _afterWarmup(){
+    // O health check é apenas diagnóstico. Não pode segurar o primeiro conteúdo:
+    // em aba anônima não há cache e uma espera por cold-start deixava Backlog e
+    // Ops4Ops em "Sincronizando" antes mesmo de suas cargas começarem.
+    function loadSharedPanels(){
       emLoadCloud();
       gasLoadBacklog(function(err, count){
         if(!err && count>0){
@@ -8711,10 +8707,10 @@ var SEED=[
         }
       });
     }
+    loadSharedPanels();
     if(BK_GAS_URL){
-      _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){});
+      _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){ /* diagnóstico assíncrono */ });
     }
-    _afterWarmup();
     loadJiraEpicSnapshotFromCloud(function(){
       loadFromSheets(function(err, sheetsData){
         if(!err && Array.isArray(sheetsData) && sheetsData.length){
