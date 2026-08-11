@@ -398,6 +398,12 @@
     return (bySquads && bySquads.name) || project.squad || 'Squad não informada';
   }
 
+  function squadInitials(name) {
+    const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '—';
+    return (words[0][0] + (words[1] ? words[1][0] : words[0][1] || '')).toUpperCase();
+  }
+
   // ============================================================================
   // AGREGAÇÕES DE PORTFÓLIO (o que alimenta os blocos executivos da Home)
   // ============================================================================
@@ -772,6 +778,8 @@
         ${healthBarHtml(kpis)}
         ${filtersBarHtml(portfolio.length, buildPortfolioRows().length)}
 
+        ${sectionHtml('Visão do Portfólio', portfolio.length, 'Clique numa linha para abrir o detalhe da iniciativa', portfolioTableHtml(portfolio))}
+
         ${sectionHtml('Atenção Executiva', attention.length, 'Iniciativas com risco alto/crítico, impedimento, atraso, dependência crítica ou decisão pendente', attentionListHtml(attention))}
 
         <div class="v2-two-col">
@@ -783,8 +791,6 @@
           ${sectionHtml('Decisões Pendentes', decisions.length, 'Marcos de cronograma que hoje exigem decisão de replanejamento ou destrave (atraso/atenção/datas inconsistentes)', decisionTableHtml(decisions), true)}
           ${sectionHtml('Observações Executivas', observations.length, 'Registros de observação já existentes na base (RAID, cronograma, ações, resumo)', observationsFeedHtml(observations), true)}
         </div>
-
-        ${sectionHtml('Visão do Portfólio', portfolio.length, 'Clique numa linha para abrir o detalhe da iniciativa', portfolioTableHtml(portfolio))}
 
         <div class="v2-footer">Discovery PMO V2 · fonte de dados compartilhada com o Tracker operacional · <a href="${V1_URL}" style="color:var(--brand);font-weight:600">abrir Tracker (V1) para editar →</a></div>
       </div>`;
@@ -864,78 +870,86 @@
     return rows.filter(r => projectPassesFilters(getProject(r)));
   }
 
-  function attentionListHtml(rows) {
-    if (!rows.length) return emptyState('Nada precisa de atenção agora', 'Nenhuma iniciativa com risco alto, impedimento, atraso ou decisão pendente no recorte atual.');
-    const row = (a) => `<div class="v2-attn-row" data-goto="${escapeAttr(a.project.id)}">
-        <div class="col-init">
-          <span class="init-name">${escapeHtml(a.project.name)}</span>
-          <span class="init-num">${escapeHtml(a.project.initiativeNumber || '—')}</span>
-        </div>
-        <div class="col-squad">${escapeHtml(squadName(a.project))}</div>
-        <div class="col-reason">
-          <span class="dot-status s-${statusTone(a.status)}"><span class="sw"></span>${statusEmoji(a.status)} ${escapeHtml(a.status)}</span>
-          ${a.reasons.map(r => `<span class="badge tone-${r.tone === 'red' ? 'red' : 'amber'}">${escapeHtml(r.text)}</span>`).join('')}
-        </div>
-        <div class="col-owner">${escapeHtml(a.responsible)}</div>
-        <div class="col-due">${escapeHtml(a.dueLabel)}</div>
-        <div class="col-next" title="${escapeAttr(a.nextAction)}">${escapeHtml(a.nextAction)}</div>
-      </div>`;
-    return `<div class="v2-card">
-      <div class="v2-attn-head"><div>Iniciativa</div><div>Squad</div><div>Situação / motivo</div><div>Responsável</div><div>Prazo</div><div>Próxima ação</div></div>
-      <div class="v2-attn-list">${rows.map(row).join('')}</div>
-    </div>`;
-  }
-
   function emptyState(title, note) {
     return `<div class="v2-empty"><strong>${escapeHtml(title)}</strong>${escapeHtml(note)}</div>`;
   }
 
+  // Componente de linha compacta compartilhado por Atenção/Riscos/Impedimentos/
+  // Decisões: título em uma única linha (nunca quebra em várias linhas como uma
+  // tabela densa faria com nome longo), faixa de cor à esquerda, metadados
+  // agrupados à direita. `tags` aceita no máx. 2 badges visíveis + "+N".
+  function xrow({ id, stripe, title, subParts, tags, dueLabel, whoLabel }) {
+    const visibleTags = (tags || []).slice(0, 2);
+    const extra = (tags || []).length - visibleTags.length;
+    return `<div class="v2-xrow" data-goto="${escapeAttr(id)}">
+      <span class="stripe ${stripe || ''}"></span>
+      <div class="main">
+        <div class="title-row"><span class="title" title="${escapeAttr(title)}">${escapeHtml(title)}</span></div>
+        <div class="sub">${subParts.filter(Boolean).join(' <span class="dim">·</span> ')}</div>
+        ${visibleTags.length ? `<div class="tags">${visibleTags.map(t => `<span class="badge tone-${t.tone}">${escapeHtml(t.text)}</span>`).join('')}${extra > 0 ? `<span class="badge tone-grey">+${extra}</span>` : ''}</div>` : ''}
+      </div>
+      <div class="meta">
+        ${dueLabel ? `<span class="due">${escapeHtml(dueLabel)}</span>` : ''}
+        ${whoLabel ? `<span class="who" title="${escapeAttr(whoLabel)}">${escapeHtml(whoLabel)}</span>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function attentionListHtml(rows) {
+    if (!rows.length) return emptyState('Nada precisa de atenção agora', 'Nenhuma iniciativa com risco alto, impedimento, atraso ou decisão pendente no recorte atual.');
+    const item = (a) => xrow({
+      id: a.project.id,
+      stripe: a.status === 'Crítico' ? 'red' : 'amber',
+      title: `${statusEmoji(a.status)} ${a.project.name}`,
+      subParts: [
+        `<span class="init-link">${escapeHtml(a.project.initiativeNumber || initiativeLabel(a.project))}</span>`,
+        escapeHtml(squadName(a.project)), escapeHtml(a.status),
+        `Próxima ação: ${escapeHtml(a.nextAction)}`
+      ],
+      tags: a.reasons.map(r => ({ text: r.text, tone: r.tone === 'red' ? 'red' : 'amber' })),
+      dueLabel: a.dueLabel !== NAO_INFORMADO ? a.dueLabel : '',
+      whoLabel: a.responsible !== NAO_INFORMADO ? a.responsible : ''
+    });
+    return `<div class="v2-card v2-list">${rows.map(item).join('')}</div>`;
+  }
+
   function riskTableHtml(rows) {
     if (!rows.length) return emptyState('Sem registro', 'Nenhum risco aberto registrado no recorte atual.');
-    const tr = (r) => `<tr class="${r.late ? 'row-late' : ''} clickable" data-goto="${escapeAttr(r.project.id)}">
-        <td class="strong">${escapeHtml(r.item.text || 'Risco sem descrição')}</td>
-        <td>${escapeHtml(initiativeLabel(r.project))}</td>
-        <td class="muted-cell">${escapeHtml(NAO_INFORMADO)}</td>
-        <td class="nowrap">${escapeHtml(orNI(r.item.owner))}</td>
-        <td class="nowrap">${escapeHtml(formatBR(r.item.due))}</td>
-        <td>${escapeHtml(orNI(r.item.action))}</td>
-        <td class="nowrap">${r.late ? '<span class="badge tone-red">Vencido</span>' : `<span class="badge tone-grey">${escapeHtml(r.item.status)}</span>`}</td>
-      </tr>`;
-    return `<div class="v2-card v2-table-wrap"><table class="v2-table">
-      <thead><tr><th>Risco</th><th>Iniciativa</th><th>Severidade / Impacto</th><th>Responsável</th><th>Prazo</th><th>Ação / Mitigação</th><th>Situação</th></tr></thead>
-      <tbody>${rows.map(tr).join('')}</tbody></table></div>`;
+    const item = (r) => xrow({
+      id: r.project.id, stripe: r.late ? 'red' : '',
+      title: r.item.text || 'Risco sem descrição',
+      subParts: [`<span class="init-link">${escapeHtml(initiativeLabel(r.project))}</span>`, orNI(r.item.action) !== NAO_INFORMADO ? escapeHtml('Ação: ' + r.item.action) : ''],
+      tags: [{ text: r.late ? 'Vencido' : r.item.status, tone: r.late ? 'red' : 'grey' }],
+      dueLabel: formatBR(r.item.due) !== NAO_INFORMADO ? formatBR(r.item.due) : '',
+      whoLabel: orNI(r.item.owner) !== NAO_INFORMADO ? r.item.owner : ''
+    });
+    return `<div class="v2-card v2-list">${rows.map(item).join('')}</div>`;
   }
 
   function impedimentTableHtml(rows) {
     if (!rows.length) return emptyState('Sem registro', 'Nenhum impedimento ativo no recorte atual.');
-    const tr = (r) => `<tr class="${r.late ? 'row-late' : ''} clickable" data-goto="${escapeAttr(r.project.id)}">
-        <td class="strong">${escapeHtml(r.item.text || 'Impedimento sem descrição')}</td>
-        <td>${escapeHtml(initiativeLabel(r.project))}</td>
-        <td>${escapeHtml(squadName(r.project))}</td>
-        <td class="nowrap">${escapeHtml(orNI(r.item.owner))}</td>
-        <td class="nowrap">${escapeHtml(formatBRDateTime(r.item.updatedAt))}</td>
-        <td class="nowrap">${escapeHtml(formatBR(r.item.due))}</td>
-        <td>${escapeHtml(orNI(r.item.action))}</td>
-        <td class="nowrap">${r.escalate ? `<span class="badge tone-red">Escalonar · ${r.lateDays}d</span>` : (r.late ? '<span class="badge tone-amber">Vencido</span>' : '<span class="badge tone-grey">Em ação</span>')}</td>
-      </tr>`;
-    return `<div class="v2-card v2-table-wrap"><table class="v2-table">
-      <thead><tr><th>Impedimento</th><th>Iniciativa</th><th>Squad</th><th>Resp. desbloqueio</th><th>Atualizado em</th><th>Prazo</th><th>Próxima ação</th><th>Situação</th></tr></thead>
-      <tbody>${rows.map(tr).join('')}</tbody></table></div>`;
+    const item = (r) => xrow({
+      id: r.project.id, stripe: r.escalate ? 'red' : (r.late ? 'amber' : ''),
+      title: r.item.text || 'Impedimento sem descrição',
+      subParts: [`<span class="init-link">${escapeHtml(initiativeLabel(r.project))}</span>`, escapeHtml(squadName(r.project)), orNI(r.item.action) !== NAO_INFORMADO ? escapeHtml('Próxima ação: ' + r.item.action) : ''],
+      tags: [r.escalate ? { text: `Escalonar · ${r.lateDays}d`, tone: 'red' } : (r.late ? { text: 'Vencido', tone: 'amber' } : { text: 'Em ação', tone: 'grey' })],
+      dueLabel: formatBR(r.item.due) !== NAO_INFORMADO ? formatBR(r.item.due) : '',
+      whoLabel: orNI(r.item.owner) !== NAO_INFORMADO ? r.item.owner : ''
+    });
+    return `<div class="v2-card v2-list">${rows.map(item).join('')}</div>`;
   }
 
   function decisionTableHtml(rows) {
     if (!rows.length) return emptyState('Sem registro', 'Nenhum marco exige decisão agora — não existe hoje um campo estruturado de "decisão pendente" na base; este painel deriva de marcos de cronograma atrasados ou com datas inconsistentes.');
-    const tr = (r) => `<tr class="${r.status.cls === 'late' ? 'row-late' : ''} clickable" data-goto="${escapeAttr(r.project.id)}">
-        <td class="strong">${escapeHtml(r.decision)}</td>
-        <td>${escapeHtml(initiativeLabel(r.project))}</td>
-        <td class="muted-cell">${escapeHtml(NAO_INFORMADO)}</td>
-        <td class="nowrap">${escapeHtml(orNI(r.item.owner || r.project.rteOwner))}</td>
-        <td class="nowrap">${escapeHtml(formatBR(r.item.end))}</td>
-        <td class="nowrap"><span class="badge tone-${r.status.cls === 'late' ? 'red' : 'amber'}">${escapeHtml(r.status.label)}</span></td>
-      </tr>`;
-    return `<div class="v2-card v2-table-wrap"><table class="v2-table">
-      <thead><tr><th>Decisão necessária</th><th>Iniciativa</th><th>Impacto de não decidir</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr></thead>
-      <tbody>${rows.map(tr).join('')}</tbody></table></div>`;
+    const item = (r) => xrow({
+      id: r.project.id, stripe: r.status.cls === 'late' ? 'red' : 'amber',
+      title: r.decision,
+      subParts: [`<span class="init-link">${escapeHtml(initiativeLabel(r.project))}</span>`],
+      tags: [{ text: r.status.label, tone: r.status.cls === 'late' ? 'red' : 'amber' }],
+      dueLabel: formatBR(r.item.end) !== NAO_INFORMADO ? formatBR(r.item.end) : '',
+      whoLabel: orNI(r.item.owner || r.project.rteOwner) !== NAO_INFORMADO ? (r.item.owner || r.project.rteOwner) : ''
+    });
+    return `<div class="v2-card v2-list">${rows.map(item).join('')}</div>`;
   }
 
   function observationsFeedHtml(rows) {
@@ -973,7 +987,10 @@
     const th = (key, label) => `<th class="sortable" data-sort="${key}">${escapeHtml(label)}${s.key === key ? `<span class="arrow">${s.dir === 'asc' ? '▲' : '▼'}</span>` : ''}</th>`;
     const tr = (r) => `<tr class="clickable" data-goto="${escapeAttr(r.project.id)}">
         <td><span class="dot-status s-${statusTone(r.status)}"><span class="sw"></span>${statusEmoji(r.status)} ${escapeHtml(r.status)}</span></td>
-        <td><div class="v2-portfolio-name"><span class="n">${escapeHtml(r.project.name)}</span><span class="sub">${escapeHtml(r.project.initiativeNumber || '—')}</span></div></td>
+        <td class="name-cell" title="${escapeAttr(r.project.name)}"><div class="v2-portfolio-name">
+          <span class="avatar">${escapeHtml(squadInitials(r.squad))}</span>
+          <div class="txt"><span class="n">${escapeHtml(r.project.name)}</span><span class="sub">${escapeHtml(r.project.initiativeNumber || '—')}</span></div>
+        </div></td>
         <td class="nowrap">${escapeHtml(r.squad)}</td>
         <td class="nowrap">${escapeHtml(r.phase)}</td>
         <td><div class="v2-progress"><div class="track"><div class="fill" style="width:${r.progress}%"></div></div><span class="pct">${r.progress}%</span></div></td>

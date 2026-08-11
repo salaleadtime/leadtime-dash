@@ -197,38 +197,42 @@ button { cursor: pointer; }
 .badge.tone-grey { background: var(--grey-tint); color: var(--grey); }
 .badge.tone-brand { background: var(--brand-tint); color: var(--brand-dark); }
 
-/* ── attention list ─────────────────────────────────────────────────────── */
-.v2-attn-list { display: flex; flex-direction: column; }
-.v2-attn-row {
-  display: grid;
-  grid-template-columns: 1.7fr 1fr 1.6fr 1fr .9fr .9fr;
-  gap: 14px; align-items: center;
-  padding: 12px 18px; border-bottom: 1px solid var(--border);
+/* ── lista executiva compacta (Atenção / Riscos / Impedimentos / Decisões) ──
+   Um único componente de linha para os quatro painéis: título em uma linha só
+   (nunca quebra em 6 linhas como uma tabela densa faria com nome longo),
+   faixa de cor à esquerda em vez de grade pesada, metadados agrupados numa
+   segunda linha discreta. ── */
+.v2-list { display: flex; flex-direction: column; }
+.v2-xrow {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 18px 12px 15px; border-bottom: 1px solid var(--border);
   cursor: pointer; transition: background .12s;
 }
-.v2-attn-row:last-child { border-bottom: 0; }
-.v2-attn-row:hover { background: var(--bg-subtle); }
-.v2-attn-row .col-init { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.v2-attn-row .init-name { font-weight: 600; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.v2-attn-row .init-num { font-size: 10.5px; color: var(--muted-2); font-family: var(--font-mono); }
-.v2-attn-row .col-squad { font-size: 12px; color: var(--ink-soft); }
-.v2-attn-row .col-reason { font-size: 12px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px; }
-.v2-attn-row .col-owner { font-size: 12px; color: var(--ink-soft); }
-.v2-attn-row .col-due { font-size: 12px; color: var(--ink-soft); }
-.v2-attn-row .col-next { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.v2-attn-head {
-  display: grid; grid-template-columns: 1.7fr 1fr 1.6fr 1fr .9fr .9fr; gap: 14px;
-  padding: 8px 18px; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-2);
-  border-bottom: 1px solid var(--border);
+.v2-xrow:last-child { border-bottom: 0; }
+.v2-xrow:hover { background: var(--bg-subtle); }
+.v2-xrow .stripe { width: 3px; align-self: stretch; border-radius: 2px; flex: 0 0 auto; background: var(--grey-tint); }
+.v2-xrow .stripe.red { background: var(--red); }
+.v2-xrow .stripe.amber { background: var(--amber); }
+.v2-xrow .stripe.green { background: var(--green); }
+.v2-xrow .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.v2-xrow .title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.v2-xrow .title {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
-@media (max-width: 1100px) {
-  .v2-attn-head { display: none; }
-  .v2-attn-row { grid-template-columns: 1fr; gap: 4px; }
-  .v2-attn-row .col-squad::before { content: 'Squad: '; color: var(--muted-2); }
-  .v2-attn-row .col-owner::before { content: 'Responsável: '; color: var(--muted-2); }
-  .v2-attn-row .col-due::before { content: 'Prazo: '; color: var(--muted-2); }
-  .v2-attn-row .col-next::before { content: 'Próxima ação: '; color: var(--muted-2); white-space: normal; }
-  .v2-attn-row .col-next { white-space: normal; }
+.v2-xrow .sub { font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.v2-xrow .sub .init-link { color: var(--brand); font-weight: 600; }
+.v2-xrow .sub .dim { color: var(--muted-2); }
+.v2-xrow .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.v2-xrow .meta {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  min-width: 108px; max-width: 220px; text-align: right;
+}
+.v2-xrow .meta .due { font-size: 12px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v2-xrow .meta .who { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+@media (max-width: 860px) {
+  .v2-xrow { flex-wrap: wrap; }
+  .v2-xrow .meta { align-items: flex-start; text-align: left; min-width: 0; flex: 1 1 100%; flex-direction: row; gap: 10px; }
 }
 
 /* ── generic smart table ───────────────────────────────────────────────── */
@@ -242,7 +246,7 @@ table.v2-table th {
 table.v2-table th.sortable { cursor: pointer; user-select: none; }
 table.v2-table th.sortable:hover { color: var(--ink-soft); }
 table.v2-table th .arrow { opacity: .55; margin-left: 3px; }
-table.v2-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--ink-soft); }
+table.v2-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--ink-soft); }
 table.v2-table tbody tr { transition: background .12s; }
 table.v2-table tbody tr.clickable { cursor: pointer; }
 table.v2-table tbody tr.clickable:hover { background: var(--bg-subtle); }
@@ -286,8 +290,16 @@ table.v2-table tr.row-late td { background: var(--red-tint); }
 .v2-feed-item .meta a { color: var(--brand); font-weight: 600; }
 
 /* ── portfolio card / table hybrid ─────────────────────────────────────── */
-.v2-portfolio-name { display: flex; flex-direction: column; gap: 2px; }
-.v2-portfolio-name .n { font-weight: 600; color: var(--ink); }
+table.v2-table td.name-cell { max-width: 0; width: 26%; }
+.v2-portfolio-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.v2-portfolio-name .avatar {
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px; background: var(--blue-tint); color: var(--blue);
+  display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700;
+}
+.v2-portfolio-name .txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.v2-portfolio-name .n {
+  font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
 .v2-portfolio-name .sub { font-size: 10.5px; color: var(--muted-2); font-family: var(--font-mono); }
 
 /* ── buttons ────────────────────────────────────────────────────────────── */
