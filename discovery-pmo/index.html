@@ -5224,6 +5224,18 @@
     .jira-status-legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--jira-status-color); }
     .jira-story-refined { flex: 0 0 auto; padding: 2px 5px; border: 1px solid #ccefdc; border-radius: 999px; background: #f1fbf5; color: #18794e; font-size: 8px; font-weight: 800; }
 
+    .ops4ops-table-wrap { max-height: 62vh; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+    .ops4ops-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    .ops4ops-table th { position: sticky; top: 0; background: #fbfcff; text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 800; color: #687587; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .ops4ops-table td { padding: 7px 10px; border-bottom: 1px solid #eef1f6; vertical-align: top; color: #344054; }
+    .ops4ops-table tr:last-child td { border-bottom: 0; }
+    .ops4ops-table a { color: inherit; text-decoration: none; }
+    .ops4ops-table a:hover { text-decoration: underline; }
+    .ops4ops-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: #f4f2fd; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .ops4ops-status-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--jira-status-color); }
+    .ops4ops-link-row { display: flex; gap: 5px; margin-top: 5px; }
+    .ops4ops-link-select { max-width: 220px; font-size: 10.5px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: #344054; }
+
     .jira-overview-list {
       display: grid;
       gap: 14px;
@@ -16990,11 +17002,26 @@ Recomendação PMO: ${d.recommendation}`;
     function planJiraImportChanges(records) {
       const groups = new Map();
       const unmatchedTags = new Set();
+      // Histórias sem rótulo #Nº ou com um #Nº que não bate com nenhuma iniciativa
+      // cadastrada não ficam mais só num contador — guardamos o registro completo
+      // pra elas poderem aparecer (sem iniciativa) em painéis como o "Ops4Ops —
+      // Histórias por Squad", em vez de sumir silenciosamente do import.
+      const unassignedRecords = [];
+      const overrides = data.jiraStoryInitiativeOverrides || {};
       let untagged = 0;
       records.forEach(rec => {
-        if (!rec.tag) { untagged++; return; }
-        const project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, rec.tag));
-        if (!project) { unmatchedTags.add(rec.tag); return; }
+        // O rótulo #Nº do Jira manda por padrão; só recorre ao vínculo manual
+        // (feito em "Ver detalhes" do painel Ops4Ops) quando o rótulo falta ou
+        // não bate com nenhuma iniciativa cadastrada — assim uma correção feita
+        // uma vez continua valendo nas próximas cargas, mesmo sem o Jira corrigido.
+        let tag = rec.tag || '';
+        let project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
+        if (!project && overrides[rec.key]) {
+          tag = overrides[rec.key];
+          project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag));
+        }
+        if (!tag) { untagged++; unassignedRecords.push(rec); return; }
+        if (!project) { unmatchedTags.add(tag); unassignedRecords.push(rec); return; }
         if (!groups.has(project.id)) groups.set(project.id, { project, records: [] });
         groups.get(project.id).records.push(rec);
       });
@@ -17005,20 +17032,22 @@ Recomendação PMO: ${d.recommendation}`;
       const warnings = [];
       const repeated = Array.from(duplicateKeys.entries()).filter(([, count]) => count > 1).map(([key]) => key);
       if (repeated.length) warnings.push(`${repeated.length} chave(s) Jira repetida(s); será mantido o último estado de cada história.`);
-      if (untagged) warnings.push(`${untagged} linha(s) sem rótulo no formato #Nº da iniciativa.`);
-      if (unmatchedTags.size) warnings.push(`${unmatchedTags.size} rótulo(s) sem iniciativa correspondente na base.`);
-      return { groups, untagged, unmatchedTags: Array.from(unmatchedTags), validation: { errors: [], warnings } };
+      if (untagged) warnings.push(`${untagged} linha(s) sem rótulo no formato #Nº da iniciativa (continuam visíveis, sem iniciativa vinculada).`);
+      if (unmatchedTags.size) warnings.push(`${unmatchedTags.size} rótulo(s) sem iniciativa correspondente na base (continuam visíveis, sem iniciativa vinculada).`);
+      return { groups, untagged, unmatchedTags: Array.from(unmatchedTags), unassignedRecords, validation: { errors: [], warnings } };
     }
 
     function applyJiraImportPlan(plan) {
       let epicsTotal = 0, storiesTotal = 0, storiesAddedTotal = 0, storiesUpdatedTotal = 0;
       const historyItems = [];
+      const resolvedKeys = new Set();
       plan.groups.forEach(({ project, records }) => {
         project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
         let added = 0, updated = 0;
         records.forEach(rec => {
+          resolvedKeys.add(rec.key);
           const existing = project.jiraStories.find(s => s.key === rec.key);
-          const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated };
+          const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated, tipo: rec.tipo };
           if (existing) { Object.assign(existing, fields); updated++; }
           else { project.jiraStories.push(fields); added++; }
         });
@@ -17032,13 +17061,25 @@ Recomendação PMO: ${d.recommendation}`;
           where: [`Épicos vinculados: ${epicKeys.size}`, `Histórias: ${project.jiraStories.length} (${added} nova(s), ${updated} atualizada(s))`]
         });
       });
+      // Histórias que ganharam um #Nº válido nesta importação saem da lista de
+      // órfãs; o restante (ainda sem #Nº ou com #Nº que não bate) é upsertado por
+      // chave, do mesmo jeito que project.jiraStories, e sincroniza junto com o
+      // resto da base (ver saveData logo abaixo) — nunca só em localStorage.
+      data.unassignedJiraStories = (Array.isArray(data.unassignedJiraStories) ? data.unassignedJiraStories : [])
+        .filter(s => !resolvedKeys.has(s.key));
+      (plan.unassignedRecords || []).forEach(rec => {
+        const fields = { key: rec.key, epicKey: rec.epicKey, summary: rec.summary, status: rec.status, team: rec.team, labels: rec.labels, created: rec.created, updated: rec.updated, tag: rec.tag, tipo: rec.tipo };
+        const existing = data.unassignedJiraStories.find(s => s.key === rec.key);
+        if (existing) Object.assign(existing, fields);
+        else data.unassignedJiraStories.push(fields);
+      });
       recordImportHistory({
         projectsCreated: 0, projectsUpdated: plan.groups.size, childrenUpserted: 0,
         cardsAdded: 0, depsAdded: 0, scheduleAdded: 0, timelineAdvanced: 0,
-        skipped: plan.untagged + plan.unmatchedTags.length, items: historyItems
+        skipped: 0, items: historyItems
       });
       saveData(true);
-      return { epicsTotal, storiesTotal, storiesAddedTotal, storiesUpdatedTotal, projectsTouched: plan.groups.size };
+      return { epicsTotal, storiesTotal, storiesAddedTotal, storiesUpdatedTotal, projectsTouched: plan.groups.size, unassigned: plan.unassignedRecords.length };
     }
 
     let _pendingJiraImportPlan = null;
@@ -17072,7 +17113,7 @@ Recomendação PMO: ${d.recommendation}`;
         ['Épicos identificados', epicKeys.size],
         ['Histórias identificadas', stories],
         ['Histórias com rótulo Refinada', refinedStories],
-        ['Linhas sem rótulo de iniciativa (ignoradas)', plan.untagged]
+        ['Linhas sem #Nº de iniciativa válido', plan.unassignedRecords.length]
       ];
       const unmatchedNote = plan.unmatchedTags.length
         ? `<p style="margin-top:10px;font-size:12px;color:#a15c00">Rótulos sem iniciativa correspondente (confira o Nº oficial): ${plan.unmatchedTags.map(t => '#' + escapeHtml(t)).join(', ')}</p>`
@@ -17080,7 +17121,7 @@ Recomendação PMO: ${d.recommendation}`;
       const body = `
         <div class="ux-v6-alert-list">${rows.map(([label, value]) => `<div class="ux-v6-alert-item"><div class="ux-v6-alert-left"><span>${escapeHtml(label)}</span></div><strong class="ux-v6-alert-count">${value}</strong></div>`).join('')}</div>
         ${importValidationHtml(plan.validation)}
-        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">O vínculo usa o rótulo "#Nº da iniciativa" de cada história no Jira. O rótulo "Refinada" separa automaticamente as histórias já refinadas. Histórias já importadas são atualizadas sem duplicar.</p>
+        <p style="margin-top:14px;font-size:12px;color:#687587;line-height:1.5">O vínculo usa o rótulo "#Nº da iniciativa" de cada história no Jira. O rótulo "Refinada" separa automaticamente as histórias já refinadas. Histórias já importadas são atualizadas sem duplicar. Histórias sem #Nº válido não ficam vinculadas a nenhuma iniciativa, mas continuam visíveis (ex.: no painel "Ops4Ops — Histórias por Squad") até o rótulo ser corrigido no Jira.</p>
         ${unmatchedNote}
       `;
       openModal('Confirmar importação do Jira', 'Revise antes de aplicar. Isso atualiza a base para todos os usuários.', body, [
@@ -17252,6 +17293,133 @@ Recomendação PMO: ${d.recommendation}`;
         }).join('')}</div>`
         : `<div class="ux-v6-attention-empty">Nenhuma iniciativa com épicos/histórias do Jira importados ainda. Use "⇪ Importar Jira" no menu lateral.</div>`;
       openModal('Épicos & Histórias (Jira)', 'Visão geral por iniciativa — clique no épico ou na história para abrir no Jira.', body, [
+        `<button type="button" class="btn" onclick="closeModal()">Fechar</button>`
+      ]);
+    }
+
+    // ── Painel "Ops4Ops — Histórias por Squad" ───────────────────────────────
+    // Visão consolidada (todas as iniciativas) das histórias do Jira que carregam
+    // o rótulo "Ops4Ops", mostrando squad, status, épico e a iniciativa completa a
+    // que cada história pertence. Reaproveita os dados já trazidos por "⇪ Importar
+    // Jira" (project.jiraStories) — não é uma importação separada.
+    function isOps4opsStory(story) {
+      return (story?.labels || []).some(label => stripAccentsLower(label) === 'ops4ops');
+    }
+
+    function collectOps4opsRows() {
+      const rows = [];
+      (data.projects || []).forEach(project => {
+        (project.jiraStories || []).forEach(story => {
+          if (isOps4opsStory(story)) rows.push({ project, story });
+        });
+      });
+      // Histórias com o rótulo Ops4Ops mas sem #Nº válido (ver applyJiraImportPlan)
+      // entram aqui com project=null, em vez de sumir do painel.
+      (data.unassignedJiraStories || []).forEach(story => {
+        if (isOps4opsStory(story)) rows.push({ project: null, story });
+      });
+      const statusOrder = { backlog: 0, progress: 1, done: 2, cancelled: 3 };
+      rows.sort((a, b) => {
+        const oa = statusOrder[jiraStatusClass(a.story.status)] ?? 9;
+        const ob = statusOrder[jiraStatusClass(b.story.status)] ?? 9;
+        if (oa !== ob) return oa - ob;
+        const na = a.project ? displayProjectTitle(a.project) : '';
+        const nb = b.project ? displayProjectTitle(b.project) : '';
+        if (!a.project !== !b.project) return a.project ? -1 : 1;
+        if (na !== nb) return na.localeCompare(nb, 'pt-BR');
+        return String(a.story.key || '').localeCompare(String(b.story.key || ''));
+      });
+      return rows;
+    }
+
+    function renderOps4opsSideCard() {
+      const rows = collectOps4opsRows();
+      const counts = { done: 0, progress: 0, backlog: 0, cancelled: 0 };
+      const epicKeys = new Set(), initiativeIds = new Set();
+      let unassignedCount = 0;
+      rows.forEach(({ project, story }) => {
+        counts[jiraStatusClass(story.status)]++;
+        if (story.epicKey) epicKeys.add(story.epicKey);
+        if (project) initiativeIds.add(project.id); else unassignedCount++;
+      });
+      const legendHtml = Object.keys(JIRA_STATUS_COLORS)
+        .filter(key => counts[key] > 0)
+        .map(key => `<span><i style="--jira-status-color:${JIRA_STATUS_COLORS[key]}"></i>${JIRA_STATUS_LABELS[key]} <strong>${counts[key]}</strong></span>`)
+        .join('') || '<span>Nenhuma história com rótulo "Ops4Ops" importada ainda.</span>';
+      return `<section class="ux-v6-side-card ops4ops-overview-card" style="grid-column:1 / -1">
+          <div class="ux-v6-side-title"><strong>Ops4Ops — Histórias por Squad</strong><span class="ux-v6-side-link" onclick="openOps4opsModal()" style="cursor:pointer" title="Ver todas as histórias com rótulo Ops4Ops">Ver detalhes</span></div>
+          <div class="jira-summary-grid">
+            <div class="jira-summary-metric"><strong>${rows.length}</strong><span>Histórias</span></div>
+            <div class="jira-summary-metric"><strong>${epicKeys.size}</strong><span>Épicos</span></div>
+            <div class="jira-summary-metric"><strong>${initiativeIds.size}</strong><span>Iniciativas</span></div>
+          </div>
+          <div class="jira-status-legend" style="margin-top:10px">${legendHtml}</div>
+          ${unassignedCount ? `<div class="exec-note" style="margin-top:8px;color:#a15c00">⚠ ${unassignedCount} história(s) com rótulo "Ops4Ops" sem #Nº de iniciativa válido — corrija o rótulo no Jira e reimporte. Elas aparecem em "Ver detalhes" mesmo assim.</div>` : ''}
+          ${rows.length ? '' : '<div class="exec-note" style="margin-top:8px">Use "⇪ Importar Jira" no menu lateral com o export que já traz o rótulo "Ops4Ops".</div>'}
+        </section>`;
+    }
+
+    // Vincula manualmente uma história órfã (rótulo Ops4Ops sem #Nº válido) a uma
+    // iniciativa. O vínculo fica salvo em data.jiraStoryInitiativeOverrides (por
+    // chave da história), sincronizado como o resto da base — então passa a valer
+    // também nas próximas importações desse mesmo arquivo, mesmo que o rótulo #Nº
+    // continue errado ou ausente no Jira (ver planJiraImportChanges).
+    function linkOrphanJiraStoryToInitiative(key, projectId) {
+      if (!projectId) { toast('Selecione uma iniciativa antes de vincular.'); return; }
+      const project = data.projects.find(p => p.id === projectId);
+      const story = (data.unassignedJiraStories || []).find(s => s.key === key);
+      if (!project || !story) return;
+      const ini = initiativeNumber(project);
+      if (!ini) { toast('Essa iniciativa não tem nº oficial cadastrado — não é possível vincular por aqui.'); return; }
+      data.jiraStoryInitiativeOverrides = data.jiraStoryInitiativeOverrides || {};
+      data.jiraStoryInitiativeOverrides[key] = ini;
+      project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
+      const existing = project.jiraStories.find(s => s.key === key);
+      const fields = { key: story.key, epicKey: story.epicKey, summary: story.summary, status: story.status, team: story.team, labels: story.labels, created: story.created, updated: story.updated, tipo: story.tipo };
+      if (existing) Object.assign(existing, fields); else project.jiraStories.push(fields);
+      data.unassignedJiraStories = (data.unassignedJiraStories || []).filter(s => s.key !== key);
+      saveData(true);
+      toast(`✅ ${key} vinculada à iniciativa ${ini}. As próximas importações desse item já caem direto nela.`);
+      openOps4opsModal();
+    }
+
+    function ops4opsInitiativePickerHtml(story) {
+      const options = (data.projects || [])
+        .slice()
+        .sort((a, b) => displayProjectTitle(a).localeCompare(displayProjectTitle(b), 'pt-BR'))
+        .map(p => `<option value="${escapeAttr(p.id)}">${escapeHtml(initiativeNumber(p) || '—')} · ${escapeHtml(displayProjectTitle(p))}</option>`)
+        .join('');
+      const selectId = `ops4opsLinkSel_${escapeAttr(story.key)}`;
+      return `<div class="ops4ops-link-row">
+          <select id="${selectId}" class="ops4ops-link-select">
+            <option value="">Vincular a...</option>
+            ${options}
+          </select>
+          <button type="button" class="btn soft" style="padding:3px 9px;font-size:10px" onclick="linkOrphanJiraStoryToInitiative('${escapeAttr(story.key)}', document.getElementById('${selectId}').value)">Vincular</button>
+        </div>`;
+    }
+
+    function openOps4opsModal() {
+      const rows = collectOps4opsRows();
+      const body = rows.length ? `<div class="ops4ops-table-wrap"><table class="ops4ops-table">
+          <thead><tr><th>Squad</th><th>Tipo</th><th>Status</th><th>Épico</th><th>Iniciativa</th><th>História</th></tr></thead>
+          <tbody>${rows.map(({ project, story }) => {
+            const cls = jiraStatusClass(story.status);
+            const initiativeCell = project
+              ? `${escapeHtml(initiativeNumber(project) || '—')} · ${escapeHtml(displayProjectTitle(project))}`
+              : `<span title="Rótulo #Nº ausente ou sem iniciativa correspondente no Jira." style="color:#a15c00;font-weight:700">⚠ Sem iniciativa vinculada</span>${ops4opsInitiativePickerHtml(story)}`;
+            return `<tr>
+              <td>${escapeHtml(story.team || '—')}</td>
+              <td>${escapeHtml(story.tipo || '—')}</td>
+              <td><span class="ops4ops-status-pill" style="--jira-status-color:${JIRA_STATUS_COLORS[cls]}">${escapeHtml(story.status || '—')}</span></td>
+              <td>${story.epicKey ? `<a href="${jiraUrl(story.epicKey)}" target="_blank" rel="noopener" title="Abrir épico ${escapeAttr(story.epicKey)} no Jira">${escapeHtml(story.epicKey)}</a>` : '—'}</td>
+              <td>${initiativeCell}</td>
+              <td><a href="${jiraUrl(story.key)}" target="_blank" rel="noopener" title="${escapeAttr(story.summary || '')}">${escapeHtml(story.key)} — ${escapeHtml(truncateText(story.summary, 70))}</a></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>`
+        : `<div class="ux-v6-attention-empty">Nenhuma história com rótulo "Ops4Ops" importada ainda. Use "⇪ Importar Jira" no menu lateral.</div>`;
+      openModal('Ops4Ops — Histórias por Squad', 'Todas as histórias com rótulo "Ops4Ops", de todas as iniciativas, do backlog até a entrega.', body, [
         `<button type="button" class="btn" onclick="closeModal()">Fechar</button>`
       ]);
     }
@@ -17895,6 +18063,7 @@ Recomendação PMO: ${d.recommendation}`;
                   <div class="ux-v6-legend">${legendHtml}</div>
                 </div>
               </section>
+              ${renderOps4opsSideCard()}
             </section>
           </div>
           <aside class="ux-v6-aside">
