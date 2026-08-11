@@ -7624,7 +7624,7 @@
       <div id="projectList" class="project-list"></div>
 
       <div class="side-actions">
-        <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
+        <button type="button" class="ghost-btn" onclick="openSeniorInitiativesView()" title="Ver carteira executiva de iniciativas">▣ Iniciativas</button>
         <button type="button" class="ghost-btn" id="macroTimelineBtn" onclick="openMacroTimelinePanel()" title="Ver Roadmap por Squad e iniciativa">🗓 Roadmap <span id="macroTimelineBadge" class="tab-badge hidden" style="margin-left:4px">Atualizado</span></button>
         <button type="button" class="ghost-btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
         <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
@@ -18177,5 +18177,6 @@ Recomendação PMO: ${d.recommendation}`;
       if (e.key === CROSS_IMPORT_EPICS_KEY) applyCrossImportEpicsFromSala();
     });
   </script>
+  <script src="senior-initiatives-view.js"></script>
 </body>
 </html>
