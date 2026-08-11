@@ -17354,12 +17354,15 @@ Recomendação PMO: ${d.recommendation}`;
       const rows = collectOps4opsRows();
       const backlogCount = countOps4opsBacklog();
       const counts = { done: 0, progress: 0, backlog: 0, cancelled: 0 };
-      const epicKeys = new Set(), initiativeIds = new Set();
+      const epicKeys = new Set(), initiativeIds = new Set(), incompleteInitiativeIds = new Set();
       let unassignedCount = 0;
       rows.forEach(({ project, story }) => {
         counts[jiraStatusClass(story.status)]++;
         if (story.epicKey) epicKeys.add(story.epicKey);
-        if (project) initiativeIds.add(project.id); else unassignedCount++;
+        if (project) {
+          initiativeIds.add(project.id);
+          if (ops4opsInitiativeWarnings(project).length) incompleteInitiativeIds.add(project.id);
+        } else unassignedCount++;
       });
       const legendHtml = Object.keys(JIRA_STATUS_COLORS)
         .filter(key => counts[key] > 0)
@@ -17375,6 +17378,7 @@ Recomendação PMO: ${d.recommendation}`;
           <div class="jira-status-legend" style="margin-top:10px">${legendHtml}</div>
           ${backlogCount ? `<div class="exec-note" style="margin-top:8px">+${backlogCount} história(s) Ops4Ops ainda em Product Backlog (não exibidas aqui — só o que já está com a squad).</div>` : ''}
           ${unassignedCount ? `<div class="exec-note" style="margin-top:8px;color:#a15c00">⚠ ${unassignedCount} história(s) com rótulo "Ops4Ops" sem #Nº de iniciativa válido — corrija o rótulo no Jira e reimporte. Elas aparecem em "Ver detalhes" mesmo assim.</div>` : ''}
+          ${incompleteInitiativeIds.size ? `<div class="exec-note" style="margin-top:8px;color:#a15c00">⚠ ${incompleteInitiativeIds.size} iniciativa(s) vinculada(s) sem squad e/ou sem nº oficial cadastrado — ver detalhes em "Ver detalhes".</div>` : ''}
           ${rows.length || backlogCount ? '' : '<div class="exec-note" style="margin-top:8px">Use "⇪ Importar Jira" no menu lateral com o export que já traz o rótulo "Ops4Ops".</div>'}
         </section>`;
     }
@@ -17403,6 +17407,21 @@ Recomendação PMO: ${d.recommendation}`;
       openOps4opsModal();
     }
 
+    // Sinaliza cadastro incompleto da iniciativa vinculada. Checa project.squadId/
+    // project.squad direto (em vez de squadForProject/squadById) porque squadById
+    // tem um fallback pro primeiro squad cadastrado quando o id não bate com nada
+    // — ótimo pra exibição em outros cantos do painel, mas mascararia justamente
+    // o "sem squad" que este alerta precisa detectar.
+    function ops4opsInitiativeWarnings(project) {
+      if (!project) return [];
+      const warnings = [];
+      if (!initiativeNumber(project)) warnings.push('sem nº oficial cadastrado');
+      const hasSquadId = project.squadId && (data.squads || []).some(s => s.id === project.squadId);
+      const hasSquadName = !!String(project.squad || '').trim();
+      if (!hasSquadId && !hasSquadName) warnings.push('sem squad cadastrada');
+      return warnings;
+    }
+
     function ops4opsInitiativePickerHtml(story) {
       const options = (data.projects || [])
         .slice()
@@ -17425,8 +17444,9 @@ Recomendação PMO: ${d.recommendation}`;
           <thead><tr><th>Squad</th><th>Tipo</th><th>Status</th><th>Épico</th><th>Iniciativa</th><th>História</th></tr></thead>
           <tbody>${rows.map(({ project, story }) => {
             const cls = jiraStatusClass(story.status);
+            const iniWarnings = ops4opsInitiativeWarnings(project);
             const initiativeCell = project
-              ? `${escapeHtml(initiativeNumber(project) || '—')} · ${escapeHtml(displayProjectTitle(project))}`
+              ? `${escapeHtml(initiativeNumber(project) || '—')} · ${escapeHtml(displayProjectTitle(project))}${iniWarnings.length ? `<br><span style="color:#a15c00;font-weight:700;font-size:10px" title="Cadastro incompleto desta iniciativa — corrija em '+ Iniciativa' / 'Squads' no menu lateral.">⚠ Iniciativa ${escapeHtml(iniWarnings.join(' e '))}</span>` : ''}`
               : `<span title="Rótulo #Nº ausente ou sem iniciativa correspondente no Jira." style="color:#a15c00;font-weight:700">⚠ Sem iniciativa vinculada</span>${ops4opsInitiativePickerHtml(story)}`;
             return `<tr>
               <td>${escapeHtml(story.team || '—')}</td>
