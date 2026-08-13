@@ -10568,7 +10568,17 @@
       const projectsMerge = mergeProjectsById(data.projects, normalizedRemote.projects, deletedIds);
       const squadsMerge = mergeById(data.squads, normalizedRemote.squads, deletedIds);
       const historyMerge = mergeById(data.importHistory, normalizedRemote.importHistory);
-      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
+      // Histórias órfãs do Ops4Ops (rótulo #Nº ausente/errado) e os vínculos manuais
+      // feitos em "Ver detalhes" (jiraStoryInitiativeOverrides) também são estado
+      // compartilhado — sem entrar aqui, ficavam de fora de todo merge (inclusive o do
+      // primeiro load) e o próximo save de QUALQUER outro usuário sobrescrevia essas
+      // duas listas no servidor com a cópia local desatualizada, apagando em silêncio
+      // o que outro navegador tinha acabado de importar/vincular.
+      const unassignedMerged = mergeNestedById(data.unassignedJiraStories, normalizedRemote.unassignedJiraStories, deletedIds);
+      const overridesMerged = Object.assign({}, normalizedRemote.jiraStoryInitiativeOverrides || {}, data.jiraStoryInitiativeOverrides || {});
+      const unassignedChanged = JSON.stringify(unassignedMerged) !== JSON.stringify(data.unassignedJiraStories || []);
+      const overridesChanged = JSON.stringify(overridesMerged) !== JSON.stringify(data.jiraStoryInitiativeOverrides || {});
+      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed && !unassignedChanged && !overridesChanged) return false;
       if (!projectsMerge.list.length) return false; // nunca fica sem nenhuma iniciativa por causa do merge
 
       data.tombstones = tombstones;
@@ -10577,6 +10587,8 @@
       data.importHistory = historyMerge.list
         .sort((a, b) => (Date.parse(b.at || '') || 0) - (Date.parse(a.at || '') || 0))
         .slice(0, 30);
+      data.unassignedJiraStories = unassignedMerged;
+      data.jiraStoryInitiativeOverrides = overridesMerged;
       // Flags de migração única (ex.: reset de cards, sync de nomes de squad) também
       // precisam propagar — sem isso, uma base remota que ainda não tem a flag faria
       // a migração "de uma vez só" rodar de novo a cada poll sobre o clone normalizado.
@@ -18180,8 +18192,13 @@ Recomendação PMO: ${d.recommendation}`;
   <script src="senior-initiatives-view.js?v=20260811-1"></script>
   <script>
     /* Compatibilidade de publicação: mantém a carteira navegável mesmo quando o
-       navegador bloqueia o arquivo externo recém-publicado. Não cria nova base. */
+       navegador bloqueia o arquivo externo recém-publicado. Não cria nova base.
+       Só entra em ação quando senior-initiatives-view.js NÃO carregou — sem essa
+       guarda, este bloco (que roda depois, sempre) sobrescrevia openSeniorInitiativesView/
+       setSeniorInitiativeFilter incondicionalmente e tornava o arquivo externo (com
+       dashboardPortfolioMode/openSquadsExecutiveView) morto mesmo quando ele carregava bem. */
     (function () {
+      if (typeof window.openSeniorInitiativesView === 'function') return;
       const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const cut = (v, n = 100) => { const t = String(v || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
       const state = s => ({'Crítico':'crit','Atenção':'warn','Concluído':'good'})[s] || 'good';
