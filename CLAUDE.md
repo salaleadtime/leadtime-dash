@@ -267,6 +267,84 @@ um navegador e populado em outro, Discovery PMO Tracker preso em
   `renderSquadOverview()` não desenha nada até `_discRemoteHydrated` ser
   `true`.
 
+## Histórico: bugs de sync/lentidão/perda de edição — sessão 14/08
+
+Registro técnico do que foi investigado e corrigido, para não precisar
+reconstruir esse raciocínio do zero numa próxima sessão. Diferente do
+incidente de 04–05/08 (acima), aqui não houve um único incidente — foram 4
+bugs distintos, em 3 arquivos diferentes, encontrados numa revisão geral
+("revise se tem bug") e depois por relatos pontuais da pessoa responsável.
+
+**Sintomas relatados**: painel da Visão de Projetos (`visao-projetos/index.html`)
+com "Total de histórias" divergente e permanente entre dois navegadores (ex.:
+178 num, 192 noutro) e o badge "Última importação" nem aparecendo; filtros
+de Squad/Status/Busca lentos ao interagir; no dashboard principal
+(`index.html`), datas de um épico (Início/Fim/Data Prevista) desaparecendo
+pouco depois de editadas.
+
+**Causas identificadas e corrigidas**:
+
+1. `discovery-pmo/index.html` — `mergeRemoteIntoData()` mesclava `projects`,
+   `squads`, `importHistory` e `tombstones`, mas não incluía os 2 campos
+   novos do painel "Ops4Ops — Histórias por Squad"
+   (`unassignedJiraStories`, `jiraStoryInitiativeOverrides`). Qualquer campo
+   novo adicionado a `data` que precise sincronizar tem que entrar
+   EXPLICITAMENTE nessa função — não é automático. **Checklist ao adicionar
+   um campo novo em `data`**: ele precisa aparecer (a) na leitura/escrita
+   normal, (b) em `mergeRemoteIntoData` (merge por registro, nunca
+   substituição total), e (c) se for um mapa `chave→valor` sujeito a edição
+   concorrente (como `jiraStoryInitiativeOverrides`), cada entrada precisa
+   carregar um timestamp próprio (`{valor, ts}`) para o merge resolver
+   conflito por recência — um `Object.assign` simples com "local por
+   último" reproduz o mesmo bug (local desatualizado vence um remoto mais
+   novo), só que de um jeito mais sutil.
+2. `visao-projetos/index.html` — `applyVpDataAll()` decidia se aplicava
+   `vpGeral`/`vpSprint`/`vpHomologation` comparando `importedAt` (relógio de
+   quem importou, não confiável entre máquinas). Uma vez que o `importedAt`
+   local parecesse "mais novo" que o do servidor, o navegador ficava preso
+   pra sempre: `gasLoadVpData` marca a revisão como conhecida assim que a
+   resposta chega, mesmo quando a aplicação é recusada, então nem o polling
+   de 1min nem o resync de 15min tentavam de novo. **Lição**: para dados que
+   têm uma revisão de servidor disponível (`getRevisions`/`_vpLastKnownRevisions`),
+   use a revisão como fonte de verdade de "isso é mais novo", nunca um
+   timestamp opcional fornecido pelo cliente — `importedAt` deve servir só
+   para exibição.
+3. `visao-projetos/index.html` — os filtros de Squad/Status/Busca tinham o
+   handler cadastrado 2x ao mesmo tempo: uma vez como atributo
+   `onchange`/`oninput` inline no HTML, outra via `addEventListener` (select
+   dispara `change` **e** `input` no mesmo evento). Cada interação rodava o
+   re-render completo (5 seções) 2–3x seguidas. **Lição**: antes de adicionar
+   `addEventListener` a um elemento que já existe no HTML, `grep` por
+   `onchange=`/`oninput=`/`onclick=` inline nesse mesmo id — as duas formas
+   coexistindo é fácil de não perceber porque cada uma isolada "funciona".
+4. `index.html` — a causa mais direta do bug de datas de épico sumindo: os
+   inputs de data/CHG/impedimento do board de Épicos identificavam a linha
+   por um **índice** (`data-i`, a posição do registro em `allData` no
+   momento do render), não pelo id do épico. Entre o usuário editar e o
+   evento chegar em `fc()`/`saveImpedimentoDraft()` — um poll automático, o
+   save de outro usuário, ou até o próprio `saveLocal()` **dentro da mesma
+   função** (que filtra `allData` e pode deslocar posições) — esse índice
+   podia passar a apontar pra outro registro; a edição ia pro épico errado e
+   o épico que o usuário via na tela ficava sem a mudança. **Lição geral,
+   vale para qualquer tabela editável deste repositório**: nunca use a
+   posição no array (`arr.indexOf`/índice capturado no render) para
+   identificar o registro que um handler de input vai editar — use sempre o
+   id estável do registro (`data-id`), e dentro do handler resolva o objeto
+   uma vez por id e continue usando essa REFERÊNCIA (nunca reindexe
+   `array[i]` de novo depois de qualquer operação que possa ter filtrado ou
+   reordenado o array no meio do caminho).
+
+**Confiança do diagnóstico**: os itens 1–3 foram confirmados com simulação
+comportamental reproduzindo o bug antigo e a correção lado a lado (ver
+commits desta data no `git log`). O item 4 também foi reproduzido com
+harness, mas o app não tem acesso a produção nem ao Apps Script separado
+`SHEETS_WEBAPP` (fora deste repositório, grava as datas do board de
+Épicos) — então uma correção adicional e mais defensiva também foi aplicada
+em paralelo (`coerceDateStr`/`makeRow`): tolera formato de data com
+hora/timezone embutida vindo do Sheets (em vez de zerar), e loga no console
+quando uma data pendente não confirma, para dar um rastro concreto se o
+sintoma se repetir.
+
 ## Como validar antes de dizer que está pronto
 
 1. Sintaxe: `node -e "new Function(require('fs').readFileSync(ARQUIVO,'utf8').match(/<script>([\s\S]*?)<\/script>/)[1])"` para cada `<script>` alterado.
