@@ -10560,6 +10560,27 @@
     // applyRemoteDiscData para ser reaproveitado também no caminho de SAVE — antes,
     // só o polling mesclava; o save sempre sobrescrevia o servidor com o `data`
     // local puro, perdendo o que outra aba tivesse acabado de salvar.
+    // Mescla o mapa key->{ini,ts} de jiraStoryInitiativeOverrides por RECÊNCIA (ts),
+    // igual ao critério usado pelos demais merges deste arquivo (mergeProjectRecord,
+    // mergeNestedById) — em vez de "o lado local sempre vence" (Object.assign com
+    // local por último), que descartaria silenciosamente uma correção mais nova vinda
+    // de outro navegador sempre que o local ainda tivesse um valor antigo em cache
+    // para a mesma história.
+    function mergeOverridesByRecency(local, remote) {
+      const merged = {};
+      const keys = new Set([...Object.keys(local || {}), ...Object.keys(remote || {})]);
+      keys.forEach(key => {
+        const l = local && local[key];
+        const r = remote && remote[key];
+        if (l && r) {
+          merged[key] = (Date.parse(r.ts || '') || 0) > (Date.parse(l.ts || '') || 0) ? r : l;
+        } else {
+          merged[key] = l || r;
+        }
+      });
+      return merged;
+    }
+
     function mergeRemoteIntoData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
       const normalizedRemote = normalizeData(deepClone(remote));
@@ -10575,7 +10596,7 @@
       // duas listas no servidor com a cópia local desatualizada, apagando em silêncio
       // o que outro navegador tinha acabado de importar/vincular.
       const unassignedMerged = mergeNestedById(data.unassignedJiraStories, normalizedRemote.unassignedJiraStories, deletedIds);
-      const overridesMerged = Object.assign({}, normalizedRemote.jiraStoryInitiativeOverrides || {}, data.jiraStoryInitiativeOverrides || {});
+      const overridesMerged = mergeOverridesByRecency(data.jiraStoryInitiativeOverrides, normalizedRemote.jiraStoryInitiativeOverrides);
       const unassignedChanged = JSON.stringify(unassignedMerged) !== JSON.stringify(data.unassignedJiraStories || []);
       const overridesChanged = JSON.stringify(overridesMerged) !== JSON.stringify(data.jiraStoryInitiativeOverrides || {});
       if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed && !unassignedChanged && !overridesChanged) return false;
@@ -17029,8 +17050,8 @@ Recomendação PMO: ${d.recommendation}`;
         let tag = rec.tag || '';
         let project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         if (!project && overrides[rec.key]) {
-          tag = overrides[rec.key];
-          project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag));
+          tag = overrides[rec.key].ini || '';
+          project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         }
         if (!tag) { untagged++; unassignedRecords.push(rec); return; }
         if (!project) { unmatchedTags.add(tag); unassignedRecords.push(rec); return; }
@@ -17408,7 +17429,10 @@ Recomendação PMO: ${d.recommendation}`;
       const ini = initiativeNumber(project);
       if (!ini) { toast('Essa iniciativa não tem nº oficial cadastrado — não é possível vincular por aqui.'); return; }
       data.jiraStoryInitiativeOverrides = data.jiraStoryInitiativeOverrides || {};
-      data.jiraStoryInitiativeOverrides[key] = ini;
+      // Guarda com timestamp (não só o nº da iniciativa) para o merge entre
+      // navegadores poder resolver por recência em vez de "local sempre vence" —
+      // ver mergeOverridesByRecency em mergeRemoteIntoData.
+      data.jiraStoryInitiativeOverrides[key] = { ini, ts: new Date().toISOString() };
       project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
       const existing = project.jiraStories.find(s => s.key === key);
       const fields = { key: story.key, epicKey: story.epicKey, summary: story.summary, status: story.status, team: story.team, labels: story.labels, created: story.created, updated: story.updated, tipo: story.tipo };

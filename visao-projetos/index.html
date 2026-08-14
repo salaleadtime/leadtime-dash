@@ -6615,8 +6615,13 @@
       } else if(hasLocalHomolog){
         // Uma resposta vazia nunca pode apagar a última carga válida deste
         // navegador. Reenvia a fotografia válida para que todos recebam a
-        // mesma fonte compartilhada na próxima abertura.
-        gasSaveVpData('vpHomologation', localHomolog);
+        // mesma fonte compartilhada na próxima abertura. appliedRevision é
+        // bookkeeping só deste navegador (ver isNewerThanApplied acima) — não pode
+        // vazar pro payload compartilhado, senão outro navegador recebe de volta
+        // uma revisão que não tem nenhuma relação com o próprio _vpLastKnownRevisions.
+        var localHomologToSend = Object.assign({}, localHomolog);
+        delete localHomologToSend.appliedRevision;
+        gasSaveVpData('vpHomologation', localHomologToSend);
       }
 
       var vpOpUpdates = all.vpOpUpdates;

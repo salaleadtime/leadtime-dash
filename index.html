@@ -4192,13 +4192,13 @@ function renderTbl(){
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-i="'+gi+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
-      '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
-      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-id="'+esc(r.id)+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-id="'+esc(r.id)+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
+      '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-id="'+esc(r.id)+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
+      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-id="'+esc(r.id)+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+(cancelado?'— não medido':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
       '<td class="cimp">'+
-        '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
+        '<textarea class="eimp" rows="2" data-id="'+esc(r.id)+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
       '</td>'+
     '</tr>';
   });
@@ -4373,12 +4373,21 @@ function renderHistorico(){
 }
 
 var _impDraftTimers={};
+// Achado numa revisão independente: o input/textarea da linha carregava um ÍNDICE
+// (data-i, posição em allData no momento do render) em vez do id do épico. Entre o
+// usuário abrir/focar o campo e o evento disparar (onchange no blur, ou os 700ms de
+// debounce aqui), um poll automático, o save de outro usuário, ou até o PRÓPRIO
+// saveLocal() desta função (que filtra allData e pode deslocar posições) podiam
+// fazer esse índice apontar pra um registro DIFERENTE — a edição haveria de ir pro
+// épico errado, e o épico que o usuário via na tela ficaria sem a mudança (parecendo
+// "sumir"). Resolver por id (estável, nunca muda) em vez de índice elimina a classe
+// inteira desse problema.
 function saveImpedimentoDraft(el){
-  var gi=parseInt(el&&el.dataset&&el.dataset.i);
-  if(isNaN(gi)||!allData[gi]) return;
-  clearTimeout(_impDraftTimers[gi]);
-  _impDraftTimers[gi]=setTimeout(function(){
-    var rec=allData[gi];
+  var id=el&&el.dataset&&el.dataset.id;
+  if(!id) return;
+  clearTimeout(_impDraftTimers[id]);
+  _impDraftTimers[id]=setTimeout(function(){
+    var rec=allData.find(function(x){return x&&x.id===id;});
     if(!rec) return;
     rec.impedimento=el.value||'';
     saveLocal();
@@ -4390,9 +4399,13 @@ function saveImpedimentoDraft(el){
 }
 function fc(el){
   var tabToRestore=rememberTab();
-  var gi=parseInt(el.dataset.i), f=el.dataset.f;
-  if(isNaN(gi)||!allData[gi]) return;
+  var id=el.dataset.id, f=el.dataset.f;
+  var gi=allData.findIndex(function(x){return x&&x.id===id;});
+  if(gi<0) return;
 
+  // rec é a referência do OBJETO (não a posição no array): continua correta mesmo
+  // que allData seja reordenado/filtrado mais adiante nesta mesma função (ver
+  // saveLocal() abaixo) ou por um redraw concorrente antes do evento chegar aqui.
   var rec=allData[gi];
   var oldVal=rec[f];
   var rawVal=(el.value||'').trim();
@@ -4465,7 +4478,7 @@ function fc(el){
     jbSave();
   }
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
-    var r=allData[gi];
+    var r=rec;
     // Enfileira TODOS os campos editáveis como pendentes até o Sheets confirmar.
     // Protege qualquer edição (inclusive apagar um campo) contra ser sobrescrita
     // por uma releitura antecipada ou perdida por uma gravação que falhou.
@@ -4692,9 +4705,9 @@ function renderMed(){
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
-      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
+      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-id="'+esc(r.id)+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-id="'+esc(r.id)+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
+      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-id="'+esc(r.id)+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+(cancelado?'— não contabilizado':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
     '</tr>';
   }).join('');
