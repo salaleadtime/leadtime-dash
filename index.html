@@ -2458,7 +2458,10 @@ var SEED_VERSION='2026-06-23-v34-sync-bulletproof';
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
+// Épicos e Backlog usam a mesma implantação controlada pelo time. Na primeira
+// abertura ela importa automaticamente a base legada e, depois, passa a
+// persistir Data Inicial, Data Prevista e Data Fim nessa fonte única.
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
 var BK_GAS_URL     = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
