@@ -8544,7 +8544,12 @@ var SEED=[
           USER_FIELDS.forEach(function(f){
             var locVal=loc[f];
             var seedVal=seedR[f];
-            if(locVal!==undefined&&locVal!==null&&locVal!==''){
+            // Preserva o valor do navegador mesmo quando vazio/nulo: um campo
+            // apagado de propósito (ex.: Data Fim revertida de Medição pra
+            // Épicos) é uma decisão do usuário e não pode ser "desfeita" pelo
+            // SEED no próximo deploy. Só cai pro SEED quando a chave nem
+            // existe no registro salvo (épico salvo antes desse campo existir).
+            if(locVal!==undefined){
               out[f]=locVal;
               // Registra divergência auditável se o valor difere do SEED
               if(AUDIT_FIELDS.indexOf(f)>=0 && locVal!==seedVal && (locVal||seedVal)){
