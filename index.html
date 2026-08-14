@@ -2734,6 +2734,24 @@ function _jbMergeAndRender(msg){
 function isValidDate(d){
   return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
 }
+// O Sheets (SHEETS_WEBAPP, um Apps Script separado deste repositório) pode devolver
+// uma data já gravada num formato que isValidDate rejeita de cara (ex.: um objeto
+// Date do Google Sheets serializado com hora/timezone, tipo "2026-08-11T00:00:00.000Z",
+// em vez do texto puro "2026-08-11"). Sem esta função, makeRow tratava isso como "sem
+// data" e ZERAVA um campo que na verdade tinha valor — e a fila de escrita pendente só
+// protege por até 24h antes de aceitar esse zero como definitivo. Extrai o prefixo
+// YYYY-MM-DD por STRING (nunca via `new Date()` + getters locais) para não introduzir
+// o mesmo bug de troca de dia por fuso horário já registrado no histórico deste
+// arquivo (ver comentário "bug visual 12/3 → 3/12" em replaceFromSharedSource).
+function coerceDateStr(v){
+  if(v===null||v===undefined||v==='') return null;
+  if(isValidDate(v)) return v;
+  var s=String(v).trim();
+  var m=s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if(m && isValidDate(m[1])) return m[1];
+  console.warn('[Épicos] Data em formato inesperado veio do Sheets e foi descartada — valor bruto:', v);
+  return null;
+}
 function isValidIsoDate(value){
   if(!value) return true;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -2804,9 +2822,9 @@ function normalizeWorkflowAll(){
   allData=allData.map(function(r){ return normalizeWorkflowRecord(r); });
 }
 function makeRow(r){
-  var sIni = isValidDate(r.ini) ? r.ini : null;
-  var sFim = isValidDate(r.fim) ? r.fim : null;
-  var sPrev = isValidDate(r.dataPrevista) ? r.dataPrevista : null;
+  var sIni = coerceDateStr(r.ini);
+  var sFim = coerceDateStr(r.fim);
+  var sPrev = coerceDateStr(r.dataPrevista);
   return normalizeWorkflowRecord({
     id:String(r.id||''),
     squad:String(r.squad||''),
@@ -2815,7 +2833,7 @@ function makeRow(r){
     statusAntes:r.statusAntes||null,
     ini:sIni,
     fim:sFim,
-    fimAntes:isValidDate(r.fimAntes)?r.fimAntes:null,
+    fimAntes:coerceDateStr(r.fimAntes),
     dataPrevista:sPrev,
     chg:(_SEED_CHG_CORRECTIONS[r.id] && r.chg===_SEED_CHG_CORRECTIONS[r.id]) ? '' : (r.chg||''),
     impedimento:r.impedimento||'',
@@ -2899,6 +2917,16 @@ function replaceFromSharedSource(rows){
           if((r[field]||'') === (pend.fields[field]||'')){
             delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
           } else {
+            // Diagnóstico: se isto aparecer repetidamente pro MESMO id/campo em
+            // sincronizações sucessivas (em vez de confirmar e sumir), é sinal de
+            // que o Sheets nunca está devolvendo o valor gravado — a proteção
+            // abaixo seguirá mostrando o valor local até PENDING_EDIT_TTL (24h)
+            // expirar, quando o valor do Sheets (possivelmente vazio) passa a valer.
+            if(['ini','fim','dataPrevista'].indexOf(field)!==-1){
+              console.warn('[Épicos] Data pendente ainda não confirmada pelo Sheets — id:', r.id,
+                'campo:', field, '| local (mantido na tela):', pend.fields[field],
+                '| Sheets devolveu:', r[field]||'(vazio)');
+            }
             r[field]=pend.fields[field];                              // ainda não refletiu — preserva
           }
         });
