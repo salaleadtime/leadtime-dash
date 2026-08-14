@@ -4126,7 +4126,33 @@ function toggleSortLT(){
   pg=1; renderTbl();
 }
 
+// Evita que um redesenho em segundo plano (poll automático do Sheets, a cada
+// SHEETS_POLL_MS) apague um valor que o usuário está no meio de digitar/
+// selecionar num input da tabela de Épicos: renderTbl() reconstrói o
+// innerHTML inteiro, e um <input type="date"> com o seletor ainda aberto
+// (ou uma edição de texto ainda não confirmada) não dispara onchange/onblur
+// antes de ser destruído — a digitação some sem nunca chegar a fc(), e por
+// isso nem o Sheets recebe o valor (não é o Sheets que "não pegou": o valor
+// nunca chegou a ser enviado).
+var _tblRenderPending=false;
+function _tblEditInProgress(){
+  var ae=document.activeElement;
+  if(!ae||!ae.classList) return false;
+  var body=$id('tblBody');
+  if(!body||!body.contains(ae)) return false;
+  return ae.classList.contains('einp')||ae.classList.contains('eimp');
+}
+document.addEventListener('focusout',function(e){
+  if(!_tblRenderPending) return;
+  var body=$id('tblBody');
+  if(body&&e.target&&body.contains(e.target)){
+    _tblRenderPending=false;
+    setTimeout(renderTbl,80);
+  }
+},true);
+
 function renderTbl(){
+  if(_tblEditInProgress()){ _tblRenderPending=true; return; }
   var fd=getFiltered(), tot=fd.length;
   // Apply LT sort if active
   if(sortLT==='desc') fd=fd.slice().sort(function(a,b){return b.lt-a.lt;});
