@@ -5742,7 +5742,7 @@
       <div class="filter-left">
         <div>
           <label>Squad</label>
-          <select id="squadFilter" onchange="handleSquadFilterChange()"></select>
+          <select id="squadFilter"></select>
         </div>
         <div class="selected-pill" id="selectedSquadLabel">Squad: Contact</div>
         <!-- Filtro de período de datas -->
@@ -5761,11 +5761,11 @@
       <div class="filter-left" id="operationalFilters" style="display:none">
         <div>
           <label>Status</label>
-          <select id="statusFilter" onchange="renderAll()"></select>
+          <select id="statusFilter"></select>
         </div>
         <div>
           <label>Buscar</label>
-          <input type="text" id="searchFilter" placeholder="Chave, resumo, épico..." oninput="renderAll()" />
+          <input type="text" id="searchFilter" placeholder="Chave, resumo, épico..." />
         </div>
       </div>
     </section>
@@ -7272,6 +7272,15 @@
       if(typeof syncSquadToUrl === 'function') syncSquadToUrl();
     }
 
+    // Squad/Status/Busca costumavam ter o handler cadastrado aqui E de novo como
+    // atributo onchange/oninput no HTML (ver <select id="squadFilter">, etc.) — cada
+    // interação disparava o mesmo re-render completo (5 seções: Gestão, Homologação,
+    // Operacional, Sprint Atual, Entregas) 2 ou 3 vezes seguidas (select dispara
+    // 'change' E 'input' no mesmo evento). Era a causa mais direta de lentidão ao
+    // trocar squad/status ou digitar na busca. Só resta esta única fonte de binding.
+    // A busca também ganha um pequeno debounce: sem ele, cada tecla digitada refaz
+    // a tabela inteira de Operacional (centenas de linhas em bases maiores).
+    let _searchFilterDebounceTimer = null;
     function bindFilterEvents(){
       const squad = $('squadFilter');
       const status = $('statusFilter');
@@ -7280,7 +7289,6 @@
       if(squad && !squad.dataset.bound){
         squad.dataset.bound = 'true';
         squad.addEventListener('change', handleSquadFilterChange);
-        squad.addEventListener('input', handleSquadFilterChange);
       }
       if(status && !status.dataset.bound){
         status.dataset.bound = 'true';
@@ -7288,7 +7296,10 @@
       }
       if(search && !search.dataset.bound){
         search.dataset.bound = 'true';
-        search.addEventListener('input', renderAll);
+        search.addEventListener('input', function(){
+          if(_searchFilterDebounceTimer) clearTimeout(_searchFilterDebounceTimer);
+          _searchFilterDebounceTimer = setTimeout(renderAll, 180);
+        });
       }
     }
 
