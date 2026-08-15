@@ -102,6 +102,50 @@ ele faz parte do espelho ou não — não adivinhe.
 `BACKLOG_SCRIPT_VERSION` no topo do arquivo deve ser incrementado a cada
 mudança, e conferido via `?action=health` depois do redeploy.
 
+## Checklist de importação completa (Jira → dashboard)
+
+O botão "🌐 Importar Tudo" (`index.html`, função `loadMultipleFiles` /
+`detectUnifiedFileType`) aceita vários arquivos de uma vez e roteia **cada
+um automaticamente** pro destino certo, por nome/conteúdo do arquivo — não
+existe uma etapa manual de "escolher pra onde vai". Isso é importante
+porque **importar só parte dos arquivos não é erro** (a importação
+funciona normalmente e não avisa nada de errado) — só atualiza as áreas
+correspondentes aos arquivos entregues, e o resto do site continua com o
+dado antigo até a próxima importação que inclua o que falta.
+
+Pra atualizar **tudo de uma vez** (dashboard principal, Discovery PMO
+Tracker e Visão de Projetos), a rotina precisa reunir os 7 relatórios do
+Jira abaixo antes de clicar em "Importar Tudo":
+
+| # | Arquivo (contém no nome) | Tipo detectado | Atualiza |
+|---|---|---|---|
+| 1 | Épicos Pós-Identificado | `epics` | Tab Épicos |
+| 2 | Qtd Épicos atrelados a Story | `stories` | Tab 📋 Qtd Story/Épicos |
+| 3 | Story no Backlog Refinadas | `backlog` | Tab Backlog/Refinamento + **Demandas Emergenciais** |
+| 4 | Acomp. Geral (Todas Squads) | `general_visao` | Visão de Projetos |
+| 5 | Sprint ativa (Story, Melhorias e Bug) | `sprint_visao` | Visão de Projetos |
+| 6 | Story em Homologação com data | `homologation_visao` | Visão de Projetos + SLA |
+| 7 | Ops4Ops Refinada x Backlog | `ops4ops` | Discovery PMO Tracker |
+
+Note que o arquivo 7 tem "Backlog" no nome mas **nunca** vai para a tab
+Backlog do dashboard principal — `detectUnifiedFileType` prioriza a
+detecção de "ops4ops" no nome de propósito (comentário no código: "Ops4Ops
+tem a mesma estrutura e pode conter 'Backlog' no nome, mas sua fonte é o
+Discovery PMO — nunca pode entrar no Backlog geral"). Quem não souber
+disso pode achar que importou o Backlog quando na verdade importou pro
+Discovery.
+
+**Sintoma de quando falta o arquivo 3 especificamente**: uma história que
+já apareceu em Demandas Emergenciais (via snapshot de Backlog confirmado)
+muda de status no Jira pra algo diferente de "Product Backlog" (ex.: "Em
+Desenvolvimento") — isso a tira do relatório de Backlog, e ela só continua
+visível em Demandas Emergenciais se a base de Estórias (arquivo 3) for
+reimportada com o status novo. Sem isso, a história some de Demandas
+Emergenciais **e de qualquer outro lugar do dashboard principal**, mesmo
+que ela apareça normalmente nos arquivos 4-7 (que vão pra outras páginas).
+Caso real: card SLOPC-42490, 12/08/26 — sumiu de Demandas Emergenciais
+porque só os arquivos 4-7 tinham sido importados naquele dia.
+
 ## Padrão de resiliência (histórico: falha "Não foi possível sincronizar")
 
 Causa raiz recorrente: o hop `script.google.com` → conteúdo real da resposta
