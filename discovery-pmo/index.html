@@ -10635,6 +10635,43 @@
       });
     }
 
+    // v23: eleição de aba líder (localStorage) + pausa por inatividade. Motivação:
+    // usuária flagrada com 10 janelas abertas ao mesmo tempo no ambiente do cliente —
+    // cada uma fazendo o ping de revisão no mesmo ritmo, 10x o necessário pra uma só
+    // pessoa. Só a aba "líder" (heartbeat em localStorage) chama o backend; as demais
+    // ficam ouvindo o evento 'storage' e só buscam de verdade quando a líder publica
+    // uma revisão nova (raro). Se a líder fechar, o heartbeat expira e outra aba assume
+    // sozinha, sem F5. localStorage indisponível faz a aba agir sozinha, como antes.
+    const _discTabId = Date.now() + '_' + Math.random().toString(36).slice(2);
+    const _discLeaderKey = 'sala_leader_discovery_v1';
+    const _discSharedRevKey = 'sala_shared_rev_discovery_v1';
+    const _discLeaderStaleMs = 75000; // 2.5x o intervalo de 30s
+    let _discLastInteraction = Date.now();
+    const _discIdleMs = 300000; // 5min sem interação numa aba visível = "esquecida"
+    ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'].forEach(ev => {
+      document.addEventListener(ev, () => { _discLastInteraction = Date.now(); }, { passive: true });
+    });
+    function _discIsIdle() { return (Date.now() - _discLastInteraction) > _discIdleMs; }
+    function _discClaimOrIsLeader() {
+      try {
+        const now = Date.now();
+        let leader = null;
+        try { leader = JSON.parse(localStorage.getItem(_discLeaderKey)); } catch (e) {}
+        const amLeader = leader && leader.id === _discTabId;
+        const leaderStale = !leader || (now - leader.heartbeat) > _discLeaderStaleMs;
+        if (amLeader || leaderStale) { localStorage.setItem(_discLeaderKey, JSON.stringify({ id: _discTabId, heartbeat: now })); return true; }
+        return false;
+      } catch (e) { return true; }
+    }
+    function _discPublishRevision() {
+      try { if (typeof _discLastKnownRevision === 'number') localStorage.setItem(_discSharedRevKey, String(_discLastKnownRevision)); } catch (e) {}
+    }
+    window.addEventListener('storage', ev => {
+      if (ev.key !== _discSharedRevKey || ev.newValue == null) return;
+      const rev = Number(ev.newValue);
+      if (!isNaN(rev) && rev !== _discLastKnownRevision) discGasSyncPull();
+    });
+
     // v21: ping barato (getRevisions) no lugar de puxar a base completa do Discovery a
     // cada 15s — esse timer era, de longe, a maior fonte de chamadas do projeto (240x
     // mais chamadas/hora que os outros paineis). Agora só busca a base completa quando a
@@ -10644,11 +10681,18 @@
     let _discPollTicks = 0;
     setInterval(() => {
       if (document.hidden) return;
+      if (_discIsIdle()) return;
+      if (!_discClaimOrIsLeader()) return;
       _discPollTicks++;
-      if (_discPollTicks % 20 === 0) { discGasSyncPull(); return; }
-      discGasCheckRevision();
+      if (_discPollTicks % 20 === 0) { discGasSyncPull(() => _discPublishRevision()); return; }
+      discGasCheckRevision(() => _discPublishRevision());
     }, 30000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasCheckRevision(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      _discLastInteraction = Date.now();
+      if (!_discClaimOrIsLeader()) return;
+      discGasCheckRevision(() => _discPublishRevision());
+    });
     // Migrações únicas só valem para toda a base quando chegam ao servidor — sem isso,
     // ficariam apenas no localStorage de quem abriu a página primeiro.
     if ((_cardsJustReset || _scheduleLegacyCleanupJustRan) && !_discUsingFallback) {
