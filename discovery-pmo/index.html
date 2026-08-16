@@ -10381,14 +10381,44 @@
       });
     }
 
-    function discGasSave(payload) {
+    function discGasSave(payload, isRetry) {
       if (!DISC_GAS_URL) return;
       fetch(DISC_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'action=saveVpData&key=' + DISC_GAS_KEY + '&payload=' + encodeURIComponent(JSON.stringify(payload))
-      }).catch(() => {});
+      }).then(() => {
+        confirmDiscGasSave(payload, isRetry);
+      }).catch(() => {
+        toast('⚠️ Falha de rede ao salvar. Tentando de novo em instantes…');
+      });
+    }
+
+    // mode:'no-cors' torna a resposta do POST opaca: o .then acima só confirma que o
+    // navegador conseguiu ENVIAR a requisição, nunca que o Apps Script realmente
+    // gravou (lock do servidor, proxy truncando a resposta, timeout — tudo isso
+    // passa batido em silêncio). Sem essa verificação, uma squad/iniciativa cadastrada
+    // podia "salvar" com sucesso na tela e nunca chegar de fato na base compartilhada,
+    // só sendo percebido dias depois como "sumiu". Mesmo padrão de verify-and-retry já
+    // validado em gasSaveBacklog (index.html): confirma via GET separado, reenvia 1x
+    // automaticamente se o servidor não refletir o que acabamos de mandar, e só then
+    // incomoda o usuário com um toast se o reenvio também não confirmar. Caminho feliz
+    // (a grande maioria dos saves) fica silencioso de propósito — o autosave roda a
+    // cada edição e não pode virar um toast a cada poucos segundos.
+    function confirmDiscGasSave(payload, isRetry) {
+      const localSquads = Array.isArray(payload?.squads) ? payload.squads.length : 0;
+      const localProjects = Array.isArray(payload?.projects) ? payload.projects.length : 0;
+      setTimeout(() => {
+        discGasLoad((err, remote) => {
+          const remoteSquads = Array.isArray(remote?.squads) ? remote.squads.length : 0;
+          const remoteProjects = Array.isArray(remote?.projects) ? remote.projects.length : 0;
+          const confirmed = !err && remote && remoteProjects >= localProjects && remoteSquads >= localSquads;
+          if (confirmed) return;
+          if (!isRetry) { discGasSave(payload, true); return; }
+          toast('⚠️ Não foi possível confirmar a última gravação no servidor. Clique em "↻ Atualizar" para tentar de novo.');
+        });
+      }, 2500);
     }
 
     function scheduleDiscGasSave() {
@@ -13884,39 +13914,11 @@ Recomendação PMO: ${d.recommendation}`;
       saveData(true);
     }
 
-    function insertSquadAutomationControls() {
-      const actions = document.querySelector('.side-actions');
-      if (!actions) return;
-      const newBtn = actions.querySelector('button[onclick="openProjectModal()"]');
-      if (newBtn) {
-        newBtn.textContent = '+ Iniciativa';
-        newBtn.title = 'Cadastrar nova iniciativa com número automático';
-      }
-
-      if (!document.getElementById('dashboardViewBtn')) {
-        const dashBtn = document.createElement('button');
-        dashBtn.type = 'button';
-        dashBtn.id = 'dashboardViewBtn';
-        dashBtn.className = 'ghost-btn';
-        dashBtn.textContent = 'Dashboard';
-        dashBtn.title = 'Visualizar dashboard executivo de Squads';
-        dashBtn.onclick = () => setDashboardMode();
-        actions.insertBefore(dashBtn, actions.firstChild);
-      }
-
-      if (!document.getElementById('squadManagerBtn')) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.id = 'squadManagerBtn';
-        btn.className = 'ghost-btn';
-        btn.textContent = 'Squads';
-        btn.title = 'Cadastrar e gerenciar Squads';
-        btn.onclick = () => openSquadModal();
-        if (newBtn?.nextSibling) actions.insertBefore(btn, newBtn.nextSibling);
-        else actions.appendChild(btn);
-      }
-    }
-
+    // insertSquadAutomationControls estava duplicada nesta base (2 declarações no
+    // mesmo escopo) — como só a ÚLTIMA declaração de uma função vale em JS, esta
+    // cópia nunca executava; removida em vez de mantida como código morto (ver
+    // "Funções duplicadas" no CLAUDE.md deste repo). A versão que realmente roda
+    // está mais abaixo, perto de renderProjectCardsForSquad/renderSquadOverview.
 
     function squadProjects(squadId) {
       return (data.projects || []).filter(p => (p.squadId || squadForProject(p)?.id) === squadId);
@@ -14038,139 +14040,14 @@ Recomendação PMO: ${d.recommendation}`;
       return words[0][0].toUpperCase();
     }
 
-    function renderProjectCardsForSquad(squad) {
-      const projects = squadProjects(squad.id);
-      if (!projects.length) {
-        return `<div class="dash-empty-projects">
-          <strong>Nenhuma iniciativa vinculada a esta Squad.</strong><br>
-          Cadastre uma nova iniciativa e selecione a Squad ${escapeHtml(squad.name)} para ela aparecer aqui.
-          <div style="margin-top:12px;"><button type="button" class="btn soft" onclick="openProjectModalForSquad('${escapeAttr(squad.id)}')">+ Nova iniciativa nesta Squad</button></div>
-        </div>`;
-      }
-      return `<div class="dashboard-project-grid">${projects.map(project => {
-        const progress = calculateProgress(project);
-        const readiness = deliveryReadinessDetails(project);
-        const alerts = projectAlertCount(project);
-        return `<button type="button" class="dashboard-project-card" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" title="Abrir projeto ${escapeAttr(displayProjectTitle(project))}">
-          <div class="dash-project-head">
-            <strong>${escapeHtml(displayProjectTitle(project))}</strong>
-            <span class="dash-project-code">${escapeHtml(initiativeNumber(project) || 'DISC')}</span>
-          </div>
-          <div class="dash-project-meta">
-            <span>${escapeHtml(project.status || 'Sem status')}</span>
-            <span>Criticidade ${escapeHtml(project.criticality || 'N/I')}</span>
-            <span>Target ${escapeHtml(formatBR(project.target))}</span>
-            <span>${alerts} alerta(s)</span>
-          </div>
-          <div class="dash-project-footer">
-            <div>
-              <div class="dash-project-progress"><span style="width:${progress}%"></span></div>
-              <div class="dash-kpi-note">Prontidão: ${escapeHtml(readiness.readiness)} · ${progress}% maturidade</div>
-            </div>
-            <span class="squad-card-link">Abrir →</span>
-          </div>
-        </button>`;
-      }).join('')}</div>`;
-    }
-
-    function renderSquadOverview() {
-      data = enhanceSquadData(data);
-      const el = document.getElementById('squadOverview');
-      if (!el) return;
-      const squads = sortedSquadsList();
-      ensureDefaultDashboardSquad();
-      const allProjects = data.projects || [];
-      const totalProjects = allProjects.length;
-      const avgProgress = totalProjects
-        ? Math.round(allProjects.reduce((acc, project) => acc + calculateProgress(project), 0) / totalProjects)
-        : 0;
-      const activeDiscoveries = allProjects.filter(project => automaticProjectStatus(project) !== 'Concluído').length;
-      const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-      const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
-
-      const squadCards = squads.map(squad => {
-        const projects = squadProjects(squad.id);
-        const count = projects.length;
-        const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
-        const alerts = projects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-        const critical = projects.filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
-        const statusCounts = projects.reduce((acc, project) => {
-          const key = project.status || 'Sem status';
-          acc[key] = (acc[key] || 0) + 1;
-          return acc;
-        }, {});
-        const statusHtml = Object.entries(statusCounts).slice(0, 3).map(([status, total]) => `<span class="squad-status-tag">${escapeHtml(status)} · ${total}</span>`).join('') || '<span class="squad-status-tag">Sem projetos</span>';
-        return `<button type="button" class="squad-dash-card ${selectedSquad?.id === squad.id ? 'active' : ''}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
-          <div class="squad-dash-top">
-            <div class="squad-avatar">${escapeHtml(squadInitials(squad.name))}</div>
-            <div class="squad-title-text">
-              <strong>${escapeHtml(squad.name || 'Squad sem nome')}</strong>
-              <span>${escapeHtml(squad.business || 'Área não informada')}</span>
-            </div>
-            <div class="squad-dash-count"><strong>${count}</strong><span>Projetos</span></div>
-          </div>
-          <div class="squad-mini-metrics">
-            <div class="squad-mini-metric"><strong>${average}%</strong><span>Maturidade média</span></div>
-            <div class="squad-mini-metric"><strong>${critical}</strong><span>Atenção / crítico</span></div>
-            <div class="squad-mini-metric"><strong>${alerts}</strong><span>Alertas PMO</span></div>
-          </div>
-          <div class="squad-status-row">${statusHtml}</div>
-          <div class="squad-dash-progress"><div class="squad-dash-progress-track"><span style="width:${average}%"></span></div><em>${average}%</em></div>
-          <span class="squad-card-link">Ver projetos da Squad →</span>
-        </button>`;
-      }).join('');
-
-      const selectedPanel = selectedSquad ? `<section id="squadProjectListPanel" class="squad-projects-dock" aria-label="Projetos da Squad selecionada">
-        <div class="dash-panel-head">
-          <div class="dash-panel-title">
-            <strong>Projetos da Squad ${escapeHtml(selectedSquad.name)}</strong>
-            <span>Clique em um projeto para abrir a visão completa do Discovery, com cards, cronograma, checklist, riscos e anexos.</span>
-          </div>
-          <div class="dash-panel-actions">
-            <span class="dash-filter-pill">${squadProjects(selectedSquad.id).length} projeto(s)</span>
-            <button type="button" class="btn soft" onclick="openProjectModalForSquad('${escapeAttr(selectedSquad.id)}')">+ Nova iniciativa</button>
-          </div>
-        </div>
-        ${renderProjectCardsForSquad(selectedSquad)}
-      </section>` : `<section class="squad-projects-dock" aria-label="Orientação do dashboard">
-        <div class="dash-empty-projects">
-          <strong>Escolha uma Squad acima.</strong><br>
-          Ao clicar, o APP mostra somente os projetos daquela Squad. Depois, clique no projeto para abrir a visão completa do Discovery.
-        </div>
-      </section>`;
-
-      el.innerHTML = `<div class="squad-dashboard-shell">
-        <section class="dashboard-command" aria-label="Resumo executivo das Squads">
-          <div>
-            <span class="dash-eyebrow">Visão executiva</span>
-            <h2>Dashboard de Squads e Discoveries</h2>
-            <p>Visão inicial focada em gestão: acompanhe quantos projetos existem por Squad, maturidade média, alertas PMO e status. Clique em uma Squad para visualizar apenas os projetos vinculados a ela.</p>
-          </div>
-          <div class="dash-kpi-board">
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Squads cadastradas</div><div class="dash-kpi-value">${squads.length}</div><div class="dash-kpi-note">Base de organização do Discovery</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Projetos / iniciativas</div><div class="dash-kpi-value">${totalProjects}</div><div class="dash-kpi-note">Total em acompanhamento</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Em acompanhamento</div><div class="dash-kpi-value">${activeDiscoveries}</div><div class="dash-kpi-note">A iniciar, Discovery ou atenção</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Alertas PMO</div><div class="dash-kpi-value">${totalAlerts}</div><div class="dash-kpi-note">Riscos, bloqueios e PDCA</div></div>
-          </div>
-        </section>
-
-        <section class="squad-dashboard-panel" aria-label="Cards clicáveis das Squads">
-          <div class="dash-panel-head">
-            <div class="dash-panel-title">
-              <strong>Squads</strong>
-              <span>Cards clicáveis para navegar até os projetos de cada Squad.</span>
-            </div>
-            <div class="dash-panel-actions">
-              <span class="dash-filter-pill">Maturidade média geral: ${avgProgress}%</span>
-              <button type="button" class="btn" onclick="openSquadModal()">Gerenciar Squads</button>
-            </div>
-          </div>
-          <div class="squad-dashboard-grid">${squadCards}</div>
-        </section>
-
-        ${selectedPanel}
-      </div>`;
-    }
+    // renderProjectCardsForSquad e renderSquadOverview estavam duplicadas nesta base
+    // (3 declarações cada, no mesmo escopo) — como só a ÚLTIMA declaração vale em JS,
+    // esta cópia (e a intermediária, mais abaixo) nunca executavam; removidas em vez
+    // de mantidas como código morto (ver "Funções duplicadas" no CLAUDE.md deste
+    // repo). renderHero e copyExecutiveSummary também estavam duplicadas — mantida
+    // só a versão mais completa (com breadcrumbProjectCode em formato "IN <nº>" e
+    // squadInitiativeCount tolerante a squad ausente), já presente mais abaixo no
+    // arquivo, junto da versão vigente de renderProjectCardsForSquad/renderSquadOverview.
 
     function renderSidebar() {
       data = enhanceSquadData(data);
@@ -14187,67 +14064,6 @@ Recomendação PMO: ${d.recommendation}`;
       const selected = wrap.querySelector('.project-pill.active');
       if (selected && typeof selected.scrollIntoView === 'function') selected.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
-
-    function renderHero(project) {
-      data = enhanceSquadData(data);
-      const progress = calculateProgress(project);
-      const readiness = deliveryReadinessDetails(project);
-      const schedulePhase = schedulePhaseSummary(project);
-      const schedulePending = schedulePendingSummary(project);
-      const pdca = readiness.pdca;
-      const decisionNeeded = readiness.blocked > 0 || readiness.risks > 0 || pdca > 0 || readiness.readiness !== 'Alta';
-      const next = nextMilestone(project);
-      const squad = squadForProject(project);
-      document.getElementById('projectName').textContent = project.name || 'Projeto sem nome';
-      document.getElementById('projectSummary').textContent = buildExecutiveReading(project);
-      document.getElementById('scoreValue').textContent = progress + '%';
-      document.getElementById('progressRing').dataset.progress = progress;
-      document.getElementById('progressRing').style.setProperty('--deg', (progress * 3.6) + 'deg');
-      document.getElementById('mainProgress').style.width = progress + '%';
-      document.getElementById('scoreText').textContent = progress >= 80 ? 'Discovery maduro para tomada de decisão e próximo passo.' : progress >= 55 ? 'Discovery em boa evolução, com pontos de atenção controláveis.' : 'Discovery ainda precisa de decisões, dados e clareza para avançar com segurança.';
-      const ini = initiativeNumber(project);
-      const breadcrumbCode = document.getElementById('breadcrumbProjectCode');
-      if (breadcrumbCode) breadcrumbCode.textContent = ini || 'Iniciativa';
-      document.getElementById('projectTags').innerHTML = `
-        ${ini ? `<span class="initiative-highlight">Nº Iniciativa: ${escapeHtml(ini)}</span><span class="dot">•</span>` : ''}
-        <span>Squad: <strong>${escapeHtml(squad?.name || project.squad || inferSquad(project))}</strong></span><span class="dot">•</span>
-        <span>Área: <strong>${escapeHtml(project.business || squad?.business || 'Não informado')}</strong></span><span class="dot">•</span>
-        <span>RTE: <strong>${escapeHtml(project.rteOwner || squad?.rteOwner || project.owner || 'PMO/RTE')}</strong></span><span class="dot">•</span>
-        <span>PMO: <strong>${escapeHtml(project.owner || squad?.owner || 'PMO/RTE')}</strong></span>
-      `;
-      const indicators = [
-        { label: 'Status', value: project.status || 'Não informado', note: project.criticality ? `Criticidade ${project.criticality}` : 'Saúde geral do projeto', color: statusColor(project.status) },
-        { label: 'Squad', value: squad?.name || project.squad || 'A definir', note: `${squadInitiativeCount(squad?.id)} iniciativa(s) vinculada(s)`, color: 'var(--blue)' },
-        { label: 'Target', value: formatBR(project.target), note: project.startDate ? `Início ${formatBR(project.startDate)}` : 'Data alvo executiva', color: 'var(--purple)' },
-        { label: 'Delivery', value: readiness.readiness, note: readiness.readiness === 'Alta' ? 'Pode evoluir com segurança' : 'Ainda exige maturação', color: readiness.readiness === 'Alta' ? 'var(--green)' : readiness.readiness === 'Média' ? 'var(--amber)' : 'var(--primary)' }
-      ];
-      document.getElementById('executiveHeroIndicators').innerHTML = indicators.map(i => `
-        <div class="exec-indicator-card" style="--indicator-color:${i.color}">
-          <div class="exec-indicator-label">${escapeHtml(i.label)}</div>
-          <div class="exec-indicator-value" title="${escapeAttr(i.value)}">${escapeHtml(i.value)}</div>
-          <div class="exec-indicator-note">${escapeHtml(i.note)}</div>
-        </div>
-      `).join('');
-      const alert = document.getElementById('executiveAttentionBlock');
-      if (decisionNeeded) {
-        const action = readiness.recommendation || managementActionText(project, { progress, blocked: readiness.blocked, risks: readiness.risks, late: pdca, attention: pdca });
-        alert.classList.remove('hidden');
-        alert.innerHTML = `<strong>Ponto de atenção executivo</strong><span>Próximo marco: ${escapeHtml(next)}. Ação esperada: ${escapeHtml(action)}</span>`;
-      } else {
-        alert.classList.add('hidden');
-        alert.innerHTML = '';
-      }
-    }
-
-    function copyExecutiveSummary() {
-      const p = getProject();
-      const d = deliveryReadinessDetails(p);
-      const squad = squadForProject(p);
-      const text = `Leitura executiva — Discovery PMO Tracker\n\nIniciativa: ${initiativeNumber(p) || 'Não informada'}\nNome: ${p.name}\nSquad: ${squad?.name || p.squad || 'Não informada'}${squad?.code ? ` (${squad.code})` : ''}\nÁrea/negócio: ${p.business || squad?.business || 'Não informado'}\nStatus executivo: ${p.status}\nData target: ${formatBR(p.target)}\nProntidão atual: ${d.readiness}\nMaturidade do Discovery: ${d.progress}%\nFase atual: ${currentDiscoveryPhase(p)}\nPróximo marco: ${nextMilestone(p)}\nMVP definido: ${d.mvp.label}\nCritérios de aceite: ${d.acceptance.label}\nDependências técnicas: ${d.dependencies.label}\nBacklog inicial: ${d.backlog.label}\nRiscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma\nAnexos relevantes: ${(p.attachments || []).length}\nRecomendação PMO: ${d.recommendation}`;
-      copyText(text);
-    }
-
-
 
     /* === PATCH Planejamento 2026 validado: preservar números oficiais e enriquecer Discovery === */
     function normalizeNeutralInitiativeNumbers(base) {
@@ -17614,154 +17430,10 @@ Recomendação PMO: ${d.recommendation}`;
       }
     }
 
-    function renderProjectCardsForSquad(squad) {
-      const projects = squadProjects(squad.id);
-      if (!projects.length) {
-        return `<div class="dash-empty-projects"><strong>Nenhuma iniciativa vinculada a esta Squad.</strong><br>Cadastre uma iniciativa oficial e selecione a Squad ${escapeHtml(squad.name)}.</div>`;
-      }
-      return `<div class="dashboard-project-grid">${projects.map(project => {
-        const progress = calculateProgress(project);
-        const readiness = deliveryReadinessDetails(project);
-        const alerts = projectAlertCount(project);
-        return `<button type="button" class="dashboard-project-card" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" title="Abrir projeto ${escapeAttr(displayProjectTitle(project))}">
-          <div class="dash-project-head">
-            <strong>${escapeHtml(displayProjectTitle(project))}</strong>
-            <span class="dash-project-code">${initiativeCodeHtml(project)}</span>
-          </div>
-          <div class="dash-project-meta">
-            <span>Discovery ${escapeHtml(formatBR(project.discoveryDate))}</span>
-            <span>Dev ${escapeHtml(formatBR(project.startDev))}</span>
-            <span>${escapeHtml(formatHours(project.hours2026))}</span>
-            <span>${subInitiativeCount(project)} filha(s)</span>
-            <span>${alerts} alerta(s)</span>
-            <span>${escapeHtml(readiness.readiness)} prontidão</span>
-          </div>
-          <div class="dash-project-people">
-            <span>Líder: ${escapeHtml(peopleValue(project, 'frontLeader'))}</span>
-            <span>PO: ${escapeHtml(peopleValue(project, 'po'))}</span>
-            <span>TL: ${escapeHtml(peopleValue(project, 'techLead'))}</span>
-            <span>Dados: ${escapeHtml(peopleValue(project, 'dataArea'))}</span>
-          </div>
-          <div class="dash-project-footer">
-            <div>
-              <div class="dash-project-progress"><span style="width:${progress}%"></span></div>
-              <div class="dash-kpi-note">${progress}% maturidade · ${escapeHtml(project.status || 'Sem status')}</div>
-            </div>
-            <span class="squad-card-link">Abrir →</span>
-          </div>
-        </button>`;
-      }).join('')}</div>`;
-    }
-
-    function renderSquadOverview() {
-      data = enhanceSquadData(data);
-      const el = document.getElementById('squadOverview');
-      if (!el) return;
-      const squads = sortedSquadsList();
-      ensureDefaultDashboardSquad();
-      const allProjects = data.projects || [];
-      const totalProjects = allProjects.length;
-      const totalChildren = allProjects.reduce((acc, project) => acc + subInitiativeCount(project), 0);
-      const totalHours = allProjects.reduce((acc, project) => acc + Number(project.hours2026 || 0), 0);
-      const avgProgress = totalProjects ? Math.round(allProjects.reduce((acc, project) => acc + calculateProgress(project), 0) / totalProjects) : 0;
-      const activeDiscoveries = allProjects.filter(p => ['Em Discovery', 'A iniciar', 'Atenção', 'Crítico', 'No prazo'].includes(p.status)).length;
-      const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-      const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
-
-      const squadCards = squads.map(squad => {
-        const projects = squadProjects(squad.id);
-        const count = projects.length;
-        const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
-        const alerts = projects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-        const critical = projects.filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
-        const hours = hoursForSquad(squad.id);
-        const children = childCountForSquad(squad.id);
-        const nextScheduleDate = nextScheduleDateForSquad(squad.id);
-        const missing = projects.reduce((acc, project) => acc + (missingDataCount(project) > 0 ? 1 : 0), 0);
-        const statusCounts = projects.reduce((acc, project) => {
-          const key = project.status || 'Sem status';
-          acc[key] = (acc[key] || 0) + 1;
-          return acc;
-        }, {});
-        const statusHtml = Object.entries(statusCounts).slice(0, 3).map(([status, total]) => `<span class="squad-status-tag">${escapeHtml(status)} · ${total}</span>`).join('') || '<span class="squad-status-tag">Sem projetos</span>';
-        return `<button type="button" class="squad-dash-card ${selectedSquad?.id === squad.id ? 'active' : ''}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
-          <div class="squad-dash-top">
-            <div class="squad-avatar">${escapeHtml(squadInitials(squad.name))}</div>
-            <div class="squad-title-text">
-              <strong>${escapeHtml(squad.name || 'Squad sem nome')}</strong>
-              <span>${escapeHtml(squad.business || 'Área não informada')}</span>
-            </div>
-            <div class="squad-dash-count"><strong>${count}</strong><span>Projetos</span></div>
-          </div>
-          <div class="squad-mini-metrics">
-            <div class="squad-mini-metric"><strong>${formatHours(hours)}</strong><span>Horas 2026</span></div>
-            <div class="squad-mini-metric"><strong>${children}</strong><span>Filhas</span></div>
-            <div class="squad-mini-metric"><strong>${alerts}</strong><span>Alertas</span></div>
-          </div>
-          <div class="squad-extra-line">
-            <span>Próx. Discovery: ${escapeHtml(formatBR(nextDisc))}</span>
-            <span>${critical} atenção/crítico</span>
-            <span>${missing} com dados pendentes</span>
-          </div>
-          <div class="squad-status-row">${statusHtml}</div>
-          <div class="squad-dash-progress"><div class="squad-dash-progress-track"><span style="width:${average}%"></span></div><em>${average}%</em></div>
-          <span class="squad-card-link">Ver projetos da Squad →</span>
-        </button>`;
-      }).join('');
-
-      const selectedPanel = selectedSquad ? `<section id="squadProjectListPanel" class="squad-projects-dock" aria-label="Projetos da Squad selecionada">
-        <div class="dash-panel-head">
-          <div class="dash-panel-title">
-            <strong>Projetos da Squad ${escapeHtml(selectedSquad.name)}</strong>
-            <span>Clique em um projeto para abrir a visão completa do Discovery. A contagem considera apenas iniciativas principais; filhas ficam dentro da iniciativa mãe.</span>
-          </div>
-          <div class="dash-panel-actions">
-            <span class="dash-filter-pill">${squadProjects(selectedSquad.id).length} projeto(s)</span>
-            <span class="dash-filter-pill">${formatHours(hoursForSquad(selectedSquad.id))}</span>
-          </div>
-        </div>
-        ${renderProjectCardsForSquad(selectedSquad)}
-      </section>` : `<section class="squad-projects-dock" aria-label="Orientação do dashboard">
-        <div class="dash-empty-projects">
-          <strong>Escolha uma Squad acima.</strong><br>
-          Ao clicar, o APP mostra somente os projetos daquela Squad. Depois, clique no projeto para abrir a visão completa do Discovery.
-        </div>
-      </section>`;
-
-      el.innerHTML = `<div class="squad-dashboard-shell">
-        <div class="plan-source-strip"><strong>Planejamento 2026</strong><span>Números oficiais preservados · ${totalProjects} iniciativas principais · ${totalChildren} filhas vinculadas · ${formatHours(totalHours)}</span></div>
-        <section class="dashboard-command" aria-label="Resumo executivo das Squads">
-          <div>
-            <span class="dash-eyebrow">Visão executiva</span>
-            <h2>Dashboard de Squads e Discoveries</h2>
-            <p>Visão inicial focada em gestão: acompanhe quantos projetos existem por Squad, horas 2026, próximos Discoveries, filhas vinculadas e dados pendentes. Clique em uma Squad para visualizar apenas os projetos vinculados a ela.</p>
-          </div>
-          <div class="dash-kpi-board">
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Squads cadastradas</div><div class="dash-kpi-value">${squads.length}</div><div class="dash-kpi-note">Base de organização do Discovery</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Iniciativas principais</div><div class="dash-kpi-value">${totalProjects}</div><div class="dash-kpi-note">Filhas não contam como projeto principal</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Iniciativas filhas</div><div class="dash-kpi-value">${totalChildren}</div><div class="dash-kpi-note">Vinculadas dentro da mãe</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Horas 2026</div><div class="dash-kpi-value">${formatHours(totalHours)}</div><div class="dash-kpi-note">Consumo total importado</div></div>
-          </div>
-        </section>
-
-        <section class="squad-dashboard-panel" aria-label="Cards clicáveis das Squads">
-          <div class="dash-panel-head">
-            <div class="dash-panel-title">
-              <strong>Squads</strong>
-              <span>Cards clicáveis para navegar até os projetos de cada Squad.</span>
-            </div>
-            <div class="dash-panel-actions">
-              <span class="dash-filter-pill">Maturidade média geral: ${avgProgress}%</span>
-              <span class="dash-filter-pill">${activeDiscoveries} em acompanhamento</span>
-              <span class="dash-filter-pill">${totalAlerts} alerta(s)</span>
-            </div>
-          </div>
-          <div class="squad-dashboard-grid">${squadCards}</div>
-        </section>
-
-        ${selectedPanel}
-      </div>`;
-    }
+    // Segunda cópia morta de renderProjectCardsForSquad/renderSquadOverview removida
+    // (ver comentário equivalente mais acima nesta base). Bônus: esta cópia referenciava
+    // uma variável `nextDisc` nunca declarada — só não quebrava a tela porque, sendo
+    // código morto, nunca chegava a executar.
 
     function renderExecutiveRows(project) {
       const d = deliveryReadinessDetails(project);
@@ -17927,9 +17599,11 @@ Recomendação PMO: ${d.recommendation}`;
       if (!_discRemoteHydrated) { renderSharedDataPending(_discSyncStatusMessage); return; }
       data = enhanceSquadData(data);
 
-      // Squad sem nenhuma iniciativa vinculada não aparece no painel executivo;
-      // assim que uma iniciativa é cadastrada nela, passa a aparecer para todos.
-      const squads = sortedSquadsList().filter(squad => squadProjects(squad.id).length > 0);
+      // Squad aparece no painel assim que é cadastrada, mesmo sem nenhuma iniciativa
+      // vinculada ainda (antes, o filtro abaixo escondia a squad até a 1ª iniciativa
+      // ser criada nela, sem nenhum aviso — parecia "a squad sumiu" quando na
+      // verdade nunca tinha chegado a aparecer).
+      const squads = sortedSquadsList();
       ensureDefaultDashboardSquad();
       const allProjects = data.projects || [];
       const totalProjects = allProjects.length;
