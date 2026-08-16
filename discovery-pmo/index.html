@@ -11594,70 +11594,10 @@
       return compactProjectName(project?.name || 'Projeto sem nome', 30);
     }
 
-    function renderSidebar() {
-      const wrap = document.getElementById('projectList');
-      wrap.innerHTML = data.projects.map(p => {
-        const progress = calculateProgress(p);
-        return `<button type="button" class="project-pill ${p.id === activeProjectId ? 'active' : ''}" onclick="setActiveProject('${p.id}')" aria-pressed="${p.id === activeProjectId}" title="Abrir visão executiva de ${escapeHtml(displayProjectTitle(p))}">
-          <div class="pill-top"><span>${escapeHtml(projectMenuTitle(p))}</span><span class="pill-percent">${progress}%</span></div>
-          <div class="pill-meta"><span><span class="selected-mark">●</span>${escapeHtml(p.status)} · ${escapeHtml(p.criticality)}</span><div class="mini-progress"><span style="width:${progress}%"></span></div></div>
-        </button>`;
-      }).join('');
-      const selected = wrap.querySelector('.project-pill.active');
-      if (selected && typeof selected.scrollIntoView === 'function') {
-        selected.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
-
-    function renderHero(project) {
-      const progress = calculateProgress(project);
-      const readiness = deliveryReadinessDetails(project);
-      const pdca = readiness.pdca;
-      const decisionNeeded = readiness.blocked > 0 || readiness.risks > 0 || pdca > 0 || readiness.readiness !== 'Alta';
-      const next = nextMilestone(project);
-      document.getElementById('projectName').textContent = project.name || 'Projeto sem nome';
-      document.getElementById('projectSummary').textContent = buildExecutiveReading(project);
-      document.getElementById('scoreValue').textContent = progress + '%';
-      document.getElementById('progressRing').dataset.progress = progress;
-      document.getElementById('progressRing').style.setProperty('--deg', (progress * 3.6) + 'deg');
-      document.getElementById('mainProgress').style.width = progress + '%';
-      document.getElementById('scoreText').textContent = progress >= 80 ? 'Discovery maduro para tomada de decisão e próximo passo.' : progress >= 55 ? 'Discovery em boa evolução, com pontos de atenção controláveis.' : 'Discovery ainda precisa de decisões, dados e clareza para avançar com segurança.';
-
-      const ini = initiativeNumber(project);
-      const breadcrumbCode = document.getElementById('breadcrumbProjectCode');
-      if (breadcrumbCode) breadcrumbCode.textContent = ini || 'Iniciativa';
-      document.getElementById('projectTags').innerHTML = `
-        ${ini ? `<span class="initiative-highlight">Nº Iniciativa: ${escapeHtml(ini)}</span><span class="dot">•</span>` : ''}
-        <span>Squad: <strong>${escapeHtml(project.squad || inferSquad(project))}</strong></span><span class="dot">•</span>
-        <span>Área: <strong>${escapeHtml(project.business || 'Não informado')}</strong></span><span class="dot">•</span>
-        <span>RTE: <strong>${escapeHtml(project.rteOwner || project.owner || 'PMO/RTE')}</strong></span><span class="dot">•</span>
-        <span>PMO: <strong>${escapeHtml(project.owner || 'PMO/RTE')}</strong></span>
-      `;
-
-      const indicators = [
-        { label: 'Status', value: project.status || 'Não informado', note: project.criticality ? `Criticidade ${project.criticality}` : 'Saúde geral do projeto', color: statusColor(project.status) },
-        { label: 'Target', value: formatBR(project.target), note: project.startDate ? `Início ${formatBR(project.startDate)}` : 'Data alvo executiva', color: 'var(--blue)' },
-        { label: 'Delivery', value: readiness.readiness, note: readiness.readiness === 'Alta' ? 'Pode evoluir com segurança' : 'Ainda exige maturação', color: readiness.readiness === 'Alta' ? 'var(--green)' : readiness.readiness === 'Média' ? 'var(--amber)' : 'var(--primary)' },
-        { label: 'Decisão', value: decisionNeeded ? 'Sim' : 'Não', note: decisionNeeded ? 'Existe ponto de gestão' : 'Sem decisão crítica agora', color: decisionNeeded ? 'var(--primary)' : 'var(--green)' }
-      ];
-      document.getElementById('executiveHeroIndicators').innerHTML = indicators.map(i => `
-        <div class="exec-indicator-card" style="--indicator-color:${i.color}">
-          <div class="exec-indicator-label">${escapeHtml(i.label)}</div>
-          <div class="exec-indicator-value" title="${escapeAttr(i.value)}">${escapeHtml(i.value)}</div>
-          <div class="exec-indicator-note">${escapeHtml(i.note)}</div>
-        </div>
-      `).join('');
-
-      const alert = document.getElementById('executiveAttentionBlock');
-      if (decisionNeeded) {
-        const action = readiness.recommendation || managementActionText(project, { progress, blocked: readiness.blocked, risks: readiness.risks, late: pdca, attention: pdca });
-        alert.classList.remove('hidden');
-        alert.innerHTML = `<strong>Ponto de atenção executivo</strong><span>Próximo marco: ${escapeHtml(next)}. Ação esperada: ${escapeHtml(action)}</span>`;
-      } else {
-        alert.classList.add('hidden');
-        alert.innerHTML = '';
-      }
-    }
+    // renderSidebar e renderHero estavam duplicadas nesta base (mesma armadilha
+    // "Funções duplicadas" do CLAUDE.md deste repo) — como só a ÚLTIMA declaração de
+    // uma função vale em JS, estas cópias nunca executavam; removidas em vez de
+    // mantidas como código morto. As versões vigentes estão mais abaixo no arquivo.
 
     function renderMetrics(project) {
       const progress = calculateProgress(project);
@@ -13461,31 +13401,8 @@
       setTimeout(() => el.classList.remove('show'), 1800);
     }
 
-    function copyExecutiveSummary() {
-      const p = getProject();
-      const d = deliveryReadinessDetails(p);
-      const text = `Prontidão para Delivery - ${displayProjectTitle(p)}
-Iniciativa: ${initiativeNumber(p) || 'Não informada'}
-Projeto: ${p.name}
-Squad: ${p.squad || inferSquad(p)}
-Área/Negócio: ${p.business}
-RTE responsável: ${p.rteOwner || p.owner || 'PMO/RTE'}
-Início do projeto: ${formatBR(p.startDate)}
-Status executivo: ${p.status}
-Data target: ${formatBR(p.target)}
-Prontidão atual: ${d.readiness}
-Maturidade do Discovery: ${d.progress}%
-Fase atual: ${currentDiscoveryPhase(p)}
-Próximo marco: ${nextMilestone(p)}
-MVP definido: ${d.mvp.label}
-Critérios de aceite: ${d.acceptance.label}
-Dependências técnicas: ${d.dependencies.label}
-Backlog inicial: ${d.backlog.label}
-Riscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma
-Anexos relevantes: ${(p.attachments || []).length}
-Recomendação PMO: ${d.recommendation}`;
-      copyText(text);
-    }
+    // copyExecutiveSummary também estava duplicada — mesma armadilha, mesma correção
+    // (ver comentário equivalente mais acima nesta base). Versão vigente mais abaixo.
 
     function copyText(text, message = 'Leitura executiva copiada') {
       if (navigator.clipboard && window.isSecureContext) {
@@ -14062,21 +13979,10 @@ Recomendação PMO: ${d.recommendation}`;
     // squadInitiativeCount tolerante a squad ausente), já presente mais abaixo no
     // arquivo, junto da versão vigente de renderProjectCardsForSquad/renderSquadOverview.
 
-    function renderSidebar() {
-      data = enhanceSquadData(data);
-      insertSquadAutomationControls();
-      const wrap = document.getElementById('projectList');
-      wrap.innerHTML = data.projects.map(p => {
-        const progress = calculateProgress(p);
-        const squad = squadForProject(p);
-        return `<button type="button" class="project-pill ${p.id === activeProjectId ? 'active' : ''}" onclick="setActiveProject('${p.id}')" aria-pressed="${p.id === activeProjectId}" title="Abrir visão executiva de ${escapeHtml(displayProjectTitle(p))}">
-          <div class="pill-top"><span>${escapeHtml(projectMenuTitle(p))}</span><span class="pill-percent">${progress}%</span></div>
-          <div class="pill-meta"><span><span class="selected-mark">●</span>${escapeHtml(squad?.name || p.squad || 'Squad')} · ${escapeHtml(p.status)}</span><div class="mini-progress"><span style="width:${progress}%"></span></div></div>
-        </button>`;
-      }).join('');
-      const selected = wrap.querySelector('.project-pill.active');
-      if (selected && typeof selected.scrollIntoView === 'function') selected.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
+    // Segunda cópia morta de renderSidebar removida (mesma armadilha; ver comentário
+    // acima). A versão vigente (mais abaixo) esvazia/esconde a lista lateral de
+    // propósito — faz parte do redesenho que passou a navegar pelos cards de Squad
+    // ("ux-v6") em vez da lista de pílulas de projeto na barra lateral.
 
     /* === PATCH Planejamento 2026 validado: preservar números oficiais e enriquecer Discovery === */
     function normalizeNeutralInitiativeNumbers(base) {
