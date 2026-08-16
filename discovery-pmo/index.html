@@ -10391,7 +10391,11 @@
       }).then(() => {
         confirmDiscGasSave(payload, isRetry);
       }).catch(() => {
-        toast('⚠️ Falha de rede ao salvar. Tentando de novo em instantes…');
+        // Falha de rede no POST em si (fetch nem chegou a sair) — reenvia 1x antes de
+        // incomodar o usuário, mesma regra de "nunca uma chamada de tentativa única"
+        // do restante do app. Só avisa se o reenvio também falhar.
+        if (!isRetry) { setTimeout(() => discGasSave(payload, true), 2000); return; }
+        toast('⚠️ Falha de rede ao salvar. A alteração ficou salva só neste navegador por enquanto.');
       });
     }
 
@@ -10415,8 +10419,17 @@
           const remoteProjects = Array.isArray(remote?.projects) ? remote.projects.length : 0;
           const confirmed = !err && remote && remoteProjects >= localProjects && remoteSquads >= localSquads;
           if (confirmed) return;
-          if (!isRetry) { discGasSave(payload, true); return; }
-          toast('⚠️ Não foi possível confirmar a última gravação no servidor. Clique em "↻ Atualizar" para tentar de novo.');
+          if (!isRetry) {
+            // Mescla por registro o que o servidor tem agora antes de reenviar — sem isso,
+            // reenviar o snapshot local original por cima podia apagar uma edição
+            // concorrente de outra sessão que tenha chegado ao servidor entre o POST e
+            // esta confirmação (mesmo cuidado que gasSaveBacklog toma com mergeBacklog
+            // antes de reenviar).
+            if (remote) mergeRemoteIntoData(remote);
+            discGasSave(payload, true);
+            return;
+          }
+          toast('⚠️ Não foi possível confirmar a última gravação no servidor. A alteração continua salva neste navegador; edite algo nela de novo para tentar sincronizar automaticamente.');
         });
       }, 2500);
     }
