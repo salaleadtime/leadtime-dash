@@ -228,6 +228,61 @@ sem confirmar que ela não estoura esse limite.
 Se adicionar um novo polling automático no futuro, siga o mesmo padrão: ping
 de revisão + busca condicional, nunca um relógio fixo buscando tudo.
 
+## Eleição de aba líder + pausa por inatividade (histórico: 15/08, v23)
+
+Motivação: mesmo com o ping de revisão da seção anterior, uma pessoa só pode
+multiplicar o consumo sozinha — usuária real flagrada com **10 janelas do
+mesmo painel abertas ao mesmo tempo** no ambiente do cliente, cada uma
+fazendo o próprio ping de revisão no mesmo ritmo. 10x o necessário para uma
+única pessoa, sem nenhum bug envolvido, só do jeito que o navegador foi
+usado.
+
+**Correção (v23)**: os 3 painéis (`index.html`, `discovery-pmo/index.html`,
+`visao-projetos/index.html`) ganharam duas camadas novas, sempre em cima do
+ping de revisão já existente — nunca no lugar dele:
+
+1. **Pausa por inatividade**: além de pausar quando `document.hidden`
+   (aba em segundo plano), agora também pausa quando a aba está **visível
+   mas sem interação** (mouse/teclado/scroll/toque) há 5 minutos —
+   `_bkIsIdle()` / `_discIsIdle()` / `_vpIsIdle()`. Cobre o caso de aba
+   aberta numa tela que ninguém está olhando. Qualquer interação retoma o
+   ritmo normal na hora; não é um risco de dado ficar escondido, só evita
+   gastar ping à toa em aba esquecida.
+2. **Eleição de líder por `localStorage`**: entre várias abas do MESMO
+   painel no MESMO navegador, só uma vira "líder" (heartbeat em
+   `localStorage`, chave `sala_leader_<painel>_v1`) e de fato chama o
+   Apps Script a cada tick — `_bkClaimOrIsLeader()` /
+   `_discClaimOrIsLeader()` / `_vpClaimOrIsLeader()`. As demais ficam
+   ouvindo o evento `storage` na chave `sala_shared_rev_<painel>_v1`: a
+   líder publica a(s) revisão(ões) mais recente(s) que conhece a cada
+   ciclo, e uma seguidora só dispara sua PRÓPRIA busca completa quando
+   percebe uma revisão diferente da que já tinha — ou seja, o custo de N
+   abas ociosas-mas-vivas continua sendo só o de uma. Se a aba líder for
+   fechada, o heartbeat expira (2,5x o intervalo do painel) e a próxima
+   aba que ticar assume sozinha, sem F5. `localStorage` indisponível (ex.:
+   navegação anônima bloqueando) faz a aba agir sozinha, como antes da v23
+   — nunca trava por causa disso.
+
+**Isso é ortogonal ao ping de revisão, não substitui**: o ping de revisão
+decide "vale a pena buscar tudo?"; a eleição de líder decide "sou eu quem
+deveria estar perguntando isso agora, ou já tem outra aba minha cuidando?".
+As duas camadas continuam funcionando mesmo com uma desativada — útil pra
+depurar isoladamente se um dia for preciso.
+
+**Ops4Ops (`OPS4OPS_LEAN_CACHE_TTL_SEC`, apps-script-backlog.gs)**: subiu de
+10 para 25 min na mesma leva. Isso NÃO atrasa a visibilidade de uma
+importação — a invalidação em `saveVpData/discoveryPmo` já limpa o cache **na
+hora**, para todo mundo, independente do TTL (ver v19 no cabeçalho do
+arquivo); o TTL só controla quanto tempo o cache sobrevive quando ninguém
+grava nada, então esticá-lo só reduz quantas vezes por hora o
+reprocessamento caro acontece à toa.
+
+**Como validar mudança nesse mecanismo**: harness Node com `vm`, múltiplas
+"abas" (sandboxes separados) compartilhando a MESMA instância de
+`localStorage` falso — não basta 1 sandbox só, o ponto é provar que 10 abas
+concorrendo pela mesma chave resultam em exatamente 1 líder por rodada. Ver
+histórico de commits deste arquivo para o modelo do harness.
+
 ## Armadilhas conhecidas deste repositório
 
 - **Funções duplicadas**: vários arquivos aqui têm a mesma função declarada

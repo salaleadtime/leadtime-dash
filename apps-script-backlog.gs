@@ -1,6 +1,14 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v23 — OPS4OPS_LEAN_CACHE_TTL_SEC 10min → 25min. O cache já era invalidado
+ * NA HORA em qualquer saveVpData de discoveryPmo (ver v19 abaixo) — quem
+ * importa continua vendo o dado novo imediatamente, para todo mundo, porque
+ * essa invalidação não depende do TTL. O TTL só governa quanto tempo o
+ * cache sobrevive quando NINGUÉM grava nada; esticar essa janela só reduz
+ * quantas vezes por hora o reprocessamento caro (leitura + parse de alguns
+ * MB) acontece à toa, sem atrasar visibilidade de importação nenhuma.
+ *
  * v21 — action=getRevisions: devolve só os contadores de revisão (backlog,
  * stories, cada chave de VP_SHEET_MAP), sem ler planilha nem disputar lock.
  * Motivação: os 3 painéis (index.html a cada 2min, visao-projetos a cada
@@ -104,7 +112,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-14-v22-leadtime-epics-migration';
+var BACKLOG_SCRIPT_VERSION = '2026-08-15-v23-ops4ops-cache-ttl-25min';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -153,7 +161,7 @@ var VP_SHEET_MAP = {
 // ativamente em saveVpData/discoveryPmo (ver commitWrite_ da chave abaixo),
 // então o TTL alto aqui é só uma rede de segurança.
 var OPS4OPS_LEAN_CACHE_KEY = 'ops4opsLeanV1';
-var OPS4OPS_LEAN_CACHE_TTL_SEC = 600;
+var OPS4OPS_LEAN_CACHE_TTL_SEC = 1500;
 
 // Cargas Jira compartilhadas. Para essas bases, uma lista vazia não é uma
 // "nova fotografia": ela normalmente indica arquivo errado, filtro vazio ou

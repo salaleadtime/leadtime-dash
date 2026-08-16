@@ -8826,6 +8826,44 @@ setTimeout(function(){ try{ flushPendingWrites(); }catch(e){} }, 5000);
 // Pré-carrega o html2canvas para que "Copiar" funcione já no 1º clique (sem perder o gesto do usuário)
 setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL); }catch(e){} }, 2500);
 
+// v23: eleição de aba líder (localStorage) + pausa por inatividade. Motivação:
+// usuária flagrada com 10 janelas abertas ao mesmo tempo no ambiente do cliente —
+// cada uma fazendo o ping de revisão a cada minuto, 10x o necessário pra uma só
+// pessoa. Só a aba "líder" (heartbeat em localStorage) chama o backend; as demais
+// ficam ouvindo o evento 'storage' e só buscam de verdade quando a líder publica
+// uma revisão nova (raro — a maioria dos ticks não muda nada). Se a líder fechar,
+// o heartbeat expira e outra aba assume sozinha, sem F5. localStorage indisponível
+// (ex.: navegação anônima bloqueando) faz a aba agir sozinha, como antes da v23.
+var _bkTabId=Date.now()+'_'+Math.random().toString(36).slice(2);
+var _bkLeaderKey='sala_leader_backlog_v1';
+var _bkSharedRevKey='sala_shared_rev_backlog_v1';
+var _bkLeaderStaleMs=150000; // 2.5x o intervalo de 60s: folga generosa antes de considerar a líder morta
+var _bkLastInteraction=Date.now();
+var _bkIdleMs=300000; // 5min sem interação numa aba visível = considera "esquecida"
+['mousemove','keydown','scroll','click','touchstart'].forEach(function(ev){
+  document.addEventListener(ev, function(){ _bkLastInteraction=Date.now(); }, {passive:true});
+});
+function _bkIsIdle(){ return (Date.now()-_bkLastInteraction)>_bkIdleMs; }
+function _bkClaimOrIsLeader(){
+  try{
+    var now=Date.now();
+    var leader=null;
+    try{ leader=JSON.parse(localStorage.getItem(_bkLeaderKey)); }catch(e){}
+    var amLeader=leader && leader.id===_bkTabId;
+    var leaderStale=!leader || (now-leader.heartbeat)>_bkLeaderStaleMs;
+    if(amLeader || leaderStale){ localStorage.setItem(_bkLeaderKey,JSON.stringify({id:_bkTabId,heartbeat:now})); return true; }
+    return false;
+  }catch(e){ return true; }
+}
+function _bkPublishRevision(){
+  try{ if(typeof _bkLastKnownRevision==='number') localStorage.setItem(_bkSharedRevKey,String(_bkLastKnownRevision)); }catch(e){}
+}
+window.addEventListener('storage', function(ev){
+  if(ev.key!==_bkSharedRevKey || ev.newValue==null || !BK_GAS_URL) return;
+  var rev=Number(ev.newValue);
+  if(!isNaN(rev) && rev!==_bkLastKnownRevision){ gasLoadBacklog(function(){}); }
+});
+
 // Reconfere o backlog com o servidor periodicamente — janelas abertas convergem sozinhas.
 // v21: em vez de buscar os dados completos a cada tick, faz um ping barato de revisão
 // (getRevisions) e só busca de verdade quando algo mudou. Pausa quando a aba está em
@@ -8836,15 +8874,19 @@ setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL
 var _bkPollTicks=0;
 setInterval(function(){
   if(document.hidden || !BK_GAS_URL) return;
+  if(_bkIsIdle()) return;
+  if(!_bkClaimOrIsLeader()) return;
   try{
     _bkPollTicks++;
-    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){}); return; }
-    gasCheckBacklogRevision(function(){});
+    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){ _bkPublishRevision(); }); return; }
+    gasCheckBacklogRevision(function(){ _bkPublishRevision(); });
   }catch(e){}
 }, 60000);
 document.addEventListener('visibilitychange', function(){
   if(document.hidden || !BK_GAS_URL) return;
-  try{ gasCheckBacklogRevision(function(){}); }catch(e){}
+  _bkLastInteraction=Date.now();
+  if(!_bkClaimOrIsLeader()) return;
+  try{ gasCheckBacklogRevision(function(){ _bkPublishRevision(); }); }catch(e){}
 });
 
 // ═══════════════════════════════════════

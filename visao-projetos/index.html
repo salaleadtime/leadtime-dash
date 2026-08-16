@@ -10177,6 +10177,47 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     // visíveis para todo o time sem re-importar. Essa primeira carga continua completa
     // (as 9 chaves), sem gate de revisão, pra garantir hidratação correta no boot.
     gasLoadAndApplyVpAll();
+    // v23: eleição de aba líder (localStorage) + pausa por inatividade. Motivação:
+    // usuária flagrada com 10 janelas abertas ao mesmo tempo no ambiente do cliente —
+    // cada uma fazendo o ping das 9 chaves no mesmo ritmo, 10x o necessário pra uma só
+    // pessoa. Só a aba "líder" (heartbeat em localStorage) chama o backend; as demais
+    // ficam ouvindo o evento 'storage' e só buscam de verdade quando a líder publica
+    // alguma revisão nova entre as 9 (raro). Se a líder fechar, o heartbeat expira e
+    // outra aba assume sozinha, sem F5. localStorage indisponível faz a aba agir
+    // sozinha, como antes.
+    var _vpTabId=Date.now()+'_'+Math.random().toString(36).slice(2);
+    var _vpLeaderKey='sala_leader_visaoprojetos_v1';
+    var _vpSharedRevKey='sala_shared_rev_visaoprojetos_v1';
+    var _vpLeaderStaleMs=150000; // 2.5x o intervalo de 60s
+    var _vpLastInteraction=Date.now();
+    var _vpIdleMs=300000; // 5min sem interação numa aba visível = "esquecida"
+    ['mousemove','keydown','scroll','click','touchstart'].forEach(function(ev){
+      document.addEventListener(ev, function(){ _vpLastInteraction=Date.now(); }, {passive:true});
+    });
+    function _vpIsIdle(){ return (Date.now()-_vpLastInteraction)>_vpIdleMs; }
+    function _vpClaimOrIsLeader(){
+      try{
+        var now=Date.now();
+        var leader=null;
+        try{ leader=JSON.parse(localStorage.getItem(_vpLeaderKey)); }catch(e){}
+        var amLeader=leader && leader.id===_vpTabId;
+        var leaderStale=!leader || (now-leader.heartbeat)>_vpLeaderStaleMs;
+        if(amLeader || leaderStale){ localStorage.setItem(_vpLeaderKey,JSON.stringify({id:_vpTabId,heartbeat:now})); return true; }
+        return false;
+      }catch(e){ return true; }
+    }
+    function _vpPublishRevisions(){
+      try{ localStorage.setItem(_vpSharedRevKey,JSON.stringify(_vpLastKnownRevisions)); }catch(e){}
+    }
+    window.addEventListener('storage', function(ev){
+      if(ev.key!==_vpSharedRevKey || ev.newValue==null || !_VP_GAS_URL) return;
+      var shared=null;
+      try{ shared=JSON.parse(ev.newValue); }catch(e){ return; }
+      if(!shared) return;
+      var changed=Object.keys(shared).some(function(k){ return _vpLastKnownRevisions[k]===undefined || shared[k]!==_vpLastKnownRevisions[k]; });
+      if(changed) gasCheckVpRevisionsAndApply(function(){});
+    });
+
     // v21: o polling recorrente passa a usar o ping barato de revisão em vez de buscar
     // as 9 chaves sempre, no ritmo fixo de 2min — ver gasCheckVpRevisionsAndApply acima.
     // Pausa quando a aba está em segundo plano; resincroniza na hora ao voltar o foco.
@@ -10184,13 +10225,17 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     var _vpPollTicks = 0;
     setInterval(function(){
       if(document.hidden || !_VP_GAS_URL) return;
+      if(_vpIsIdle()) return;
+      if(!_vpClaimOrIsLeader()) return;
       _vpPollTicks++;
-      if(_vpPollTicks % 15 === 0){ gasLoadAndApplyVpAll(); return; }
-      gasCheckVpRevisionsAndApply(function(){});
+      if(_vpPollTicks % 15 === 0){ gasLoadAndApplyVpAll(); _vpPublishRevisions(); return; }
+      gasCheckVpRevisionsAndApply(function(){ _vpPublishRevisions(); });
     }, 60000);
     document.addEventListener('visibilitychange', function(){
       if(document.hidden || !_VP_GAS_URL) return;
-      gasCheckVpRevisionsAndApply(function(){});
+      _vpLastInteraction=Date.now();
+      if(!_vpClaimOrIsLeader()) return;
+      gasCheckVpRevisionsAndApply(function(){ _vpPublishRevisions(); });
     });
   </script>
 </body>
