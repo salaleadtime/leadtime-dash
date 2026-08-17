@@ -10603,6 +10603,27 @@
     // applyRemoteDiscData para ser reaproveitado também no caminho de SAVE — antes,
     // só o polling mesclava; o save sempre sobrescrevia o servidor com o `data`
     // local puro, perdendo o que outra aba tivesse acabado de salvar.
+    // Mescla o mapa key->{ini,ts} de jiraStoryInitiativeOverrides por RECÊNCIA (ts),
+    // igual ao critério usado pelos demais merges deste arquivo (mergeProjectRecord,
+    // mergeNestedById) — em vez de "o lado local sempre vence" (Object.assign com
+    // local por último), que descartaria silenciosamente uma correção mais nova vinda
+    // de outro navegador sempre que o local ainda tivesse um valor antigo em cache
+    // para a mesma história.
+    function mergeOverridesByRecency(local, remote) {
+      const merged = {};
+      const keys = new Set([...Object.keys(local || {}), ...Object.keys(remote || {})]);
+      keys.forEach(key => {
+        const l = local && local[key];
+        const r = remote && remote[key];
+        if (l && r) {
+          merged[key] = (Date.parse(r.ts || '') || 0) > (Date.parse(l.ts || '') || 0) ? r : l;
+        } else {
+          merged[key] = l || r;
+        }
+      });
+      return merged;
+    }
+
     function mergeRemoteIntoData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
       const normalizedRemote = normalizeData(deepClone(remote));
@@ -10611,7 +10632,17 @@
       const projectsMerge = mergeProjectsById(data.projects, normalizedRemote.projects, deletedIds);
       const squadsMerge = mergeById(data.squads, normalizedRemote.squads, deletedIds);
       const historyMerge = mergeById(data.importHistory, normalizedRemote.importHistory);
-      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
+      // Histórias órfãs do Ops4Ops (rótulo #Nº ausente/errado) e os vínculos manuais
+      // feitos em "Ver detalhes" (jiraStoryInitiativeOverrides) também são estado
+      // compartilhado — sem entrar aqui, ficavam de fora de todo merge (inclusive o do
+      // primeiro load) e o próximo save de QUALQUER outro usuário sobrescrevia essas
+      // duas listas no servidor com a cópia local desatualizada, apagando em silêncio
+      // o que outro navegador tinha acabado de importar/vincular.
+      const unassignedMerged = mergeNestedById(data.unassignedJiraStories, normalizedRemote.unassignedJiraStories, deletedIds);
+      const overridesMerged = mergeOverridesByRecency(data.jiraStoryInitiativeOverrides, normalizedRemote.jiraStoryInitiativeOverrides);
+      const unassignedChanged = JSON.stringify(unassignedMerged) !== JSON.stringify(data.unassignedJiraStories || []);
+      const overridesChanged = JSON.stringify(overridesMerged) !== JSON.stringify(data.jiraStoryInitiativeOverrides || {});
+      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed && !unassignedChanged && !overridesChanged) return false;
       if (!projectsMerge.list.length) return false; // nunca fica sem nenhuma iniciativa por causa do merge
 
       data.tombstones = tombstones;
@@ -10620,6 +10651,8 @@
       data.importHistory = historyMerge.list
         .sort((a, b) => (Date.parse(b.at || '') || 0) - (Date.parse(a.at || '') || 0))
         .slice(0, 30);
+      data.unassignedJiraStories = unassignedMerged;
+      data.jiraStoryInitiativeOverrides = overridesMerged;
       // Flags de migração única (ex.: reset de cards, sync de nomes de squad) também
       // precisam propagar — sem isso, uma base remota que ainda não tem a flag faria
       // a migração "de uma vez só" rodar de novo a cada poll sobre o clone normalizado.
@@ -16796,8 +16829,8 @@
         let tag = rec.tag || '';
         let project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         if (!project && overrides[rec.key]) {
-          tag = overrides[rec.key];
-          project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag));
+          tag = overrides[rec.key].ini || '';
+          project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         }
         if (!tag) { untagged++; unassignedRecords.push(rec); return; }
         if (!project) { unmatchedTags.add(tag); unassignedRecords.push(rec); return; }
@@ -17175,7 +17208,10 @@
       const ini = initiativeNumber(project);
       if (!ini) { toast('Essa iniciativa não tem nº oficial cadastrado — não é possível vincular por aqui.'); return; }
       data.jiraStoryInitiativeOverrides = data.jiraStoryInitiativeOverrides || {};
-      data.jiraStoryInitiativeOverrides[key] = ini;
+      // Guarda com timestamp (não só o nº da iniciativa) para o merge entre
+      // navegadores poder resolver por recência em vez de "local sempre vence" —
+      // ver mergeOverridesByRecency em mergeRemoteIntoData.
+      data.jiraStoryInitiativeOverrides[key] = { ini, ts: new Date().toISOString() };
       project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
       const existing = project.jiraStories.find(s => s.key === key);
       const fields = { key: story.key, epicKey: story.epicKey, summary: story.summary, status: story.status, team: story.team, labels: story.labels, created: story.created, updated: story.updated, tipo: story.tipo };
@@ -17817,8 +17853,13 @@
   <script src="senior-initiatives-view.js?v=20260811-1"></script>
   <script>
     /* Compatibilidade de publicação: mantém a carteira navegável mesmo quando o
-       navegador bloqueia o arquivo externo recém-publicado. Não cria nova base. */
+       navegador bloqueia o arquivo externo recém-publicado. Não cria nova base.
+       Só entra em ação quando senior-initiatives-view.js NÃO carregou — sem essa
+       guarda, este bloco (que roda depois, sempre) sobrescrevia openSeniorInitiativesView/
+       setSeniorInitiativeFilter incondicionalmente e tornava o arquivo externo (com
+       dashboardPortfolioMode/openSquadsExecutiveView) morto mesmo quando ele carregava bem. */
     (function () {
+      if (typeof window.openSeniorInitiativesView === 'function') return;
       const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const cut = (v, n = 100) => { const t = String(v || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
       const state = s => ({'Crítico':'crit','Atenção':'warn','Concluído':'good'})[s] || 'good';

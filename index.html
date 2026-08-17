@@ -2737,6 +2737,24 @@ function _jbMergeAndRender(msg){
 function isValidDate(d){
   return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
 }
+// O Sheets (SHEETS_WEBAPP, um Apps Script separado deste repositório) pode devolver
+// uma data já gravada num formato que isValidDate rejeita de cara (ex.: um objeto
+// Date do Google Sheets serializado com hora/timezone, tipo "2026-08-11T00:00:00.000Z",
+// em vez do texto puro "2026-08-11"). Sem esta função, makeRow tratava isso como "sem
+// data" e ZERAVA um campo que na verdade tinha valor — e a fila de escrita pendente só
+// protege por até 24h antes de aceitar esse zero como definitivo. Extrai o prefixo
+// YYYY-MM-DD por STRING (nunca via `new Date()` + getters locais) para não introduzir
+// o mesmo bug de troca de dia por fuso horário já registrado no histórico deste
+// arquivo (ver comentário "bug visual 12/3 → 3/12" em replaceFromSharedSource).
+function coerceDateStr(v){
+  if(v===null||v===undefined||v==='') return null;
+  if(isValidDate(v)) return v;
+  var s=String(v).trim();
+  var m=s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if(m && isValidDate(m[1])) return m[1];
+  console.warn('[Épicos] Data em formato inesperado veio do Sheets e foi descartada — valor bruto:', v);
+  return null;
+}
 function isValidIsoDate(value){
   if(!value) return true;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -2807,9 +2825,9 @@ function normalizeWorkflowAll(){
   allData=allData.map(function(r){ return normalizeWorkflowRecord(r); });
 }
 function makeRow(r){
-  var sIni = isValidDate(r.ini) ? r.ini : null;
-  var sFim = isValidDate(r.fim) ? r.fim : null;
-  var sPrev = isValidDate(r.dataPrevista) ? r.dataPrevista : null;
+  var sIni = coerceDateStr(r.ini);
+  var sFim = coerceDateStr(r.fim);
+  var sPrev = coerceDateStr(r.dataPrevista);
   return normalizeWorkflowRecord({
     id:String(r.id||''),
     squad:String(r.squad||''),
@@ -2818,7 +2836,7 @@ function makeRow(r){
     statusAntes:r.statusAntes||null,
     ini:sIni,
     fim:sFim,
-    fimAntes:isValidDate(r.fimAntes)?r.fimAntes:null,
+    fimAntes:coerceDateStr(r.fimAntes),
     dataPrevista:sPrev,
     chg:(_SEED_CHG_CORRECTIONS[r.id] && r.chg===_SEED_CHG_CORRECTIONS[r.id]) ? '' : (r.chg||''),
     impedimento:r.impedimento||'',
@@ -2902,6 +2920,16 @@ function replaceFromSharedSource(rows){
           if((r[field]||'') === (pend.fields[field]||'')){
             delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
           } else {
+            // Diagnóstico: se isto aparecer repetidamente pro MESMO id/campo em
+            // sincronizações sucessivas (em vez de confirmar e sumir), é sinal de
+            // que o Sheets nunca está devolvendo o valor gravado — a proteção
+            // abaixo seguirá mostrando o valor local até PENDING_EDIT_TTL (24h)
+            // expirar, quando o valor do Sheets (possivelmente vazio) passa a valer.
+            if(['ini','fim','dataPrevista'].indexOf(field)!==-1){
+              console.warn('[Épicos] Data pendente ainda não confirmada pelo Sheets — id:', r.id,
+                'campo:', field, '| local (mantido na tela):', pend.fields[field],
+                '| Sheets devolveu:', r[field]||'(vazio)');
+            }
             r[field]=pend.fields[field];                              // ainda não refletiu — preserva
           }
         });
@@ -4193,13 +4221,13 @@ function renderTbl(){
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-i="'+gi+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
-      '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
-      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-id="'+esc(r.id)+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-id="'+esc(r.id)+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
+      '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-id="'+esc(r.id)+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
+      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-id="'+esc(r.id)+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+(cancelado?'— não medido':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
       '<td class="cimp">'+
-        '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
+        '<textarea class="eimp" rows="2" data-id="'+esc(r.id)+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
       '</td>'+
     '</tr>';
   });
@@ -4374,12 +4402,21 @@ function renderHistorico(){
 }
 
 var _impDraftTimers={};
+// Achado numa revisão independente: o input/textarea da linha carregava um ÍNDICE
+// (data-i, posição em allData no momento do render) em vez do id do épico. Entre o
+// usuário abrir/focar o campo e o evento disparar (onchange no blur, ou os 700ms de
+// debounce aqui), um poll automático, o save de outro usuário, ou até o PRÓPRIO
+// saveLocal() desta função (que filtra allData e pode deslocar posições) podiam
+// fazer esse índice apontar pra um registro DIFERENTE — a edição haveria de ir pro
+// épico errado, e o épico que o usuário via na tela ficaria sem a mudança (parecendo
+// "sumir"). Resolver por id (estável, nunca muda) em vez de índice elimina a classe
+// inteira desse problema.
 function saveImpedimentoDraft(el){
-  var gi=parseInt(el&&el.dataset&&el.dataset.i);
-  if(isNaN(gi)||!allData[gi]) return;
-  clearTimeout(_impDraftTimers[gi]);
-  _impDraftTimers[gi]=setTimeout(function(){
-    var rec=allData[gi];
+  var id=el&&el.dataset&&el.dataset.id;
+  if(!id) return;
+  clearTimeout(_impDraftTimers[id]);
+  _impDraftTimers[id]=setTimeout(function(){
+    var rec=allData.find(function(x){return x&&x.id===id;});
     if(!rec) return;
     rec.impedimento=el.value||'';
     saveLocal();
@@ -4391,9 +4428,13 @@ function saveImpedimentoDraft(el){
 }
 function fc(el){
   var tabToRestore=rememberTab();
-  var gi=parseInt(el.dataset.i), f=el.dataset.f;
-  if(isNaN(gi)||!allData[gi]) return;
+  var id=el.dataset.id, f=el.dataset.f;
+  var gi=allData.findIndex(function(x){return x&&x.id===id;});
+  if(gi<0) return;
 
+  // rec é a referência do OBJETO (não a posição no array): continua correta mesmo
+  // que allData seja reordenado/filtrado mais adiante nesta mesma função (ver
+  // saveLocal() abaixo) ou por um redraw concorrente antes do evento chegar aqui.
   var rec=allData[gi];
   var oldVal=rec[f];
   var rawVal=(el.value||'').trim();
@@ -4466,7 +4507,7 @@ function fc(el){
     jbSave();
   }
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
-    var r=allData[gi];
+    var r=rec;
     // Enfileira TODOS os campos editáveis como pendentes até o Sheets confirmar.
     // Protege qualquer edição (inclusive apagar um campo) contra ser sobrescrita
     // por uma releitura antecipada ou perdida por uma gravação que falhou.
@@ -4693,9 +4734,9 @@ function renderMed(){
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
-      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
+      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-id="'+esc(r.id)+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-id="'+esc(r.id)+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
+      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-id="'+esc(r.id)+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+(cancelado?'— não contabilizado':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
     '</tr>';
   }).join('');
