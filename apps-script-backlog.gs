@@ -112,7 +112,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-15-v23-ops4ops-cache-ttl-25min';
+var BACKLOG_SCRIPT_VERSION = '2026-08-16-v24-discovery-pmo-report-edits';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -153,7 +153,13 @@ var VP_SHEET_MAP = {
   // Semanal (discovery-pmo/report-semanal.html). Antes só existia no
   // localStorage de quem clicou em "×" — em outro navegador o item "voltava
   // do nada", mesmo o código já pretendendo que a exclusão fosse definitiva.
-  discoveryPmoReportResolved: '_discovery_pmo_report_resolved'
+  discoveryPmoReportResolved: '_discovery_pmo_report_resolved',
+  // Complementos executivos do Report Semanal (Observação executiva, Evolução
+  // relevante, Alinhamento, Pendência/Risco/Dependência adicional, Avanço
+  // confirmado) — mesmo problema do item acima: até aqui só existiam no
+  // localStorage de quem digitou. v24 adiciona push/pull compartilhado
+  // (ver pushEdits/pullEdits/mergeEditsMaps em report-semanal.html).
+  discoveryPmoReportEdits: '_discovery_pmo_report_edits'
 };
 
 // v19 — cache da projeção enxuta do getOps4opsData (CacheService, nativo do
@@ -219,7 +225,15 @@ var MERGE_MAP_KEYS = {
   vpEpicMeta: true,
   // Mapa plano assinatura→estado (excluído/concluído); nunca uma fotografia
   // completa, então merge por chave está certo aqui também.
-  discoveryPmoReportResolved: true
+  discoveryPmoReportResolved: true,
+  // Mapa plano semana→complementos; o cliente nunca remove uma chave de
+  // semana (itens dentro dela são "apagados" via tumba, não removendo a
+  // semana do mapa — ver recordEditTombstone em report-semanal.html), então
+  // a mesma regra de "somar é sempre correto" vale aqui. Rede de segurança
+  // por trás do merge por item que o cliente já faz antes de cada push
+  // (pushEdits faz pull+merge antes de enviar) — cobre o caso de um
+  // navegador cujo `edits` local ainda nem conhece todas as semanas.
+  discoveryPmoReportEdits: true
 };
 
 // Propriedades do Script (Configurações do projeto → Propriedades do script).
