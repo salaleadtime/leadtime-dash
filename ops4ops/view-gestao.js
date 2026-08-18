@@ -23,6 +23,7 @@
   }
 
   let abertas = {};        // id → editor expandido
+  let listasAbertas = {};  // chave do filtro → lista de múltipla escolha aberta
   let filtros = {};
   let novaAberta = false;
 
@@ -85,8 +86,18 @@
     return set.sort(function (a, b) { return String(a).localeCompare(String(b), 'pt-BR'); });
   }
 
+  /* Filtro de múltipla escolha compacto: ocupa uma linha só, como os demais
+     filtros, e abre a lista sobreposta ao clicar. A versão anterior mostrava
+     a lista sempre aberta, o que desalinhava a grade de filtros e empurrava
+     os campos seguintes para outra linha. */
   function campoListaMultipla(chave, rotulo, opcoes) {
     const selecionados = filtros[chave] || [];
+    const aberta = !!listasAbertas[chave];
+
+    const resumo = !selecionados.length ? 'Todas'
+      : selecionados.length === 1 ? selecionados[0]
+      : selecionados.length + ' selecionadas';
+
     const itens = opcoes.length
       ? opcoes.map(function (o) {
           const marcado = selecionados.indexOf(o) !== -1;
@@ -95,8 +106,19 @@
             '<span>' + esc(o) + '</span></label>';
         }).join('')
       : '<span class="campo-lista-vazio">Nenhuma opção disponível</span>';
-    return '<div class="campo"><label>' + esc(rotulo) + (selecionados.length ? ' · ' + selecionados.length + ' selecionada(s)' : '') + '</label>' +
-      '<div class="campo-lista">' + itens + '</div></div>';
+
+    const painel = aberta
+      ? '<div class="campo-lista">' + itens +
+        (selecionados.length ? '<button type="button" class="lista-limpar" onclick="Ops4OpsVisaoGestao.limparFiltroLista(\'' + chave + '\')">Limpar seleção</button>' : '') +
+        '</div>'
+      : '';
+
+    return '<div class="campo campo-lista-wrap"><label>' + esc(rotulo) + '</label>' +
+      '<button type="button" class="lista-abrir' + (selecionados.length ? ' tem-selecao' : '') + '"' +
+      ' aria-expanded="' + aberta + '"' +
+      ' onclick="Ops4OpsVisaoGestao.alternarLista(\'' + chave + '\')">' +
+      '<span>' + esc(resumo) + '</span><span class="lista-seta">' + (aberta ? '▴' : '▾') + '</span></button>' +
+      painel + '</div>';
   }
 
   function seletorFiltro(chave, rotulo, opcoes) {
@@ -487,6 +509,18 @@
 
     filtrar: function (chave, valor) { filtros[chave] = valor || null; raiz.Ops4OpsApp.render(); },
 
+    alternarLista: function (chave) {
+      const estava = !!listasAbertas[chave];
+      listasAbertas = {};              // só uma lista aberta por vez
+      if (!estava) listasAbertas[chave] = true;
+      raiz.Ops4OpsApp.render();
+    },
+
+    limparFiltroLista: function (chave) {
+      filtros[chave] = [];
+      raiz.Ops4OpsApp.render();
+    },
+
     alternarFiltroLista: function (chave, valor, marcado) {
       const atual = (filtros[chave] || []).slice();
       const idx = atual.indexOf(valor);
@@ -540,6 +574,28 @@
       raiz.Ops4OpsApp.salvarSquad({ name: nome.trim(), techLead: null, dev: null, qa: null, capacityValidated: false });
     }
   };
+
+  /* Fecha a lista aberta ao clicar fora ou apertar Esc.
+
+     Escuta na FASE DE CAPTURA de propósito: marcar um item dispara um
+     redesenho que substitui o DOM inteiro, desanexando o elemento clicado
+     antes de o evento subir até o document. Na fase de bolha, portanto, o
+     clique "de dentro" pode nunca chegar aqui — e a checagem de "clicou
+     dentro?" ficaria indeterminada. Na captura o evento passa por aqui
+     primeiro, com o DOM ainda intacto. */
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', function (ev) {
+      if (!Object.keys(listasAbertas).length) return;
+      if (ev.target && ev.target.closest && ev.target.closest('.campo-lista-wrap')) return;
+      listasAbertas = {};
+      raiz.Ops4OpsApp.render();
+    }, true);
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape' || !Object.keys(listasAbertas).length) return;
+      listasAbertas = {};
+      raiz.Ops4OpsApp.render();
+    });
+  }
 
   raiz.Ops4OpsVisaoGestao = API;
 })(typeof self !== 'undefined' ? self : this);
