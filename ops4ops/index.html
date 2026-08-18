@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ops4Ops — Gestão Estratégica</title>
+<style>
+/* ── Tokens ────────────────────────────────────────────────────────────
+   Cor é significado, não decoração (requisito 25). A base é neutra; verde,
+   âmbar e vermelho só aparecem quando classificam alguma coisa. */
+:root{
+  --bg:#f4f6f9; --surface:#fff; --surface-2:#fafbfd; --line:#e2e7ee; --line-forte:#cfd7e2;
+  --tinta:#1b2333; --tinta-2:#4a5768; --tinta-3:#7b879a;
+  --marca:#1f3a5f; --marca-2:#2e5c94; --marca-suave:#eef3f9;
+  --ok:#1a7f52; --ok-bg:#eaf6f0;
+  --atencao:#a86a00; --atencao-bg:#fdf3e2;
+  --critico:#b3243a; --critico-bg:#fdeef1;
+  --neutro:#6b7688; --neutro-bg:#eef1f5;
+  --manual:#fff8e1; --manual-linha:#e8d9a8;
+  --auto:#f0f2f5;
+  --raio:10px; --sombra:0 1px 2px rgba(20,32,54,.05),0 8px 24px rgba(20,32,54,.05);
+  --fonte:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);font:14px/1.45 var(--fonte);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;letter-spacing:-.01em}
+button{font:inherit;cursor:pointer}
+a{color:var(--marca-2)}
+
+/* ── Cabeçalho e abas ─────────────────────────────────────────────── */
+.topo{background:var(--marca);color:#fff;padding:16px 28px 0}
+.topo-linha{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;max-width:1680px;margin:0 auto}
+.topo h1{font-size:19px;font-weight:700}
+.topo .sub{font-size:12px;color:#b9c9dd;margin-top:3px}
+.topo-meta{font-size:11px;color:#b9c9dd;text-align:right;line-height:1.6}
+.abas{display:flex;gap:4px;max-width:1680px;margin:14px auto 0}
+.aba{background:transparent;border:0;border-bottom:3px solid transparent;color:#c3d2e4;padding:9px 16px;font-size:13px;font-weight:600;border-radius:6px 6px 0 0}
+.aba:hover{color:#fff;background:rgba(255,255,255,.07)}
+.aba[aria-selected="true"]{color:#fff;background:var(--bg);border-bottom-color:var(--bg);color:var(--marca)}
+.pagina{max-width:1680px;margin:0 auto;padding:22px 28px 60px}
+
+/* ── Blocos ───────────────────────────────────────────────────────── */
+.cartao{background:var(--surface);border:1px solid var(--line);border-radius:var(--raio);box-shadow:var(--sombra)}
+.cartao-topo{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.cartao-topo h2{font-size:15px}
+.cartao-topo .dica{font-size:11.5px;color:var(--tinta-3)}
+.secao{margin-bottom:20px}
+.rotulo{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta-3)}
+
+/* ── KPIs ─────────────────────────────────────────────────────────── */
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--raio);padding:13px 15px;box-shadow:var(--sombra)}
+.kpi b{display:block;font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.kpi span{display:block;font-size:11px;color:var(--tinta-2);margin-top:5px;line-height:1.3}
+.kpi.t-critico b{color:var(--critico)} .kpi.t-atencao b{color:var(--atencao)}
+.kpi.t-ok b{color:var(--ok)} .kpi.t-neutro b{color:var(--neutro)}
+
+/* ── Selos ────────────────────────────────────────────────────────── */
+.selo{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;white-space:nowrap;background:var(--neutro-bg);color:var(--neutro)}
+.selo.ok{background:var(--ok-bg);color:var(--ok)}
+.selo.atencao{background:var(--atencao-bg);color:var(--atencao)}
+.selo.critico{background:var(--critico-bg);color:var(--critico)}
+.selo.neutro{background:var(--neutro-bg);color:var(--neutro)}
+.selo.marca{background:var(--marca-suave);color:var(--marca-2)}
+.selo::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75}
+.selo.sem-ponto::before{display:none}
+.ausente{color:var(--tinta-3);font-style:italic}
+
+/* ── Atenção da gestão ────────────────────────────────────────────── */
+.alertas{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;padding:16px 18px}
+.alerta{position:relative;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:13px 15px 13px 18px;overflow:hidden}
+.alerta::before{content:'';position:absolute;inset:0 auto 0 0;width:4px;background:var(--neutro)}
+.alerta.critico::before{background:var(--critico)} .alerta.atencao::before{background:var(--atencao)}
+.alerta.ok::before{background:var(--ok)}
+.alerta strong{display:block;font-size:13px;margin-bottom:4px}
+.alerta span{font-size:11.5px;color:var(--tinta-2);line-height:1.45}
+
+/* ── Tabelas ──────────────────────────────────────────────────────── */
+.rolagem{overflow-x:auto}
+table.grade{width:100%;border-collapse:collapse;font-size:12px}
+table.grade th{position:sticky;top:0;z-index:1;background:var(--surface-2);text-align:left;padding:9px 12px;font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--tinta-3);border-bottom:1px solid var(--line);white-space:nowrap}
+table.grade td{padding:11px 12px;border-bottom:1px solid #eef1f5;vertical-align:top;color:var(--tinta-2)}
+table.grade tr:last-child td{border-bottom:0}
+table.grade tr.destaque-critico td{background:linear-gradient(90deg,var(--critico-bg),transparent 42%)}
+table.grade tr.destaque-atencao td{background:linear-gradient(90deg,var(--atencao-bg),transparent 42%)}
+.cel-forte{color:var(--tinta);font-weight:600}
+.cel-mini{display:block;font-size:10.5px;color:var(--tinta-3);margin-top:2px}
+.plano-real{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:11.5px}
+.plano-real .seta{color:var(--tinta-3)}
+.vazio{padding:34px 18px;text-align:center;color:var(--tinta-3);font-size:12.5px}
+
+/* ── Mapa de colisão ──────────────────────────────────────────────── */
+.mapa{display:grid;gap:2px;padding:16px 18px;overflow-x:auto}
+.mapa-linha{display:grid;grid-template-columns:150px repeat(var(--meses),minmax(38px,1fr));gap:2px;align-items:center}
+.mapa-cab{font-size:9.5px;font-weight:800;color:var(--tinta-3);text-transform:uppercase;letter-spacing:.06em;text-align:center;padding:4px 0}
+.mapa-nome{font-size:11.5px;font-weight:600;color:var(--tinta);padding-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mapa-cel{height:26px;border-radius:4px;background:var(--neutro-bg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--tinta-3)}
+.mapa-cel.n1{background:#e3ecf6;color:var(--marca-2)}
+.mapa-cel.n2{background:var(--atencao-bg);color:var(--atencao)}
+.mapa-cel.n3{background:var(--critico-bg);color:var(--critico)}
+.mapa-legenda{display:flex;gap:14px;flex-wrap:wrap;padding:0 18px 16px;font-size:11px;color:var(--tinta-3)}
+
+/* ── Formulário / Gestão 2026 ─────────────────────────────────────── */
+.legenda-campos{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2)}
+.amostra{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid var(--line-forte)}
+.amostra.man{background:var(--manual);border-color:var(--manual-linha)}
+.amostra.aut{background:var(--auto)}
+.filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--surface-2);border-radius:var(--raio) var(--raio) 0 0}
+.campo{display:flex;flex-direction:column;gap:4px}
+.campo>label{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-3)}
+input,select,textarea{font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid var(--line-forte);border-radius:7px;background:#fff;color:var(--tinta);width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--marca-2);outline-offset:-1px}
+input.manual,select.manual,textarea.manual{background:var(--manual);border-color:var(--manual-linha)}
+input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);cursor:not-allowed}
+.valor-auto{background:var(--auto);border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px;color:var(--tinta-2);min-height:33px;line-height:1.35;word-break:break-word}
+.blocos{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:16px;padding:16px 18px 20px;background:var(--surface-2);border-top:1px solid var(--line)}
+.bloco{background:#fff;border:1px solid var(--line);border-radius:8px;padding:13px 15px}
+.bloco>h4{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--marca-2);margin-bottom:11px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.bloco .campo+.campo{margin-top:9px}
+.dupla{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.iniciativa{border:1px solid var(--line);border-radius:var(--raio);background:var(--surface);margin-bottom:10px;box-shadow:var(--sombra);overflow:hidden}
+.iniciativa-cab{display:grid;grid-template-columns:minmax(240px,2.2fr) 1fr 1.1fr 1fr .9fr auto;gap:14px;align-items:center;padding:13px 16px;cursor:pointer}
+.iniciativa-cab:hover{background:var(--surface-2)}
+.iniciativa.aberta .iniciativa-cab{background:var(--marca-suave)}
+.iniciativa-cab .num{font-size:10.5px;font-weight:800;color:var(--marca-2)}
+.iniciativa-cab .nome{font-size:13px;font-weight:650;color:var(--tinta);line-height:1.3}
+.botao{border:1px solid var(--line-forte);background:#fff;color:var(--tinta-2);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600}
+.botao:hover{background:var(--surface-2);border-color:var(--marca-2);color:var(--marca-2)}
+.botao.primario{background:var(--marca);border-color:var(--marca);color:#fff}
+.botao.primario:hover{background:var(--marca-2);color:#fff}
+.botao.perigo:hover{border-color:var(--critico);color:var(--critico)}
+.barra-acoes{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line)}
+.aviso{padding:11px 15px;border-radius:8px;font-size:12px;line-height:1.5;background:var(--atencao-bg);color:#6b4400;border:1px solid #f0dcb6}
+.aviso.grave{background:var(--critico-bg);color:#7a1526;border-color:#f2c6cf}
+.aviso.info{background:var(--marca-suave);color:var(--marca);border-color:#cfe0f2}
+.rodape{max-width:1680px;margin:0 auto;padding:18px 28px 40px;font-size:11px;color:var(--tinta-3);line-height:1.6}
+.oculto{display:none!important}
+.pilha{display:flex;flex-direction:column;gap:3px}
+.lista-limpa{margin:6px 0 0;padding-left:16px;font-size:11.5px;color:var(--tinta-2);line-height:1.5}
+@media(max-width:1400px){.kpis{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.iniciativa-cab{grid-template-columns:1fr;gap:8px}}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo-linha">
+    <div>
+      <h1>Ops4Ops — Gestão Estratégica</h1>
+      <div class="sub">Leitura executiva do planejamento 2026 · protótipo</div>
+    </div>
+    <div class="topo-meta" id="topoMeta">Carregando…</div>
+  </div>
+  <nav class="abas" role="tablist">
+    <button class="aba" role="tab" id="abaExecutiva"  aria-selected="true"  onclick="irPara('executiva')">Visão Executiva</button>
+    <button class="aba" role="tab" id="abaGestao"     aria-selected="false" onclick="irPara('gestao')">Gestão 2026</button>
+    <button class="aba" role="tab" id="abaSquads"     aria-selected="false" onclick="irPara('squads')">Squads e Capacidade</button>
+    <button class="aba" role="tab" id="abaConfig"     aria-selected="false" onclick="irPara('config')">Parâmetros</button>
+  </nav>
+</header>
+
+<main class="pagina">
+  <section id="paginaExecutiva"></section>
+  <section id="paginaGestao" class="oculto"></section>
+  <section id="paginaSquads" class="oculto"></section>
+  <section id="paginaConfig" class="oculto"></section>
+</main>
+
+<footer class="rodape" id="rodape"></footer>
+
+<script src="config.js"></script>
+<script src="rules.js"></script>
+<script src="store.js"></script>
+<script src="view-executivo.js"></script>
+<script src="view-gestao.js"></script>
+<script>
+/* Orquestração: estado único, roteamento de abas e gravação.
+   Nenhuma regra de negócio mora aqui — só coordenação (requisito 28). */
+(function () {
+  'use strict';
+  const R = window.Ops4OpsRules, S = window.Ops4OpsStore;
+
+  let estado = S.estadoVazio();
+  let abaAtual = 'executiva';
+
+  // Avaliação derivada: recalculada do zero a cada mudança, para que adicionar
+  // iniciativa ou alterar capacidade sempre reflita em TODOS os indicadores
+  // (requisitos 23 e 24) — não existe indicador guardado em cache.
+  function calcular() {
+    const cfg = estado.config;
+    const hoje = R.hojeISO();
+    const avaliacoes = estado.iniciativas.map(function (i) {
+      return R.avaliar(i, estado.iniciativas, estado.squads, cfg, hoje);
+    });
+    const squads = estado.squads.map(function (s) {
+      return Object.assign(R.avaliarSquad(s, estado.iniciativas, cfg, hoje), {
+        simulacao: R.simularDesbloqueioGeral(s, estado.iniciativas, cfg, hoje)
+      });
+    });
+    return { estado: estado, cfg: cfg, hoje: hoje, avaliacoes: avaliacoes, squads: squads };
+  }
+
+  /* O estado é a única fonte de verdade e cada mudança redesenha as telas.
+     Isso é simples e garante que todo indicador reflita a edição — mas o
+     redesenho substituiria o campo que está sendo digitado. Guardamos qual
+     campo estava em foco (data-ref) e a posição do cursor, e devolvemos os
+     dois depois de redesenhar, para a digitação nunca ser interrompida. */
+  function capturarFoco() {
+    const el = document.activeElement;
+    if (!el || !el.getAttribute) return null;
+    const ref = el.getAttribute('data-ref');
+    if (!ref) return null;
+    let inicio = null, fim = null;
+    try { inicio = el.selectionStart; fim = el.selectionEnd; } catch (e) {}
+    return { ref: ref, inicio: inicio, fim: fim };
+  }
+
+  function devolverFoco(foco) {
+    if (!foco) return;
+    const el = document.querySelector('[data-ref="' + foco.ref.replace(/"/g, '\\"') + '"]');
+    if (!el) return;
+    el.focus();
+    if (foco.inicio !== null && typeof el.setSelectionRange === 'function') {
+      try { el.setSelectionRange(foco.inicio, foco.fim); } catch (e) {}
+    }
+  }
+
+  function render() {
+    const foco = capturarFoco();
+    const ctx = calcular();
+    window.Ops4OpsVisaoExecutiva.render(document.getElementById('paginaExecutiva'), ctx);
+    window.Ops4OpsVisaoGestao.render(document.getElementById('paginaGestao'), ctx, api);
+    window.Ops4OpsVisaoGestao.renderSquads(document.getElementById('paginaSquads'), ctx, api);
+    window.Ops4OpsVisaoGestao.renderConfig(document.getElementById('paginaConfig'), ctx, api);
+
+    const total = estado.iniciativas.length;
+    const pend = ctx.avaliacoes.filter(function (a) { return a.confiabilidade.percentual < 1; }).length;
+    document.getElementById('topoMeta').innerHTML =
+      total + ' iniciativa(s) · ' + estado.squads.length + ' squad(s)<br>' +
+      pend + ' com campo pendente de validação<br>' +
+      'Atualizado em ' + (estado.atualizadoEm ? new Date(estado.atualizadoEm).toLocaleString('pt-BR') : '—');
+
+    document.getElementById('rodape').innerHTML =
+      '<strong>Origem dos dados:</strong> ' + (estado.fonte ? esc(estado.fonte) : 'nenhuma base carregada — cadastre iniciativas na aba Gestão 2026') + '. ' +
+      '<strong>Persistência:</strong> ' + esc(S.adaptadorAtual().nome) + ' — este protótipo grava apenas neste navegador; ' +
+      'trocar por API/backend é implementar o mesmo contrato em <code>store.js</code>. ' +
+      'Campos sem informação aparecem como “A validar” ou “Não informado” e nunca como zero.';
+
+    devolverFoco(foco);
+  }
+
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+
+  function persistirERenderizar() {
+    S.salvar(estado).catch(function (e) {
+      alert('Não foi possível gravar as alterações neste navegador: ' + (e && e.message ? e.message : e));
+    }).then(render, render);
+  }
+
+  // API entregue às views: elas nunca tocam no estado diretamente.
+  const api = {
+    atualizarIniciativa: function (id, campo, valor) {
+      const c = {}; c[campo] = valor;
+      api.atualizarIniciativaCampos(id, c);
+    },
+    // Vários campos numa única gravação: evita render/salvamento intermediário
+    // com o registro pela metade (ex.: trocar de squad muda squadId e squad).
+    atualizarIniciativaCampos: function (id, campos) {
+      const alvo = estado.iniciativas.find(function (i) { return i.id === id; });
+      if (!alvo) return;
+      const bruta = Object.assign({}, alvo, campos, { atualizadoEm: new Date().toISOString() });
+      Object.assign(alvo, S.normalizarIniciativa(bruta));
+      persistirERenderizar();
+    },
+    // Leitura para as views montarem seletores — sempre cópia, nunca o array vivo.
+    squads: function () { return estado.squads.map(function (s) { return Object.assign({}, s); }); },
+    adicionarIniciativa: function (dados) {
+      const nova = S.normalizarIniciativa(Object.assign({ origem: 'manual', atualizadoEm: new Date().toISOString() }, dados));
+      estado.iniciativas.push(nova);
+      persistirERenderizar();
+      return nova.id;
+    },
+    removerIniciativa: function (id) {
+      estado.iniciativas = estado.iniciativas.filter(function (i) { return i.id !== id; });
+      persistirERenderizar();
+    },
+    salvarSquad: function (dados) {
+      const norm = S.normalizarSquad(Object.assign({ atualizadoEm: new Date().toISOString() }, dados));
+      const idx = estado.squads.findIndex(function (s) { return s.id === norm.id; });
+      if (idx >= 0) {
+        const nomeAntigo = estado.squads[idx].name;
+        estado.squads[idx] = norm;
+        // Renomear a squad não pode desvincular as iniciativas dela.
+        if (nomeAntigo && norm.name && nomeAntigo !== norm.name) {
+          estado.iniciativas.forEach(function (i) { if (i.squadId === norm.id) i.squad = norm.name; });
+        }
+      } else {
+        estado.squads.push(norm);
+      }
+      persistirERenderizar();
+      return norm.id;
+    },
+    removerSquad: function (id) {
+      const usada = estado.iniciativas.filter(function (i) { return i.squadId === id; }).length;
+      if (usada) { alert('Esta squad tem ' + usada + ' iniciativa(s) vinculada(s). Reatribua antes de excluir.'); return; }
+      estado.squads = estado.squads.filter(function (s) { return s.id !== id; });
+      persistirERenderizar();
+    },
+    atualizarConfig: function (grupo, chave, valor) {
+      const n = Number(valor);
+      if (!Number.isFinite(n)) return;
+      estado.config[grupo][chave] = n;
+      persistirERenderizar();
+    },
+    restaurarConfig: function () {
+      estado.config = window.Ops4OpsConfig.padrao();
+      persistirERenderizar();
+    },
+    recarregarDaFonte: function () {
+      if (!confirm('Isto descarta as alterações locais e recarrega a base de planejamento 2026. Continuar?')) return;
+      S.limparTudo();
+      S.carregar().then(function (e) { estado = e; persistirERenderizar(); });
+    },
+    exportar: function () {
+      const blob = new Blob([JSON.stringify(estado, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ops4ops-gestao-estrategica.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+    },
+    render: render
+  };
+  window.Ops4OpsApp = api;
+
+  window.irPara = function (aba) {
+    abaAtual = aba;
+    [['executiva', 'Executiva'], ['gestao', 'Gestao'], ['squads', 'Squads'], ['config', 'Config']].forEach(function (par) {
+      document.getElementById('pagina' + par[1]).classList.toggle('oculto', par[0] !== aba);
+      document.getElementById('aba' + par[1]).setAttribute('aria-selected', String(par[0] === aba));
+    });
+    window.scrollTo(0, 0);
+  };
+
+  S.carregar().then(function (e) { estado = e; render(); });
+})();
+</script>
+</body>
+</html>

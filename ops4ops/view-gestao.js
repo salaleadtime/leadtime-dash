@@ -1,0 +1,499 @@
+/* Ops4Ops — Gestão 2026, Squads e Parâmetros (áreas de atualização).
+   Regra visual do requisito 19: campo manual em amarelo-claro, campo calculado
+   em cinza-claro e readonly. Nenhum campo calculado é editável — o valor vem
+   sempre do motor de regras, nunca de digitação. */
+(function (raiz) {
+  'use strict';
+  const R = raiz.Ops4OpsRules;
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  const CLASSE = { CRITICO: 'critico', ATENCAO: 'atencao', OK: 'ok', INDEFINIDO: 'neutro' };
+  function classeRisco(n) {
+    if (['ALTO', 'Alto', 'INVIÁVEL'].indexOf(n) !== -1) return 'critico';
+    if (['MÉDIO', 'Médio', 'APERTADA'].indexOf(n) !== -1) return 'atencao';
+    if (['BAIXO', 'Baixo', 'Sem bloqueios', 'VIÁVEL'].indexOf(n) !== -1) return 'ok';
+    return 'neutro';
+  }
+
+  let abertas = {};        // id → editor expandido
+  let filtros = {};
+  let novaAberta = false;
+
+  /* ── Campos ─────────────────────────────────────────────────────────── */
+
+  function campoTexto(id, campo, rotulo, valor, tipo) {
+    return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
+      '<input class="manual" type="' + (tipo || 'text') + '" value="' + esc(valor == null ? '' : valor) + '"' +
+      ' data-ref="ini:' + esc(id) + ':' + campo + '"' +
+      ' placeholder="' + (tipo === 'date' ? '' : 'Não informado') + '"' +
+      ' oninput="Ops4OpsVisaoGestao.editarDebounce(\'' + esc(id) + '\',\'' + campo + '\',this.value)"></div>';
+  }
+
+  function campoNumero(id, campo, rotulo, valor) {
+    return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
+      '<input class="manual" type="number" min="0" step="1" value="' + (valor == null ? '' : esc(valor)) + '" placeholder="A validar"' +
+      ' data-ref="ini:' + esc(id) + ':' + campo + '"' +
+      ' oninput="Ops4OpsVisaoGestao.editarDebounce(\'' + esc(id) + '\',\'' + campo + '\',this.value)"></div>';
+  }
+
+  function campoSelecao(id, campo, rotulo, valor, opcoes) {
+    return '<div class="campo"><label>' + esc(rotulo) + '</label><select class="manual"' +
+      ' data-ref="ini:' + esc(id) + ':' + campo + '"' +
+      ' onchange="Ops4OpsApp.atualizarIniciativa(\'' + esc(id) + '\',\'' + campo + '\',this.value)">' +
+      opcoes.map(function (o) {
+        return '<option value="' + esc(o) + '"' + (String(valor) === String(o) ? ' selected' : '') + '>' + esc(o) + '</option>';
+      }).join('') + '</select></div>';
+  }
+
+  /* Calculado: fundo cinza e sem qualquer forma de escrita. É um <div> e não
+     um <input readonly> de propósito — além de não ser editável de jeito
+     nenhum, o texto quebra linha em vez de truncar ("DADO INCOMPLET…"), o que
+     numa tela de reunião muda a leitura do indicador. */
+  function campoAuto(rotulo, valor, dica) {
+    return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
+      '<div class="valor-auto"' + (dica ? ' title="' + esc(dica) + '"' : '') + '>' + esc(valor) + '</div></div>';
+  }
+
+  /* ── Filtros (requisito 20) ─────────────────────────────────────────── */
+
+  function unicos(lista, campo) {
+    const set = [];
+    lista.forEach(function (i) {
+      const v = i[campo];
+      if (!R.ehPlaceholder(v) && set.indexOf(v) === -1) set.push(v);
+    });
+    return set.sort(function (a, b) { return String(a).localeCompare(String(b), 'pt-BR'); });
+  }
+
+  function seletorFiltro(chave, rotulo, opcoes) {
+    return '<div class="campo"><label>' + esc(rotulo) + '</label><select onchange="Ops4OpsVisaoGestao.filtrar(\'' + chave + '\',this.value)">' +
+      '<option value="">Todos</option>' +
+      opcoes.map(function (o) {
+        return '<option value="' + esc(o) + '"' + (filtros[chave] === o ? ' selected' : '') + '>' + esc(o) + '</option>';
+      }).join('') + '</select></div>';
+  }
+
+  function aplicarFiltros(avaliacoes) {
+    return avaliacoes.filter(function (a) {
+      const i = a.iniciativa;
+      if (filtros.squad && R.texto(i.squad) !== filtros.squad) return false;
+      if (filtros.techLead && R.texto(i.techLead) !== filtros.techLead) return false;
+      if (filtros.po && R.texto(i.po) !== filtros.po) return false;
+      if (filtros.discovery && i.discoverySituation !== filtros.discovery) return false;
+      if (filtros.execucao && i.execSituation !== filtros.execucao) return false;
+      if (filtros.bloqueio && i.blocked !== filtros.bloqueio) return false;
+      if (filtros.area && R.texto(i.blockArea) !== filtros.area) return false;
+      if (filtros.risco && a.concentracao.nivel !== filtros.risco) return false;
+      if (filtros.desvio) {
+        const n = a.desvio.nivel;
+        if (filtros.desvio === 'Com desvio' && !(a.desvio.desvioTotal > 0)) return false;
+        if (filtros.desvio === 'Crítico' && n !== 'CRITICO') return false;
+        if (filtros.desvio === 'Atenção' && n !== 'ATENCAO') return false;
+        if (filtros.desvio === 'No prazo' && n !== 'OK') return false;
+        if (filtros.desvio === 'Dado incompleto' && n !== 'INDEFINIDO') return false;
+      }
+      if (filtros.gestao && a.necessitaGestao.valor !== filtros.gestao) return false;
+      return true;
+    });
+  }
+
+  /* ── Editor de uma iniciativa ───────────────────────────────────────── */
+
+  function editor(a, ctx) {
+    const i = a.iniciativa;
+    const nomesSquads = ctx.estado.squads.map(function (s) { return s.name; }).filter(Boolean);
+
+    const blocoA =
+      '<div class="bloco"><h4>Bloco A — Identificação</h4>' +
+      campoTexto(i.id, 'initiativeNumber', 'ID da iniciativa', i.initiativeNumber) +
+      campoTexto(i.id, 'name', 'Nome da iniciativa', i.name) +
+      '<div class="campo"><label>Squad</label><select class="manual" data-ref="ini:' + esc(i.id) + ':squadId" onchange="Ops4OpsVisaoGestao.trocarSquad(\'' + esc(i.id) + '\',this.value)">' +
+        '<option value="">Não informado</option>' +
+        ctx.estado.squads.map(function (s) {
+          return '<option value="' + esc(s.id) + '"' + (i.squadId === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('') +
+        (i.squadId || R.ehPlaceholder(i.squad) ? '' : '<option value="" selected>' + esc(i.squad) + ' (fora do cadastro)</option>') +
+      '</select></div>' +
+      campoTexto(i.id, 'po', 'PO', i.po) +
+      campoTexto(i.id, 'techLead', 'Líder Técnico', i.techLead) +
+      '</div>';
+
+    const blocoB =
+      '<div class="bloco"><h4>Bloco B — Discovery</h4>' +
+      campoSelecao(i.id, 'discoverySituation', 'Situação Discovery', i.discoverySituation, R.SITUACAO_DISCOVERY) +
+      '<div class="dupla">' +
+        campoTexto(i.id, 'discoveryStart', 'Início Discovery', i.discoveryStart, 'date') +
+        campoTexto(i.id, 'discoveryEnd', 'Fim Discovery', i.discoveryEnd, 'date') +
+      '</div>' +
+      (R.ehADefinir(i.discoveryStart) || R.ehADefinir(i.discoveryEnd)
+        ? '<p style="margin:9px 0 0;font-size:11px;color:var(--tinta-3)">A fonte trouxe “a definir” — preservado como está.</p>' : '') +
+      '</div>';
+
+    const blocoC =
+      '<div class="bloco"><h4>Bloco C — Situação atual da execução</h4>' +
+      campoSelecao(i.id, 'execSituation', 'Situação Execução', i.execSituation, R.SITUACAO_EXECUCAO) +
+      campoSelecao(i.id, 'deliverySituation', 'Situação Entrega', i.deliverySituation, R.SITUACAO_ENTREGA) +
+      '<div class="dupla">' +
+        campoTexto(i.id, 'nextMilestoneLabel', 'Próximo Marco', i.nextMilestoneLabel) +
+        campoTexto(i.id, 'nextMilestoneDate', 'Data do marco', i.nextMilestoneDate, 'date') +
+      '</div>' +
+      (a.marco.derivado ? '<p style="margin:9px 0 0;font-size:11px;color:var(--tinta-3)">Sem marco informado, a visão executiva usa <strong>' + esc(a.marco.label) + ' · ' + esc(R.formatarBR(a.marco.data)) + '</strong>, derivado do planejamento.</p>' : '') +
+      '</div>';
+
+    const blocoPlano =
+      '<div class="bloco"><h4>Planejamento versus execução</h4>' +
+      '<div class="dupla">' +
+        campoTexto(i.id, 'planStartDev', 'Início DEV Planejado', i.planStartDev, 'date') +
+        campoTexto(i.id, 'planEndDev', 'Fim DEV Planejado', i.planEndDev, 'date') +
+      '</div>' +
+      '<div class="dupla">' +
+        campoTexto(i.id, 'realStartDev', 'Início DEV Real', i.realStartDev, 'date') +
+        campoTexto(i.id, 'realEndDev', 'Fim DEV Real', i.realEndDev, 'date') +
+      '</div>' +
+      campoTexto(i.id, 'currentForecast', 'Previsão Atual', i.currentForecast, 'date') +
+      '<div class="dupla" style="margin-top:9px">' +
+        campoAuto('Desvio de início', a.desvio.desvioInicio === null ? R.DADO_INCOMPLETO : R.formatarDesvio(a.desvio.desvioInicio), 'Início real menos início planejado') +
+        campoAuto('Desvio de término', a.desvio.desvioFim === null ? R.DADO_INCOMPLETO : R.formatarDesvio(a.desvio.desvioFim), 'Término real ou previsão atual menos fim planejado') +
+      '</div>' +
+      '<div class="dupla">' +
+        campoAuto('Desvio total em dias', a.desvio.desvioTotal === null ? R.DADO_INCOMPLETO : R.formatarDesvio(a.desvio.desvioTotal)) +
+        campoAuto('Situação do planejamento', a.desvio.situacaoPlanejamento) +
+      '</div>' +
+      '<p style="margin:10px 0 0;font-size:11.5px;color:var(--tinta-2);background:var(--auto);padding:8px 10px;border-radius:6px">' +
+        'Planejado <strong>' + esc(R.formatarBR(i.planEndDev)) + '</strong> → ' +
+        (a.desvio.referenciaFim ? (a.desvio.referenciaFimTipo === 'real' ? 'Real ' : 'Previsão ') + '<strong>' + esc(R.formatarBR(a.desvio.referenciaFim)) + '</strong>' : '<span class="ausente">sem previsão informada</span>') +
+        ' → Desvio <strong>' + esc(a.desvio.desvioTotal === null ? R.DADO_INCOMPLETO : R.formatarDesvio(a.desvio.desvioTotal)) + '</strong></p>' +
+      '</div>';
+
+    const blocoBloqueio =
+      '<div class="bloco"><h4>Bloqueios</h4>' +
+      campoSelecao(i.id, 'blocked', 'Bloqueado?', i.blocked, R.BLOQUEIO) +
+      campoTexto(i.id, 'blockReason', 'Motivo do bloqueio', i.blockReason) +
+      '<div class="campo"><label>Área responsável pelo destrave</label><select class="manual" data-ref="ini:' + esc(i.id) + ':blockArea" onchange="Ops4OpsApp.atualizarIniciativa(\'' + esc(i.id) + '\',\'blockArea\',this.value)">' +
+        '<option value="">Não informado</option>' +
+        R.AREAS_DESTRAVE.map(function (o) { return '<option value="' + esc(o) + '"' + (i.blockArea === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') +
+      '</select></div>' +
+      campoTexto(i.id, 'blockOwner', 'Responsável', i.blockOwner) +
+      '<div class="dupla">' +
+        campoTexto(i.id, 'blockStart', 'Início do bloqueio', i.blockStart, 'date') +
+        campoTexto(i.id, 'blockForecast', 'Previsão de resolução', i.blockForecast, 'date') +
+      '</div>' +
+      campoAuto('Status executivo', a.statusExecutivo.texto, 'Bloqueio tem prioridade sobre a fase') +
+      '</div>';
+
+    const blocoHoras =
+      '<div class="bloco"><h4>Horas</h4>' +
+      '<div class="dupla">' +
+        campoNumero(i.id, 'plannedHours', 'Horas Planejadas', i.plannedHours) +
+        campoNumero(i.id, 'consumedHours', 'Horas Consumidas', i.consumedHours) +
+      '</div>' +
+      '<div class="dupla" style="margin-top:9px">' +
+        campoAuto('Horas Restantes', a.horas.restantesTexto) +
+        campoAuto('% Consumo', a.horas.percentualTexto) +
+      '</div>' +
+      campoAuto('Densidade de carga', a.horas.densidadeTexto, 'Horas planejadas por DEV da squad. Não é utilização nem capacidade disponível.') +
+      campoAuto('Viabilidade da janela', a.viabilidade.nivel + (a.viabilidade.horasDiaPorDev !== null ? ' · ' + a.viabilidade.horasDiaPorDev.toFixed(1) + 'h/dia por DEV' : ''),
+        'Cruza horas planejadas, capacidade da squad e dias úteis da janela de DEV.') +
+      '</div>';
+
+    const blocoRisco =
+      '<div class="bloco"><h4>Risco e escalonamento (automático)</h4>' +
+      '<div class="dupla">' +
+        campoAuto('Iniciativas concorrentes', a.concorrencia.total === null ? R.DADO_INCOMPLETO : a.concorrencia.total + ' na janela',
+          a.concorrencia.motivo || ('Janela de -' + ctx.cfg.concorrencia.janelaDiasAntes + ' a +' + ctx.cfg.concorrencia.janelaDiasDepois + ' dias')) +
+        campoAuto('Risco de concentração', a.concentracao.nivel) +
+      '</div>' +
+      '<div class="dupla">' +
+        campoAuto('Risco se desbloquear', a.desbloqueio.nivel) +
+        campoAuto('Necessita atuação da gestão?', a.necessitaGestao.valor) +
+      '</div>' +
+      campoAuto('Capacidade da Squad', a.capacidade.devTexto + ' DEV · ' + a.capacidade.qaTexto + ' QA' + (a.capacidade.validada ? ' · validada' : ' · não validada')) +
+      '<p style="margin:10px 0 0;font-size:11.5px;color:var(--tinta-2);background:var(--auto);padding:9px 11px;border-radius:6px;line-height:1.5">' +
+        '<strong>Justificativa executiva:</strong> ' + esc(a.justificativa) + '<br>' +
+        '<strong>Ação recomendada:</strong> ' + esc(a.acaoRecomendada) +
+        (a.necessitaGestao.motivos.length ? '<br><strong>Motivos:</strong> ' + esc(a.necessitaGestao.motivos.join('; ')) : '') +
+      '</p>' +
+      '</div>';
+
+    const blocoJira =
+      '<div class="bloco"><h4>Jira (modelo preparado, sem integração)</h4>' +
+      campoTexto(i.id, 'jiraEpicId', 'Jira Epic ID', i.jiraEpicId) +
+      campoTexto(i.id, 'jiraUrl', 'URL Jira', i.jiraUrl, 'url') +
+      '<div class="dupla">' +
+        campoNumero(i.id, 'jiraStoriesTotal', 'Qtd. histórias', i.jiraStoriesTotal) +
+        campoNumero(i.id, 'jiraStoriesRefined', 'Refinadas', i.jiraStoriesRefined) +
+      '</div>' +
+      '<div class="dupla">' +
+        campoNumero(i.id, 'jiraStoriesInDev', 'Em desenvolvimento', i.jiraStoriesInDev) +
+        campoNumero(i.id, 'jiraStoriesDone', 'Concluídas', i.jiraStoriesDone) +
+      '</div>' +
+      (i.jiraUrl ? '<p style="margin:9px 0 0"><a href="' + esc(i.jiraUrl) + '" target="_blank" rel="noopener">Abrir no Jira ↗</a></p>' : '') +
+      '</div>';
+
+    const auditoria = a.inconsistencias.length
+      ? '<div class="bloco" style="grid-column:1/-1"><h4>Inconsistências apontadas na fonte</h4>' +
+        '<div class="aviso">Estes pontos <strong>não são corrigidos automaticamente</strong> — a fonte permanece como está até alguém validar.' +
+        '<ul class="lista-limpa">' + a.inconsistencias.map(function (x) { return '<li>' + esc(x.texto) + '</li>'; }).join('') + '</ul></div></div>'
+      : '';
+
+    return '<div class="blocos">' + blocoA + blocoB + blocoC + blocoPlano + blocoBloqueio + blocoHoras + blocoRisco + blocoJira + auditoria +
+      '<div style="grid-column:1/-1"><button class="botao perigo" onclick="Ops4OpsVisaoGestao.excluir(\'' + esc(i.id) + '\')">Excluir iniciativa</button></div>' +
+      '</div>';
+  }
+
+  function cabecalhoIniciativa(a) {
+    const i = a.iniciativa;
+    const gestao = a.necessitaGestao.valor;
+    return '<div class="iniciativa-cab" onclick="Ops4OpsVisaoGestao.alternar(\'' + esc(i.id) + '\')">' +
+      '<div><div class="num">' + esc(R.texto(i.initiativeNumber)) + '</div><div class="nome">' + esc(R.texto(i.name, 'Iniciativa sem nome')) + '</div></div>' +
+      '<div class="pilha"><span style="font-size:12px;font-weight:600">' + esc(R.texto(i.squad)) + '</span><span style="font-size:10.5px;color:var(--tinta-3)">TL ' + esc(R.texto(i.techLead)) + '</span></div>' +
+      '<div><span class="selo ' + CLASSE[a.statusExecutivo.nivel] + '">' + esc(a.statusExecutivo.texto) + '</span></div>' +
+      '<div class="pilha"><span style="font-size:11.5px">' + esc(R.formatarBR(i.planEndDev)) + ' → ' + esc(a.desvio.referenciaFim ? R.formatarBR(a.desvio.referenciaFim) : R.A_VALIDAR) + '</span>' +
+        '<span style="font-size:10.5px;color:var(--tinta-3)">planejado → previsto</span></div>' +
+      '<div><span class="selo ' + (a.desvio.desvioTotal === null ? 'neutro' : CLASSE[a.desvio.nivel]) + '">' +
+        esc(a.desvio.desvioTotal === null ? R.DADO_INCOMPLETO : R.formatarDesvio(a.desvio.desvioTotal)) + '</span></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<span class="selo ' + (gestao === 'SIM' ? 'critico' : gestao === 'AVALIAR' ? 'atencao' : 'ok') + '">Gestão: ' + esc(gestao) + '</span>' +
+        '<span class="botao">' + (abertas[i.id] ? 'Fechar' : 'Editar') + '</span>' +
+      '</div></div>';
+  }
+
+  /* ── Cadastro de nova iniciativa (requisito 23) ─────────────────────── */
+
+  function formularioNova(ctx) {
+    if (!novaAberta) {
+      return '<div class="barra-acoes"><button class="botao primario" onclick="Ops4OpsVisaoGestao.abrirNova()">+ Nova iniciativa</button>' +
+        '<button class="botao" onclick="Ops4OpsApp.exportar()">Exportar dados (JSON)</button>' +
+        '<button class="botao" onclick="Ops4OpsApp.recarregarDaFonte()">Recarregar base de planejamento</button></div>';
+    }
+    const opcoesSquad = ctx.estado.squads.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+    return '<div class="blocos" id="formNova">' +
+      '<div class="bloco"><h4>Identificação</h4>' +
+        '<div class="campo"><label>ID da iniciativa</label><input class="manual" id="nvNum" placeholder="Não informado"></div>' +
+        '<div class="campo"><label>Nome da iniciativa</label><input class="manual" id="nvNome" placeholder="Obrigatório"></div>' +
+        '<div class="campo"><label>Squad</label><select class="manual" id="nvSquad"><option value="">Não informado</option>' + opcoesSquad + '</select></div>' +
+        '<div class="campo"><label>PO</label><input class="manual" id="nvPo" placeholder="Não informado"></div>' +
+        '<div class="campo"><label>Líder Técnico</label><input class="manual" id="nvTl" placeholder="Não informado"></div>' +
+      '</div>' +
+      '<div class="bloco"><h4>Discovery e execução</h4>' +
+        '<div class="campo"><label>Situação Discovery</label><select class="manual" id="nvDisc">' + R.SITUACAO_DISCOVERY.map(function (o) { return '<option' + (o === 'A validar' ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="dupla"><div class="campo"><label>Início Discovery</label><input class="manual" type="date" id="nvDiscIni"></div>' +
+        '<div class="campo"><label>Fim Discovery</label><input class="manual" type="date" id="nvDiscFim"></div></div>' +
+        '<div class="campo"><label>Situação Execução</label><select class="manual" id="nvExec">' + R.SITUACAO_EXECUCAO.map(function (o) { return '<option' + (o === 'A validar' ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="campo"><label>Situação Entrega</label><select class="manual" id="nvEntrega">' + R.SITUACAO_ENTREGA.map(function (o) { return '<option' + (o === 'A atualizar' ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></div>' +
+      '</div>' +
+      '<div class="bloco"><h4>Planejamento</h4>' +
+        '<div class="dupla"><div class="campo"><label>Início DEV Planejado</label><input class="manual" type="date" id="nvPlanIni"></div>' +
+        '<div class="campo"><label>Fim DEV Planejado</label><input class="manual" type="date" id="nvPlanFim"></div></div>' +
+        '<div class="campo"><label>Previsão Atual</label><input class="manual" type="date" id="nvPrev"></div>' +
+      '</div>' +
+      '<div class="bloco"><h4>Bloqueio e horas</h4>' +
+        '<div class="campo"><label>Bloqueado?</label><select class="manual" id="nvBloq">' + R.BLOQUEIO.map(function (o) { return '<option' + (o === 'Não informado' ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="campo"><label>Área responsável</label><select class="manual" id="nvArea"><option value="">Não informado</option>' + R.AREAS_DESTRAVE.map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="campo"><label>Motivo do bloqueio</label><input class="manual" id="nvMotivo" placeholder="Não informado"></div>' +
+        '<div class="dupla"><div class="campo"><label>Horas Planejadas</label><input class="manual" type="number" min="0" id="nvHp" placeholder="A validar"></div>' +
+        '<div class="campo"><label>Horas Consumidas</label><input class="manual" type="number" min="0" id="nvHc" placeholder="A validar"></div></div>' +
+      '</div>' +
+      '<div style="grid-column:1/-1;display:flex;gap:9px;align-items:center">' +
+        '<button class="botao primario" onclick="Ops4OpsVisaoGestao.salvarNova()">Salvar iniciativa</button>' +
+        '<button class="botao" onclick="Ops4OpsVisaoGestao.fecharNova()">Cancelar</button>' +
+        '<span style="font-size:11.5px;color:var(--tinta-3)">Campos deixados em branco permanecem como “A validar” — não são preenchidos com zero nem com suposição.</span>' +
+      '</div></div>';
+  }
+
+  /* ── Render principal da Gestão 2026 ────────────────────────────────── */
+
+  function render(host, ctx, api) {
+    if (!host) return;
+    const todas = ctx.avaliacoes;
+    const visiveis = aplicarFiltros(todas);
+    const inis = ctx.estado.iniciativas;
+
+    const barraFiltros = '<div class="filtros">' +
+      seletorFiltro('squad', 'Squad', unicos(inis, 'squad')) +
+      seletorFiltro('techLead', 'Tech Lead', unicos(inis, 'techLead')) +
+      seletorFiltro('po', 'PO', unicos(inis, 'po')) +
+      seletorFiltro('discovery', 'Situação Discovery', R.SITUACAO_DISCOVERY) +
+      seletorFiltro('execucao', 'Situação Execução', R.SITUACAO_EXECUCAO) +
+      seletorFiltro('bloqueio', 'Bloqueio', R.BLOQUEIO) +
+      seletorFiltro('area', 'Área de destrave', R.AREAS_DESTRAVE) +
+      seletorFiltro('risco', 'Risco de concentração', ['BAIXO', 'MÉDIO', 'ALTO', R.DADO_INCOMPLETO]) +
+      seletorFiltro('desvio', 'Desvio', ['Com desvio', 'Crítico', 'Atenção', 'No prazo', 'Dado incompleto']) +
+      seletorFiltro('gestao', 'Necessita gestão', ['SIM', 'AVALIAR', 'NÃO']) +
+      '</div>';
+
+    const lista = visiveis.length
+      ? visiveis.map(function (a) {
+          return '<div class="iniciativa' + (abertas[a.iniciativa.id] ? ' aberta' : '') + '">' +
+            cabecalhoIniciativa(a) + (abertas[a.iniciativa.id] ? editor(a, ctx) : '') + '</div>';
+        }).join('')
+      : '<div class="cartao"><div class="vazio">Nenhuma iniciativa corresponde aos filtros selecionados.</div></div>';
+
+    host.innerHTML =
+      '<div class="cartao secao">' +
+        '<div class="cartao-topo"><h2>Gestão 2026</h2>' +
+          '<div class="legenda-campos"><span><span class="amostra man"></span>Amarelo = atualizar</span>' +
+          '<span><span class="amostra aut"></span>Cinza = automático</span>' +
+          '<span>' + visiveis.length + ' de ' + todas.length + ' iniciativa(s)</span></div></div>' +
+        barraFiltros + formularioNova(ctx) +
+      '</div>' + lista;
+  }
+
+  /* ── Squads e capacidade (requisito 24) ─────────────────────────────── */
+
+  function renderSquads(host, ctx, api) {
+    if (!host) return;
+    const linhas = ctx.squads.map(function (s) {
+      const q = s.squad;
+      return '<tr>' +
+        '<td><input class="manual" value="' + esc(q.name == null ? '' : q.name) + '" data-ref="sq:' + esc(q.id) + ':name" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'name\',this.value)"></td>' +
+        '<td><input class="manual" value="' + esc(q.techLead == null ? '' : q.techLead) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':techLead" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'techLead\',this.value)"></td>' +
+        '<td style="width:96px"><input class="manual" type="number" min="0" value="' + (q.dev == null ? '' : esc(q.dev)) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':dev" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'dev\',this.value)"></td>' +
+        '<td style="width:96px"><input class="manual" type="number" min="0" value="' + (q.qa == null ? '' : esc(q.qa)) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':qa" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'qa\',this.value)"></td>' +
+        '<td><input class="manual" value="' + esc(q.note == null ? '' : q.note) + '" placeholder="Não informado" data-ref="sq:' + esc(q.id) + ':note" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'note\',this.value)"></td>' +
+        '<td style="text-align:center"><input type="checkbox" style="width:auto" ' + (q.capacityValidated ? 'checked' : '') + ' data-ref="sq:' + esc(q.id) + ':capacityValidated" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'capacityValidated\',this.checked)"></td>' +
+        '<td>' + s.iniciativas + '<span class="cel-mini">' + s.emDesenvolvimento + ' em dev · ' + s.bloqueadas + ' bloqueada(s)</span></td>' +
+        '<td><span class="selo ' + classeRisco(s.riscoConcentracao.nivel) + '">' + esc(s.riscoConcentracao.nivel) + '</span></td>' +
+        '<td><span class="selo ' + classeRisco(s.riscoSeDesbloquear.nivel) + '">' + esc(s.riscoSeDesbloquear.nivel) + '</span></td>' +
+        '<td style="font-size:11.5px">' + esc(s.acaoRecomendada) + '</td>' +
+        '<td><button class="botao perigo" onclick="Ops4OpsApp.removerSquad(\'' + esc(q.id) + '\')">Excluir</button></td>' +
+        '</tr>';
+    }).join('');
+
+    host.innerHTML =
+      '<div class="cartao secao">' +
+        '<div class="cartao-topo"><h2>Squads e Capacidade</h2>' +
+        '<div class="legenda-campos"><span><span class="amostra man"></span>Amarelo = atualizar</span><span><span class="amostra aut"></span>Cinza = automático</span></div></div>' +
+        '<div style="padding:14px 18px 0"><div class="aviso info">Campo em branco significa <strong>A validar</strong>, nunca zero. Enquanto DEV não for informado, as iniciativas da squad ficam como <strong>DADO INCOMPLETO</strong> — o sistema não classifica como risco baixo aquilo que ele não sabe. Alterar DEV, QA ou a squad de uma iniciativa recalcula concorrência, concentração, densidade de carga e escalonamento na hora.</div></div>' +
+        '<div class="rolagem" style="padding:14px 18px">' +
+        (ctx.squads.length
+          ? '<table class="grade"><thead><tr>' +
+            ['Squad', 'Tech Lead', 'DEV', 'QA', 'Observação', 'Validada?', 'Iniciativas', 'Risco concentração', 'Risco se desbloquear', 'Ação recomendada', '']
+              .map(function (h) { return '<th>' + h + '</th>'; }).join('') +
+            '</tr></thead><tbody>' + linhas + '</tbody></table>'
+          : '<div class="vazio">Nenhuma squad cadastrada.</div>') +
+        '</div>' +
+        '<div class="barra-acoes"><button class="botao primario" onclick="Ops4OpsVisaoGestao.novaSquad()">+ Nova squad</button></div>' +
+      '</div>';
+  }
+
+  /* ── Parâmetros (requisito 4, 10, 11, 12 — nada hardcoded) ──────────── */
+
+  function renderConfig(host, ctx, api) {
+    if (!host) return;
+    const g = function (grupo, chave, rotulo, dica) {
+      return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
+        '<input class="manual" type="number" value="' + esc(ctx.cfg[grupo][chave]) + '" data-ref="cfg:' + grupo + ':' + chave + '" onchange="Ops4OpsApp.atualizarConfig(\'' + grupo + '\',\'' + chave + '\',this.value)">' +
+        (dica ? '<span style="font-size:10.5px;color:var(--tinta-3);line-height:1.4">' + esc(dica) + '</span>' : '') + '</div>';
+    };
+
+    host.innerHTML =
+      '<div class="cartao secao"><div class="cartao-topo"><h2>Parâmetros de classificação</h2>' +
+      '<span class="dica">Nenhum limiar é fixo no código — alterar aqui recalcula toda a leitura executiva</span></div>' +
+      '<div class="blocos">' +
+        '<div class="bloco"><h4>Desvio</h4>' +
+          g('desvio', 'noPrazoAte', 'No prazo até (dias)', 'Desvio menor ou igual a este valor é considerado no prazo. Negativo é adiantado.') +
+          g('desvio', 'atencaoAte', 'Atenção até (dias)', 'Acima deste valor, o desvio é crítico.') +
+        '</div>' +
+        '<div class="bloco"><h4>Concorrência</h4>' +
+          g('concorrencia', 'janelaDiasAntes', 'Janela — dias antes') +
+          g('concorrencia', 'janelaDiasDepois', 'Janela — dias depois', 'Iniciativas da mesma squad com início de DEV planejado dentro desta janela são concorrentes.') +
+        '</div>' +
+        '<div class="bloco"><h4>Risco de concentração</h4>' +
+          g('concentracao', 'altoConcorrentes', 'ALTO a partir de (concorrentes)') +
+          g('concentracao', 'altoConcorrentesSquadPequena', 'ALTO em squad pequena a partir de') +
+          g('concentracao', 'devPequena', 'Squad é pequena com até (DEV)') +
+          g('concentracao', 'medioConcorrentes', 'MÉDIO a partir de (concorrentes)') +
+          g('concentracao', 'medioDevMinimo', 'MÉDIO se squad tem até (DEV)') +
+        '</div>' +
+        '<div class="bloco"><h4>Risco se desbloquear</h4>' +
+          g('desbloqueio', 'baixoAte', 'Baixo até (bloqueadas)') +
+          g('desbloqueio', 'medioAte', 'Médio até (bloqueadas)', 'Acima disso, Alto. Qualquer bloqueio “Não informado” força DADO INCOMPLETO.') +
+        '</div>' +
+        '<div class="bloco"><h4>Marcos e horas</h4>' +
+          g('marcos', 'janelaDias', 'Próximos marcos — janela (dias)') +
+          g('horas', 'horasDiaPorDev', 'Limite de horas/dia por DEV', 'Usado no indicador de viabilidade da janela de DEV.') +
+        '</div>' +
+        '<div class="bloco"><h4>Auditoria de datas</h4>' +
+          g('dataQualidade', 'anoMinimoPlausivel', 'Ano mínimo plausível') +
+          g('dataQualidade', 'anoMaximoPlausivel', 'Ano máximo plausível', 'Datas fora desta faixa são apontadas como provável erro de digitação — jamais corrigidas sozinhas.') +
+        '</div>' +
+      '</div>' +
+      '<div class="barra-acoes"><button class="botao" onclick="Ops4OpsApp.restaurarConfig()">Restaurar padrões</button></div></div>';
+  }
+
+  /* ── Interações ─────────────────────────────────────────────────────── */
+
+  let timer = null;
+  const API = {
+    render: render, renderSquads: renderSquads, renderConfig: renderConfig,
+
+    alternar: function (id) { abertas[id] = !abertas[id]; raiz.Ops4OpsApp.render(); },
+
+    // Digitação em campo de texto grava com folga, para não redesenhar a cada tecla.
+    editarDebounce: function (id, campo, valor) {
+      clearTimeout(timer);
+      timer = setTimeout(function () { raiz.Ops4OpsApp.atualizarIniciativa(id, campo, valor); }, 450);
+    },
+
+    trocarSquad: function (id, squadId) {
+      const squad = raiz.Ops4OpsApp.squads().find(function (s) { return s.id === squadId; });
+      raiz.Ops4OpsApp.atualizarIniciativaCampos(id, {
+        squadId: squadId || null,
+        squad: squad ? squad.name : null
+      });
+    },
+
+    filtrar: function (chave, valor) { filtros[chave] = valor || null; raiz.Ops4OpsApp.render(); },
+
+    excluir: function (id) {
+      if (!confirm('Excluir esta iniciativa? Os indicadores de risco da squad serão recalculados.')) return;
+      delete abertas[id];
+      raiz.Ops4OpsApp.removerIniciativa(id);
+    },
+
+    abrirNova: function () { novaAberta = true; raiz.Ops4OpsApp.render(); },
+    fecharNova: function () { novaAberta = false; raiz.Ops4OpsApp.render(); },
+
+    salvarNova: function () {
+      const v = function (id) { const el = document.getElementById(id); return el && el.value !== '' ? el.value : null; };
+      const nome = v('nvNome');
+      if (!nome) { alert('Informe ao menos o nome da iniciativa.'); return; }
+      const squadId = v('nvSquad');
+      const squad = raiz.Ops4OpsApp.squads().find(function (s) { return s.id === squadId; });
+      const id = raiz.Ops4OpsApp.adicionarIniciativa({
+        initiativeNumber: v('nvNum'), name: nome,
+        squadId: squadId, squad: squad ? squad.name : null,
+        po: v('nvPo'), techLead: v('nvTl'),
+        discoverySituation: v('nvDisc'), discoveryStart: v('nvDiscIni'), discoveryEnd: v('nvDiscFim'),
+        execSituation: v('nvExec'), deliverySituation: v('nvEntrega'),
+        planStartDev: v('nvPlanIni'), planEndDev: v('nvPlanFim'), currentForecast: v('nvPrev'),
+        blocked: v('nvBloq'), blockArea: v('nvArea'), blockReason: v('nvMotivo'),
+        plannedHours: v('nvHp'), consumedHours: v('nvHc')
+      });
+      novaAberta = false;
+      abertas[id] = true;
+      raiz.Ops4OpsApp.render();
+    },
+
+    editarSquad: function (id, campo, valor) {
+      const atual = raiz.Ops4OpsApp.squads().find(function (s) { return s.id === id; });
+      if (!atual) return;
+      const dados = Object.assign({}, atual);
+      dados[campo] = valor;
+      raiz.Ops4OpsApp.salvarSquad(dados);
+    },
+
+    novaSquad: function () {
+      const nome = prompt('Nome da nova squad:');
+      if (!nome || !nome.trim()) return;
+      raiz.Ops4OpsApp.salvarSquad({ name: nome.trim(), techLead: null, dev: null, qa: null, capacityValidated: false });
+    }
+  };
+
+  raiz.Ops4OpsVisaoGestao = API;
+})(typeof self !== 'undefined' ? self : this);
