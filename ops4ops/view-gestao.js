@@ -249,19 +249,26 @@
       '</p>' +
       '</div>';
 
+    // Jira NÃO é campo manual: no Discovery PMO Tracker esses valores chegam
+    // por importação (CSV do Jira, vínculo pelo rótulo "#Nº da iniciativa"),
+    // nunca por digitação aqui. Por isso o bloco usa a mesma aparência dos
+    // campos calculados (cinza, sem edição) em vez de amarelo — mesmo que,
+    // nesta primeira versão do protótipo, sem uma fonte de importação
+    // conectada, os valores apareçam como "A validar".
     const blocoJira =
-      '<div class="bloco"><h4>Jira (modelo preparado, sem integração)</h4>' +
-      campoTexto(i.id, 'jiraEpicId', 'Jira Epic ID', i.jiraEpicId) +
-      campoTexto(i.id, 'jiraUrl', 'URL Jira', i.jiraUrl, 'url') +
+      '<div class="bloco"><h4>Jira (via importação — não editável aqui)</h4>' +
+      campoAuto('Jira Epic ID', R.texto(i.jiraEpicId)) +
+      campoAuto('URL Jira', R.texto(i.jiraUrl)) +
       '<div class="dupla">' +
-        campoNumero(i.id, 'jiraStoriesTotal', 'Qtd. histórias', i.jiraStoriesTotal) +
-        campoNumero(i.id, 'jiraStoriesRefined', 'Refinadas', i.jiraStoriesRefined) +
+        campoAuto('Qtd. histórias', i.jiraStoriesTotal === null ? R.A_VALIDAR : String(i.jiraStoriesTotal)) +
+        campoAuto('Refinadas', i.jiraStoriesRefined === null ? R.A_VALIDAR : String(i.jiraStoriesRefined)) +
       '</div>' +
       '<div class="dupla">' +
-        campoNumero(i.id, 'jiraStoriesInDev', 'Em desenvolvimento', i.jiraStoriesInDev) +
-        campoNumero(i.id, 'jiraStoriesDone', 'Concluídas', i.jiraStoriesDone) +
+        campoAuto('Em desenvolvimento', i.jiraStoriesInDev === null ? R.A_VALIDAR : String(i.jiraStoriesInDev)) +
+        campoAuto('Concluídas', i.jiraStoriesDone === null ? R.A_VALIDAR : String(i.jiraStoriesDone)) +
       '</div>' +
       (i.jiraUrl ? '<p style="margin:9px 0 0"><a href="' + esc(i.jiraUrl) + '" target="_blank" rel="noopener">Abrir no Jira ↗</a></p>' : '') +
+      '<p style="margin:9px 0 0;font-size:11px;color:var(--tinta-3);line-height:1.4">Preenchido pela importação do Jira já usada no Discovery PMO Tracker. Este protótipo ainda não está conectado a essa importação, então aparece como “A validar” até a integração ser ligada.</p>' +
       '</div>';
 
     const auditoria = a.inconsistencias.length
