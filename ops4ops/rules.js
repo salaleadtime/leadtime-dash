@@ -401,6 +401,12 @@
       if (vazio(ini.blockForecast)) achados.push({ campo: 'Previsão de resolução', tipo: 'bloqueio', texto: 'Bloqueio sem previsão de resolução.' });
     }
 
+    const uteis = diasUteis(ini.planStartDev, ini.planEndDev);
+    if (uteis === 0) {
+      achados.push({ campo: 'Janela de DEV', tipo: 'janela',
+        texto: 'Janela de DEV sem nenhum dia útil (' + formatarBR(ini.planStartDev) + ' a ' + formatarBR(ini.planEndDev) + '). Confirmar as datas.' });
+    }
+
     const consumidas = numero(ini.consumedHours);
     const planejadas = numero(ini.plannedHours);
     if (consumidas !== null && planejadas !== null && planejadas > 0 && consumidas > planejadas) {

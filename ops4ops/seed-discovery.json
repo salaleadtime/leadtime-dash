@@ -10,7 +10,11 @@
       "totalHours2026": 20160,
       "defaultPo": "Beatriz Miranda",
       "techLeads": [],
-      "frontLeader": "Cinthia Ribeiro"
+      "frontLeader": "Cinthia Ribeiro",
+      "dev": null,
+      "qa": null,
+      "capacityValidated": false,
+      "capacitySource": null
     },
     {
       "id": "squad-contact",
@@ -22,7 +26,13 @@
       "techLeads": [
         "Rodrigo D'avila"
       ],
-      "frontLeader": "Luciana Possamai"
+      "frontLeader": "Luciana Possamai",
+      "dev": 6,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Operações de Contas e Cartões · Líder da frente: Luciana Possamai",
+      "capacitySource": "Capacity das Squads · linha \"CONTACT\"",
+      "capacityNote": null
     },
     {
       "id": "squad-expresso",
@@ -34,7 +44,13 @@
       "techLeads": [
         "Moséas Gama"
       ],
-      "frontLeader": "Celso Perussi"
+      "frontLeader": "Celso Perussi",
+      "dev": 6,
+      "qa": 2,
+      "capacityValidated": false,
+      "note": "Composição de Dívidas · 6 devs + 2 QA · Líder da frente: Celso Perussi",
+      "capacitySource": "Capacity das Squads · linha \"EXPRESSO\"",
+      "capacityNote": "6 devs + 2 QA"
     },
     {
       "id": "squad-inception",
@@ -46,7 +62,13 @@
       "techLeads": [
         "Victor Fortunato"
       ],
-      "frontLeader": "Carolina Máximo"
+      "frontLeader": "Carolina Máximo",
+      "dev": 1,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Operações Jurídicas · Prevista alocação de novos desenvolvedores · Líder da frente: Carolina Máximo",
+      "capacitySource": "Capacity das Squads · linha \"INCEPTION\"",
+      "capacityNote": "Prevista alocação de novos desenvolvedores terceiros"
     },
     {
       "id": "squad-interstelar",
@@ -58,7 +80,13 @@
       "techLeads": [
         "Silmara Rosalem"
       ],
-      "frontLeader": "Davi Lopes"
+      "frontLeader": "Davi Lopes",
+      "dev": 6,
+      "qa": 3,
+      "capacityValidated": false,
+      "note": "Gestão de Consignado · Planilha: Total DEV 6 (1+5), mas a observação diz \"5 DEVs + 3 QAs\" — conferir · Líder da frente: Davi Lopes",
+      "capacitySource": "Capacity das Squads · linha \"INTER\"",
+      "capacityNote": "Planilha: Total DEV 6 (1 func. + 5 terc.), mas a observação diz \"5 DEVs + 3 QAs\" — conferir"
     },
     {
       "id": "squad-madmax",
@@ -70,7 +98,13 @@
       "techLeads": [
         "Rennan Gustavo"
       ],
-      "frontLeader": "Marcos Tasca"
+      "frontLeader": "Marcos Tasca",
+      "dev": 1,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas) · Prevista alocação de novos desenvolvedores · Líder da frente: Marcos Tasca",
+      "capacitySource": "Capacity das Squads · linha \"MADMAX\"",
+      "capacityNote": "Prevista alocação de novos desenvolvedores terceiros"
     },
     {
       "id": "squad-terminator",
@@ -83,7 +117,12 @@
         "Juliana Ribeiro",
         "Moséas Gama"
       ],
-      "frontLeader": "Davi Lopes"
+      "frontLeader": "Davi Lopes",
+      "dev": 4,
+      "qa": null,
+      "capacityValidated": false,
+      "capacitySource": "Capacity das Squads · linha \"RPA\"",
+      "capacityNote": "A planilha nomeia esta squad como \"RPA\""
     },
     {
       "id": "squad-topgun",
@@ -92,8 +131,16 @@
       "business": "Gestão de Consignado",
       "totalHours2026": 0,
       "defaultPo": null,
-      "techLeads": [],
-      "frontLeader": "Davi Lopes"
+      "techLeads": [
+        "Zoltan"
+      ],
+      "frontLeader": "Davi Lopes",
+      "dev": 1,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Gestão de Consignado · Prevista alocação de novos desenvolvedores · Líder da frente: Davi Lopes",
+      "capacitySource": "Capacity das Squads · linha \"TOPGUN\"",
+      "capacityNote": "Prevista alocação de novos desenvolvedores terceiros"
     }
   ],
   "projects": [
@@ -455,6 +502,15 @@
       "status": "Em Discovery",
       "subInitiatives": [],
       "origemDoDado": "apresentação Ops4Ops"
+    }
+  ],
+  "squadsForaDoEscopo": [
+    {
+      "nome": "GUARDIÕES",
+      "techLead": "Leo Lira",
+      "dev": 8,
+      "qa": 1,
+      "motivo": "Consta na planilha de capacity, mas não faz parte do Ops4Ops no momento (decisão de 18/08). Não cadastrar sem nova confirmação."
     }
   ]
 }

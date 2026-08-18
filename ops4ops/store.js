@@ -136,8 +136,15 @@
         techLeads: Array.isArray(s.techLeads) ? s.techLeads : [],
         // O líder da frente é papel distinto do Líder Técnico: fica como
         // observação para não se passar por LT.
-        note: [s.business, s.frontLeader ? 'Líder da frente: ' + s.frontLeader : null].filter(Boolean).join(' · ') || null,
-        dev: null, qa: null,         // capacidade NÃO existe na fonte → A validar
+        note: [s.business, s.capacityNote, s.capacitySource,
+               s.frontLeader ? 'Líder da frente: ' + s.frontLeader : null].filter(Boolean).join(' · ') || null,
+        // Capacidade vem da planilha de Capacity das Squads. Squad ausente
+        // da planilha permanece sem capacidade — nunca vira zero.
+        dev: s.dev === undefined ? null : s.dev,
+        qa: s.qa === undefined ? null : s.qa,
+        // A planilha se declara incompleta ("Preencher DEV Func. e DEV
+        // Terc.") e diverge de si mesma em 2 linhas: entra como NÃO
+        // validada até alguém confirmar na tela.
         capacityValidated: false
       });
     });

@@ -120,7 +120,9 @@
     const inviaveis = av.filter(function (a) { return a.viabilidade.nivel === 'INVIÁVEL'; });
     if (inviaveis.length) {
       alertas.push({ n: 'critico', t: inviaveis.length + ' iniciativa(s) com janela de DEV incompatível com as horas planejadas.',
-        d: inviaveis.slice(0, 3).map(function (a) { return R.texto(a.iniciativa.initiativeNumber) + ': ' + a.viabilidade.horasDiaPorDev.toFixed(1) + 'h/dia por DEV (limite ' + a.viabilidade.limite + 'h).'; }).join(' ') });
+        d: 'Horas planejadas divididas pelos DEV da squad e pelos dias úteis da janela: ' +
+           inviaveis.slice(0, 3).map(function (a) { return R.texto(a.iniciativa.initiativeNumber) + ' ' + a.viabilidade.horasDiaPorDev.toFixed(1) + 'h/dia'; }).join(' · ') +
+           ' (limite ' + ctx.cfg.horas.horasDiaPorDev + 'h, ajustável em Parâmetros). Ou a janela está curta, ou parte das horas cai fora dela — as duas leituras precisam de confirmação.' });
     }
 
     if (!alertas.length) {

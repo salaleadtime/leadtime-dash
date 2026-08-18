@@ -206,7 +206,11 @@ window.OPS4OPS_SEED = {
       "totalHours2026": 20160,
       "defaultPo": "Beatriz Miranda",
       "techLeads": [],
-      "frontLeader": "Cinthia Ribeiro"
+      "frontLeader": "Cinthia Ribeiro",
+      "dev": null,
+      "qa": null,
+      "capacityValidated": false,
+      "capacitySource": null
     },
     {
       "id": "squad-contact",
@@ -218,7 +222,13 @@ window.OPS4OPS_SEED = {
       "techLeads": [
         "Rodrigo D'avila"
       ],
-      "frontLeader": "Luciana Possamai"
+      "frontLeader": "Luciana Possamai",
+      "dev": 6,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Operações de Contas e Cartões · Líder da frente: Luciana Possamai",
+      "capacitySource": "Capacity das Squads · linha \"CONTACT\"",
+      "capacityNote": null
     },
     {
       "id": "squad-expresso",
@@ -230,7 +240,13 @@ window.OPS4OPS_SEED = {
       "techLeads": [
         "Moséas Gama"
       ],
-      "frontLeader": "Celso Perussi"
+      "frontLeader": "Celso Perussi",
+      "dev": 6,
+      "qa": 2,
+      "capacityValidated": false,
+      "note": "Composição de Dívidas · 6 devs + 2 QA · Líder da frente: Celso Perussi",
+      "capacitySource": "Capacity das Squads · linha \"EXPRESSO\"",
+      "capacityNote": "6 devs + 2 QA"
     },
     {
       "id": "squad-inception",
@@ -242,7 +258,13 @@ window.OPS4OPS_SEED = {
       "techLeads": [
         "Victor Fortunato"
       ],
-      "frontLeader": "Carolina Máximo"
+      "frontLeader": "Carolina Máximo",
+      "dev": 1,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Operações Jurídicas · Prevista alocação de novos desenvolvedores · Líder da frente: Carolina Máximo",
+      "capacitySource": "Capacity das Squads · linha \"INCEPTION\"",
+      "capacityNote": "Prevista alocação de novos desenvolvedores terceiros"
     },
     {
       "id": "squad-interstelar",
@@ -254,7 +276,13 @@ window.OPS4OPS_SEED = {
       "techLeads": [
         "Silmara Rosalem"
       ],
-      "frontLeader": "Davi Lopes"
+      "frontLeader": "Davi Lopes",
+      "dev": 6,
+      "qa": 3,
+      "capacityValidated": false,
+      "note": "Gestão de Consignado · Planilha: Total DEV 6 (1+5), mas a observação diz \"5 DEVs + 3 QAs\" — conferir · Líder da frente: Davi Lopes",
+      "capacitySource": "Capacity das Squads · linha \"INTER\"",
+      "capacityNote": "Planilha: Total DEV 6 (1 func. + 5 terc.), mas a observação diz \"5 DEVs + 3 QAs\" — conferir"
     },
     {
       "id": "squad-madmax",
@@ -266,7 +294,13 @@ window.OPS4OPS_SEED = {
       "techLeads": [
         "Rennan Gustavo"
       ],
-      "frontLeader": "Marcos Tasca"
+      "frontLeader": "Marcos Tasca",
+      "dev": 1,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas) · Prevista alocação de novos desenvolvedores · Líder da frente: Marcos Tasca",
+      "capacitySource": "Capacity das Squads · linha \"MADMAX\"",
+      "capacityNote": "Prevista alocação de novos desenvolvedores terceiros"
     },
     {
       "id": "squad-terminator",
@@ -279,7 +313,12 @@ window.OPS4OPS_SEED = {
         "Juliana Ribeiro",
         "Moséas Gama"
       ],
-      "frontLeader": "Davi Lopes"
+      "frontLeader": "Davi Lopes",
+      "dev": 4,
+      "qa": null,
+      "capacityValidated": false,
+      "capacitySource": "Capacity das Squads · linha \"RPA\"",
+      "capacityNote": "A planilha nomeia esta squad como \"RPA\""
     },
     {
       "id": "squad-topgun",
@@ -288,8 +327,16 @@ window.OPS4OPS_SEED = {
       "business": "Gestão de Consignado",
       "totalHours2026": 0,
       "defaultPo": null,
-      "techLeads": [],
-      "frontLeader": "Davi Lopes"
+      "techLeads": [
+        "Zoltan"
+      ],
+      "frontLeader": "Davi Lopes",
+      "dev": 1,
+      "qa": null,
+      "capacityValidated": false,
+      "note": "Gestão de Consignado · Prevista alocação de novos desenvolvedores · Líder da frente: Davi Lopes",
+      "capacitySource": "Capacity das Squads · linha \"TOPGUN\"",
+      "capacityNote": "Prevista alocação de novos desenvolvedores terceiros"
     }
   ],
   "projects": [
@@ -651,6 +698,15 @@ window.OPS4OPS_SEED = {
       "status": "Em Discovery",
       "subInitiatives": [],
       "origemDoDado": "apresentação Ops4Ops"
+    }
+  ],
+  "squadsForaDoEscopo": [
+    {
+      "nome": "GUARDIÕES",
+      "techLead": "Leo Lira",
+      "dev": 8,
+      "qa": 1,
+      "motivo": "Consta na planilha de capacity, mas não faz parte do Ops4Ops no momento (decisão de 18/08). Não cadastrar sem nova confirmação."
     }
   ]
 };
@@ -1140,6 +1196,12 @@ window.OPS4OPS_SEED = {
       if (vazio(ini.blockForecast)) achados.push({ campo: 'Previsão de resolução', tipo: 'bloqueio', texto: 'Bloqueio sem previsão de resolução.' });
     }
 
+    const uteis = diasUteis(ini.planStartDev, ini.planEndDev);
+    if (uteis === 0) {
+      achados.push({ campo: 'Janela de DEV', tipo: 'janela',
+        texto: 'Janela de DEV sem nenhum dia útil (' + formatarBR(ini.planStartDev) + ' a ' + formatarBR(ini.planEndDev) + '). Confirmar as datas.' });
+    }
+
     const consumidas = numero(ini.consumedHours);
     const planejadas = numero(ini.plannedHours);
     if (consumidas !== null && planejadas !== null && planejadas > 0 && consumidas > planejadas) {
@@ -1619,8 +1681,15 @@ window.OPS4OPS_SEED = {
         techLeads: Array.isArray(s.techLeads) ? s.techLeads : [],
         // O líder da frente é papel distinto do Líder Técnico: fica como
         // observação para não se passar por LT.
-        note: [s.business, s.frontLeader ? 'Líder da frente: ' + s.frontLeader : null].filter(Boolean).join(' · ') || null,
-        dev: null, qa: null,         // capacidade NÃO existe na fonte → A validar
+        note: [s.business, s.capacityNote, s.capacitySource,
+               s.frontLeader ? 'Líder da frente: ' + s.frontLeader : null].filter(Boolean).join(' · ') || null,
+        // Capacidade vem da planilha de Capacity das Squads. Squad ausente
+        // da planilha permanece sem capacidade — nunca vira zero.
+        dev: s.dev === undefined ? null : s.dev,
+        qa: s.qa === undefined ? null : s.qa,
+        // A planilha se declara incompleta ("Preencher DEV Func. e DEV
+        // Terc.") e diverge de si mesma em 2 linhas: entra como NÃO
+        // validada até alguém confirmar na tela.
         capacityValidated: false
       });
     });
@@ -1860,7 +1929,9 @@ window.OPS4OPS_SEED = {
     const inviaveis = av.filter(function (a) { return a.viabilidade.nivel === 'INVIÁVEL'; });
     if (inviaveis.length) {
       alertas.push({ n: 'critico', t: inviaveis.length + ' iniciativa(s) com janela de DEV incompatível com as horas planejadas.',
-        d: inviaveis.slice(0, 3).map(function (a) { return R.texto(a.iniciativa.initiativeNumber) + ': ' + a.viabilidade.horasDiaPorDev.toFixed(1) + 'h/dia por DEV (limite ' + a.viabilidade.limite + 'h).'; }).join(' ') });
+        d: 'Horas planejadas divididas pelos DEV da squad e pelos dias úteis da janela: ' +
+           inviaveis.slice(0, 3).map(function (a) { return R.texto(a.iniciativa.initiativeNumber) + ' ' + a.viabilidade.horasDiaPorDev.toFixed(1) + 'h/dia'; }).join(' · ') +
+           ' (limite ' + ctx.cfg.horas.horasDiaPorDev + 'h, ajustável em Parâmetros). Ou a janela está curta, ou parte das horas cai fora dela — as duas leituras precisam de confirmação.' });
     }
 
     if (!alertas.length) {

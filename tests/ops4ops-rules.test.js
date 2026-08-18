@@ -291,6 +291,13 @@ function squad(over) {
   const bloqCego = R.inconsistenciasDeDados(ini({ blocked: 'Sim' }), cfg);
   ok('auditoria: bloqueio sem área/dono/previsão gera 3 apontamentos', bloqCego.filter(function (a) { return a.tipo === 'bloqueio'; }).length === 3);
 
+  // Caso real da base: 113319 tem início e fim de DEV no mesmo sábado.
+  const sabado = R.inconsistenciasDeDados(ini({ planStartDev: '2026-08-01', planEndDev: '2026-08-01' }), cfg);
+  ok('auditoria: janela de DEV sem dia útil é sinalizada', sabado.some(function (a) { return a.tipo === 'janela'; }), JSON.stringify(sabado));
+
+  const umDiaUtil = R.inconsistenciasDeDados(ini({ planStartDev: '2026-08-03', planEndDev: '2026-08-03' }), cfg);
+  ok('auditoria: janela de um dia útil não é sinalizada', !umDiaUtil.some(function (a) { return a.tipo === 'janela'; }));
+
   const limpa = R.inconsistenciasDeDados(ini({ discoveryStart: '2026-05-01', discoveryEnd: '2026-06-01',
     planStartDev: '2026-07-01', planEndDev: '2026-08-01', blocked: 'Não' }), cfg);
   eq('auditoria: dados coerentes não geram ruído', limpa.length, 0);
