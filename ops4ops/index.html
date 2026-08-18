@@ -183,6 +183,7 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
 </header>
 
 <main class="pagina">
+  <div id="avisoBase"></div>
   <section id="paginaExecutiva"></section>
   <section id="paginaGestao" class="oculto"></section>
   <section id="paginaSquads" class="oculto"></section>
@@ -256,6 +257,21 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
     window.Ops4OpsVisaoGestao.renderSquads(document.getElementById('paginaSquads'), ctx, api);
     window.Ops4OpsVisaoGestao.renderConfig(document.getElementById('paginaConfig'), ctx, api);
 
+    const novas = estado.novasNaBase || [];
+    const novasSquads = estado.squadsNovasNaBase || [];
+    document.getElementById('avisoBase').innerHTML = (novas.length || novasSquads.length)
+      ? '<div class="aviso info secao" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">' +
+          '<div style="flex:1;min-width:280px"><strong>A base de planejamento tem ' +
+          (novas.length ? novas.length + ' iniciativa(s) que ainda não estão aqui' : '') +
+          (novas.length && novasSquads.length ? ' e ' : '') +
+          (novasSquads.length ? novasSquads.length + ' squad(s) nova(s)' : '') + '.</strong> ' +
+          (novas.length ? novas.map(function (i) { return esc(i.initiativeNumber || i.name); }).join(', ') + '. ' : '') +
+          'Este protótipo guarda os dados neste navegador, então a base atualizada não entra sozinha.</div>' +
+          '<button class="botao primario" onclick="Ops4OpsApp.incorporarNovasDaBase()">Adicionar sem perder o que já preenchi</button>' +
+          '<button class="botao" onclick="Ops4OpsApp.recarregarDaFonte()">Recarregar tudo do zero</button>' +
+        '</div>'
+      : '';
+
     const total = estado.iniciativas.length;
     const pend = ctx.avaliacoes.filter(function (a) { return a.confiabilidade.percentual < 1; }).length;
     document.getElementById('topoMeta').innerHTML =
@@ -305,6 +321,23 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
     },
     removerIniciativa: function (id) {
       estado.iniciativas = estado.iniciativas.filter(function (i) { return i.id !== id; });
+      // Guarda a exclusão para a base não sugerir readicionar depois.
+      if (estado.removidos.indexOf(id) === -1) estado.removidos.push(id);
+      estado.novasNaBase = (estado.novasNaBase || []).filter(function (i) { return i.id !== id; });
+      persistirERenderizar();
+    },
+
+    /* Incorpora o que a base ganhou desde a última abertura SEM tocar no que
+       já existe aqui — o caminho seguro quando alguém já preencheu campos.
+       Diferente de recarregarDaFonte(), que descarta tudo e recomeça. */
+    incorporarNovasDaBase: function () {
+      const novas = estado.novasNaBase || [];
+      const novasSquads = estado.squadsNovasNaBase || [];
+      if (!novas.length && !novasSquads.length) return;
+      novasSquads.forEach(function (s) { estado.squads.push(s); });
+      novas.forEach(function (i) { estado.iniciativas.push(i); });
+      estado.novasNaBase = [];
+      estado.squadsNovasNaBase = [];
       persistirERenderizar();
     },
     salvarSquad: function (dados) {

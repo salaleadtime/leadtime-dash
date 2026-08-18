@@ -184,7 +184,8 @@
   /* ── Estado ──────────────────────────────────────────────────────────── */
 
   function estadoVazio() {
-    return { versao: VERSAO_MODELO, iniciativas: [], squads: [], config: CFG.padrao(), fonte: null, atualizadoEm: null };
+    return { versao: VERSAO_MODELO, iniciativas: [], squads: [], config: CFG.padrao(), fonte: null,
+             atualizadoEm: null, removidos: [], base: null, novasNaBase: [], squadsNovasNaBase: [] };
   }
 
   function normalizarEstado(bruto) {
@@ -195,6 +196,7 @@
     e.config = CFG.mesclar(CFG.PADRAO, bruto.config);
     e.fonte = limpar(bruto.fonte);
     e.atualizadoEm = limpar(bruto.atualizadoEm);
+    e.removidos = Array.isArray(bruto.removidos) ? bruto.removidos.slice() : [];
     return e;
   }
 
@@ -202,44 +204,64 @@
      arquivo de base extraído do Discovery. Se o arquivo não estiver acessível
      (ex.: aberto via file:// com fetch bloqueado), a aplicação inicia vazia e
      diz isso — nunca inventa iniciativas para "ter o que mostrar". */
+  /* A base pode vir embutida na página (versão de arquivo único, que abre por
+     file:// sem servidor) ou de um fetch. Resolvida SEMPRE, mesmo havendo
+     dados salvos, para dar pra comparar o que já está no navegador com a base
+     atual — sem isso, uma iniciativa nova nunca chegaria em quem já abriu o
+     protótipo antes. */
+  function resolverBase() {
+    if (raiz.OPS4OPS_SEED) return Promise.resolve(raiz.OPS4OPS_SEED);
+    return fetch('seed-discovery.json', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .catch(function () { return null; });
+  }
+
   function carregar() {
-    return adaptador.carregar().then(function (salvo) {
+    return Promise.all([adaptador.carregar(), resolverBase()]).then(function (par) {
+      const salvo = par[0];
+      const bruto = par[1];
+      const base = bruto ? semearDoDiscovery(bruto) : null;
+
       if (salvo && Array.isArray(salvo.iniciativas) && salvo.iniciativas.length) {
-        return normalizarEstado(salvo);
+        const e = normalizarEstado(salvo);
+        e.base = base;
+        // O que existe na base e não existe aqui. Iniciativas que a pessoa
+        // excluiu de propósito ficam de fora — senão o aviso reapareceria
+        // para sempre pedindo para readicioná-las.
+        if (base) {
+          const tenho = {};
+          e.iniciativas.forEach(function (i) { tenho[i.id] = true; });
+          (e.removidos || []).forEach(function (id) { tenho[id] = true; });
+          e.novasNaBase = base.iniciativas.filter(function (i) { return !tenho[i.id]; });
+
+          const temSquad = {};
+          e.squads.forEach(function (s) { temSquad[s.id] = true; });
+          e.squadsNovasNaBase = base.squads.filter(function (s) { return !temSquad[s.id]; });
+        }
+        return e;
       }
-      // Versão em arquivo único: a base vem embutida na própria página, então
-      // não há fetch (e o protótipo abre por file:// com duplo clique).
-      if (raiz.OPS4OPS_SEED) {
-        const semeado = semearDoDiscovery(raiz.OPS4OPS_SEED);
-        const e = estadoVazio();
-        e.iniciativas = semeado.iniciativas;
-        e.squads = semeado.squads;
-        e.fonte = raiz.OPS4OPS_SEED.fonte || 'Base de planejamento 2026 do Discovery PMO';
+
+      const e = estadoVazio();
+      if (base) {
+        e.iniciativas = base.iniciativas;
+        e.squads = base.squads;
+        e.fonte = bruto.fonte || 'Base de planejamento 2026 do Discovery PMO';
         e.atualizadoEm = new Date().toISOString();
-        return Promise.resolve(e);
+        e.base = base;
       }
-      return fetch('seed-discovery.json', { cache: 'no-store' })
-        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function (bruto) {
-          const semeado = semearDoDiscovery(bruto);
-          const e = estadoVazio();
-          e.iniciativas = semeado.iniciativas;
-          e.squads = semeado.squads;
-          e.fonte = bruto.fonte || 'Base de planejamento 2026 do Discovery PMO';
-          e.atualizadoEm = new Date().toISOString();
-          return e;
-        })
-        .catch(function () {
-          const e = estadoVazio();
-          e.fonte = null;
-          return e;
-        });
+      return e;
     });
   }
 
   function salvar(estado) {
     estado.atualizadoEm = new Date().toISOString();
-    return adaptador.salvar(estado);
+    // base/novasNaBase são derivados da comparação com o arquivo de base:
+    // gravá-los duplicaria a base inteira dentro do estado salvo.
+    const paraGravar = Object.assign({}, estado);
+    delete paraGravar.base;
+    delete paraGravar.novasNaBase;
+    delete paraGravar.squadsNovasNaBase;
+    return adaptador.salvar(paraGravar);
   }
 
   raiz.Ops4OpsStore = {
