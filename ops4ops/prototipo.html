@@ -124,6 +124,12 @@ table.grade tr.destaque-atencao td{background:linear-gradient(90deg,var(--atenca
 .lista-limpar{display:block;width:100%;margin-top:3px;padding:7px 8px;border:0;border-top:1px solid var(--line);background:transparent;color:var(--marca-2);font-size:11.5px;font-weight:600;text-align:left;border-radius:0 0 5px 5px}
 .lista-limpar:hover{background:var(--surface-2)}
 .campo-lista-vazio{display:block;padding:8px;font-size:11.5px;color:var(--tinta-3)}
+.lt-lista{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px;min-height:22px;align-items:flex-start}
+.lt-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 4px 2px 8px;border-radius:999px;background:var(--marca-suave);border:1px solid #cfe0f2;color:var(--marca);font-size:11px;font-weight:600;white-space:nowrap}
+.lt-chip button{border:0;background:transparent;color:var(--marca-2);font-size:13px;line-height:1;padding:0 3px;border-radius:50%;opacity:.65}
+.lt-chip button:hover{opacity:1;background:#dbe8f5;color:var(--critico)}
+.lt-vazio{font-size:11.5px;color:var(--tinta-3);font-style:italic;padding-top:2px}
+.lt-novo{font-size:11.5px;padding:5px 8px}
 .campo{display:flex;flex-direction:column;gap:4px}
 .campo>label{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-3)}
 input,select,textarea{font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid var(--line-forte);border-radius:7px;background:#fff;color:var(--tinta);width:100%}
@@ -189,7 +195,7 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
 <script>
 /* Base de planejamento 2026 embutida (gerada por build-standalone.js). */
 window.OPS4OPS_SEED = {
-  "fonte": "discovery-pmo/index.html (defaultData) — mesma base de planejamento 2026 do Discovery PMO Tracker",
+  "fonte": "Apresentação Ops4Ops (números de iniciativa, datas de Discovery, Squad e Líder Técnico) + discovery-pmo/index.html (janelas de DEV e horas 2026)",
   "extraidoEm": "2026-08-18",
   "squads": [
     {
@@ -198,8 +204,9 @@ window.OPS4OPS_SEED = {
       "code": "ASD",
       "business": "Automação RPA",
       "totalHours2026": 20160,
-      "defaultLeader": "Cinthia Ribeiro",
-      "defaultPo": "Beatriz Miranda"
+      "defaultPo": "Beatriz Miranda",
+      "techLeads": [],
+      "frontLeader": "Cinthia Ribeiro"
     },
     {
       "id": "squad-contact",
@@ -207,8 +214,11 @@ window.OPS4OPS_SEED = {
       "code": "CONTAC",
       "business": "Operações de Contas e Cartões",
       "totalHours2026": 7637,
-      "defaultLeader": "Luciana Possamai",
-      "defaultPo": "Sandra Souza"
+      "defaultPo": "Sandra Souza",
+      "techLeads": [
+        "Rodrigo D'avila"
+      ],
+      "frontLeader": "Luciana Possamai"
     },
     {
       "id": "squad-expresso",
@@ -216,8 +226,11 @@ window.OPS4OPS_SEED = {
       "code": "EXPRES",
       "business": "Composição de Dívidas",
       "totalHours2026": 4615,
-      "defaultLeader": "Celso Perussi",
-      "defaultPo": "Daniel Lima"
+      "defaultPo": "Daniel Lima",
+      "techLeads": [
+        "Moséas Gama"
+      ],
+      "frontLeader": "Celso Perussi"
     },
     {
       "id": "squad-inception",
@@ -225,8 +238,11 @@ window.OPS4OPS_SEED = {
       "code": "INCEPT",
       "business": "Operações Jurídicas",
       "totalHours2026": 5376,
-      "defaultLeader": "Carolina Máximo",
-      "defaultPo": "Sandra Souza"
+      "defaultPo": "Sandra Souza",
+      "techLeads": [
+        "Victor Fortunato"
+      ],
+      "frontLeader": "Carolina Máximo"
     },
     {
       "id": "squad-interstelar",
@@ -234,8 +250,11 @@ window.OPS4OPS_SEED = {
       "code": "INTERS",
       "business": "Gestão de Consignado",
       "totalHours2026": 2500,
-      "defaultLeader": "Davi Lopes",
-      "defaultPo": "Rodrigo Santos"
+      "defaultPo": "Rodrigo Santos",
+      "techLeads": [
+        "Silmara Rosalem"
+      ],
+      "frontLeader": "Davi Lopes"
     },
     {
       "id": "squad-madmax",
@@ -243,8 +262,11 @@ window.OPS4OPS_SEED = {
       "code": "MADMAX",
       "business": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas)",
       "totalHours2026": 5376,
-      "defaultLeader": "Marcos Tasca",
-      "defaultPo": "Sérgio Cartapatti"
+      "defaultPo": "Sérgio Cartapatti",
+      "techLeads": [
+        "Rennan Gustavo"
+      ],
+      "frontLeader": "Marcos Tasca"
     },
     {
       "id": "squad-terminator",
@@ -252,8 +274,12 @@ window.OPS4OPS_SEED = {
       "code": "TERMIN",
       "business": "Gestão de Consignado",
       "totalHours2026": 1390,
-      "defaultLeader": "Davi Lopes",
-      "defaultPo": "Jane Silva"
+      "defaultPo": "Jane Silva",
+      "techLeads": [
+        "Juliana Ribeiro",
+        "Moséas Gama"
+      ],
+      "frontLeader": "Davi Lopes"
     },
     {
       "id": "squad-topgun",
@@ -261,8 +287,9 @@ window.OPS4OPS_SEED = {
       "code": "TOPGUN",
       "business": "Gestão de Consignado",
       "totalHours2026": 0,
-      "defaultLeader": "Davi Lopes",
-      "defaultPo": null
+      "defaultPo": null,
+      "techLeads": [],
+      "frontLeader": "Davi Lopes"
     }
   ],
   "projects": [
@@ -273,7 +300,7 @@ window.OPS4OPS_SEED = {
       "squad": "Expresso",
       "squadId": "squad-expresso",
       "po": "Daniel Lima",
-      "techLead": "Moseas Souza",
+      "techLead": "a definir",
       "frontLeader": "Celso Perussi",
       "business": "Composição de Dívidas",
       "theme": "Composição de Dívidas",
@@ -283,7 +310,8 @@ window.OPS4OPS_SEED = {
       "target": "2026-08-01",
       "hours2026": 1615,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113292",
@@ -292,24 +320,25 @@ window.OPS4OPS_SEED = {
       "squad": "Expresso",
       "squadId": "squad-expresso",
       "po": "Fernanda Rocha",
-      "techLead": "Moseas Souza",
+      "techLead": "Moséas Gama",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos",
       "theme": "Concilicação, Regulatório, Garantias e Documentos",
-      "discoveryDate": "2006-08-03",
+      "discoveryDate": "2026-08-03",
       "startDev": "2026-09-01",
       "endDev": "2026-10-01",
       "target": "2026-10-01",
       "hours2026": 1800,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "2026-08-31"
     },
     {
       "id": "ini-113345",
       "initiativeNumber": "113345",
       "name": "Cartões - Não Monetário - Tratar base PCCF",
-      "squad": "Contact",
-      "squadId": "squad-contact",
+      "squad": "Interstelar",
+      "squadId": "squad-interstelar",
       "po": "Sandra Souza",
       "techLead": "Silmara Rosalem",
       "frontLeader": "Luciana Possamai",
@@ -326,16 +355,17 @@ window.OPS4OPS_SEED = {
           "name": "Cartões - Demais Produtos (Alelo, Backoffice PJ, NEXT, Transportes, Cadastral PF)",
           "squad": "Contact"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113359",
       "initiativeNumber": "113359",
       "name": "Compensação de Cheques",
-      "squad": "Ainda Sem Definição",
-      "squadId": "squad-asd",
+      "squad": "Contact",
+      "squadId": "squad-contact",
       "po": "Mariana Nakaya",
-      "techLead": "Silmara Rosalem",
+      "techLead": "Rodrigo D'avila",
       "frontLeader": "Luis Fernando",
       "business": "Serviços Operacionais Banco",
       "theme": "Serviços Operacionais Banco",
@@ -345,7 +375,8 @@ window.OPS4OPS_SEED = {
       "target": "2026-11-01",
       "hours2026": 2000,
       "status": "A iniciar",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-98434",
@@ -364,14 +395,15 @@ window.OPS4OPS_SEED = {
       "target": "2026-11-01",
       "hours2026": 5197,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-116596",
       "initiativeNumber": "116596",
       "name": "Jornada de Automação: Conversão Robôs em RPA",
-      "squad": "ASD",
-      "squadId": "squad-asd",
+      "squad": "Terminator",
+      "squadId": "squad-terminator",
       "po": "Beatriz Miranda",
       "techLead": "Juliana Ribeiro",
       "frontLeader": "Cinthia Ribeiro",
@@ -383,7 +415,8 @@ window.OPS4OPS_SEED = {
       "target": "2027-12-01",
       "hours2026": 8064,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113319",
@@ -392,7 +425,7 @@ window.OPS4OPS_SEED = {
       "squad": "Terminator",
       "squadId": "squad-terminator",
       "po": "Jane Silva",
-      "techLead": "ASD",
+      "techLead": "Moséas Gama",
       "frontLeader": "Davi Lopes",
       "business": "Gestão de Consignado",
       "theme": "Gestão de Consignado",
@@ -402,7 +435,8 @@ window.OPS4OPS_SEED = {
       "target": "2026-08-01",
       "hours2026": 1390,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "2026-08-31"
     },
     {
       "id": "ini-113317",
@@ -411,7 +445,7 @@ window.OPS4OPS_SEED = {
       "squad": "Interstelar",
       "squadId": "squad-interstelar",
       "po": "Rodrigo Santos",
-      "techLead": "ASD",
+      "techLead": "Silmara Rosalem",
       "frontLeader": "Davi Lopes",
       "business": "Gestão de Consignado",
       "theme": "Gestão de Consignado",
@@ -421,7 +455,8 @@ window.OPS4OPS_SEED = {
       "target": "2026-11-01",
       "hours2026": 2500,
       "status": "A iniciar",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113315",
@@ -430,7 +465,7 @@ window.OPS4OPS_SEED = {
       "squad": "Ainda Sem Definição",
       "squadId": "squad-asd",
       "po": "Daniel Lima",
-      "techLead": "ASD",
+      "techLead": "Silmara Rosalem",
       "frontLeader": "Davi Lopes",
       "business": "Gestão de Consignado",
       "theme": "Gestão de Consignado",
@@ -449,7 +484,8 @@ window.OPS4OPS_SEED = {
           "name": "Conciliação e Portabilidade - Produto",
           "squad": "Ainda Sem Definição"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113301",
@@ -458,7 +494,7 @@ window.OPS4OPS_SEED = {
       "squad": "Expresso",
       "squadId": "squad-expresso",
       "po": "Vinicius Barbosa",
-      "techLead": "ASD",
+      "techLead": "Moséas Gama",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos",
       "theme": "Concilicação, Regulatório, Garantias e Documentos",
@@ -473,7 +509,8 @@ window.OPS4OPS_SEED = {
           "name": "Disponibilização Termo Quitação Portal Consorciado",
           "squad": "Interstelar"
         }
-      ]
+      ],
+      "discoveryEnd": "2026-08-31"
     },
     {
       "id": "ini-113309",
@@ -482,7 +519,7 @@ window.OPS4OPS_SEED = {
       "squad": "MadMax",
       "squadId": "squad-madmax",
       "po": "Sérgio Cartapatti",
-      "techLead": "ASD",
+      "techLead": "Rennan Gustavo",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas)",
       "theme": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas)",
@@ -501,7 +538,8 @@ window.OPS4OPS_SEED = {
           "name": "Controle de Pendências",
           "squad": "Ainda Sem Definição"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113260",
@@ -510,7 +548,7 @@ window.OPS4OPS_SEED = {
       "squad": "Inception",
       "squadId": "squad-inception",
       "po": "Sandra Souza",
-      "techLead": "ASD",
+      "techLead": "Victor Fortunato",
       "frontLeader": "Carolina Máximo",
       "business": "Operações Jurídicas",
       "theme": "Operações Jurídicas",
@@ -520,16 +558,17 @@ window.OPS4OPS_SEED = {
       "target": "2027-03-01",
       "hours2026": 5376,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113308",
       "initiativeNumber": "113308",
       "name": "Gestão de Fornecedores e Indexação Legado",
-      "squad": "ASD",
-      "squadId": "squad-asd",
+      "squad": "MadMax",
+      "squadId": "squad-madmax",
       "po": "Vinicius Barbosa",
-      "techLead": "ASD",
+      "techLead": "Rennan Gustavo",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos (sem GCC)",
       "theme": "Concilicação, Regulatório, Garantias e Documentos (sem GCC)",
@@ -544,16 +583,17 @@ window.OPS4OPS_SEED = {
           "name": "Indexação do Legado de Contas",
           "squad": "ASD"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113327",
       "initiativeNumber": "113327",
       "name": "FIRP / Abono / Mtoken / APP RM",
-      "squad": "ASD",
-      "squadId": "squad-asd",
+      "squad": "Inception",
+      "squadId": "squad-inception",
       "po": "Paulo Nascimento",
-      "techLead": "ASD",
+      "techLead": "Victor Fortunato",
       "frontLeader": "Luciana Possamai",
       "business": "Operações de Contas e Cartões",
       "theme": "Operações de Contas e Cartões",
@@ -588,7 +628,29 @@ window.OPS4OPS_SEED = {
           "name": "Prevenção a Fraude - M-Token/Senhas + Cartões",
           "squad": "ASD"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
+    },
+    {
+      "id": "ini-113061",
+      "initiativeNumber": "113061",
+      "name": "RPA Vínculo Automático NPC – AOC/NCE/TRAVA",
+      "squad": "Terminator",
+      "squadId": "squad-terminator",
+      "po": null,
+      "techLead": "Juliana Ribeiro",
+      "frontLeader": null,
+      "business": null,
+      "theme": null,
+      "discoveryDate": "2026-06-10",
+      "discoveryEnd": "2026-08-31",
+      "startDev": null,
+      "endDev": null,
+      "target": null,
+      "hours2026": null,
+      "status": "Em Discovery",
+      "subInitiatives": [],
+      "origemDoDado": "apresentação Ops4Ops"
     }
   ]
 };
@@ -878,6 +940,19 @@ window.OPS4OPS_SEED = {
       completa: dev !== null,
       validada: !!(squad && squad.capacityValidated === true)
     };
+  }
+
+  /* Líderes Técnicos de uma squad. Uma squad pode ter mais de um; lista
+     vazia é ausência de informação, nunca "sem líder". */
+  function techLeads(squad) {
+    if (!squad) return [];
+    if (Array.isArray(squad.techLeads)) return squad.techLeads.filter(function (n) { return !ehPlaceholder(n); });
+    return ehPlaceholder(squad.techLead) ? [] : [String(squad.techLead).trim()];
+  }
+
+  function techLeadsTexto(squad, separador) {
+    const lista = techLeads(squad);
+    return lista.length ? lista.join(separador || ' · ') : A_VALIDAR;
   }
 
   /* ── Regra 10 · Concorrência de iniciativas ─────────────────────────── */
@@ -1393,7 +1468,8 @@ window.OPS4OPS_SEED = {
     diasUteis: diasUteis, hojeISO: hojeISO, formatarHoras: formatarHoras, formatarDesvio: formatarDesvio,
     classificarDesvio: classificarDesvio, calcularDesvio: calcularDesvio,
     estaBloqueada: estaBloqueada, bloqueioIndefinido: bloqueioIndefinido, statusExecutivo: statusExecutivo,
-    capacidadeSquad: capacidadeSquad, mesmaSquad: mesmaSquad, concorrentes: concorrentes,
+    capacidadeSquad: capacidadeSquad, techLeads: techLeads, techLeadsTexto: techLeadsTexto,
+    mesmaSquad: mesmaSquad, concorrentes: concorrentes,
     riscoConcentracao: riscoConcentracao, riscoSeDesbloquear: riscoSeDesbloquear,
     horas: horas, viabilidadeJanela: viabilidadeJanela, inconsistenciasDeDados: inconsistenciasDeDados,
     confiabilidade: confiabilidade, necessitaGestao: necessitaGestao,
@@ -1460,7 +1536,7 @@ window.OPS4OPS_SEED = {
   }
 
   function squadVazia() {
-    return { id: null, name: null, techLead: null, dev: null, qa: null, note: null, capacityValidated: false, atualizadoEm: null };
+    return { id: null, name: null, techLeads: [], dev: null, qa: null, note: null, capacityValidated: false, atualizadoEm: null };
   }
 
   function limpar(v) {
@@ -1499,11 +1575,29 @@ window.OPS4OPS_SEED = {
     return saida;
   }
 
+  /* Uma squad pode ter mais de um Líder Técnico. Aceita:
+     - array (formato atual);
+     - texto único (formato anterior, migrado sem perder o nome);
+     - texto combinado da fonte ("Fulano / Ciclano", "Fulano, Ciclano").
+     Duplicatas são descartadas; nomes vazios nunca entram. */
+  function normalizarTechLeads(valor, legado) {
+    const bruto = Array.isArray(valor) ? valor.slice() : (valor == null ? [] : [valor]);
+    if (!bruto.length && legado != null) bruto.push(legado);
+    const saida = [];
+    bruto.forEach(function (v) {
+      String(v == null ? '' : v).split(/[;,\/]/).forEach(function (parte) {
+        const nome = limpar(parte);
+        if (nome && saida.indexOf(nome) === -1) saida.push(nome);
+      });
+    });
+    return saida;
+  }
+
   function normalizarSquad(bruta) {
     const saida = Object.assign(squadVazia(), {
       id: limpar(bruta.id) || ('sq-' + Math.random().toString(36).slice(2, 8)),
       name: limpar(bruta.name),
-      techLead: limpar(bruta.techLead),
+      techLeads: normalizarTechLeads(bruta.techLeads, bruta.techLead),
       dev: limparNumero(bruta.dev),
       qa: limparNumero(bruta.qa),
       note: limpar(bruta.note),
@@ -1522,9 +1616,11 @@ window.OPS4OPS_SEED = {
     const squads = (bruto.squads || []).map(function (s) {
       return normalizarSquad({
         id: s.id, name: s.name,
-        techLead: s.defaultLeader,   // liderança conhecida da base
+        techLeads: Array.isArray(s.techLeads) ? s.techLeads : [],
+        // O líder da frente é papel distinto do Líder Técnico: fica como
+        // observação para não se passar por LT.
+        note: [s.business, s.frontLeader ? 'Líder da frente: ' + s.frontLeader : null].filter(Boolean).join(' · ') || null,
         dev: null, qa: null,         // capacidade NÃO existe na fonte → A validar
-        note: s.business || null,
         capacityValidated: false
       });
     });
@@ -1543,7 +1639,9 @@ window.OPS4OPS_SEED = {
         po: p.po, techLead: p.techLead,
         discoverySituation: situacaoDiscovery,
         discoveryStart: p.discoveryDate,
-        discoveryEnd: null,
+        // "a definir" na fonte é preservado literal (decisão pendente), não
+        // convertido em ausência nem em data inventada.
+        discoveryEnd: p.discoveryEnd || null,
         execSituation: 'A validar',
         deliverySituation: 'A atualizar',
         planStartDev: p.startDev, planEndDev: p.endDev,
@@ -1622,6 +1720,7 @@ window.OPS4OPS_SEED = {
 
   raiz.Ops4OpsStore = {
     CHAVE: CHAVE,
+    normalizarTechLeads: normalizarTechLeads,
     iniciativaVazia: iniciativaVazia,
     squadVazia: squadVazia,
     normalizarIniciativa: normalizarIniciativa,
@@ -1867,7 +1966,7 @@ window.OPS4OPS_SEED = {
           : (rd.semInformacao ? '<span class="cel-mini">' + rd.semInformacao + ' sem bloqueio informado</span>' : ''));
 
       return '<tr>' +
-        '<td class="cel-forte">' + ou(s.squad.name) + '<span class="cel-mini">TL ' + R.texto(s.squad.techLead) + '</span></td>' +
+        '<td class="cel-forte">' + ou(s.squad.name) + '<span class="cel-mini">LT ' + esc(R.techLeadsTexto(s.squad)) + '</span></td>' +
         '<td>' + (s.capacidade.dev === null ? '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>' : esc(s.capacidade.devTexto) + ' DEV') +
           '<span class="cel-mini">QA: ' + (s.capacidade.qa === null ? '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>' : esc(s.capacidade.qaTexto)) + '</span></td>' +
         '<td>' + s.iniciativas + '<span class="cel-mini">' + s.emDesenvolvimento + ' em desenvolvimento</span></td>' +
@@ -2078,6 +2177,16 @@ window.OPS4OPS_SEED = {
       ' oninput="Ops4OpsVisaoGestao.editarDebounce(\'' + esc(id) + '\',\'' + campo + '\',this.value)"></div>';
   }
 
+  /* Igual a campoTexto, mas oferecendo os valores já conhecidos como
+     sugestão (<datalist>). Não restringe: um nome novo continua sendo aceito
+     — a lista é atalho, não validação. */
+  function campoTextoComSugestoes(id, campo, rotulo, valor, listaId) {
+    return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
+      '<input class="manual" list="' + esc(listaId) + '" value="' + esc(valor == null ? '' : valor) + '"' +
+      ' data-ref="ini:' + esc(id) + ':' + campo + '" placeholder="Não informado"' +
+      ' oninput="Ops4OpsVisaoGestao.editarDebounce(\'' + esc(id) + '\',\'' + campo + '\',this.value)"></div>';
+  }
+
   function campoNumero(id, campo, rotulo, valor) {
     return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
       '<input class="manual" type="number" min="0" step="1" value="' + (valor == null ? '' : esc(valor)) + '" placeholder="A validar"' +
@@ -2212,7 +2321,7 @@ window.OPS4OPS_SEED = {
         (i.squadId || R.ehPlaceholder(i.squad) ? '' : '<option value="" selected>' + esc(i.squad) + ' (fora do cadastro)</option>') +
       '</select></div>' +
       campoTexto(i.id, 'po', 'PO', i.po) +
-      campoTexto(i.id, 'techLead', 'Líder Técnico', i.techLead) +
+      campoTextoComSugestoes(i.id, 'techLead', 'Líder Técnico', i.techLead, 'lts-conhecidos') +
       '</div>';
 
     const blocoB =
@@ -2433,7 +2542,19 @@ window.OPS4OPS_SEED = {
         }).join('')
       : '<div class="cartao"><div class="vazio">Nenhuma iniciativa corresponde aos filtros selecionados.</div></div>';
 
-    host.innerHTML =
+    const ltsConhecidos = [];
+    ctx.estado.squads.forEach(function (sq) {
+      R.techLeads(sq).forEach(function (n) { if (ltsConhecidos.indexOf(n) === -1) ltsConhecidos.push(n); });
+    });
+    inis.forEach(function (i) {
+      const n = R.texto(i.techLead);
+      if (n !== R.A_VALIDAR && n !== R.NAO_INFORMADO && ltsConhecidos.indexOf(n) === -1) ltsConhecidos.push(n);
+    });
+    ltsConhecidos.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+    const datalistLts = '<datalist id="lts-conhecidos">' +
+      ltsConhecidos.map(function (n) { return '<option value="' + esc(n) + '"></option>'; }).join('') + '</datalist>';
+
+    host.innerHTML = datalistLts +
       '<div class="cartao secao">' +
         '<div class="cartao-topo"><h2>Gestão 2026</h2>' +
           '<div class="legenda-campos"><span><span class="amostra man"></span>Amarelo = atualizar</span>' +
@@ -2441,6 +2562,26 @@ window.OPS4OPS_SEED = {
           '<span>' + visiveis.length + ' de ' + todas.length + ' iniciativa(s)</span></div></div>' +
         barraFiltros + formularioNova(ctx) +
       '</div>' + lista;
+  }
+
+  /* Editor de Líderes Técnicos da squad: uma squad pode ter mais de um.
+     Cada nome vira uma etiqueta removível; o campo abaixo adiciona um novo
+     com Enter ou ao sair do campo. Lista vazia mostra "A validar" — nunca
+     "sem líder", que seria afirmar algo que não sabemos. */
+  function editorTechLeads(q) {
+    const lista = R.techLeads(q);
+    const etiquetas = lista.length
+      ? lista.map(function (nome) {
+          return '<span class="lt-chip">' + esc(nome) +
+            '<button type="button" title="Remover ' + esc(nome) + '" aria-label="Remover ' + esc(nome) + '"' +
+            ' onclick="Ops4OpsVisaoGestao.removerTechLead(\'' + esc(q.id) + '\',\'' + escJs(nome) + '\')">×</button></span>';
+        }).join('')
+      : '<span class="lt-vazio">' + esc(R.A_VALIDAR) + '</span>';
+
+    return '<div class="lt-lista">' + etiquetas + '</div>' +
+      '<input class="manual lt-novo" placeholder="+ adicionar LT" data-ref="sq:' + esc(q.id) + ':novoLt"' +
+      ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();Ops4OpsVisaoGestao.adicionarTechLead(\'' + esc(q.id) + '\',this.value)}"' +
+      ' onblur="Ops4OpsVisaoGestao.adicionarTechLead(\'' + esc(q.id) + '\',this.value)">';
   }
 
   /* ── Squads e capacidade (requisito 24) ─────────────────────────────── */
@@ -2451,7 +2592,7 @@ window.OPS4OPS_SEED = {
       const q = s.squad;
       return '<tr>' +
         '<td><input class="manual" value="' + esc(q.name == null ? '' : q.name) + '" data-ref="sq:' + esc(q.id) + ':name" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'name\',this.value)"></td>' +
-        '<td><input class="manual" value="' + esc(q.techLead == null ? '' : q.techLead) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':techLead" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'techLead\',this.value)"></td>' +
+        '<td style="min-width:210px">' + editorTechLeads(q) + '</td>' +
         '<td style="width:96px"><input class="manual" type="number" min="0" value="' + (q.dev == null ? '' : esc(q.dev)) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':dev" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'dev\',this.value)"></td>' +
         '<td style="width:96px"><input class="manual" type="number" min="0" value="' + (q.qa == null ? '' : esc(q.qa)) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':qa" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'qa\',this.value)"></td>' +
         '<td><input class="manual" value="' + esc(q.note == null ? '' : q.note) + '" placeholder="Não informado" data-ref="sq:' + esc(q.id) + ':note" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'note\',this.value)"></td>' +
@@ -2609,10 +2750,28 @@ window.OPS4OPS_SEED = {
       raiz.Ops4OpsApp.salvarSquad(dados);
     },
 
+    adicionarTechLead: function (id, valor) {
+      if (!valor || !valor.trim()) return;
+      const atual = raiz.Ops4OpsApp.squads().find(function (s) { return s.id === id; });
+      if (!atual) return;
+      const lista = (Array.isArray(atual.techLeads) ? atual.techLeads : []).slice();
+      // Aceita vários de uma vez ("Fulano, Ciclano") — a normalização separa.
+      const novos = raiz.Ops4OpsStore.normalizarTechLeads([valor]);
+      novos.forEach(function (n) { if (lista.indexOf(n) === -1) lista.push(n); });
+      raiz.Ops4OpsApp.salvarSquad(Object.assign({}, atual, { techLeads: lista }));
+    },
+
+    removerTechLead: function (id, nome) {
+      const atual = raiz.Ops4OpsApp.squads().find(function (s) { return s.id === id; });
+      if (!atual) return;
+      const lista = (Array.isArray(atual.techLeads) ? atual.techLeads : []).filter(function (n) { return n !== nome; });
+      raiz.Ops4OpsApp.salvarSquad(Object.assign({}, atual, { techLeads: lista }));
+    },
+
     novaSquad: function () {
       const nome = prompt('Nome da nova squad:');
       if (!nome || !nome.trim()) return;
-      raiz.Ops4OpsApp.salvarSquad({ name: nome.trim(), techLead: null, dev: null, qa: null, capacityValidated: false });
+      raiz.Ops4OpsApp.salvarSquad({ name: nome.trim(), techLeads: [], dev: null, qa: null, capacityValidated: false });
     }
   };
 

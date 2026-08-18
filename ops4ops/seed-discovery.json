@@ -1,5 +1,5 @@
 {
-  "fonte": "discovery-pmo/index.html (defaultData) — mesma base de planejamento 2026 do Discovery PMO Tracker",
+  "fonte": "Apresentação Ops4Ops (números de iniciativa, datas de Discovery, Squad e Líder Técnico) + discovery-pmo/index.html (janelas de DEV e horas 2026)",
   "extraidoEm": "2026-08-18",
   "squads": [
     {
@@ -8,8 +8,9 @@
       "code": "ASD",
       "business": "Automação RPA",
       "totalHours2026": 20160,
-      "defaultLeader": "Cinthia Ribeiro",
-      "defaultPo": "Beatriz Miranda"
+      "defaultPo": "Beatriz Miranda",
+      "techLeads": [],
+      "frontLeader": "Cinthia Ribeiro"
     },
     {
       "id": "squad-contact",
@@ -17,8 +18,11 @@
       "code": "CONTAC",
       "business": "Operações de Contas e Cartões",
       "totalHours2026": 7637,
-      "defaultLeader": "Luciana Possamai",
-      "defaultPo": "Sandra Souza"
+      "defaultPo": "Sandra Souza",
+      "techLeads": [
+        "Rodrigo D'avila"
+      ],
+      "frontLeader": "Luciana Possamai"
     },
     {
       "id": "squad-expresso",
@@ -26,8 +30,11 @@
       "code": "EXPRES",
       "business": "Composição de Dívidas",
       "totalHours2026": 4615,
-      "defaultLeader": "Celso Perussi",
-      "defaultPo": "Daniel Lima"
+      "defaultPo": "Daniel Lima",
+      "techLeads": [
+        "Moséas Gama"
+      ],
+      "frontLeader": "Celso Perussi"
     },
     {
       "id": "squad-inception",
@@ -35,8 +42,11 @@
       "code": "INCEPT",
       "business": "Operações Jurídicas",
       "totalHours2026": 5376,
-      "defaultLeader": "Carolina Máximo",
-      "defaultPo": "Sandra Souza"
+      "defaultPo": "Sandra Souza",
+      "techLeads": [
+        "Victor Fortunato"
+      ],
+      "frontLeader": "Carolina Máximo"
     },
     {
       "id": "squad-interstelar",
@@ -44,8 +54,11 @@
       "code": "INTERS",
       "business": "Gestão de Consignado",
       "totalHours2026": 2500,
-      "defaultLeader": "Davi Lopes",
-      "defaultPo": "Rodrigo Santos"
+      "defaultPo": "Rodrigo Santos",
+      "techLeads": [
+        "Silmara Rosalem"
+      ],
+      "frontLeader": "Davi Lopes"
     },
     {
       "id": "squad-madmax",
@@ -53,8 +66,11 @@
       "code": "MADMAX",
       "business": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas)",
       "totalHours2026": 5376,
-      "defaultLeader": "Marcos Tasca",
-      "defaultPo": "Sérgio Cartapatti"
+      "defaultPo": "Sérgio Cartapatti",
+      "techLeads": [
+        "Rennan Gustavo"
+      ],
+      "frontLeader": "Marcos Tasca"
     },
     {
       "id": "squad-terminator",
@@ -62,8 +78,12 @@
       "code": "TERMIN",
       "business": "Gestão de Consignado",
       "totalHours2026": 1390,
-      "defaultLeader": "Davi Lopes",
-      "defaultPo": "Jane Silva"
+      "defaultPo": "Jane Silva",
+      "techLeads": [
+        "Juliana Ribeiro",
+        "Moséas Gama"
+      ],
+      "frontLeader": "Davi Lopes"
     },
     {
       "id": "squad-topgun",
@@ -71,8 +91,9 @@
       "code": "TOPGUN",
       "business": "Gestão de Consignado",
       "totalHours2026": 0,
-      "defaultLeader": "Davi Lopes",
-      "defaultPo": null
+      "defaultPo": null,
+      "techLeads": [],
+      "frontLeader": "Davi Lopes"
     }
   ],
   "projects": [
@@ -83,7 +104,7 @@
       "squad": "Expresso",
       "squadId": "squad-expresso",
       "po": "Daniel Lima",
-      "techLead": "Moseas Souza",
+      "techLead": "a definir",
       "frontLeader": "Celso Perussi",
       "business": "Composição de Dívidas",
       "theme": "Composição de Dívidas",
@@ -93,7 +114,8 @@
       "target": "2026-08-01",
       "hours2026": 1615,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113292",
@@ -102,24 +124,25 @@
       "squad": "Expresso",
       "squadId": "squad-expresso",
       "po": "Fernanda Rocha",
-      "techLead": "Moseas Souza",
+      "techLead": "Moséas Gama",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos",
       "theme": "Concilicação, Regulatório, Garantias e Documentos",
-      "discoveryDate": "2006-08-03",
+      "discoveryDate": "2026-08-03",
       "startDev": "2026-09-01",
       "endDev": "2026-10-01",
       "target": "2026-10-01",
       "hours2026": 1800,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "2026-08-31"
     },
     {
       "id": "ini-113345",
       "initiativeNumber": "113345",
       "name": "Cartões - Não Monetário - Tratar base PCCF",
-      "squad": "Contact",
-      "squadId": "squad-contact",
+      "squad": "Interstelar",
+      "squadId": "squad-interstelar",
       "po": "Sandra Souza",
       "techLead": "Silmara Rosalem",
       "frontLeader": "Luciana Possamai",
@@ -136,16 +159,17 @@
           "name": "Cartões - Demais Produtos (Alelo, Backoffice PJ, NEXT, Transportes, Cadastral PF)",
           "squad": "Contact"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113359",
       "initiativeNumber": "113359",
       "name": "Compensação de Cheques",
-      "squad": "Ainda Sem Definição",
-      "squadId": "squad-asd",
+      "squad": "Contact",
+      "squadId": "squad-contact",
       "po": "Mariana Nakaya",
-      "techLead": "Silmara Rosalem",
+      "techLead": "Rodrigo D'avila",
       "frontLeader": "Luis Fernando",
       "business": "Serviços Operacionais Banco",
       "theme": "Serviços Operacionais Banco",
@@ -155,7 +179,8 @@
       "target": "2026-11-01",
       "hours2026": 2000,
       "status": "A iniciar",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-98434",
@@ -174,14 +199,15 @@
       "target": "2026-11-01",
       "hours2026": 5197,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-116596",
       "initiativeNumber": "116596",
       "name": "Jornada de Automação: Conversão Robôs em RPA",
-      "squad": "ASD",
-      "squadId": "squad-asd",
+      "squad": "Terminator",
+      "squadId": "squad-terminator",
       "po": "Beatriz Miranda",
       "techLead": "Juliana Ribeiro",
       "frontLeader": "Cinthia Ribeiro",
@@ -193,7 +219,8 @@
       "target": "2027-12-01",
       "hours2026": 8064,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113319",
@@ -202,7 +229,7 @@
       "squad": "Terminator",
       "squadId": "squad-terminator",
       "po": "Jane Silva",
-      "techLead": "ASD",
+      "techLead": "Moséas Gama",
       "frontLeader": "Davi Lopes",
       "business": "Gestão de Consignado",
       "theme": "Gestão de Consignado",
@@ -212,7 +239,8 @@
       "target": "2026-08-01",
       "hours2026": 1390,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "2026-08-31"
     },
     {
       "id": "ini-113317",
@@ -221,7 +249,7 @@
       "squad": "Interstelar",
       "squadId": "squad-interstelar",
       "po": "Rodrigo Santos",
-      "techLead": "ASD",
+      "techLead": "Silmara Rosalem",
       "frontLeader": "Davi Lopes",
       "business": "Gestão de Consignado",
       "theme": "Gestão de Consignado",
@@ -231,7 +259,8 @@
       "target": "2026-11-01",
       "hours2026": 2500,
       "status": "A iniciar",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113315",
@@ -240,7 +269,7 @@
       "squad": "Ainda Sem Definição",
       "squadId": "squad-asd",
       "po": "Daniel Lima",
-      "techLead": "ASD",
+      "techLead": "Silmara Rosalem",
       "frontLeader": "Davi Lopes",
       "business": "Gestão de Consignado",
       "theme": "Gestão de Consignado",
@@ -259,7 +288,8 @@
           "name": "Conciliação e Portabilidade - Produto",
           "squad": "Ainda Sem Definição"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113301",
@@ -268,7 +298,7 @@
       "squad": "Expresso",
       "squadId": "squad-expresso",
       "po": "Vinicius Barbosa",
-      "techLead": "ASD",
+      "techLead": "Moséas Gama",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos",
       "theme": "Concilicação, Regulatório, Garantias e Documentos",
@@ -283,7 +313,8 @@
           "name": "Disponibilização Termo Quitação Portal Consorciado",
           "squad": "Interstelar"
         }
-      ]
+      ],
+      "discoveryEnd": "2026-08-31"
     },
     {
       "id": "ini-113309",
@@ -292,7 +323,7 @@
       "squad": "MadMax",
       "squadId": "squad-madmax",
       "po": "Sérgio Cartapatti",
-      "techLead": "ASD",
+      "techLead": "Rennan Gustavo",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas)",
       "theme": "Concilicação, Regulatório, Garantias e Documentos(varios sistemas)",
@@ -311,7 +342,8 @@
           "name": "Controle de Pendências",
           "squad": "Ainda Sem Definição"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113260",
@@ -320,7 +352,7 @@
       "squad": "Inception",
       "squadId": "squad-inception",
       "po": "Sandra Souza",
-      "techLead": "ASD",
+      "techLead": "Victor Fortunato",
       "frontLeader": "Carolina Máximo",
       "business": "Operações Jurídicas",
       "theme": "Operações Jurídicas",
@@ -330,16 +362,17 @@
       "target": "2027-03-01",
       "hours2026": 5376,
       "status": "Em Discovery",
-      "subInitiatives": []
+      "subInitiatives": [],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113308",
       "initiativeNumber": "113308",
       "name": "Gestão de Fornecedores e Indexação Legado",
-      "squad": "ASD",
-      "squadId": "squad-asd",
+      "squad": "MadMax",
+      "squadId": "squad-madmax",
       "po": "Vinicius Barbosa",
-      "techLead": "ASD",
+      "techLead": "Rennan Gustavo",
       "frontLeader": "Marcos Tasca",
       "business": "Concilicação, Regulatório, Garantias e Documentos (sem GCC)",
       "theme": "Concilicação, Regulatório, Garantias e Documentos (sem GCC)",
@@ -354,16 +387,17 @@
           "name": "Indexação do Legado de Contas",
           "squad": "ASD"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
     },
     {
       "id": "ini-113327",
       "initiativeNumber": "113327",
       "name": "FIRP / Abono / Mtoken / APP RM",
-      "squad": "ASD",
-      "squadId": "squad-asd",
+      "squad": "Inception",
+      "squadId": "squad-inception",
       "po": "Paulo Nascimento",
-      "techLead": "ASD",
+      "techLead": "Victor Fortunato",
       "frontLeader": "Luciana Possamai",
       "business": "Operações de Contas e Cartões",
       "theme": "Operações de Contas e Cartões",
@@ -398,7 +432,29 @@
           "name": "Prevenção a Fraude - M-Token/Senhas + Cartões",
           "squad": "ASD"
         }
-      ]
+      ],
+      "discoveryEnd": "a definir"
+    },
+    {
+      "id": "ini-113061",
+      "initiativeNumber": "113061",
+      "name": "RPA Vínculo Automático NPC – AOC/NCE/TRAVA",
+      "squad": "Terminator",
+      "squadId": "squad-terminator",
+      "po": null,
+      "techLead": "Juliana Ribeiro",
+      "frontLeader": null,
+      "business": null,
+      "theme": null,
+      "discoveryDate": "2026-06-10",
+      "discoveryEnd": "2026-08-31",
+      "startDev": null,
+      "endDev": null,
+      "target": null,
+      "hours2026": null,
+      "status": "Em Discovery",
+      "subInitiatives": [],
+      "origemDoDado": "apresentação Ops4Ops"
     }
   ]
 }

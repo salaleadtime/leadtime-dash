@@ -226,7 +226,7 @@
           : (rd.semInformacao ? '<span class="cel-mini">' + rd.semInformacao + ' sem bloqueio informado</span>' : ''));
 
       return '<tr>' +
-        '<td class="cel-forte">' + ou(s.squad.name) + '<span class="cel-mini">TL ' + R.texto(s.squad.techLead) + '</span></td>' +
+        '<td class="cel-forte">' + ou(s.squad.name) + '<span class="cel-mini">LT ' + esc(R.techLeadsTexto(s.squad)) + '</span></td>' +
         '<td>' + (s.capacidade.dev === null ? '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>' : esc(s.capacidade.devTexto) + ' DEV') +
           '<span class="cel-mini">QA: ' + (s.capacidade.qa === null ? '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>' : esc(s.capacidade.qaTexto)) + '</span></td>' +
         '<td>' + s.iniciativas + '<span class="cel-mini">' + s.emDesenvolvimento + ' em desenvolvimento</span></td>' +

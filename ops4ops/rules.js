@@ -203,6 +203,19 @@
     };
   }
 
+  /* Líderes Técnicos de uma squad. Uma squad pode ter mais de um; lista
+     vazia é ausência de informação, nunca "sem líder". */
+  function techLeads(squad) {
+    if (!squad) return [];
+    if (Array.isArray(squad.techLeads)) return squad.techLeads.filter(function (n) { return !ehPlaceholder(n); });
+    return ehPlaceholder(squad.techLead) ? [] : [String(squad.techLead).trim()];
+  }
+
+  function techLeadsTexto(squad, separador) {
+    const lista = techLeads(squad);
+    return lista.length ? lista.join(separador || ' · ') : A_VALIDAR;
+  }
+
   /* ── Regra 10 · Concorrência de iniciativas ─────────────────────────── */
 
   /* Concorrentes = outras iniciativas da MESMA squad cujo início de DEV
@@ -716,7 +729,8 @@
     diasUteis: diasUteis, hojeISO: hojeISO, formatarHoras: formatarHoras, formatarDesvio: formatarDesvio,
     classificarDesvio: classificarDesvio, calcularDesvio: calcularDesvio,
     estaBloqueada: estaBloqueada, bloqueioIndefinido: bloqueioIndefinido, statusExecutivo: statusExecutivo,
-    capacidadeSquad: capacidadeSquad, mesmaSquad: mesmaSquad, concorrentes: concorrentes,
+    capacidadeSquad: capacidadeSquad, techLeads: techLeads, techLeadsTexto: techLeadsTexto,
+    mesmaSquad: mesmaSquad, concorrentes: concorrentes,
     riscoConcentracao: riscoConcentracao, riscoSeDesbloquear: riscoSeDesbloquear,
     horas: horas, viabilidadeJanela: viabilidadeJanela, inconsistenciasDeDados: inconsistenciasDeDados,
     confiabilidade: confiabilidade, necessitaGestao: necessitaGestao,

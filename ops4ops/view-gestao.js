@@ -37,6 +37,16 @@
       ' oninput="Ops4OpsVisaoGestao.editarDebounce(\'' + esc(id) + '\',\'' + campo + '\',this.value)"></div>';
   }
 
+  /* Igual a campoTexto, mas oferecendo os valores já conhecidos como
+     sugestão (<datalist>). Não restringe: um nome novo continua sendo aceito
+     — a lista é atalho, não validação. */
+  function campoTextoComSugestoes(id, campo, rotulo, valor, listaId) {
+    return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
+      '<input class="manual" list="' + esc(listaId) + '" value="' + esc(valor == null ? '' : valor) + '"' +
+      ' data-ref="ini:' + esc(id) + ':' + campo + '" placeholder="Não informado"' +
+      ' oninput="Ops4OpsVisaoGestao.editarDebounce(\'' + esc(id) + '\',\'' + campo + '\',this.value)"></div>';
+  }
+
   function campoNumero(id, campo, rotulo, valor) {
     return '<div class="campo"><label>' + esc(rotulo) + '</label>' +
       '<input class="manual" type="number" min="0" step="1" value="' + (valor == null ? '' : esc(valor)) + '" placeholder="A validar"' +
@@ -171,7 +181,7 @@
         (i.squadId || R.ehPlaceholder(i.squad) ? '' : '<option value="" selected>' + esc(i.squad) + ' (fora do cadastro)</option>') +
       '</select></div>' +
       campoTexto(i.id, 'po', 'PO', i.po) +
-      campoTexto(i.id, 'techLead', 'Líder Técnico', i.techLead) +
+      campoTextoComSugestoes(i.id, 'techLead', 'Líder Técnico', i.techLead, 'lts-conhecidos') +
       '</div>';
 
     const blocoB =
@@ -392,7 +402,19 @@
         }).join('')
       : '<div class="cartao"><div class="vazio">Nenhuma iniciativa corresponde aos filtros selecionados.</div></div>';
 
-    host.innerHTML =
+    const ltsConhecidos = [];
+    ctx.estado.squads.forEach(function (sq) {
+      R.techLeads(sq).forEach(function (n) { if (ltsConhecidos.indexOf(n) === -1) ltsConhecidos.push(n); });
+    });
+    inis.forEach(function (i) {
+      const n = R.texto(i.techLead);
+      if (n !== R.A_VALIDAR && n !== R.NAO_INFORMADO && ltsConhecidos.indexOf(n) === -1) ltsConhecidos.push(n);
+    });
+    ltsConhecidos.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+    const datalistLts = '<datalist id="lts-conhecidos">' +
+      ltsConhecidos.map(function (n) { return '<option value="' + esc(n) + '"></option>'; }).join('') + '</datalist>';
+
+    host.innerHTML = datalistLts +
       '<div class="cartao secao">' +
         '<div class="cartao-topo"><h2>Gestão 2026</h2>' +
           '<div class="legenda-campos"><span><span class="amostra man"></span>Amarelo = atualizar</span>' +
@@ -400,6 +422,26 @@
           '<span>' + visiveis.length + ' de ' + todas.length + ' iniciativa(s)</span></div></div>' +
         barraFiltros + formularioNova(ctx) +
       '</div>' + lista;
+  }
+
+  /* Editor de Líderes Técnicos da squad: uma squad pode ter mais de um.
+     Cada nome vira uma etiqueta removível; o campo abaixo adiciona um novo
+     com Enter ou ao sair do campo. Lista vazia mostra "A validar" — nunca
+     "sem líder", que seria afirmar algo que não sabemos. */
+  function editorTechLeads(q) {
+    const lista = R.techLeads(q);
+    const etiquetas = lista.length
+      ? lista.map(function (nome) {
+          return '<span class="lt-chip">' + esc(nome) +
+            '<button type="button" title="Remover ' + esc(nome) + '" aria-label="Remover ' + esc(nome) + '"' +
+            ' onclick="Ops4OpsVisaoGestao.removerTechLead(\'' + esc(q.id) + '\',\'' + escJs(nome) + '\')">×</button></span>';
+        }).join('')
+      : '<span class="lt-vazio">' + esc(R.A_VALIDAR) + '</span>';
+
+    return '<div class="lt-lista">' + etiquetas + '</div>' +
+      '<input class="manual lt-novo" placeholder="+ adicionar LT" data-ref="sq:' + esc(q.id) + ':novoLt"' +
+      ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();Ops4OpsVisaoGestao.adicionarTechLead(\'' + esc(q.id) + '\',this.value)}"' +
+      ' onblur="Ops4OpsVisaoGestao.adicionarTechLead(\'' + esc(q.id) + '\',this.value)">';
   }
 
   /* ── Squads e capacidade (requisito 24) ─────────────────────────────── */
@@ -410,7 +452,7 @@
       const q = s.squad;
       return '<tr>' +
         '<td><input class="manual" value="' + esc(q.name == null ? '' : q.name) + '" data-ref="sq:' + esc(q.id) + ':name" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'name\',this.value)"></td>' +
-        '<td><input class="manual" value="' + esc(q.techLead == null ? '' : q.techLead) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':techLead" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'techLead\',this.value)"></td>' +
+        '<td style="min-width:210px">' + editorTechLeads(q) + '</td>' +
         '<td style="width:96px"><input class="manual" type="number" min="0" value="' + (q.dev == null ? '' : esc(q.dev)) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':dev" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'dev\',this.value)"></td>' +
         '<td style="width:96px"><input class="manual" type="number" min="0" value="' + (q.qa == null ? '' : esc(q.qa)) + '" placeholder="A validar" data-ref="sq:' + esc(q.id) + ':qa" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'qa\',this.value)"></td>' +
         '<td><input class="manual" value="' + esc(q.note == null ? '' : q.note) + '" placeholder="Não informado" data-ref="sq:' + esc(q.id) + ':note" onchange="Ops4OpsVisaoGestao.editarSquad(\'' + esc(q.id) + '\',\'note\',this.value)"></td>' +
@@ -568,10 +610,28 @@
       raiz.Ops4OpsApp.salvarSquad(dados);
     },
 
+    adicionarTechLead: function (id, valor) {
+      if (!valor || !valor.trim()) return;
+      const atual = raiz.Ops4OpsApp.squads().find(function (s) { return s.id === id; });
+      if (!atual) return;
+      const lista = (Array.isArray(atual.techLeads) ? atual.techLeads : []).slice();
+      // Aceita vários de uma vez ("Fulano, Ciclano") — a normalização separa.
+      const novos = raiz.Ops4OpsStore.normalizarTechLeads([valor]);
+      novos.forEach(function (n) { if (lista.indexOf(n) === -1) lista.push(n); });
+      raiz.Ops4OpsApp.salvarSquad(Object.assign({}, atual, { techLeads: lista }));
+    },
+
+    removerTechLead: function (id, nome) {
+      const atual = raiz.Ops4OpsApp.squads().find(function (s) { return s.id === id; });
+      if (!atual) return;
+      const lista = (Array.isArray(atual.techLeads) ? atual.techLeads : []).filter(function (n) { return n !== nome; });
+      raiz.Ops4OpsApp.salvarSquad(Object.assign({}, atual, { techLeads: lista }));
+    },
+
     novaSquad: function () {
       const nome = prompt('Nome da nova squad:');
       if (!nome || !nome.trim()) return;
-      raiz.Ops4OpsApp.salvarSquad({ name: nome.trim(), techLead: null, dev: null, qa: null, capacityValidated: false });
+      raiz.Ops4OpsApp.salvarSquad({ name: nome.trim(), techLeads: [], dev: null, qa: null, capacityValidated: false });
     }
   };
 

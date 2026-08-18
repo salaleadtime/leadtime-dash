@@ -53,7 +53,7 @@
   }
 
   function squadVazia() {
-    return { id: null, name: null, techLead: null, dev: null, qa: null, note: null, capacityValidated: false, atualizadoEm: null };
+    return { id: null, name: null, techLeads: [], dev: null, qa: null, note: null, capacityValidated: false, atualizadoEm: null };
   }
 
   function limpar(v) {
@@ -92,11 +92,29 @@
     return saida;
   }
 
+  /* Uma squad pode ter mais de um Líder Técnico. Aceita:
+     - array (formato atual);
+     - texto único (formato anterior, migrado sem perder o nome);
+     - texto combinado da fonte ("Fulano / Ciclano", "Fulano, Ciclano").
+     Duplicatas são descartadas; nomes vazios nunca entram. */
+  function normalizarTechLeads(valor, legado) {
+    const bruto = Array.isArray(valor) ? valor.slice() : (valor == null ? [] : [valor]);
+    if (!bruto.length && legado != null) bruto.push(legado);
+    const saida = [];
+    bruto.forEach(function (v) {
+      String(v == null ? '' : v).split(/[;,\/]/).forEach(function (parte) {
+        const nome = limpar(parte);
+        if (nome && saida.indexOf(nome) === -1) saida.push(nome);
+      });
+    });
+    return saida;
+  }
+
   function normalizarSquad(bruta) {
     const saida = Object.assign(squadVazia(), {
       id: limpar(bruta.id) || ('sq-' + Math.random().toString(36).slice(2, 8)),
       name: limpar(bruta.name),
-      techLead: limpar(bruta.techLead),
+      techLeads: normalizarTechLeads(bruta.techLeads, bruta.techLead),
       dev: limparNumero(bruta.dev),
       qa: limparNumero(bruta.qa),
       note: limpar(bruta.note),
@@ -115,9 +133,11 @@
     const squads = (bruto.squads || []).map(function (s) {
       return normalizarSquad({
         id: s.id, name: s.name,
-        techLead: s.defaultLeader,   // liderança conhecida da base
+        techLeads: Array.isArray(s.techLeads) ? s.techLeads : [],
+        // O líder da frente é papel distinto do Líder Técnico: fica como
+        // observação para não se passar por LT.
+        note: [s.business, s.frontLeader ? 'Líder da frente: ' + s.frontLeader : null].filter(Boolean).join(' · ') || null,
         dev: null, qa: null,         // capacidade NÃO existe na fonte → A validar
-        note: s.business || null,
         capacityValidated: false
       });
     });
@@ -136,7 +156,9 @@
         po: p.po, techLead: p.techLead,
         discoverySituation: situacaoDiscovery,
         discoveryStart: p.discoveryDate,
-        discoveryEnd: null,
+        // "a definir" na fonte é preservado literal (decisão pendente), não
+        // convertido em ausência nem em data inventada.
+        discoveryEnd: p.discoveryEnd || null,
         execSituation: 'A validar',
         deliverySituation: 'A atualizar',
         planStartDev: p.startDev, planEndDev: p.endDev,
@@ -215,6 +237,7 @@
 
   raiz.Ops4OpsStore = {
     CHAVE: CHAVE,
+    normalizarTechLeads: normalizarTechLeads,
     iniciativaVazia: iniciativaVazia,
     squadVazia: squadVazia,
     normalizarIniciativa: normalizarIniciativa,
