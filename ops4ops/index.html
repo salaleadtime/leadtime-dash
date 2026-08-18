@@ -100,6 +100,19 @@ table.grade tr.destaque-atencao td{background:linear-gradient(90deg,var(--atenca
 .mapa-cel.n3{background:var(--critico-bg);color:var(--critico)}
 .mapa-legenda{display:flex;gap:14px;flex-wrap:wrap;padding:0 18px 16px;font-size:11px;color:var(--tinta-3)}
 
+/* ── Cards de squad (aba Capacidade e Risco) ─────────────────────────── */
+.squad-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:16px 18px}
+.squad-card{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px 16px;box-shadow:var(--sombra)}
+.squad-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:2px}
+.squad-mini-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:9px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:2px}
+.squad-mini-kpi{text-align:center}
+.squad-mini-kpi b{display:block;font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--tinta)}
+.squad-mini-kpi span{display:block;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--tinta-3);margin-top:2px}
+.squad-card details summary{list-style:none}
+.squad-card details summary::-webkit-details-marker{display:none}
+.squad-card details summary::before{content:'▸ ';color:var(--marca-2)}
+.squad-card details[open] summary::before{content:'▾ '}
+
 /* ── Formulário / Gestão 2026 ─────────────────────────────────────── */
 .legenda-campos{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--tinta-2)}
 .amostra{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid var(--line-forte)}
@@ -175,18 +188,20 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
     <div class="topo-meta" id="topoMeta">Carregando…</div>
   </div>
   <nav class="abas" role="tablist">
-    <button class="aba" role="tab" id="abaExecutiva"  aria-selected="true"  onclick="irPara('executiva')">Visão Executiva</button>
-    <button class="aba" role="tab" id="abaGestao"     aria-selected="false" onclick="irPara('gestao')">Gestão 2026</button>
-    <button class="aba" role="tab" id="abaSquads"     aria-selected="false" onclick="irPara('squads')">Squads e Capacidade</button>
-    <button class="aba" role="tab" id="abaConfig"     aria-selected="false" onclick="irPara('config')">Parâmetros</button>
+    <button class="aba" role="tab" id="abaExecutiva"      aria-selected="true"  onclick="irPara('executiva')">Visão Executiva</button>
+    <button class="aba" role="tab" id="abaAcompanhamento" aria-selected="false" onclick="irPara('acompanhamento')">Acompanhamento das Iniciativas</button>
+    <button class="aba" role="tab" id="abaCapacidade"     aria-selected="false" onclick="irPara('capacidade')">Capacidade e Risco</button>
+    <button class="aba" role="tab" id="abaGestao"         aria-selected="false" onclick="irPara('gestao')">Gestão 2026</button>
+    <button class="aba" role="tab" id="abaConfig"         aria-selected="false" onclick="irPara('config')">Parâmetros</button>
   </nav>
 </header>
 
 <main class="pagina">
   <div id="avisoBase"></div>
   <section id="paginaExecutiva"></section>
+  <section id="paginaAcompanhamento" class="oculto"></section>
+  <section id="paginaCapacidade" class="oculto"></section>
   <section id="paginaGestao" class="oculto"></section>
-  <section id="paginaSquads" class="oculto"></section>
   <section id="paginaConfig" class="oculto"></section>
 </main>
 
@@ -253,8 +268,14 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
     const foco = capturarFoco();
     const ctx = calcular();
     window.Ops4OpsVisaoExecutiva.render(document.getElementById('paginaExecutiva'), ctx);
+    window.Ops4OpsVisaoExecutiva.renderAcompanhamento(document.getElementById('paginaAcompanhamento'), ctx);
+    // Capacidade e Risco: cards de leitura (view-executivo.js) + tabela de
+    // edição (view-gestao.js) anexada logo abaixo, na mesma aba.
+    window.Ops4OpsVisaoExecutiva.renderCapacidade(document.getElementById('paginaCapacidade'), ctx);
+    const editorCapacidade = document.createElement('div');
+    document.getElementById('paginaCapacidade').appendChild(editorCapacidade);
+    window.Ops4OpsVisaoGestao.renderSquads(editorCapacidade, ctx, api);
     window.Ops4OpsVisaoGestao.render(document.getElementById('paginaGestao'), ctx, api);
-    window.Ops4OpsVisaoGestao.renderSquads(document.getElementById('paginaSquads'), ctx, api);
     window.Ops4OpsVisaoGestao.renderConfig(document.getElementById('paginaConfig'), ctx, api);
 
     const novas = estado.novasNaBase || [];
@@ -414,7 +435,7 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
 
   window.irPara = function (aba) {
     abaAtual = aba;
-    [['executiva', 'Executiva'], ['gestao', 'Gestao'], ['squads', 'Squads'], ['config', 'Config']].forEach(function (par) {
+    [['executiva', 'Executiva'], ['acompanhamento', 'Acompanhamento'], ['capacidade', 'Capacidade'], ['gestao', 'Gestao'], ['config', 'Config']].forEach(function (par) {
       document.getElementById('pagina' + par[1]).classList.toggle('oculto', par[0] !== aba);
       document.getElementById('aba' + par[1]).setAttribute('aria-selected', String(par[0] === aba));
     });

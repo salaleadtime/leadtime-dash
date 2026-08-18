@@ -465,9 +465,12 @@
         '</tr>';
     }).join('');
 
+    // Renderizada dentro da aba "Capacidade e Risco", logo abaixo dos cards
+    // (view-executivo.js). O título muda de propósito aqui: os cards já
+    // mostram capacidade e risco; esta tabela é onde DEV/QA são editados.
     host.innerHTML =
       '<div class="cartao secao">' +
-        '<div class="cartao-topo"><h2>Squads e Capacidade</h2>' +
+        '<div class="cartao-topo"><h2>Editar capacidade das Squads</h2>' +
         '<div class="legenda-campos"><span><span class="amostra man"></span>Amarelo = atualizar</span><span><span class="amostra aut"></span>Cinza = automático</span></div></div>' +
         '<div style="padding:14px 18px 0"><div class="aviso info">Campo em branco significa <strong>A validar</strong>, nunca zero. Enquanto DEV não for informado, as iniciativas da squad ficam como <strong>DADO INCOMPLETO</strong> — o sistema não classifica como risco baixo aquilo que ele não sabe. Alterar DEV, QA ou a squad de uma iniciativa recalcula concorrência, concentração, densidade de carga e escalonamento na hora.</div></div>' +
         '<div class="rolagem" style="padding:14px 18px">' +

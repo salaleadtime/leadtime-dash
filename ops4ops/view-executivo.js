@@ -1,6 +1,16 @@
-/* Ops4Ops — Visão Executiva (somente leitura).
+/* Ops4Ops — Visão Executiva, Acompanhamento das Iniciativas e Capacidade e Risco.
    Esta camada só FORMATA o que o motor de regras já decidiu. Se algum cálculo
-   parecer necessário aqui, ele pertence a rules.js. */
+   parecer necessário aqui, ele pertence a rules.js.
+
+   Três telas de leitura, cada uma com um trabalho:
+   - Visão Executiva: o que muda a decisão AGORA (KPIs, Atenção da Gestão,
+     Impedimentos, Próximos marcos). Nada de tabela grande aqui — é a tela
+     que a liderança olha primeiro, sem rolar.
+   - Acompanhamento das Iniciativas: a tabela completa, mapa de colisão e
+     confiabilidade — para quem vai investigar uma iniciativa específica.
+   - Capacidade e Risco: os cards de squad e as regras do protótipo em
+     linguagem simples. A edição de DEV/QA mora em view-gestao.js e é
+     anexada ao final desta tela pelo orquestrador em index.html. */
 (function (raiz) {
   'use strict';
   const R = raiz.Ops4OpsRules;
@@ -142,7 +152,62 @@
       }).join('') + '</div></div>';
   }
 
-  /* ── Iniciativas críticas (requisito 16) ────────────────────────────── */
+  /* ── Impedimentos ativos ──────────────────────────────────────────────
+     Um cartão por iniciativa bloqueada, separado da Atenção da Gestão: ali
+     o bloqueio é um entre vários motivos de alerta; aqui é o que precisa de
+     destrave HOJE, sem competir por atenção com desvio ou concentração. */
+  function impedimentosAtivos(ctx) {
+    const bloqueadas = ctx.avaliacoes.filter(function (a) { return R.estaBloqueada(a.iniciativa); })
+      .sort(function (a, b) { return b.criticidade - a.criticidade; });
+
+    const corpo = bloqueadas.length
+      ? '<div class="alertas">' + bloqueadas.map(function (a) {
+          const i = a.iniciativa;
+          return '<div class="alerta critico">' +
+            '<strong>' + esc(R.texto(i.initiativeNumber)) + ' · ' + esc(R.texto(i.name, 'Iniciativa sem nome')) + '</strong>' +
+            '<span>' + esc(R.texto(i.blockArea, 'Área a validar')) + ' — ' + esc(R.texto(i.blockReason, 'motivo a validar')) +
+            '. Responsável: ' + esc(R.texto(i.blockOwner)) +
+            (i.blockForecast ? '. Previsão: ' + esc(R.formatarBR(i.blockForecast)) : '. Sem previsão de resolução') + '.</span>' +
+            '</div>';
+        }).join('') + '</div>'
+      : '<div class="vazio">Nenhum impedimento ativo no momento.</div>';
+
+    return '<div class="cartao secao">' +
+      '<div class="cartao-topo"><h2>Impedimentos ativos</h2><span class="dica">Exigem destrave agora — não inclui risco futuro nem desvio de prazo</span></div>' +
+      corpo + '</div>';
+  }
+
+  /* ── Acompanhamento das Iniciativas (requisito 16) ────────────────────
+     Colunas separadas por assunto (identificação, squad, fase, plano,
+     bloqueio, jira, risco, ação) em vez de empilhar tudo em "situação
+     executiva" — mais fácil de escanear numa tela de reunião. Uma faixa de
+     cor na borda esquerda da linha marca bloqueio/atenção sem exigir
+     leitura de texto. */
+  let mostrarJustificativas = false;
+
+  function listra(nivel) {
+    const cor = { CRITICO: 'var(--critico)', ATENCAO: 'var(--atencao)', OK: 'var(--ok)', INDEFINIDO: 'var(--neutro)' }[nivel] || 'var(--neutro)';
+    return 'box-shadow:inset 4px 0 0 ' + cor;
+  }
+
+  function celJira(i) {
+    const total = i.jiraStoriesTotal, ref = i.jiraStoriesRefined;
+    if (total === null || total === undefined) return '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>';
+    const texto = total + ' história(s)' + (ref !== null && ref !== undefined ? ' · ' + ref + ' refinada(s)' : '');
+    return i.jiraUrl
+      ? '<a href="' + esc(i.jiraUrl) + '" target="_blank" rel="noopener" title="Abrir no Jira">' + esc(texto) + ' ↗</a>'
+      : esc(texto);
+  }
+
+  function celImpedimento(a) {
+    const i = a.iniciativa;
+    if (R.estaBloqueada(i)) return esc(R.texto(i.blockReason, 'Motivo a validar'));
+    if (R.bloqueioIndefinido(i)) return '<span class="ausente">Bloqueio não informado</span>';
+    if (a.desvio.nivel === 'ATENCAO' || a.desvio.nivel === 'CRITICO') return 'Desvio de prazo em acompanhamento';
+    if (a.concentracao.nivel === 'ALTO' || a.concentracao.nivel === 'MÉDIO') return 'Risco de concentração na squad';
+    return '<span style="color:var(--tinta-3)">Nenhum</span>';
+  }
+
   function tabelaIniciativas(ctx) {
     const ordenadas = ctx.avaliacoes.slice().sort(function (a, b) {
       return b.criticidade - a.criticidade ||
@@ -150,31 +215,29 @@
     });
 
     if (!ordenadas.length) {
-      return '<div class="cartao secao"><div class="cartao-topo"><h2>Iniciativas</h2></div>' +
+      return '<div class="cartao secao"><div class="cartao-topo"><h2>Acompanhamento das Iniciativas</h2></div>' +
         '<div class="vazio">Nenhuma iniciativa cadastrada. Use a aba <strong>Gestão 2026</strong> para cadastrar ou recarregar a base de planejamento.</div></div>';
     }
 
     const linhas = ordenadas.map(function (a) {
       const i = a.iniciativa;
-      const cls = a.statusExecutivo.nivel === 'CRITICO' ? 'destaque-critico' : (a.statusExecutivo.nivel === 'ATENCAO' ? 'destaque-atencao' : '');
+      const estiloListra = listra(a.statusExecutivo.nivel);
 
       const idCel = i.jiraUrl
         ? '<a href="' + esc(i.jiraUrl) + '" target="_blank" rel="noopener" title="Abrir no Jira (nova aba)">' + esc(R.texto(i.initiativeNumber)) + ' ↗</a>'
         : ou(i.initiativeNumber);
 
       const planejado = '<div class="plano-real">' + dataOu(i.planStartDev) + '<span class="seta">→</span>' + dataOu(i.planEndDev) + '</div>';
-      const previsao = a.desvio.referenciaFim
+      const real = a.desvio.referenciaFim
         ? dataOu(a.desvio.referenciaFim) + '<span class="cel-mini">' + (a.desvio.referenciaFimTipo === 'real' ? 'término real' : 'previsão atual') + '</span>'
         : '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>';
 
       const desvio = a.desvio.desvioTotal === null
         ? '<span class="selo neutro">' + esc(R.DADO_INCOMPLETO) + '</span>'
-        : '<span class="selo ' + CLASSE[a.desvio.nivel] + '">' + esc(R.formatarDesvio(a.desvio.desvioTotal)) + '</span>' +
-          '<span class="cel-mini">' + esc(a.desvio.situacaoPlanejamento) + '</span>';
+        : '<span class="selo ' + CLASSE[a.desvio.nivel] + '">' + esc(R.formatarDesvio(a.desvio.desvioTotal)) + '</span>';
 
       const bloqueio = R.estaBloqueada(i)
-        ? '<span class="selo critico">' + esc(R.texto(i.blockArea, 'Área a validar')) + '</span>' +
-          '<span class="cel-mini">' + esc(R.texto(i.blockReason, 'Motivo a validar')) + '</span>'
+        ? '<span class="selo critico">Sim — ' + esc(R.texto(i.blockArea, 'área a validar')) + '</span>'
         : (R.bloqueioIndefinido(i)
           ? '<span class="selo neutro">' + esc(R.NAO_INFORMADO) + '</span>'
           : '<span class="selo ok sem-ponto">Não</span>');
@@ -186,67 +249,123 @@
       const gestao = a.necessitaGestao.valor;
       const seloGestao = '<span class="selo ' + (gestao === 'SIM' ? 'critico' : gestao === 'AVALIAR' ? 'atencao' : 'ok') + '">' + esc(gestao) + '</span>';
 
-      return '<tr class="' + cls + '">' +
-        '<td class="cel-forte">' + idCel + '<span class="cel-mini">' + ou(i.name) + '</span></td>' +
-        '<td>' + squadCel(i, ctx.estado.squads) + '<span class="cel-mini">TL ' + R.texto(i.techLead) + '</span></td>' +
+      const justificativa = mostrarJustificativas
+        ? '<tr><td colspan="13" style="padding-top:0;font-size:11.5px;color:var(--tinta-2)">' + esc(a.justificativa) + '</td></tr>'
+        : '';
+
+      return '<tr>' +
+        '<td class="cel-forte" style="' + estiloListra + '">' + idCel + '<span class="cel-mini">' + ou(i.name) + '</span></td>' +
+        '<td>' + squadCel(i, ctx.estado.squads) + '</td>' +
+        '<td>' + ou(i.techLead) + '</td>' +
         '<td><span class="selo ' + CLASSE[a.statusExecutivo.nivel] + '">' + esc(a.statusExecutivo.texto) + '</span>' +
-          '<span class="cel-mini">Discovery: ' + esc(R.texto(i.discoverySituation)) + ' · Entrega: ' + esc(R.texto(i.deliverySituation)) + '</span></td>' +
+          '<span class="cel-mini">Entrega: ' + esc(R.texto(i.deliverySituation)) + '</span></td>' +
         '<td>' + planejado + '</td>' +
-        '<td>' + previsao + '</td>' +
+        '<td>' + real + '</td>' +
         '<td>' + desvio + '</td>' +
         '<td>' + bloqueio + '</td>' +
+        '<td style="max-width:180px">' + celImpedimento(a) + '</td>' +
+        '<td>' + celJira(i) + '</td>' +
+        '<td><span class="selo ' + classeRisco(a.concentracao.nivel) + '">' + esc(a.concentracao.nivel) + '</span></td>' +
         '<td>' + marco + '</td>' +
         '<td>' + seloGestao + '<span class="cel-mini">' + esc(a.acaoRecomendada) + '</span></td>' +
-        '</tr>' +
-        '<tr class="' + cls + '"><td colspan="9" style="padding-top:0;font-size:11.5px;color:var(--tinta-2)">' + esc(a.justificativa) + '</td></tr>';
+        '</tr>' + justificativa;
     }).join('');
 
     return '<div class="cartao secao">' +
-      '<div class="cartao-topo"><h2>Iniciativas por criticidade</h2><span class="dica">Ordenado por bloqueio, desvio e risco · a justificativa abaixo de cada linha é montada a partir dos dados, sem texto gerado</span></div>' +
+      '<div class="cartao-topo"><h2>Acompanhamento das Iniciativas</h2>' +
+      '<span class="dica" style="display:flex;gap:12px;align-items:center">Ordenado por bloqueio, desvio e risco' +
+      '<button type="button" class="botao" onclick="Ops4OpsVisaoExecutiva.alternarJustificativas()">' +
+      (mostrarJustificativas ? 'Ocultar' : 'Mostrar') + ' justificativas</button></span></div>' +
       '<div class="rolagem"><table class="grade"><thead><tr>' +
-      ['ID / Iniciativa', 'Squad / Tech Lead', 'Situação executiva', 'DEV planejado', 'Real / Previsão', 'Desvio', 'Bloqueio', 'Próximo marco', 'Gestão / Ação recomendada']
+      ['ID / Iniciativa', 'Squad', 'Líder Técnico', 'Fase atual', 'DEV Planejado', 'DEV Real / Previsão', 'Desvio', 'Bloqueio', 'Impedimento / ponto de atenção', 'Histórias Jira', 'Risco', 'Próximo marco', 'Gestão / Ação recomendada']
         .map(function (h) { return '<th>' + h + '</th>'; }).join('') +
       '</tr></thead><tbody>' + linhas + '</tbody></table></div></div>';
   }
 
-  /* ── Capacidade por squad (requisito 17) ────────────────────────────── */
-  function tabelaSquads(ctx) {
-    if (!ctx.squads.length) return '';
+  /* ── Capacidade e risco por Squad (requisito 17) ──────────────────────
+     Um card por squad: nome + selo de risco no topo, mini-KPIs numa régua,
+     os dois indicadores de risco, uma lista expansível das iniciativas da
+     squad (sem exigir sair da tela) e a ação recomendada. */
+  function squadCards(ctx) {
+    if (!ctx.squads.length) {
+      return '<div class="cartao secao"><div class="cartao-topo"><h2>Capacidade e risco por Squad</h2></div>' +
+        '<div class="vazio">Nenhuma squad cadastrada.</div></div>';
+    }
     const ordem = ctx.squads.slice().sort(function (a, b) {
       return b.riscoConcentracao.ordem - a.riscoConcentracao.ordem || b.iniciativas - a.iniciativas;
     });
-    const linhas = ordem.map(function (s) {
-      // "Risco se desbloquear" é o indicador do requisito 12 (função da
-      // quantidade de bloqueadas). A simulação de liberação simultânea é uma
-      // leitura adicional e aparece como complemento, nunca no lugar dele.
+
+    const cartoes = ordem.map(function (s) {
+      const daSquad = ctx.avaliacoes.filter(function (a) { return R.mesmaSquad(a.iniciativa, { squadId: s.squad.id, squad: s.squad.name }); });
+      const horas = daSquad.reduce(function (t, a) { return t + (a.horas.planejadas || 0); }, 0);
+      const temHoras = daSquad.some(function (a) { return a.horas.planejadas !== null; });
+
+      const mini = [
+        [s.capacidade.dev === null ? R.A_VALIDAR : s.capacidade.devTexto, 'DEV'],
+        [s.capacidade.qa === null ? R.A_VALIDAR : s.capacidade.qaTexto, 'QA'],
+        [String(s.iniciativas), 'Iniciativas'],
+        [String(s.bloqueadas), 'Bloqueadas'],
+        [String(s.entradasProximas), 'Entradas ' + ctx.cfg.marcos.janelaDias + 'd'],
+        [temHoras ? R.formatarHoras(horas) : R.A_VALIDAR, 'H. Planej.']
+      ].map(function (par) {
+        const ausente = par[0] === R.A_VALIDAR;
+        return '<div class="squad-mini-kpi"><b class="' + (ausente ? 'ausente' : '') + '" style="font-size:' + (ausente ? '11px' : '17px') + '">' + esc(par[0]) + '</b><span>' + esc(par[1]) + '</span></div>';
+      }).join('');
+
       const rd = s.riscoSeDesbloquear;
       const sim = s.simulacao;
-      const simTexto = '<span class="selo ' + classeRisco(rd.nivel) + '">' + esc(rd.nivel) + '</span>' +
-        (sim.aplicavel
-          ? '<span class="cel-mini">se liberadas juntas: ' + esc(sim.nivel).toLowerCase() + ' · ' +
-            esc(String(sim.concorrentesDepois)) + ' na mesma janela</span>'
-          : (rd.semInformacao ? '<span class="cel-mini">' + rd.semInformacao + ' sem bloqueio informado</span>' : ''));
+      const simTexto = sim.aplicavel
+        ? '<span class="cel-mini">se liberadas juntas: ' + esc(sim.nivel).toLowerCase() + ' · ' + esc(String(sim.concorrentesDepois)) + ' na mesma janela</span>'
+        : (rd.semInformacao ? '<span class="cel-mini">' + rd.semInformacao + ' sem bloqueio informado</span>' : '');
 
-      return '<tr>' +
-        '<td class="cel-forte">' + ou(s.squad.name) + '<span class="cel-mini">LT ' + esc(R.techLeadsTexto(s.squad)) + '</span></td>' +
-        '<td>' + (s.capacidade.dev === null ? '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>' : esc(s.capacidade.devTexto) + ' DEV') +
-          '<span class="cel-mini">QA: ' + (s.capacidade.qa === null ? '<span class="ausente">' + esc(R.A_VALIDAR) + '</span>' : esc(s.capacidade.qaTexto)) + '</span></td>' +
-        '<td>' + s.iniciativas + '<span class="cel-mini">' + s.emDesenvolvimento + ' em desenvolvimento</span></td>' +
-        '<td>' + (s.bloqueadas ? '<span class="selo critico">' + s.bloqueadas + '</span>' : '<span class="selo ok sem-ponto">0</span>') + '</td>' +
-        '<td>' + s.entradasProximas + '<span class="cel-mini">próximos ' + ctx.cfg.marcos.janelaDias + ' dias</span></td>' +
-        '<td><span class="selo ' + classeRisco(s.riscoConcentracao.nivel) + '">' + esc(s.riscoConcentracao.nivel) + '</span>' +
-          (s.riscoConcentracao.faltando && s.riscoConcentracao.faltando.length ? '<span class="cel-mini">falta: ' + esc(s.riscoConcentracao.faltando.join(', ')) + '</span>' : '') + '</td>' +
-        '<td>' + simTexto + '</td>' +
-        '<td>' + esc(s.acaoRecomendada) + '</td>' +
-        '</tr>';
+      const lista = daSquad.length
+        ? daSquad.slice().sort(function (a, b) { return b.criticidade - a.criticidade; }).map(function (a) {
+            const i = a.iniciativa;
+            return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:11.5px">' +
+              '<span>' + esc(R.texto(i.initiativeNumber)) + ' · ' + esc(R.texto(i.name, 'Iniciativa sem nome')) + '</span>' +
+              '<span class="selo ' + CLASSE[a.statusExecutivo.nivel] + ' sem-ponto">' + esc(a.statusExecutivo.texto) + '</span></div>';
+          }).join('')
+        : '<div style="padding:6px 0;color:var(--tinta-3);font-size:11.5px">Nenhuma iniciativa vinculada.</div>';
+
+      return '<div class="squad-card">' +
+        '<div class="squad-card-head"><strong style="font-size:14px">' + esc(R.texto(s.squad.name)) + '</strong>' +
+        '<span class="selo ' + classeRisco(s.riscoConcentracao.nivel) + '">' + esc(s.riscoConcentracao.nivel) + '</span></div>' +
+        '<div class="cel-mini" style="margin-bottom:10px">LT ' + esc(R.techLeadsTexto(s.squad)) + '</div>' +
+        '<div class="squad-mini-kpis">' + mini + '</div>' +
+        (s.riscoConcentracao.faltando && s.riscoConcentracao.faltando.length
+          ? '<div class="cel-mini" style="margin-bottom:6px">Falta para calcular o risco: ' + esc(s.riscoConcentracao.faltando.join(', ')) + '</div>' : '') +
+        '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)">' +
+        '<span class="rotulo">Risco se desbloquear</span><span class="selo ' + classeRisco(rd.nivel) + '">' + esc(rd.nivel) + '</span></div>' +
+        (simTexto ? '<div style="text-align:right">' + simTexto + '</div>' : '') +
+        '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:11.5px;font-weight:700;color:var(--marca-2)">Ver ' + s.iniciativas + ' iniciativa(s) da squad</summary>' + lista + '</details>' +
+        '<div class="cel-mini" style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line);color:var(--tinta-2);font-size:11.5px"><strong style="color:var(--tinta)">Ação: </strong>' + esc(s.acaoRecomendada) + '</div>' +
+        '</div>';
     }).join('');
 
     return '<div class="cartao secao">' +
-      '<div class="cartao-topo"><h2>Capacidade e risco por Squad</h2><span class="dica">“Risco se desbloquear” simula o retorno simultâneo das iniciativas bloqueadas da squad</span></div>' +
-      '<div class="rolagem"><table class="grade"><thead><tr>' +
-      ['Squad', 'Capacidade', 'Iniciativas', 'Bloqueadas', 'Entradas próximas', 'Risco de concentração', 'Risco se desbloquear', 'Ação recomendada']
-        .map(function (h) { return '<th>' + h + '</th>'; }).join('') +
-      '</tr></thead><tbody>' + linhas + '</tbody></table></div></div>';
+      '<div class="cartao-topo"><h2>Capacidade e risco por Squad</h2><span class="dica">Leitura automática a partir da Gestão 2026 e da capacidade cadastrada</span></div>' +
+      '<div class="squad-cards">' + cartoes + '</div></div>';
+  }
+
+  /* ── Regras do protótipo ───────────────────────────────────────────────
+     Cada indicador explicado em linguagem direta, com os parâmetros ATUAIS
+     (não um texto fixo) — se alguém mudar um limiar em Parâmetros, esta
+     explicação já reflete o novo valor. Transparência: nada de caixa-preta. */
+  function regrasDoPrototipo(ctx) {
+    const c = ctx.cfg;
+    const regras = [
+      { t: 'Desvio', d: 'Data real ou prevista menos a data planejada. Até ' + c.desvio.noPrazoAte + ' dia(s): no prazo. Até ' + c.desvio.atencaoAte + ': atenção. Acima disso: crítico.' },
+      { t: 'Concorrência', d: 'Iniciativas da mesma squad com início de DEV planejado entre ' + c.concorrencia.janelaDiasAntes + ' dias antes e ' + c.concorrencia.janelaDiasDepois + ' dias depois — a própria iniciativa conta.' },
+      { t: 'Risco de concentração', d: 'ALTO com ' + c.concentracao.altoConcorrentes + '+ concorrentes, ou ' + c.concentracao.altoConcorrentesSquadPequena + '+ numa squad de até ' + c.concentracao.devPequena + ' DEV. Sem squad, DEV, bloqueio ou data planejada, o resultado é DADO INCOMPLETO — nunca BAIXO.' },
+      { t: 'Risco se desbloquear', d: '0 bloqueadas: sem bloqueios. 1: baixo. 2: médio. ' + (c.desbloqueio.medioAte + 1) + ' ou mais: alto. Qualquer bloqueio "Não informado" na squad vira DADO INCOMPLETO.' },
+      { t: 'Escalonamento à gestão', d: 'SIM com bloqueio externo, desvio crítico, risco alto de concentração ou de desbloqueio. AVALIAR para os casos intermediários ou capacidade não validada.' },
+      { t: 'Densidade de carga', d: 'Horas planejadas ÷ DEV da squad. Não é utilização nem capacidade disponível — é quanto de escopo pesa sobre cada pessoa.' }
+    ];
+    return '<div class="cartao secao">' +
+      '<div class="cartao-topo"><h2>Regras do protótipo</h2><span class="dica">Transparência: nada de caixa-preta — os números abaixo refletem os parâmetros atuais</span></div>' +
+      '<div class="blocos" style="background:var(--surface)">' + regras.map(function (r) {
+        return '<div class="bloco"><h4 style="color:var(--tinta)">' + esc(r.t) + '</h4><p style="margin:0;font-size:12px;color:var(--tinta-2);line-height:1.5">' + esc(r.d) + '</p></div>';
+      }).join('') + '</div></div>';
   }
 
   /* ── Mapa de colisão por squad ──────────────────────────────────────
@@ -383,17 +502,34 @@
       '</div></div>';
   }
 
+  /* ── Três telas ────────────────────────────────────────────────────── */
+
+  // Visão Executiva: só o que muda a decisão agora — sem tabela grande.
   function render(host, ctx) {
     if (!host) return;
-    host.innerHTML =
-      kpis(ctx) +
-      atencaoGestao(ctx) +
-      tabelaIniciativas(ctx) +
-      tabelaSquads(ctx) +
-      mapaColisao(ctx) +
-      proximosMarcos(ctx) +
-      confiabilidade(ctx);
+    host.innerHTML = kpis(ctx) + atencaoGestao(ctx) + impedimentosAtivos(ctx) + proximosMarcos(ctx);
   }
 
-  raiz.Ops4OpsVisaoExecutiva = { render: render };
+  // Acompanhamento das Iniciativas: a tabela completa + contexto de dados.
+  function renderAcompanhamento(host, ctx) {
+    if (!host) return;
+    host.innerHTML = tabelaIniciativas(ctx) + mapaColisao(ctx) + confiabilidade(ctx);
+  }
+
+  // Capacidade e Risco: cards + regras. A edição de DEV/QA é anexada pelo
+  // orquestrador (index.html) logo após esta chamada.
+  function renderCapacidade(host, ctx) {
+    if (!host) return;
+    host.innerHTML = squadCards(ctx) + regrasDoPrototipo(ctx);
+  }
+
+  raiz.Ops4OpsVisaoExecutiva = {
+    render: render,
+    renderAcompanhamento: renderAcompanhamento,
+    renderCapacidade: renderCapacidade,
+    alternarJustificativas: function () {
+      mostrarJustificativas = !mostrarJustificativas;
+      raiz.Ops4OpsApp.render();
+    }
+  };
 })(typeof self !== 'undefined' ? self : this);
