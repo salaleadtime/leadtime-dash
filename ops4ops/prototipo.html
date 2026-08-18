@@ -107,6 +107,11 @@ table.grade tr.destaque-atencao td{background:linear-gradient(90deg,var(--atenca
 .amostra.man{background:var(--manual);border-color:var(--manual-linha)}
 .amostra.aut{background:var(--auto)}
 .filtros{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--surface-2);border-radius:var(--raio) var(--raio) 0 0}
+.campo-lista{border:1px solid var(--line-forte);border-radius:7px;background:#fff;max-height:172px;overflow-y:auto;padding:4px}
+.item-lista{display:flex;align-items:center;gap:7px;padding:5px 7px;font-size:12px;color:var(--tinta-2);border-radius:5px;cursor:pointer;user-select:none}
+.item-lista:hover{background:var(--surface-2)}
+.item-lista input{width:auto;margin:0;flex:none}
+.campo-lista-vazio{display:block;padding:8px;font-size:11.5px;color:var(--tinta-3)}
 .campo{display:flex;flex-direction:column;gap:4px}
 .campo>label{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-3)}
 input,select,textarea{font:inherit;font-size:12.5px;padding:7px 9px;border:1px solid var(--line-forte);border-radius:7px;background:#fff;color:var(--tinta);width:100%}
@@ -1270,6 +1275,18 @@ window.OPS4OPS_SEED = {
     }) || null;
   }
 
+  /* Nome de exibição da squad de uma iniciativa. Resolve pelo cadastro de
+     squads (via squadId) antes de recorrer ao texto bruto: a fonte usa "ASD"
+     tanto como código real da squad "Ainda Sem Definição" quanto, em outros
+     campos, como marcador de ausência — texto() sozinho trataria os dois
+     casos como iguais e faria a iniciativa sumir de filtros e listagens por
+     squad mesmo com o vínculo (squadId) correto. */
+  function squadDisplay(ini, squads) {
+    const s = acharSquad(ini, squads);
+    if (s && !ehPlaceholder(s.name)) return String(s.name).trim();
+    return texto(ini.squad);
+  }
+
   /* Ordenação executiva: bloqueio e desvio crítico primeiro; dado incompleto
      acima de "tudo certo", porque não saber também é pauta de gestão. */
   function pontuarCriticidade(status, desvio, gestao, concentracao, desbloqueio) {
@@ -1369,7 +1386,7 @@ window.OPS4OPS_SEED = {
     horas: horas, viabilidadeJanela: viabilidadeJanela, inconsistenciasDeDados: inconsistenciasDeDados,
     confiabilidade: confiabilidade, necessitaGestao: necessitaGestao,
     justificativaExecutiva: justificativaExecutiva, acaoRecomendada: acaoRecomendada,
-    proximoMarco: proximoMarco, avaliar: avaliar, acharSquad: acharSquad,
+    proximoMarco: proximoMarco, avaliar: avaliar, acharSquad: acharSquad, squadDisplay: squadDisplay,
     avaliarSquad: avaliarSquad, simularDesbloqueioGeral: simularDesbloqueioGeral
   };
 });
@@ -1624,11 +1641,15 @@ window.OPS4OPS_SEED = {
   }
 
   // Ausência tem aparência própria: nunca some, nunca vira zero.
-  function ou(valor, rotulo) {
-    const t = R.texto(valor, rotulo || R.A_VALIDAR);
+  function marcarAusencia(t) {
     if (t === R.A_VALIDAR || t === R.NAO_INFORMADO || t === R.A_DEFINIR) return '<span class="ausente">' + esc(t) + '</span>';
     return esc(t);
   }
+  function ou(valor, rotulo) { return marcarAusencia(R.texto(valor, rotulo || R.A_VALIDAR)); }
+  // Nome da squad exibido: resolve pelo cadastro (squadId) antes do texto
+  // bruto — ver R.squadDisplay para o porquê ("ASD" é código de squad aqui,
+  // mas placeholder em outros campos).
+  function squadCel(i, squads) { return marcarAusencia(R.squadDisplay(i, squads)); }
 
   function dataOu(valor) {
     const t = R.formatarBR(valor);
@@ -1794,7 +1815,7 @@ window.OPS4OPS_SEED = {
 
       return '<tr class="' + cls + '">' +
         '<td class="cel-forte">' + idCel + '<span class="cel-mini">' + ou(i.name) + '</span></td>' +
-        '<td>' + ou(i.squad) + '<span class="cel-mini">TL ' + R.texto(i.techLead) + '</span></td>' +
+        '<td>' + squadCel(i, ctx.estado.squads) + '<span class="cel-mini">TL ' + R.texto(i.techLead) + '</span></td>' +
         '<td><span class="selo ' + CLASSE[a.statusExecutivo.nivel] + '">' + esc(a.statusExecutivo.texto) + '</span>' +
           '<span class="cel-mini">Discovery: ' + esc(R.texto(i.discoverySituation)) + ' · Entrega: ' + esc(R.texto(i.deliverySituation)) + '</span></td>' +
         '<td>' + planejado + '</td>' +
@@ -1929,7 +1950,7 @@ window.OPS4OPS_SEED = {
         '<td class="cel-forte">' + ou(i.initiativeNumber) + '<span class="cel-mini">' + ou(i.name) + '</span></td>' +
         '<td>' + esc(a.marco.label) + (a.marco.derivado ? '<span class="cel-mini">derivado do planejamento</span>' : '') + '</td>' +
         '<td>' + esc(R.formatarBR(a.marco.data)) + '<span class="cel-mini">em ' + R.diasEntre(ctx.hoje, a.marco.data) + ' dia(s)</span></td>' +
-        '<td>' + ou(i.squad) + '</td>' +
+        '<td>' + squadCel(i, ctx.estado.squads) + '</td>' +
         '<td><span class="selo ' + classeRisco(risco) + '">' + esc(risco) + '</span></td>' +
         '</tr>';
     }).join('') : '';
@@ -2014,6 +2035,9 @@ window.OPS4OPS_SEED = {
   'use strict';
   const R = raiz.Ops4OpsRules;
 
+  function escJs(v) {
+    return String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
@@ -2077,6 +2101,33 @@ window.OPS4OPS_SEED = {
     return set.sort(function (a, b) { return String(a).localeCompare(String(b), 'pt-BR'); });
   }
 
+  // Squad usa o nome resolvido pelo cadastro (ver R.squadDisplay): a fonte
+  // grava "ASD" tanto como código real de "Ainda Sem Definição" quanto como
+  // marcador de ausência em outros campos — texto bruto duplicaria a squad
+  // na lista de opções ou faria essas iniciativas sumirem do filtro.
+  function unicosSquads(lista, squads) {
+    const set = [];
+    lista.forEach(function (i) {
+      const nome = R.squadDisplay(i, squads);
+      if (nome !== R.A_VALIDAR && nome !== R.NAO_INFORMADO && set.indexOf(nome) === -1) set.push(nome);
+    });
+    return set.sort(function (a, b) { return String(a).localeCompare(String(b), 'pt-BR'); });
+  }
+
+  function campoListaMultipla(chave, rotulo, opcoes) {
+    const selecionados = filtros[chave] || [];
+    const itens = opcoes.length
+      ? opcoes.map(function (o) {
+          const marcado = selecionados.indexOf(o) !== -1;
+          return '<label class="item-lista"><input type="checkbox"' + (marcado ? ' checked' : '') +
+            ' onchange="Ops4OpsVisaoGestao.alternarFiltroLista(\'' + chave + '\',\'' + escJs(o) + '\',this.checked)">' +
+            '<span>' + esc(o) + '</span></label>';
+        }).join('')
+      : '<span class="campo-lista-vazio">Nenhuma opção disponível</span>';
+    return '<div class="campo"><label>' + esc(rotulo) + (selecionados.length ? ' · ' + selecionados.length + ' selecionada(s)' : '') + '</label>' +
+      '<div class="campo-lista">' + itens + '</div></div>';
+  }
+
   function seletorFiltro(chave, rotulo, opcoes) {
     return '<div class="campo"><label>' + esc(rotulo) + '</label><select onchange="Ops4OpsVisaoGestao.filtrar(\'' + chave + '\',this.value)">' +
       '<option value="">Todos</option>' +
@@ -2085,10 +2136,10 @@ window.OPS4OPS_SEED = {
       }).join('') + '</select></div>';
   }
 
-  function aplicarFiltros(avaliacoes) {
+  function aplicarFiltros(avaliacoes, ctx) {
     return avaliacoes.filter(function (a) {
       const i = a.iniciativa;
-      if (filtros.squad && R.texto(i.squad) !== filtros.squad) return false;
+      if (filtros.squad && filtros.squad.length && filtros.squad.indexOf(R.squadDisplay(i, ctx.estado.squads)) === -1) return false;
       if (filtros.techLead && R.texto(i.techLead) !== filtros.techLead) return false;
       if (filtros.po && R.texto(i.po) !== filtros.po) return false;
       if (filtros.discovery && i.discoverySituation !== filtros.discovery) return false;
@@ -2253,12 +2304,12 @@ window.OPS4OPS_SEED = {
       '</div>';
   }
 
-  function cabecalhoIniciativa(a) {
+  function cabecalhoIniciativa(a, ctx) {
     const i = a.iniciativa;
     const gestao = a.necessitaGestao.valor;
     return '<div class="iniciativa-cab" onclick="Ops4OpsVisaoGestao.alternar(\'' + esc(i.id) + '\')">' +
       '<div><div class="num">' + esc(R.texto(i.initiativeNumber)) + '</div><div class="nome">' + esc(R.texto(i.name, 'Iniciativa sem nome')) + '</div></div>' +
-      '<div class="pilha"><span style="font-size:12px;font-weight:600">' + esc(R.texto(i.squad)) + '</span><span style="font-size:10.5px;color:var(--tinta-3)">TL ' + esc(R.texto(i.techLead)) + '</span></div>' +
+      '<div class="pilha"><span style="font-size:12px;font-weight:600">' + esc(R.squadDisplay(i, ctx.estado.squads)) + '</span><span style="font-size:10.5px;color:var(--tinta-3)">TL ' + esc(R.texto(i.techLead)) + '</span></div>' +
       '<div><span class="selo ' + CLASSE[a.statusExecutivo.nivel] + '">' + esc(a.statusExecutivo.texto) + '</span></div>' +
       '<div class="pilha"><span style="font-size:11.5px">' + esc(R.formatarBR(i.planEndDev)) + ' → ' + esc(a.desvio.referenciaFim ? R.formatarBR(a.desvio.referenciaFim) : R.A_VALIDAR) + '</span>' +
         '<span style="font-size:10.5px;color:var(--tinta-3)">planejado → previsto</span></div>' +
@@ -2318,11 +2369,11 @@ window.OPS4OPS_SEED = {
   function render(host, ctx, api) {
     if (!host) return;
     const todas = ctx.avaliacoes;
-    const visiveis = aplicarFiltros(todas);
+    const visiveis = aplicarFiltros(todas, ctx);
     const inis = ctx.estado.iniciativas;
 
     const barraFiltros = '<div class="filtros">' +
-      seletorFiltro('squad', 'Squad', unicos(inis, 'squad')) +
+      campoListaMultipla('squad', 'Squad', unicosSquads(inis, ctx.estado.squads)) +
       seletorFiltro('techLead', 'Tech Lead', unicos(inis, 'techLead')) +
       seletorFiltro('po', 'PO', unicos(inis, 'po')) +
       seletorFiltro('discovery', 'Situação Discovery', R.SITUACAO_DISCOVERY) +
@@ -2337,7 +2388,7 @@ window.OPS4OPS_SEED = {
     const lista = visiveis.length
       ? visiveis.map(function (a) {
           return '<div class="iniciativa' + (abertas[a.iniciativa.id] ? ' aberta' : '') + '">' +
-            cabecalhoIniciativa(a) + (abertas[a.iniciativa.id] ? editor(a, ctx) : '') + '</div>';
+            cabecalhoIniciativa(a, ctx) + (abertas[a.iniciativa.id] ? editor(a, ctx) : '') + '</div>';
         }).join('')
       : '<div class="cartao"><div class="vazio">Nenhuma iniciativa corresponde aos filtros selecionados.</div></div>';
 
@@ -2457,6 +2508,15 @@ window.OPS4OPS_SEED = {
     },
 
     filtrar: function (chave, valor) { filtros[chave] = valor || null; raiz.Ops4OpsApp.render(); },
+
+    alternarFiltroLista: function (chave, valor, marcado) {
+      const atual = (filtros[chave] || []).slice();
+      const idx = atual.indexOf(valor);
+      if (marcado && idx === -1) atual.push(valor);
+      if (!marcado && idx !== -1) atual.splice(idx, 1);
+      filtros[chave] = atual;
+      raiz.Ops4OpsApp.render();
+    },
 
     excluir: function (id) {
       if (!confirm('Excluir esta iniciativa? Os indicadores de risco da squad serão recalculados.')) return;

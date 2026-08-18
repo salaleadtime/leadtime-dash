@@ -6,6 +6,9 @@
   'use strict';
   const R = raiz.Ops4OpsRules;
 
+  function escJs(v) {
+    return String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
@@ -69,6 +72,33 @@
     return set.sort(function (a, b) { return String(a).localeCompare(String(b), 'pt-BR'); });
   }
 
+  // Squad usa o nome resolvido pelo cadastro (ver R.squadDisplay): a fonte
+  // grava "ASD" tanto como código real de "Ainda Sem Definição" quanto como
+  // marcador de ausência em outros campos — texto bruto duplicaria a squad
+  // na lista de opções ou faria essas iniciativas sumirem do filtro.
+  function unicosSquads(lista, squads) {
+    const set = [];
+    lista.forEach(function (i) {
+      const nome = R.squadDisplay(i, squads);
+      if (nome !== R.A_VALIDAR && nome !== R.NAO_INFORMADO && set.indexOf(nome) === -1) set.push(nome);
+    });
+    return set.sort(function (a, b) { return String(a).localeCompare(String(b), 'pt-BR'); });
+  }
+
+  function campoListaMultipla(chave, rotulo, opcoes) {
+    const selecionados = filtros[chave] || [];
+    const itens = opcoes.length
+      ? opcoes.map(function (o) {
+          const marcado = selecionados.indexOf(o) !== -1;
+          return '<label class="item-lista"><input type="checkbox"' + (marcado ? ' checked' : '') +
+            ' onchange="Ops4OpsVisaoGestao.alternarFiltroLista(\'' + chave + '\',\'' + escJs(o) + '\',this.checked)">' +
+            '<span>' + esc(o) + '</span></label>';
+        }).join('')
+      : '<span class="campo-lista-vazio">Nenhuma opção disponível</span>';
+    return '<div class="campo"><label>' + esc(rotulo) + (selecionados.length ? ' · ' + selecionados.length + ' selecionada(s)' : '') + '</label>' +
+      '<div class="campo-lista">' + itens + '</div></div>';
+  }
+
   function seletorFiltro(chave, rotulo, opcoes) {
     return '<div class="campo"><label>' + esc(rotulo) + '</label><select onchange="Ops4OpsVisaoGestao.filtrar(\'' + chave + '\',this.value)">' +
       '<option value="">Todos</option>' +
@@ -77,10 +107,10 @@
       }).join('') + '</select></div>';
   }
 
-  function aplicarFiltros(avaliacoes) {
+  function aplicarFiltros(avaliacoes, ctx) {
     return avaliacoes.filter(function (a) {
       const i = a.iniciativa;
-      if (filtros.squad && R.texto(i.squad) !== filtros.squad) return false;
+      if (filtros.squad && filtros.squad.length && filtros.squad.indexOf(R.squadDisplay(i, ctx.estado.squads)) === -1) return false;
       if (filtros.techLead && R.texto(i.techLead) !== filtros.techLead) return false;
       if (filtros.po && R.texto(i.po) !== filtros.po) return false;
       if (filtros.discovery && i.discoverySituation !== filtros.discovery) return false;
@@ -245,12 +275,12 @@
       '</div>';
   }
 
-  function cabecalhoIniciativa(a) {
+  function cabecalhoIniciativa(a, ctx) {
     const i = a.iniciativa;
     const gestao = a.necessitaGestao.valor;
     return '<div class="iniciativa-cab" onclick="Ops4OpsVisaoGestao.alternar(\'' + esc(i.id) + '\')">' +
       '<div><div class="num">' + esc(R.texto(i.initiativeNumber)) + '</div><div class="nome">' + esc(R.texto(i.name, 'Iniciativa sem nome')) + '</div></div>' +
-      '<div class="pilha"><span style="font-size:12px;font-weight:600">' + esc(R.texto(i.squad)) + '</span><span style="font-size:10.5px;color:var(--tinta-3)">TL ' + esc(R.texto(i.techLead)) + '</span></div>' +
+      '<div class="pilha"><span style="font-size:12px;font-weight:600">' + esc(R.squadDisplay(i, ctx.estado.squads)) + '</span><span style="font-size:10.5px;color:var(--tinta-3)">TL ' + esc(R.texto(i.techLead)) + '</span></div>' +
       '<div><span class="selo ' + CLASSE[a.statusExecutivo.nivel] + '">' + esc(a.statusExecutivo.texto) + '</span></div>' +
       '<div class="pilha"><span style="font-size:11.5px">' + esc(R.formatarBR(i.planEndDev)) + ' → ' + esc(a.desvio.referenciaFim ? R.formatarBR(a.desvio.referenciaFim) : R.A_VALIDAR) + '</span>' +
         '<span style="font-size:10.5px;color:var(--tinta-3)">planejado → previsto</span></div>' +
@@ -310,11 +340,11 @@
   function render(host, ctx, api) {
     if (!host) return;
     const todas = ctx.avaliacoes;
-    const visiveis = aplicarFiltros(todas);
+    const visiveis = aplicarFiltros(todas, ctx);
     const inis = ctx.estado.iniciativas;
 
     const barraFiltros = '<div class="filtros">' +
-      seletorFiltro('squad', 'Squad', unicos(inis, 'squad')) +
+      campoListaMultipla('squad', 'Squad', unicosSquads(inis, ctx.estado.squads)) +
       seletorFiltro('techLead', 'Tech Lead', unicos(inis, 'techLead')) +
       seletorFiltro('po', 'PO', unicos(inis, 'po')) +
       seletorFiltro('discovery', 'Situação Discovery', R.SITUACAO_DISCOVERY) +
@@ -329,7 +359,7 @@
     const lista = visiveis.length
       ? visiveis.map(function (a) {
           return '<div class="iniciativa' + (abertas[a.iniciativa.id] ? ' aberta' : '') + '">' +
-            cabecalhoIniciativa(a) + (abertas[a.iniciativa.id] ? editor(a, ctx) : '') + '</div>';
+            cabecalhoIniciativa(a, ctx) + (abertas[a.iniciativa.id] ? editor(a, ctx) : '') + '</div>';
         }).join('')
       : '<div class="cartao"><div class="vazio">Nenhuma iniciativa corresponde aos filtros selecionados.</div></div>';
 
@@ -449,6 +479,15 @@
     },
 
     filtrar: function (chave, valor) { filtros[chave] = valor || null; raiz.Ops4OpsApp.render(); },
+
+    alternarFiltroLista: function (chave, valor, marcado) {
+      const atual = (filtros[chave] || []).slice();
+      const idx = atual.indexOf(valor);
+      if (marcado && idx === -1) atual.push(valor);
+      if (!marcado && idx !== -1) atual.splice(idx, 1);
+      filtros[chave] = atual;
+      raiz.Ops4OpsApp.render();
+    },
 
     excluir: function (id) {
       if (!confirm('Excluir esta iniciativa? Os indicadores de risco da squad serão recalculados.')) return;

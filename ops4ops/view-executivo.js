@@ -12,11 +12,15 @@
   }
 
   // Ausência tem aparência própria: nunca some, nunca vira zero.
-  function ou(valor, rotulo) {
-    const t = R.texto(valor, rotulo || R.A_VALIDAR);
+  function marcarAusencia(t) {
     if (t === R.A_VALIDAR || t === R.NAO_INFORMADO || t === R.A_DEFINIR) return '<span class="ausente">' + esc(t) + '</span>';
     return esc(t);
   }
+  function ou(valor, rotulo) { return marcarAusencia(R.texto(valor, rotulo || R.A_VALIDAR)); }
+  // Nome da squad exibido: resolve pelo cadastro (squadId) antes do texto
+  // bruto — ver R.squadDisplay para o porquê ("ASD" é código de squad aqui,
+  // mas placeholder em outros campos).
+  function squadCel(i, squads) { return marcarAusencia(R.squadDisplay(i, squads)); }
 
   function dataOu(valor) {
     const t = R.formatarBR(valor);
@@ -182,7 +186,7 @@
 
       return '<tr class="' + cls + '">' +
         '<td class="cel-forte">' + idCel + '<span class="cel-mini">' + ou(i.name) + '</span></td>' +
-        '<td>' + ou(i.squad) + '<span class="cel-mini">TL ' + R.texto(i.techLead) + '</span></td>' +
+        '<td>' + squadCel(i, ctx.estado.squads) + '<span class="cel-mini">TL ' + R.texto(i.techLead) + '</span></td>' +
         '<td><span class="selo ' + CLASSE[a.statusExecutivo.nivel] + '">' + esc(a.statusExecutivo.texto) + '</span>' +
           '<span class="cel-mini">Discovery: ' + esc(R.texto(i.discoverySituation)) + ' · Entrega: ' + esc(R.texto(i.deliverySituation)) + '</span></td>' +
         '<td>' + planejado + '</td>' +
@@ -317,7 +321,7 @@
         '<td class="cel-forte">' + ou(i.initiativeNumber) + '<span class="cel-mini">' + ou(i.name) + '</span></td>' +
         '<td>' + esc(a.marco.label) + (a.marco.derivado ? '<span class="cel-mini">derivado do planejamento</span>' : '') + '</td>' +
         '<td>' + esc(R.formatarBR(a.marco.data)) + '<span class="cel-mini">em ' + R.diasEntre(ctx.hoje, a.marco.data) + ' dia(s)</span></td>' +
-        '<td>' + ou(i.squad) + '</td>' +
+        '<td>' + squadCel(i, ctx.estado.squads) + '</td>' +
         '<td><span class="selo ' + classeRisco(risco) + '">' + esc(risco) + '</span></td>' +
         '</tr>';
     }).join('') : '';

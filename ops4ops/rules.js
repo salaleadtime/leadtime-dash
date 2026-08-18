@@ -610,6 +610,18 @@
     }) || null;
   }
 
+  /* Nome de exibição da squad de uma iniciativa. Resolve pelo cadastro de
+     squads (via squadId) antes de recorrer ao texto bruto: a fonte usa "ASD"
+     tanto como código real da squad "Ainda Sem Definição" quanto, em outros
+     campos, como marcador de ausência — texto() sozinho trataria os dois
+     casos como iguais e faria a iniciativa sumir de filtros e listagens por
+     squad mesmo com o vínculo (squadId) correto. */
+  function squadDisplay(ini, squads) {
+    const s = acharSquad(ini, squads);
+    if (s && !ehPlaceholder(s.name)) return String(s.name).trim();
+    return texto(ini.squad);
+  }
+
   /* Ordenação executiva: bloqueio e desvio crítico primeiro; dado incompleto
      acima de "tudo certo", porque não saber também é pauta de gestão. */
   function pontuarCriticidade(status, desvio, gestao, concentracao, desbloqueio) {
@@ -709,7 +721,7 @@
     horas: horas, viabilidadeJanela: viabilidadeJanela, inconsistenciasDeDados: inconsistenciasDeDados,
     confiabilidade: confiabilidade, necessitaGestao: necessitaGestao,
     justificativaExecutiva: justificativaExecutiva, acaoRecomendada: acaoRecomendada,
-    proximoMarco: proximoMarco, avaliar: avaliar, acharSquad: acharSquad,
+    proximoMarco: proximoMarco, avaliar: avaliar, acharSquad: acharSquad, squadDisplay: squadDisplay,
     avaliarSquad: avaliarSquad, simularDesbloqueioGeral: simularDesbloqueioGeral
   };
 });
