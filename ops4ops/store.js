@@ -178,6 +178,17 @@
       if (salvo && Array.isArray(salvo.iniciativas) && salvo.iniciativas.length) {
         return normalizarEstado(salvo);
       }
+      // Versão em arquivo único: a base vem embutida na própria página, então
+      // não há fetch (e o protótipo abre por file:// com duplo clique).
+      if (raiz.OPS4OPS_SEED) {
+        const semeado = semearDoDiscovery(raiz.OPS4OPS_SEED);
+        const e = estadoVazio();
+        e.iniciativas = semeado.iniciativas;
+        e.squads = semeado.squads;
+        e.fonte = raiz.OPS4OPS_SEED.fonte || 'Base de planejamento 2026 do Discovery PMO';
+        e.atualizadoEm = new Date().toISOString();
+        return Promise.resolve(e);
+      }
       return fetch('seed-discovery.json', { cache: 'no-store' })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(function (bruto) {

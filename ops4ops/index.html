@@ -321,13 +321,36 @@ input.auto{background:var(--auto);border-color:var(--line);color:var(--tinta-2);
       S.limparTudo();
       S.carregar().then(function (e) { estado = e; persistirERenderizar(); });
     },
+    /* Exportação em dois caminhos, porque a página roda em dois lugares:
+       aberta como arquivo (local ou ambiente do cliente), o download comum
+       funciona; publicada como página do Claude, o visualizador não permite
+       download direto e o salvamento precisa passar pela API dele. Sem os
+       dois, o botão fica morto num dos contextos. */
     exportar: function () {
-      const blob = new Blob([JSON.stringify(estado, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'ops4ops-gestao-estrategica.json';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      const conteudo = JSON.stringify(estado, null, 2);
+      const nome = 'ops4ops-gestao-estrategica.json';
+
+      const baixarDireto = function () {
+        const blob = new Blob([conteudo], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = nome;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      };
+
+      if (typeof window.claude === 'undefined' || typeof window.claude.use !== 'function') {
+        baixarDireto();
+        return;
+      }
+      window.claude.use('downloads').then(function (downloads) {
+        if (!downloads) { baixarDireto(); return; }
+        return downloads.save({ filename: nome, data: conteudo }).catch(function (erro) {
+          // "declined" é escolha de quem está vendo, não erro para avisar.
+          if (erro && erro.code === 'declined') return;
+          alert('Não foi possível salvar o arquivo: ' + ((erro && erro.message) || erro));
+        });
+      }).catch(baixarDireto);
     },
     render: render
   };
