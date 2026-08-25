@@ -7108,6 +7108,7 @@
       const st = normalize($('statusFilter')?.value) || 'Todos';
       const q = lower($('searchFilter')?.value);
       if(st !== 'Todos') data = data.filter(r => sameText(r.situacao, st));
+      else data = data.filter(r => !isCancelledStatus(r.situacao));
       if(q) data = data.filter(r => [r.chave,r.epic,r.resumo,r.squad,r.situacao,r.responsavel,r.proximo,(r.rotulos||[]).join(' ')].some(x => lower(x).includes(q)));
       return data;
     }
@@ -7164,6 +7165,17 @@
     function renderStatusBadge(status){
       const label = normalize(status) || 'Sem status';
       return `<span class="status-badge ${statusClass(label)}" title="${escapeAttr(label)}">${escapeHtml(label)}</span>`;
+    }
+
+    // Cancelada/removida no Jira não é mais trabalho operacional em andamento.
+    // O Acomp. Geral costuma nem trazer mais o item depois de cancelado (some
+    // sozinho na próxima importação), mas a Sprint ativa traz status de TUDO
+    // que está no sprint, cancelados inclusive — por isso o item pode chegar
+    // aqui com situação "Cancelada" e ficar contando como história ativa na
+    // Tabela operacional/Sprint se ninguém filtrar. Continua selecionável no
+    // filtro de status (dropdown) para quem quiser auditar cancelados.
+    function isCancelledStatus(situacao){
+      return statusClass(situacao) === 'status-cancel';
     }
 
     function barColorClass(label){
@@ -8062,6 +8074,7 @@
       const q = lower($('searchFilter')?.value);
 
       if(st !== 'Todos') data = data.filter(r => sameText(r.situacao, st));
+      else data = data.filter(r => !isCancelledStatus(r.situacao));
       if(q) data = data.filter(r => [r.chave,r.epic,r.resumo,r.squad,r.situacao,r.responsavel,r.proximo,(r.rotulos||[]).join(' ')].some(x => lower(x).includes(q)));
       return data;
     }
