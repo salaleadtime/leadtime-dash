@@ -5773,27 +5773,27 @@
     <section id="gerencial" class="view active">
       <!-- KPIs estratégicos (4 colunas) -->
       <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr)">
-        <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad())">
+        <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad().filter(r=>!isCancelledStatus(r.situacao)))">
           <span>Total de histórias</span>
           <strong id="kpiTotal">0</strong>
           <small>Escopo total da squad no filtro selecionado.</small>
         </article>
-        <article class="kpi" onclick="openList('Histórias em Product Backlog', filteredBySquad().filter(r=>r.product_backlog))">
+        <article class="kpi" onclick="openList('Histórias em Product Backlog', filteredBySquad().filter(r=>r.product_backlog && !isCancelledStatus(r.situacao)))">
           <span>Product Backlog</span>
           <strong id="kpiPB">0</strong>
           <small>Itens ainda não iniciados — pipeline de entrada.</small>
         </article>
-        <article class="kpi" onclick="openList('Histórias refinadas', filteredBySquad().filter(r=>r.refinada))">
+        <article class="kpi" onclick="openList('Histórias refinadas', filteredBySquad().filter(r=>r.refinada && !isCancelledStatus(r.situacao)))">
           <span>Refinadas</span>
           <strong id="kpiRefinadas">0</strong>
           <small id="kpiRefinedasDetail">Histórias com refinamento concluído.</small>
         </article>
-        <article class="kpi" onclick="openList('Alertas: bloqueios e dependências', filteredBySquad().filter(r=>r.bloqueio||r.dependencia))">
+        <article class="kpi" onclick="openList('Alertas: bloqueios e dependências', filteredBySquad().filter(r=>(r.bloqueio||r.dependencia) && !isCancelledStatus(r.situacao)))">
           <span>Alertas</span>
           <strong id="kpiAlertas">0</strong>
           <small id="kpiAlertasDetail">Bloqueios e dependências que requerem ação.</small>
         </article>
-        <article class="kpi" onclick="openList('Rota de produção e homologação', filteredBySquad().filter(r=>/produção|producao|deploy|homolog|teste/i.test(r.situacao||'')))">
+        <article class="kpi" onclick="openList('Rota de produção e homologação', filteredBySquad().filter(r=>/produção|producao|deploy|homolog|teste/i.test(r.situacao||'') && !isCancelledStatus(r.situacao)))">
           <span>Próximas entregas</span>
           <strong id="kpiEntregas">0</strong>
           <small id="kpiEntregasDetail">Itens em homologação ou rota de produção.</small>
@@ -7476,7 +7476,11 @@
 
     function renderManagement(){
       const squad = getSelectedSquad();
-      const rawData = baseRowsForSquad(squad);
+      // Cancelada não é mais escopo ativo: some dos KPIs, do resumo executivo
+      // e dos gráficos (ver isCancelledStatus, mesma regra da Tabela
+      // operacional/Sprint atual). rows.length/sprintRows.length abaixo (para
+      // o empty state) continuam olhando a base bruta de propósito.
+      const rawData = baseRowsForSquad(squad).filter(r => !isCancelledStatus(r.situacao));
       const data = applyDateFilter(rawData);
 
       if($('insights')) $('insights').innerHTML = '';
@@ -7522,9 +7526,11 @@
       const prodItems = data.filter(r=>/produção|producao|deploy/i.test(r.situacao||'')).length;
       const entregas = homolog + prodItems;
 
-      // Dataset combinado: rows + sprintRows (deduplicado por chave)
+      // Dataset combinado: rows + sprintRows (deduplicado por chave). A Sprint
+      // ativa do Jira traz status de tudo que está no sprint, cancelados
+      // inclusive — exclui aqui pelo mesmo motivo do rawData acima.
       const sprintDataForSquad = effectiveSprintRows().filter(r =>
-        sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)
+        (sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)) && !isCancelledStatus(r.situacao)
       );
       const seenKeys = new Set(data.map(r => r.chave).filter(Boolean));
       const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
@@ -7687,7 +7693,7 @@
       // (ex.: texto dizia "8 história(s)" e os épicos somavam 23 cards). Agora soma
       // só o que a sprint tem de NOVO (por chave) e aplica o mesmo filtro de data —
       // igual ao padrão já usado no KPI combinado (ver renderManagement).
-      const sprintDataForSquad = effectiveSprintRows().filter(r => sameSquad(selectedSquad, 'Todas') || sameSquad(r.squad, selectedSquad));
+      const sprintDataForSquad = effectiveSprintRows().filter(r => (sameSquad(selectedSquad, 'Todas') || sameSquad(r.squad, selectedSquad)) && !isCancelledStatus(r.situacao));
       const seenKeys = new Set(data.map(r => r.chave).filter(Boolean));
       const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
       const scope = applyDateFilter([...data, ...extraFromSprint]);
@@ -8151,14 +8157,21 @@
 
       const byKey = new Map(squadRows.map(row => [storyKey(row), row]));
       const committedRows = snapshot.storyKeys.map(key => byKey.get(key)).filter(Boolean);
-      const delivered = committedRows.filter(isSprintDelivered);
-      const pending = snapshot.storyKeys.length - delivered.length;
-      const percent = Math.round((delivered.length / snapshot.storyKeys.length) * 100);
-      const blocked = committedRows.filter(row => row.bloqueio || row.dependencia).length;
-      const retest = committedRows.filter(row => /reteste/i.test(`${row.situacao} ${(row.rotulos || []).join(' ')}`)).length;
-      const withoutOwner = committedRows.filter(row => !normalize(row.responsavel)).length;
-      const validation = committedRows.filter(row => !isSprintDelivered(row) && /teste|homolog/i.test(row.situacao)).length;
-      const unplannedDelivered = squadRows.filter(row => !snapshot.storyKeys.includes(storyKey(row)) && isSprintDelivered(row)).length;
+      // Uma história cancelada depois do planning saiu de escopo — não é
+      // "não entregue". Tira ela do compromisso em vez de deixá-la pesar
+      // contra o percentual (mesma regra de isCancelledStatus usada na
+      // Tabela operacional/Sprint atual/KPIs).
+      const cancelledCommitted = committedRows.filter(row => isCancelledStatus(row.situacao));
+      const activeCommittedRows = committedRows.filter(row => !isCancelledStatus(row.situacao));
+      const commitment = snapshot.storyKeys.length - cancelledCommitted.length;
+      const delivered = activeCommittedRows.filter(isSprintDelivered);
+      const pending = commitment - delivered.length;
+      const percent = commitment ? Math.round((delivered.length / commitment) * 100) : 100;
+      const blocked = activeCommittedRows.filter(row => row.bloqueio || row.dependencia).length;
+      const retest = activeCommittedRows.filter(row => /reteste/i.test(`${row.situacao} ${(row.rotulos || []).join(' ')}`)).length;
+      const withoutOwner = activeCommittedRows.filter(row => !normalize(row.responsavel)).length;
+      const validation = activeCommittedRows.filter(row => !isSprintDelivered(row) && /teste|homolog/i.test(row.situacao)).length;
+      const unplannedDelivered = squadRows.filter(row => !isCancelledStatus(row.situacao) && !snapshot.storyKeys.includes(storyKey(row)) && isSprintDelivered(row)).length;
       const status = percent >= 90 ? 'Atingido' : percent >= 60 ? 'Parcialmente atingido' : 'Não atingido';
       const forecast = percent >= 90 ? 'No alvo' : percent >= 60 ? 'Atenção' : 'Comprometida';
       const reasons = [];
@@ -8168,7 +8181,8 @@
         if(validation) reasons.push(`${validation} ${validation === 1 ? 'história ainda está em teste ou homologação' : 'histórias ainda estão em teste ou homologação'}`);
         if(withoutOwner) reasons.push(`${withoutOwner} ${withoutOwner === 1 ? 'história está sem responsável' : 'histórias estão sem responsável'}`);
       }
-      return { hasSnapshot:true, ended, objective, commitment:snapshot.storyKeys.length, delivered:delivered.length, pending, percent, status, forecast, reasons, unplannedDelivered };
+      if(cancelledCommitted.length) reasons.push(`${cancelledCommitted.length} ${cancelledCommitted.length === 1 ? 'história do compromisso foi cancelada e saiu do cálculo' : 'histórias do compromisso foram canceladas e saíram do cálculo'}`);
+      return { hasSnapshot:true, ended, objective, commitment, delivered:delivered.length, pending, percent, status, forecast, reasons, unplannedDelivered, cancelledCommitted: cancelledCommitted.length };
     }
 
     function renderSprintOutcome(squadRows, squad){
@@ -8212,7 +8226,9 @@
       carryLabel.textContent = outcome.ended ? 'Transbordo' : 'Risco transbordo';
       carry.textContent = outcome.pending;
       if(outcome.pending === 0){
-        reason.textContent = 'Compromisso concluído. Não há itens previstos para transbordar.';
+        reason.textContent = outcome.cancelledCommitted
+          ? `Compromisso concluído. ${outcome.cancelledCommitted} ${outcome.cancelledCommitted === 1 ? 'história cancelada foi removida' : 'histórias canceladas foram removidas'} do cálculo — não há itens previstos para transbordar.`
+          : 'Compromisso concluído. Não há itens previstos para transbordar.';
       }else if(outcome.reasons.length){
         reason.textContent = `${outcome.ended ? 'Justificativa automática:' : 'Motivos observados:'} ${outcome.reasons.join('; ')}.`;
       }else{
@@ -9124,7 +9140,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     }
 
     function openResponsibleInfo(){
-      const data = filteredBySquad().filter(r=>normalize(r.responsavel));
+      const data = filteredBySquad().filter(r=>normalize(r.responsavel) && !isCancelledStatus(r.situacao));
       if(data.length) openList('Histórias com responsável informado', data);
       else openList('Responsáveis não encontrados na extração', []);
     }
