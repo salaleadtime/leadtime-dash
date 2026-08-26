@@ -129,11 +129,15 @@
   <p class="bds-footer" id="bds-footer">Consultar o sistema completo: <a href="../index.html">dashboard</a> · <a href="../discovery-pmo/index.html">Discovery PMO</a></p>
 </div>
 
+<script src="../gas-config.js"></script>
 <script src="./rules.js"></script>
 <script>
 (function () {
   'use strict';
-  var BK_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+  // URL de producao do Apps Script: nunca fica hardcoded aqui, vem de
+  // gas-config.js (arquivo local, fora do git — ver .gitignore). Se faltar,
+  // cai no mesmo tratamento de "sem webapp" que a pagina ja tinha.
+  var BK_GAS_URL = (window.__SALA_GAS__ && window.__SALA_GAS__.main) || '';
   var R = window.BoletimDSRules;
   var root = document.getElementById('boletim-ds-root');
 

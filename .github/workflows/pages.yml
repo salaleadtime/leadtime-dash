@@ -22,6 +22,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Generate gas-config.js from repository secrets
+        env:
+          SALA_GAS_MAIN_URL: ${{ secrets.SALA_GAS_MAIN_URL }}
+          SALA_GAS_MEASUREMENT_URL: ${{ secrets.SALA_GAS_MEASUREMENT_URL }}
+        run: |
+          python3 - <<'PYEOF'
+          import json
+          import os
+          main_url = os.environ.get("SALA_GAS_MAIN_URL", "")
+          measurement_url = os.environ.get("SALA_GAS_MEASUREMENT_URL", "")
+          with open("gas-config.js", "w", encoding="utf-8") as f:
+              f.write("window.__SALA_GAS__ = {\n")
+              f.write("  main: %s,\n" % json.dumps(main_url))
+              f.write("  measurement: %s\n" % json.dumps(measurement_url))
+              f.write("};\n")
+          PYEOF
       - name: Patch dashboard for deployment
         run: python3 .github/scripts/patch_dashboard.py
       - name: Apply visual layout patch

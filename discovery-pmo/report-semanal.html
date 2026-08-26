@@ -904,10 +904,13 @@ body[data-model="B"] .only-a{display:none}
 </div>
 <div class="toast" id="toast">Report gerado para a semana 2026-W31</div>
 
+<script src="../gas-config.js"></script>
 <script>
 /* ════════════ CONFIG ════════════ */
 const CFG={
-  gasUrl:'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec',
+  // URL de producao do Apps Script: nunca fica hardcoded aqui, vem de
+  // gas-config.js (arquivo local, fora do git — ver .gitignore).
+  gasUrl:(window.__SALA_GAS__ && window.__SALA_GAS__.main) || '',
   gasKey:'discoveryPmo',
   trackerKey:'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3',
   cacheKey:'sala_rep_cache_v3', editKey:'sala_rep_edit_v4', snapKey:'sala_rep_snap_v4',
