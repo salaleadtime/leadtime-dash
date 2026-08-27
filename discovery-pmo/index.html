@@ -10686,8 +10686,8 @@
     // uma revisão nova (raro). Se a líder fechar, o heartbeat expira e outra aba assume
     // sozinha, sem F5. localStorage indisponível faz a aba agir sozinha, como antes.
     const _discTabId = Date.now() + '_' + Math.random().toString(36).slice(2);
-    const _discLeaderKey = 'sala_leader_discovery_v1';
-    const _discSharedRevKey = 'sala_shared_rev_discovery_v1';
+    const _discLeaderSlot = 'sala_leader_discovery_v1';
+    const _discSharedRevSlot = 'sala_shared_rev_discovery_v1';
     const _discLeaderStaleMs = 75000; // 2.5x o intervalo de 30s
     let _discLastInteraction = Date.now();
     const _discIdleMs = 300000; // 5min sem interação numa aba visível = "esquecida"
@@ -10699,18 +10699,18 @@
       try {
         const now = Date.now();
         let leader = null;
-        try { leader = JSON.parse(localStorage.getItem(_discLeaderKey)); } catch (e) {}
+        try { leader = JSON.parse(localStorage.getItem(_discLeaderSlot)); } catch (e) {}
         const amLeader = leader && leader.id === _discTabId;
         const leaderStale = !leader || (now - leader.heartbeat) > _discLeaderStaleMs;
-        if (amLeader || leaderStale) { localStorage.setItem(_discLeaderKey, JSON.stringify({ id: _discTabId, heartbeat: now })); return true; }
+        if (amLeader || leaderStale) { localStorage.setItem(_discLeaderSlot, JSON.stringify({ id: _discTabId, heartbeat: now })); return true; }
         return false;
       } catch (e) { return true; }
     }
     function _discPublishRevision() {
-      try { if (typeof _discLastKnownRevision === 'number') localStorage.setItem(_discSharedRevKey, String(_discLastKnownRevision)); } catch (e) {}
+      try { if (typeof _discLastKnownRevision === 'number') localStorage.setItem(_discSharedRevSlot, String(_discLastKnownRevision)); } catch (e) {}
     }
     window.addEventListener('storage', ev => {
-      if (ev.key !== _discSharedRevKey || ev.newValue == null) return;
+      if (ev.key !== _discSharedRevSlot || ev.newValue == null) return;
       const rev = Number(ev.newValue);
       if (!isNaN(rev) && rev !== _discLastKnownRevision) discGasSyncPull();
     });

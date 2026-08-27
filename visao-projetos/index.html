@@ -10215,8 +10215,8 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     // outra aba assume sozinha, sem F5. localStorage indisponível faz a aba agir
     // sozinha, como antes.
     var _vpTabId=Date.now()+'_'+Math.random().toString(36).slice(2);
-    var _vpLeaderKey='sala_leader_visaoprojetos_v1';
-    var _vpSharedRevKey='sala_shared_rev_visaoprojetos_v1';
+    var _vpLeaderSlot='sala_leader_visaoprojetos_v1';
+    var _vpSharedRevSlot='sala_shared_rev_visaoprojetos_v1';
     var _vpLeaderStaleMs=150000; // 2.5x o intervalo de 60s
     var _vpLastInteraction=Date.now();
     var _vpIdleMs=300000; // 5min sem interação numa aba visível = "esquecida"
@@ -10228,18 +10228,18 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       try{
         var now=Date.now();
         var leader=null;
-        try{ leader=JSON.parse(localStorage.getItem(_vpLeaderKey)); }catch(e){}
+        try{ leader=JSON.parse(localStorage.getItem(_vpLeaderSlot)); }catch(e){}
         var amLeader=leader && leader.id===_vpTabId;
         var leaderStale=!leader || (now-leader.heartbeat)>_vpLeaderStaleMs;
-        if(amLeader || leaderStale){ localStorage.setItem(_vpLeaderKey,JSON.stringify({id:_vpTabId,heartbeat:now})); return true; }
+        if(amLeader || leaderStale){ localStorage.setItem(_vpLeaderSlot,JSON.stringify({id:_vpTabId,heartbeat:now})); return true; }
         return false;
       }catch(e){ return true; }
     }
     function _vpPublishRevisions(){
-      try{ localStorage.setItem(_vpSharedRevKey,JSON.stringify(_vpLastKnownRevisions)); }catch(e){}
+      try{ localStorage.setItem(_vpSharedRevSlot,JSON.stringify(_vpLastKnownRevisions)); }catch(e){}
     }
     window.addEventListener('storage', function(ev){
-      if(ev.key!==_vpSharedRevKey || ev.newValue==null || !_VP_GAS_URL) return;
+      if(ev.key!==_vpSharedRevSlot || ev.newValue==null || !_VP_GAS_URL) return;
       var shared=null;
       try{ shared=JSON.parse(ev.newValue); }catch(e){ return; }
       if(!shared) return;
