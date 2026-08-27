@@ -312,6 +312,24 @@ histórico de commits deste arquivo para o modelo do harness.
   aparecer divergente, é sinal de que `main` avançou em paralelo; reconstrua o
   branch a partir de `origin/main` e reaplique (cherry-pick) só os commits
   realmente novos antes de abrir/mesclar o PR.
+- **Nomes de variável com "Key" disparam falso positivo no GitLeaks do
+  Bradesco**: a esteira de segurança do ambiente do cliente (action
+  `Bradesco-Actions/brad-gitleaks-actions@v2`, fora deste repositório) usa a
+  regra genérica `generic-api-key`, que bate em qualquer
+  `algumaCoisaKey = "string comprida"` — mesmo quando o valor é só um nome de
+  chave de `localStorage` (ex.: `_vpLeaderKey='sala_leader_visaoprojetos_v1'`),
+  sem ser credencial nenhuma. Já aconteceu (27/08) com as variáveis do
+  mecanismo de "eleição de aba líder" (`_bkLeaderKey`/`_bkSharedRevKey` em
+  `index.html`, `_discLeaderKey`/`_discSharedRevKey` em
+  `discovery-pmo/index.html`, `_vpLeaderKey`/`_vpSharedRevKey` em
+  `visao-projetos/index.html`) e travou o pipeline de lá. Corrigido
+  renomeando pra `..._vpLeaderSlot`/`..._vpSharedRevSlot` (sufixo `Slot` no
+  lugar de `Key`) — não muda nenhum valor salvo, só o nome da variável no
+  código. Pedir pra incluir esse achado numa allowlist do lado do Bradesco é
+  possível mas depende do time deles (burocracia); evitar a palavra "key"
+  (case-insensitive) no nome de qualquer variável nova que guarde um nome de
+  chave de `localStorage`/`sessionStorage` já evita o problema de origem, sem
+  depender de ninguém de fora.
 
 ## Histórico: incidente de sincronização de 04–05/08
 
