@@ -76,6 +76,16 @@ pedido de novo a cada vez):
    etc.).
 5. Se mais de um arquivo mudou, entregar todos juntos, prontos pra
    substituir de uma vez — não em rodadas separadas.
+6. Além de enviar os arquivos individualmente, entregar também um **.zip**
+   com todos os arquivos tocados na sessão, cada um dentro da mesma
+   subpasta indicada na 2ª coluna da tabela do item 1+2 (ex.:
+   `visao-projetos/index.html` dentro de uma pasta `visao-projetos/` no
+   zip, `index.html` na raiz do zip) — pra dar pra descompactar direto por
+   cima do ambiente do cliente, sem renomear nem mover nada na mão.
+   `apps-script-backlog.gs`, quando fizer parte da entrega, entra no zip na
+   raiz mesmo assim (é só um arquivo a mais pra referência/backup — o aviso
+   do item 3 sobre colar no editor do Apps Script continua valendo do mesmo
+   jeito, o zip não muda isso).
 
 **Formato validado pela pessoa responsável para o item 1+2**: uma tabela
 `# | Arquivo | Onde substituir no ambiente do cliente`, uma linha por
