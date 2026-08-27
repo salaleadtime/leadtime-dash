@@ -13766,14 +13766,13 @@
       const squad = isEdit ? squadById(squadId) : { id: uid('squad'), name: '', code: '', business: '', rteOwner: '', owner: '', techLead: '' };
       if (!squad) { toast('Squad não encontrada'); return; }
       modalState = { type: 'squad', isEdit, squad: deepClone(squad), originalSquadId: squadId };
-      openModal(isEdit ? 'Editar Squad' : 'Cadastro de Squads', 'Cadastre a Squad uma vez e reutilize em várias iniciativas. O número da iniciativa é sequencial e independente da sigla.', `
-        <div class="automation-note"><span class="automation-dot"></span><div><strong>Cadastro único por Squad</strong>A Squad organiza as iniciativas, mas o Nº da Iniciativa é neutro e sequencial: exemplo DISC-001, DISC-002.</div></div>
+      openModal(isEdit ? 'Editar Squad' : 'Cadastro de Squads', 'Cadastre a Squad uma vez e reutilize em várias iniciativas.', `
+        <div class="automation-note"><span class="automation-dot"></span><div><strong>Cadastro único por Squad</strong>A Squad organiza as iniciativas. O Nº da Iniciativa é o número oficial da planilha, informado no cadastro de cada iniciativa.</div></div>
         ${squadListHtml(squadId || '')}
         <div class="form-grid">
           ${field('Nome da Squad', 'squad-name', squad.name)}
           ${field('Tech Lead padrão', 'squad-tech-lead', squad.techLead || '')}
           ${field('RTE padrão', 'squad-rte-owner', squad.rteOwner)}
-          <div class="form-field"><label>Próximo Nº previsto</label><input type="text" readonly value="${escapeAttr(nextInitiativeNumber(squad.id))}" /></div>
         </div>
       `, [
         isEdit ? `<button type="button" class="btn" onclick="deleteSquad('${squad.id}')">Excluir</button>` : '',

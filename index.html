@@ -5462,6 +5462,12 @@ function gasCheckBacklogRevision(cb){
     // aparece sozinha, sem precisar de F5 manual.
     var emRev=json.revisions.emergencyDemand;
     if(typeof emRev==='number' && _emergencyRevision!==null && emRev!==_emergencyRevision){ emLoadCloud(); }
+    // Estórias (arquivo 3) também é servida pelo mesmo ping: sem isso, uma
+    // reimportação feita por outra pessoa só aparecia nesta aba depois de um
+    // F5 manual, mesmo com o backlog já sincronizando sozinho — Demandas
+    // Emergenciais (que lê allStories) ficava desatualizada em silêncio.
+    var stRev=json.revisions.stories;
+    if(typeof stRev==='number' && _storiesRevision!==null && stRev!==_storiesRevision){ gasLoadStories(function(){}); }
     if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
     gasLoadBacklog(function(err2){ if(cb) cb(err2,true); });
   }, 28000, 0);
@@ -8878,7 +8884,7 @@ setInterval(function(){
   if(!_bkClaimOrIsLeader()) return;
   try{
     _bkPollTicks++;
-    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){ _bkPublishRevision(); }); return; }
+    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){ _bkPublishRevision(); }); gasLoadStories(function(){}); return; }
     gasCheckBacklogRevision(function(){ _bkPublishRevision(); });
   }catch(e){}
 }, 60000);
@@ -8926,7 +8932,7 @@ function calSave(){ try{ storageSet(CAL_KEY, JSON.stringify(calData)); }catch(e)
 // detectActiveSprint() (visao-projetos/index.html) esperam ler. Sem isso, o
 // calendário existia só no localStorage de quem editou — a confirmação
 // automática de planning no Apps Script nunca achava sprint nenhuma.
-function calSaveToCloud(){
+function calSaveToCloud(isRetry){
   if(!BK_GAS_URL || !Array.isArray(calData)) return;
   var sprints = calData.reduce(function(acc,tri){
     return acc.concat(Array.isArray(tri && tri.sprints) ? tri.sprints : []);
@@ -8935,7 +8941,25 @@ function calSaveToCloud(){
     method:'POST', mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:'action=saveVpData&key=vpSprintCalendar&payload='+encodeURIComponent(JSON.stringify({sprints:sprints}))
-  }).catch(function(){});
+  }).then(function(){
+    // mode:'no-cors' torna a resposta do POST opaca — dá pra saber que o
+    // navegador conseguiu ENVIAR, nunca que o servidor realmente gravou (lock
+    // ocupado, proxy truncando). Mesmo risco de "salvou na tela e não chegou
+    // no servidor" já corrigido em gasSaveBacklog/discGasSave. Confirma com um
+    // GET separado e reenvia 1x antes de avisar; caminho feliz fica em
+    // silêncio de propósito — isso roda a cada edição do calendário.
+    setTimeout(function(){
+      _gasJsonp(BK_GAS_URL+'?action=getVpData&key=vpSprintCalendar&t='+Date.now(), function(err,json){
+        var remoteLen=(!err && json && json.ok && json.data && Array.isArray(json.data.sprints)) ? json.data.sprints.length : -1;
+        if(remoteLen>=sprints.length) return;
+        if(!isRetry){ calSaveToCloud(true); return; }
+        toast('⚠️ Calendário de sprints','Não foi possível confirmar a gravação no servidor. A alteração continua salva só neste navegador.','warn');
+      });
+    }, 2500);
+  }).catch(function(){
+    if(!isRetry){ setTimeout(function(){ calSaveToCloud(true); }, 2000); return; }
+    toast('⚠️ Calendário de sprints','Falha de rede ao salvar. A alteração continua salva só neste navegador.','warn');
+  });
 }
 
 // planejamento padrão — datas exatas dos trimestres apresentados
