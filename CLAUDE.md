@@ -317,8 +317,9 @@ histórico de commits deste arquivo para o modelo do harness.
   `Bradesco-Actions/brad-gitleaks-actions@v2`, fora deste repositório) usa a
   regra genérica `generic-api-key`, que bate em qualquer
   `algumaCoisaKey = "string comprida"` — mesmo quando o valor é só um nome de
-  chave de `localStorage` (ex.: `_vpLeaderKey='sala_leader_visaoprojetos_v1'`),
-  sem ser credencial nenhuma. Já aconteceu (27/08) com as variáveis do
+  chave de `localStorage` (ex.: variável `_vpLeaderKey` guardando o texto
+  `sala_leader_visaoprojetos_v1`), sem ser credencial nenhuma. Já aconteceu
+  (27/08) com as variáveis do
   mecanismo de "eleição de aba líder" (`_bkLeaderKey`/`_bkSharedRevKey` em
   `index.html`, `_discLeaderKey`/`_discSharedRevKey` em
   `discovery-pmo/index.html`, `_vpLeaderKey`/`_vpSharedRevKey` em
