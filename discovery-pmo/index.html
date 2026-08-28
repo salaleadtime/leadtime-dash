@@ -7790,6 +7790,7 @@
   <div id="uxV6ReportsRoot"></div>
   <div id="uxV6TimelineRoot"></div>
 
+  <script src="../gas-config.js"></script>
   <script>
     const today = new Date();
     // toISOString() converte pra UTC antes de fatiar a data — no fuso do Brasil
@@ -10318,7 +10319,10 @@
     // ─── Sync entre navegadores (mesmo Apps Script/planilha usados no dashboard principal) ───
     // Sem isso, cada usuário só enxerga as próprias edições (tudo ficava só no localStorage
     // do navegador). Guarda a base inteira sob uma chave própria no mesmo Web App do GAS.
-    const DISC_GAS_URL = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+    // URL de producao do Apps Script: nunca fica hardcoded aqui, vem de
+    // gas-config.js (arquivo local, fora do git — ver .gitignore). Se faltar,
+    // cai no mesmo tratamento de "sem webapp" que a pagina ja tinha.
+    const DISC_GAS_URL = (window.__SALA_GAS__ && window.__SALA_GAS__.main) || '';
     const DISC_GAS_KEY = 'discoveryPmo';
     let _discGasSaving = false;
     let _discGasSaveTimer = null;

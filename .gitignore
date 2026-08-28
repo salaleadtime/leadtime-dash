@@ -1,3 +1,10 @@
 .claude/
 .github/scripts/boletim_ds/node_modules/
 .github/scripts/boletim_ds/out/
+
+# URL de producao do Apps Script (BK_GAS_URL/DISC_GAS_URL/_VP_GAS_URL/GAS/
+# MEASUREMENT_GAS). Nunca comitar este arquivo — cada ambiente (GitHub Pages
+# via secret no workflow, ambiente do cliente via copia manual local) tem a
+# sua propria copia com o valor real. Ver gas-config.example.js para o
+# formato esperado.
+gas-config.js

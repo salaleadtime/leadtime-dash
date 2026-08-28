@@ -54,11 +54,14 @@
   </main>
   <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><h2>Complementos executivos</h2><p>Inclua ação, observação ou risco sem criar uma nova base. O conteúdo é salvo na chave já existente <b>vpQuickNotes</b>.</p><div class="form-grid"><div class="field"><label>Tipo</label><select id="extraType"><option value="action">Ação de gestão</option><option value="risk">Risco / impedimento</option><option value="observation">Observação executiva</option></select></div><div class="field"><label>Squad</label><select id="extraSquad"></select></div><div class="field full"><label>Título</label><input id="extraTitle" placeholder="Ex.: Confirmar janela de homologação"></div><div class="field"><label>Responsável</label><input id="extraOwner" placeholder="Nome ou papel responsável"></div><div class="field"><label>Resultado esperado / prazo</label><input id="extraOutcome" placeholder="Ex.: decisão tomada até sexta-feira"></div><div class="field full"><label>Contexto</label><textarea id="extraText" placeholder="Descreva o risco, a decisão ou a observação que a gestão precisa conhecer."></textarea></div></div><div class="modal-actions"><button class="btn" onclick="closeComplements()">Cancelar</button><button class="btn red" onclick="saveComplement()">Salvar complemento</button></div></div></div>
   <div class="toast" id="toast"></div>
+  <script src="../gas-config.js"></script>
   <script>
   (function(){
     'use strict';
-    var GAS='https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
-    var MEASUREMENT_GAS='https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
+    // URLs de producao do Apps Script: nunca ficam hardcoded aqui, vem de
+    // gas-config.js (arquivo local, fora do git — ver .gitignore).
+    var GAS=(window.__SALA_GAS__ && window.__SALA_GAS__.main) || '';
+    var MEASUREMENT_GAS=(window.__SALA_GAS__ && window.__SALA_GAS__.measurement) || '';
     var state={rows:[],homolog:[],homologSource:'',homologImportedAt:'',ops:{},quick:{},discovery:{projects:[]},backlog:[],backlogFallback:false,measurement:[],selectedWeek:'',loadedAt:null,errors:[]};
     var $=function(id){return document.getElementById(id)};
     function esc(v){var text=String(v==null?'':v);if(text==='Interestelar')text='Intrstelar';return text.replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
