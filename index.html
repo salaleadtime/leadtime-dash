@@ -6817,7 +6817,7 @@ var SV_STATUS=[
 ];
 
 function classifySvStatus(status){
-  var s=(status||'').toLowerCase().trim();
+  var s=stripAcc((status||'')).toLowerCase().trim();
   for(var i=0;i<SV_STATUS.length;i++){if(SV_STATUS[i].test(s)) return SV_STATUS[i].key;}
   return 'other';
 }
