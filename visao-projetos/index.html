@@ -7145,7 +7145,7 @@
       if(/deploy|implant|change|cab|release|pronto para prod|pronto para produção|pronto para producao/.test(s)) return 'status-deploy';
 
       // Verde suave: produção
-      if(/produção|producao|prod/.test(s)) return 'status-prod';
+      if(/produção|producao|\bprod\b/.test(s)) return 'status-prod';
 
       // Laranja: desenvolvimento/andamento
       if(/desenv|andamento|doing|progress|em execução|execucao|execução|in progress/.test(s)) return 'status-dev';
