@@ -5742,7 +5742,7 @@
       <div class="filter-left">
         <div>
           <label>Squad</label>
-          <select id="squadFilter" onchange="handleSquadFilterChange()"></select>
+          <select id="squadFilter"></select>
         </div>
         <div class="selected-pill" id="selectedSquadLabel">Squad: Contact</div>
         <!-- Filtro de período de datas -->
@@ -5761,11 +5761,11 @@
       <div class="filter-left" id="operationalFilters" style="display:none">
         <div>
           <label>Status</label>
-          <select id="statusFilter" onchange="renderAll()"></select>
+          <select id="statusFilter"></select>
         </div>
         <div>
           <label>Buscar</label>
-          <input type="text" id="searchFilter" placeholder="Chave, resumo, épico..." oninput="renderAll()" />
+          <input type="text" id="searchFilter" placeholder="Chave, resumo, épico..." />
         </div>
       </div>
     </section>
@@ -6540,17 +6540,45 @@
 
     function applyVpDataAll(all){
       var needsRender = false;
+      // Datas (importedAt) das bases que este ciclo realmente aplicou — usadas só
+      // pra badge "Última importação" no topo, nunca mais pra decidir se aplica.
+      var appliedTimes = [];
+
+      // As 3 checagens abaixo comparavam importedAt (relógio de quem clicou
+      // "Importar", não confiável entre máquinas — sujeito a fuso/clock skew) para
+      // decidir se a base do servidor era "mais nova" que a local. Isso podia travar
+      // um navegador para sempre mostrando uma base velha: gasLoadVpData já marca a
+      // revisão como conhecida em _vpLastKnownRevisions assim que a resposta chega,
+      // mesmo quando este bloco decidia NÃO aplicar por causa do importedAt — então
+      // o próximo ping de revisão (gasCheckVpRevisionsAndApply, a cada 1 min) não via
+      // "mudança" nenhuma e nunca mais tentava de novo, nem o resync completo
+      // incondicional de 15 em 15 min (mesma checagem, mesmo resultado). Era esse o
+      // motivo de dois navegadores ficarem com totais permanentemente diferentes
+      // (ex.: "Total de histórias" 178 num, 192 noutro) sem nenhum jeito de se
+      // recuperar sozinhos. A revisão do servidor é monotônica (nunca "volta") e é a
+      // fonte de verdade real de "isso é mais novo que o que eu já apliquei"; sem uma
+      // revisão conhecida (ex.: resposta antiga sem o campo), cai de volta na
+      // checagem por data de antes.
+      function isNewerThanApplied(serverRevision, localSnapshot, serverTime, localTime, extraCondition){
+        if(typeof serverRevision === 'number'){
+          var localRevision = localSnapshot && typeof localSnapshot.appliedRevision === 'number' ? localSnapshot.appliedRevision : -1;
+          return serverRevision !== localRevision;
+        }
+        return extraCondition !== undefined ? extraCondition : serverTime > localTime;
+      }
 
       var vpGeral = all.vpGeral;
       if(vpGeral && Array.isArray(vpGeral.rows) && vpGeral.rows.length){
         var localGeral = readStoredJSON('vpBaseGeralImportada', null);
         var serverGeralTime = vpGeral.importedAt ? Date.parse(vpGeral.importedAt) : 0;
         var localGeralTime  = localGeral && localGeral.importedAt ? Date.parse(localGeral.importedAt) : 0;
-        if(serverGeralTime > localGeralTime){
+        var serverGeralRev = _vpLastKnownRevisions.vpGeral;
+        if(isNewerThanApplied(serverGeralRev, localGeral, serverGeralTime, localGeralTime)){
           rows = vpGeral.rows.map(applyRefinementRule);
           if(vpGeral.sourceName) sourceName = vpGeral.sourceName;
-          storageSet('vpBaseGeralImportada', JSON.stringify(vpGeral));
+          storageSet('vpBaseGeralImportada', JSON.stringify(Object.assign({}, vpGeral, {appliedRevision: serverGeralRev})));
           needsRender = true;
+          if(serverGeralTime) appliedTimes.push(serverGeralTime);
         }
       }
 
@@ -6559,11 +6587,13 @@
         var localSprint = readStoredJSON('vpBaseSprintImportada', null);
         var serverSprintTime = vpSprint.importedAt ? Date.parse(vpSprint.importedAt) : 0;
         var localSprintTime  = localSprint && localSprint.importedAt ? Date.parse(localSprint.importedAt) : 0;
-        if(serverSprintTime > localSprintTime){
+        var serverSprintRev = _vpLastKnownRevisions.vpSprint;
+        if(isNewerThanApplied(serverSprintRev, localSprint, serverSprintTime, localSprintTime)){
           sprintRows = vpSprint.rows.map(function(row){ return applyRefinementRule(Object.assign({}, row, {sprintAtual:true})); });
           if(vpSprint.sourceName) sprintSourceName = vpSprint.sourceName;
-          storageSet('vpBaseSprintImportada', JSON.stringify(vpSprint));
+          storageSet('vpBaseSprintImportada', JSON.stringify(Object.assign({}, vpSprint, {appliedRevision: serverSprintRev})));
           needsRender = true;
+          if(serverSprintTime) appliedTimes.push(serverSprintTime);
         }
       }
 
@@ -6574,17 +6604,24 @@
       if(hasServerHomolog){
         var serverHomologTime = vpHomologation.importedAt ? Date.parse(vpHomologation.importedAt) : 0;
         var localHomologTime  = localHomolog && localHomolog.importedAt ? Date.parse(localHomolog.importedAt) : 0;
-        if(serverHomologTime > localHomologTime || !hasLocalHomolog){
+        var serverHomologRev = _vpLastKnownRevisions.vpHomologation;
+        if(isNewerThanApplied(serverHomologRev, localHomolog, serverHomologTime, localHomologTime, serverHomologTime > localHomologTime || !hasLocalHomolog)){
           homologationRows = vpHomologation.rows.map(applyRefinementRule).filter(isHomologation);
           homologationSourceName = vpHomologation.sourceName || 'Homologação compartilhada';
-          storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(vpHomologation));
+          storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(Object.assign({}, vpHomologation, {appliedRevision: serverHomologRev})));
           needsRender = true;
+          if(serverHomologTime) appliedTimes.push(serverHomologTime);
         }
       } else if(hasLocalHomolog){
         // Uma resposta vazia nunca pode apagar a última carga válida deste
         // navegador. Reenvia a fotografia válida para que todos recebam a
-        // mesma fonte compartilhada na próxima abertura.
-        gasSaveVpData('vpHomologation', localHomolog);
+        // mesma fonte compartilhada na próxima abertura. appliedRevision é
+        // bookkeeping só deste navegador (ver isNewerThanApplied acima) — não pode
+        // vazar pro payload compartilhado, senão outro navegador recebe de volta
+        // uma revisão que não tem nenhuma relação com o próprio _vpLastKnownRevisions.
+        var localHomologToSend = Object.assign({}, localHomolog);
+        delete localHomologToSend.appliedRevision;
+        gasSaveVpData('vpHomologation', localHomologToSend);
       }
 
       var vpOpUpdates = all.vpOpUpdates;
@@ -6627,6 +6664,19 @@
         deliveries = vpDeliveries;
         storageSet('jiraDashboardDeliveries', JSON.stringify(deliveries));
         needsRender = true;
+      }
+
+      // Badge "Última importação" (topbar) precisa refletir a base compartilhada
+      // mesmo para quem nunca clicou em "Importar aqui" neste navegador — a
+      // imensa maioria de quem só abre o painel pra consultar. Antes, importDateTime
+      // só era setado por uma importação local (registrarImportacaoBase) ou pela
+      // propagação do "Importar Tudo" do SALA, então o badge ficava permanentemente
+      // escondido (e sem nenhum sinal de quando os números na tela foram gerados)
+      // pra qualquer um que só sincronizasse com o servidor via polling/boot.
+      if(appliedTimes.length){
+        var newestApplied = Math.max.apply(null, appliedTimes);
+        if(!importDateTime || newestApplied > importDateTime.getTime()) importDateTime = new Date(newestApplied);
+        updateLastUpdatedBadge();
       }
 
       if(needsRender){ try{ renderAll(); }catch(e){} }
@@ -7239,6 +7289,15 @@
       if(typeof syncSquadToUrl === 'function') syncSquadToUrl();
     }
 
+    // Squad/Status/Busca costumavam ter o handler cadastrado aqui E de novo como
+    // atributo onchange/oninput no HTML (ver <select id="squadFilter">, etc.) — cada
+    // interação disparava o mesmo re-render completo (5 seções: Gestão, Homologação,
+    // Operacional, Sprint Atual, Entregas) 2 ou 3 vezes seguidas (select dispara
+    // 'change' E 'input' no mesmo evento). Era a causa mais direta de lentidão ao
+    // trocar squad/status ou digitar na busca. Só resta esta única fonte de binding.
+    // A busca também ganha um pequeno debounce: sem ele, cada tecla digitada refaz
+    // a tabela inteira de Operacional (centenas de linhas em bases maiores).
+    let _searchFilterDebounceTimer = null;
     function bindFilterEvents(){
       const squad = $('squadFilter');
       const status = $('statusFilter');
@@ -7247,7 +7306,6 @@
       if(squad && !squad.dataset.bound){
         squad.dataset.bound = 'true';
         squad.addEventListener('change', handleSquadFilterChange);
-        squad.addEventListener('input', handleSquadFilterChange);
       }
       if(status && !status.dataset.bound){
         status.dataset.bound = 'true';
@@ -7255,7 +7313,10 @@
       }
       if(search && !search.dataset.bound){
         search.dataset.bound = 'true';
-        search.addEventListener('input', renderAll);
+        search.addEventListener('input', function(){
+          if(_searchFilterDebounceTimer) clearTimeout(_searchFilterDebounceTimer);
+          _searchFilterDebounceTimer = setTimeout(renderAll, 180);
+        });
       }
     }
 
