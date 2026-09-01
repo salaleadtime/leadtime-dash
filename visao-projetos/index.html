@@ -6538,8 +6538,30 @@
       gasLoadAndApplyVpAllLegacy();
     }
 
+    // O badge "Última importação" (importDateTime) só era atualizado quando ESTE
+    // navegador importava um arquivo localmente (registrarImportacaoBase/etc) —
+    // nunca quando os dados chegavam via sync do servidor (boot ou polling). Resultado:
+    // cada navegador mostrava a data da SUA última importação local, divergentes entre
+    // si, nenhuma refletindo a importação real mais recente feita por qualquer pessoa.
+    // vpGeral/vpSprint/vpHomologation já carregam importedAt (setado por quem importou
+    // e salvo via gasSaveVpData) — usamos o mais recente entre os três pra manter o
+    // badge igual pra todo mundo, em qualquer navegador, sem chamada extra ao Apps Script.
+    function syncImportBadgeFromServer(all){
+      var candidates = [all.vpGeral, all.vpSprint, all.vpHomologation]
+        .map(function(d){ return d && d.importedAt ? Date.parse(d.importedAt) : NaN; })
+        .filter(function(t){ return !Number.isNaN(t) && t > 0; });
+      if(!candidates.length) return;
+      var maxT = Math.max.apply(null, candidates);
+      if(!importDateTime || maxT > importDateTime.getTime()){
+        importDateTime = new Date(maxT);
+        storageSet(IMPORT_BASE_KEY, importDateTime.toISOString());
+        updateLastUpdatedBadge();
+      }
+    }
+
     function applyVpDataAll(all){
       var needsRender = false;
+      syncImportBadgeFromServer(all);
 
       var vpGeral = all.vpGeral;
       if(vpGeral && Array.isArray(vpGeral.rows) && vpGeral.rows.length){
