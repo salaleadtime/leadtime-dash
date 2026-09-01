@@ -6887,11 +6887,14 @@
     const CROSS_IMPORT_SPRINT_KEY = 'sala_cross_import_sprint_v1';
     const CROSS_IMPORT_GENERAL_KEY = 'sala_cross_import_general_v1';
     const CROSS_IMPORT_HOMOLOGATION_KEY = 'sala_cross_import_homologation_v1';
-    function persistHomologationBase(){
+    // importedAtOverride existe pra edição pontual de campo (ex.: updateHomologationDate)
+    // conseguir preservar o importedAt da última carga real do Jira, em vez de fingir
+    // uma importação nova toda vez que alguém só edita uma data numa linha.
+    function persistHomologationBase(importedAtOverride){
       const data = {
         rows: homologationRows,
         sourceName: homologationSourceName,
-        importedAt: new Date().toISOString()
+        importedAt: importedAtOverride || new Date().toISOString()
       };
       storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(data));
       gasSaveVpData('vpHomologation', data, {officialSnapshot:true, sourceFile:homologationSourceName});
@@ -7382,7 +7385,11 @@
       const item = homologationRows.find(row => sameText(storyKey(row), key));
       if(!item) return;
       item.homologacaoData = value ? formatHomologationDate(value) : '';
-      persistHomologationBase();
+      // Editar a data de uma única linha não é uma importação nova — preserva o
+      // importedAt da última carga real do Jira pra não inflar o badge
+      // "Última importação" a cada edição pontual (ver syncImportBadgeFromServer).
+      const existing = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
+      persistHomologationBase(existing && existing.importedAt);
       renderAll();
     }
 
