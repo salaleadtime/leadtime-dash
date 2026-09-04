@@ -7199,23 +7199,41 @@ function detectUnifiedFileType(wb, fileName){
       // 1. Arquivo de Épicos: tem linhas "Épico" no Tipo de Item
       if(epicCnt>0) return 'epics';
 
+      // 2-7. Roteamento por nome de arquivo: aplica sempre que o cabeçalho
+      // "Tipo de Item" + "Chave" foi encontrado, independente de a amostra
+      // de 40 linhas conter alguma "História". Um relatório misto (ex.:
+      // "Sprint ativa - Story, Melhorias e Bug") pode não ter nenhuma
+      // História nas primeiras 40 linhas amostradas (ex.: sprint ordenada
+      // com Bugs/Melhorias no topo) — nesse caso o nome do arquivo é o
+      // único sinal confiável, e antes ele era ignorado porque essas
+      // checagens só rodavam dentro do "if(historiaCnt>0)", fazendo a
+      // detecção cair no fallback estrutural genérico (detectStoriesFormat),
+      // que não olha nome de arquivo e classificava tudo como "stories" —
+      // colidindo com outro arquivo (ex.: "QTD Épicos atrelados a Story")
+      // e cancelando a importação inteira ("Importação cancelada
+      // localmente: Há mais de um arquivo para 'stories'").
+      // 2. Arquivo de Homologação → Visão de Projetos: aba Homologação
+      if(fn.indexOf('homolog')>=0) return 'homologation_visao';
+      // 3. Sprint ativa → Visão de Projetos (Importar Sprint do Jira)
+      if(fn.indexOf('sprint')>=0) return 'sprint_visao';
+      // 4. Acomp. Geral → Visão de Projetos (botão JIRA)
+      if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
+      // 5. Ops4Ops tem a mesma estrutura e pode conter “Backlog” no nome,
+      // mas sua fonte é o Discovery PMO — nunca pode entrar no Backlog geral.
+      if(fn.indexOf('ops4ops')>=0) return 'ops4ops';
+      // 6. Story no Backlog → Tab Backlog/Refinamento
+      if(fn.indexOf('backlog')>=0) return 'backlog';
+      // 7. QTD Epicos → Tab Qtd Story/Épicos
+      if(fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
+
       if(historiaCnt>0){
-        // 2. Arquivo de Homologação → Visão de Projetos: aba Homologação
-        if(fn.indexOf('homolog')>=0) return 'homologation_visao';
-        // 3. Sprint ativa → Visão de Projetos (Importar Sprint do Jira)
-        if(fn.indexOf('sprint')>=0) return 'sprint_visao';
-        // 4. Acomp. Geral → Visão de Projetos (botão JIRA)
-        if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
-        // 5. Ops4Ops tem a mesma estrutura e pode conter “Backlog” no nome,
-        // mas sua fonte é o Discovery PMO — nunca pode entrar no Backlog geral.
-        if(fn.indexOf('ops4ops')>=0) return 'ops4ops';
-        // 6. Story no Backlog → Tab Backlog/Refinamento
-        if(fn.indexOf('backlog')>=0) return 'backlog';
-        // 7. QTD Epicos → Tab Qtd Story/Épicos
-        if(fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
-        // Heurística de conteúdo: ≥90% Product Backlog → backlog; senão → stories
+        // Nenhum nome de arquivo reconhecido: heurística de conteúdo
+        // (≥90% Product Backlog → backlog; senão → stories).
         return (pbCnt/historiaCnt>=0.9)?'backlog':'stories';
       }
+      // Nem nome de arquivo nem amostra de conteúdo bateram para este
+      // cabeçalho: continua procurando outro cabeçalho candidato (próxima
+      // linha/aba) em vez de decidir errado com base em nada.
     }
   }
   // Fallback para detectores já existentes (formatos anteriores)
