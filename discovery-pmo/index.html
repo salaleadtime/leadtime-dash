@@ -5233,6 +5233,12 @@
     .ops4ops-table a:hover { text-decoration: underline; }
     .ops4ops-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: #f4f2fd; font-size: 10px; font-weight: 700; white-space: nowrap; }
     .ops4ops-status-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--jira-status-color); }
+    .ops4ops-copy-btn { border: none; background: transparent; cursor: pointer; padding: 0 0 0 5px; font-size: 11px; line-height: 1; color: #8a97ab; opacity: .45; vertical-align: middle; }
+    .ops4ops-copy-btn:hover { opacity: 1; color: #344054; }
+    .ops4ops-squad-breakdown { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f6; font-size: 11px; color: #5e6d80; }
+    .ops4ops-squad-breakdown strong { color: #102a56; }
+    .ops4ops-search-input { display: block; width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 8px 12px; font-size: 12.5px; border: 1px solid var(--line); border-radius: 10px; background: #fbfcff; color: #344054; }
+    .ops4ops-search-input:focus { outline: none; border-color: #b7c3d6; background: #fff; }
     .ops4ops-link-row { display: flex; gap: 5px; margin-top: 5px; }
     .ops4ops-link-select { max-width: 220px; font-size: 10.5px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: #344054; }
 
@@ -17128,12 +17134,46 @@
       return n;
     }
 
+    // Parser do formato de data do export do Jira ("10/ago/26 8:51 AM") — meses
+    // abreviados em PT-BR, ano com 2 dígitos. Date.parse nativo não entende esse
+    // formato, então não dá pra usar direto.
+    const OPS4OPS_PT_MONTHS = { jan: 0, fev: 1, mar: 2, abr: 3, mai: 4, jun: 5, jul: 6, ago: 7, set: 8, out: 9, nov: 10, dez: 11 };
+    function parseJiraExportDate(str) {
+      const m = String(str || '').trim().match(/^(\d{1,2})\/([A-Za-zçÇ]{3})\/(\d{2,4})[ ,]+(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (!m) return null;
+      const day = parseInt(m[1], 10);
+      const month = OPS4OPS_PT_MONTHS[stripAccentsLower(m[2]).slice(0, 3)];
+      if (month === undefined) return null;
+      let year = parseInt(m[3], 10);
+      if (year < 100) year += 2000;
+      let hour = parseInt(m[4], 10) % 12;
+      if ((m[6] || '').toUpperCase() === 'PM') hour += 12;
+      const d = new Date(year, month, day, hour, parseInt(m[5], 10));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Histórias já em desenvolvimento (nunca as concluídas/canceladas — não faz
+    // sentido cobrar atualização de algo que já terminou) sem atualização recente
+    // no Jira viram sinal de possível parada.
+    const OPS4OPS_STALE_DAYS = 7;
+    function ops4opsDaysSinceUpdate(story) {
+      const d = parseJiraExportDate(story?.updated);
+      return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : null;
+    }
+    function ops4opsIsStale(story) {
+      const cls = jiraStatusClass(story.status);
+      if (cls === 'done' || cls === 'cancelled') return false;
+      const days = ops4opsDaysSinceUpdate(story);
+      return days !== null && days >= OPS4OPS_STALE_DAYS;
+    }
+
     function renderOps4opsSideCard() {
       const rows = collectOps4opsRows();
       const backlogCount = countOps4opsBacklog();
       const counts = { done: 0, progress: 0, backlog: 0, cancelled: 0 };
       const epicKeys = new Set(), initiativeIds = new Set(), incompleteInitiativeIds = new Set();
-      let unassignedCount = 0;
+      const squadCounts = new Map();
+      let unassignedCount = 0, staleCount = 0;
       rows.forEach(({ project, story }) => {
         counts[jiraStatusClass(story.status)]++;
         if (story.epicKey) epicKeys.add(story.epicKey);
@@ -17141,11 +17181,18 @@
           initiativeIds.add(project.id);
           if (ops4opsInitiativeWarnings(project).length) incompleteInitiativeIds.add(project.id);
         } else unassignedCount++;
+        const squadLabel = story.team || 'Sem squad no Jira';
+        squadCounts.set(squadLabel, (squadCounts.get(squadLabel) || 0) + 1);
+        if (ops4opsIsStale(story)) staleCount++;
       });
       const legendHtml = Object.keys(JIRA_STATUS_COLORS)
         .filter(key => counts[key] > 0)
         .map(key => `<span><i style="--jira-status-color:${JIRA_STATUS_COLORS[key]}"></i>${JIRA_STATUS_LABELS[key]} <strong>${counts[key]}</strong></span>`)
         .join('') || '<span>Nenhuma história em desenvolvimento com rótulo "Ops4Ops" no momento.</span>';
+      const squadBreakdownHtml = Array.from(squadCounts.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'))
+        .map(([squad, count]) => `<span>${escapeHtml(squad)} <strong>${count}</strong></span>`)
+        .join('');
       return `<section class="ux-v6-side-card ops4ops-overview-card" style="grid-column:1 / -1">
           <div class="ux-v6-side-title"><strong>Ops4Ops — Em Desenvolvimento</strong><span class="ux-v6-side-link" onclick="openOps4opsModal()" style="cursor:pointer" title="Ver todas as histórias Ops4Ops que já saíram do Product Backlog">Ver detalhes</span></div>
           <div class="jira-summary-grid">
@@ -17154,7 +17201,9 @@
             <div class="jira-summary-metric"><strong>${initiativeIds.size}</strong><span>Iniciativas</span></div>
           </div>
           <div class="jira-status-legend" style="margin-top:10px">${legendHtml}</div>
+          ${squadBreakdownHtml ? `<div class="ops4ops-squad-breakdown">${squadBreakdownHtml}</div>` : ''}
           ${backlogCount ? `<div class="exec-note" style="margin-top:8px">+${backlogCount} história(s) Ops4Ops ainda em Product Backlog (não exibidas aqui — só o que já está com a squad).</div>` : ''}
+          ${staleCount ? `<div class="exec-note" style="margin-top:8px;color:#a15c00">⏱ ${staleCount} história(s) sem atualização no Jira há ${OPS4OPS_STALE_DAYS}+ dias — ver detalhes em "Ver detalhes".</div>` : ''}
           ${unassignedCount ? `<div class="exec-note" style="margin-top:8px;color:#a15c00">⚠ ${unassignedCount} história(s) com rótulo "Ops4Ops" sem #Nº de iniciativa válido — corrija o rótulo no Jira e reimporte. Elas aparecem em "Ver detalhes" mesmo assim.</div>` : ''}
           ${incompleteInitiativeIds.size ? `<div class="exec-note" style="margin-top:8px;color:#a15c00">⚠ ${incompleteInitiativeIds.size} iniciativa(s) vinculada(s) sem squad e/ou sem nº oficial cadastrado — ver detalhes em "Ver detalhes".</div>` : ''}
           ${rows.length || backlogCount ? '' : '<div class="exec-note" style="margin-top:8px">Use "⇪ Importar Jira" no menu lateral com o export que já traz o rótulo "Ops4Ops".</div>'}
@@ -17216,9 +17265,69 @@
         </div>`;
     }
 
+    // Botão discreto de copiar (chave do épico/história) nas células da tabela.
+    // stopPropagation/preventDefault porque o botão fica dentro do <td> ao lado
+    // de um <a> que abre o Jira — sem isso, um clique mal colocado abriria a aba.
+    function ops4opsCopyBtnHtml(text) {
+      return `<button type="button" class="ops4ops-copy-btn" title="Copiar ${escapeAttr(text)}" onclick="event.stopPropagation();event.preventDefault();ops4opsCopyToClipboard('${escapeAttr(text)}')">⧉</button>`;
+    }
+
+    function ops4opsCopyToClipboard(text) {
+      const done = () => toast(`📋 ${text} copiado`);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => ops4opsCopyFallback(text, done));
+      } else {
+        ops4opsCopyFallback(text, done);
+      }
+    }
+
+    // Fallback pra navegador/contexto sem Clipboard API (ex.: acesso não-https no
+    // ambiente do cliente) — textarea temporária + document.execCommand('copy').
+    function ops4opsCopyFallback(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); }
+      catch (e) { toast('Não foi possível copiar automaticamente — selecione o texto manualmente.'); }
+      document.body.removeChild(ta);
+    }
+
+    // Texto normalizado (sem acento, minúsculo) usado pelo filtro de busca do
+    // modal — cobre squad, tipo, status, épico, iniciativa e a história inteira,
+    // pra um termo digitado bater com qualquer coluna, não só com o título.
+    function ops4opsSearchBlob(project, story) {
+      const parts = [
+        story.team, story.tipo, story.status, story.epicKey, story.key, story.summary,
+        project ? initiativeNumber(project) : '', project ? displayProjectTitle(project) : ''
+      ];
+      return stripAccentsLower(parts.filter(Boolean).join(' '));
+    }
+
+    // Filtra as linhas da tabela no cliente, sem recarregar nada — o termo já
+    // normalizado (sem acento) é comparado contra o data-search de cada <tr>,
+    // preenchido na hora que o modal é montado.
+    function ops4opsFilterRows(term) {
+      const wrap = document.getElementById('ops4opsModalTableWrap');
+      if (!wrap) return;
+      const needle = stripAccentsLower(term || '').trim();
+      let visible = 0;
+      wrap.querySelectorAll('tbody tr[data-search]').forEach(tr => {
+        const match = !needle || tr.dataset.search.includes(needle);
+        tr.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      const noMatch = document.getElementById('ops4opsNoMatchRow');
+      if (noMatch) noMatch.style.display = visible ? 'none' : '';
+    }
+
     function openOps4opsModal() {
       const rows = collectOps4opsRows();
-      const body = rows.length ? `<div class="ops4ops-table-wrap"><table class="ops4ops-table">
+      const body = rows.length ? `
+        <input type="search" id="ops4opsSearchInput" class="ops4ops-search-input" placeholder="Buscar por squad, iniciativa, épico ou história..." oninput="ops4opsFilterRows(this.value)" autocomplete="off">
+        <div class="ops4ops-table-wrap" id="ops4opsModalTableWrap"><table class="ops4ops-table">
           <thead><tr><th>Squad</th><th>Tipo</th><th>Status</th><th>Épico</th><th>Iniciativa</th><th>História</th></tr></thead>
           <tbody>${rows.map(({ project, story }) => {
             const cls = jiraStatusClass(story.status);
@@ -17226,15 +17335,21 @@
             const initiativeCell = project
               ? `${escapeHtml(initiativeNumber(project) || '—')} · ${escapeHtml(displayProjectTitle(project))}${iniWarnings.length ? `<br><span style="color:#a15c00;font-weight:700;font-size:10px" title="Cadastro incompleto desta iniciativa — corrija em '+ Iniciativa' / 'Squads' no menu lateral.">⚠ Iniciativa ${escapeHtml(iniWarnings.join(' e '))}</span>` : ''}`
               : `<span title="Rótulo #Nº ausente ou sem iniciativa correspondente no Jira." style="color:#a15c00;font-weight:700">⚠ Sem iniciativa vinculada</span>${ops4opsInitiativePickerHtml(story)}`;
-            return `<tr>
+            const staleDays = ops4opsDaysSinceUpdate(story);
+            const staleBadge = ops4opsIsStale(story)
+              ? `<br><span style="color:#a15c00;font-weight:700;font-size:10px" title="Sem atualização no Jira há ${staleDays} dia(s) — vale confirmar com a squad se ainda está em andamento.">⏱ Parada há ${staleDays}d</span>`
+              : '';
+            return `<tr data-search="${escapeAttr(ops4opsSearchBlob(project, story))}">
               <td>${escapeHtml(story.team || '—')}</td>
               <td>${escapeHtml(story.tipo || '—')}</td>
-              <td><span class="ops4ops-status-pill" style="--jira-status-color:${JIRA_STATUS_COLORS[cls]}">${escapeHtml(story.status || '—')}</span></td>
-              <td>${story.epicKey ? `<a href="${jiraUrl(story.epicKey)}" target="_blank" rel="noopener" title="Abrir épico ${escapeAttr(story.epicKey)} no Jira">${escapeHtml(story.epicKey)}</a>` : '—'}</td>
+              <td><span class="ops4ops-status-pill" style="--jira-status-color:${JIRA_STATUS_COLORS[cls]}">${escapeHtml(story.status || '—')}</span>${staleBadge}</td>
+              <td>${story.epicKey ? `<a href="${jiraUrl(story.epicKey)}" target="_blank" rel="noopener" title="Abrir épico ${escapeAttr(story.epicKey)} no Jira">${escapeHtml(story.epicKey)}</a>${ops4opsCopyBtnHtml(story.epicKey)}` : '—'}</td>
               <td>${initiativeCell}</td>
-              <td><a href="${jiraUrl(story.key)}" target="_blank" rel="noopener" title="${escapeAttr(story.summary || '')}">${escapeHtml(story.key)} — ${escapeHtml(truncateText(story.summary, 70))}</a></td>
+              <td><a href="${jiraUrl(story.key)}" target="_blank" rel="noopener" title="${escapeAttr(story.summary || '')}">${escapeHtml(story.key)} — ${escapeHtml(truncateText(story.summary, 70))}</a>${ops4opsCopyBtnHtml(story.key)}</td>
             </tr>`;
-          }).join('')}</tbody>
+          }).join('')}
+          <tr id="ops4opsNoMatchRow" style="display:none"><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Nenhuma história bate com essa busca.</td></tr>
+          </tbody>
         </table></div>`
         : `<div class="ux-v6-attention-empty">Nenhuma história Ops4Ops em desenvolvimento no momento (ou nada foi importado ainda — use "⇪ Importar Jira" no menu lateral).</div>`;
       openModal('Ops4Ops — Em Desenvolvimento', 'Histórias com rótulo "Ops4Ops" que já saíram do Product Backlog, de todas as iniciativas, até a entrega.', body, [
