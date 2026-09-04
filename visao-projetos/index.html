@@ -6865,9 +6865,30 @@
       return sprintRows.map(row => applyOperationalUpdate({...row, sprintAtual:true}));
     }
 
+    // vpOpUpdates fica DE PROPÓSITO fora do merge server-side (apps-script-backlog.gs,
+    // ver comentário em MERGE_MAP_KEYS): o cliente faz `delete operationalUpdates[k]`
+    // pra limpar uma edição, e mesclar no servidor ressuscitaria essa exclusão. Isso
+    // significa que a única proteção contra "duas pessoas editando ao mesmo tempo, uma
+    // perde a edição da outra" precisa vir daqui — busca o vpOpUpdates mais recente do
+    // servidor e só então aplica por cima a MUDANÇA desta edição (a chave que acabou de
+    // ser setada ou removida em editingOperationalKey), em vez de reenviar a cópia local
+    // inteira (que pode estar desatualizada em relação a outras chaves salvas por outra
+    // pessoa entre o último poll e agora). Mesmo padrão de gasSaveVpQuickNote acima.
     function saveOperationalUpdates(){
       storageSet('jiraDashboardOperationalUpdates', JSON.stringify(operationalUpdates));
-      gasSaveVpData('vpOpUpdates', operationalUpdates);
+      var changedKey = editingOperationalKey;
+      var hasChangedValue = changedKey ? Object.prototype.hasOwnProperty.call(operationalUpdates, changedKey) : false;
+      var changedValue = hasChangedValue ? operationalUpdates[changedKey] : undefined;
+      gasLoadVpData('vpOpUpdates', function(err, remote){
+        var base = (!err && remote && typeof remote === 'object' && !Array.isArray(remote)) ? Object.assign({}, remote) : Object.assign({}, operationalUpdates);
+        if(changedKey){
+          if(hasChangedValue) base[changedKey] = changedValue;
+          else delete base[changedKey];
+        }
+        operationalUpdates = base;
+        storageSet('jiraDashboardOperationalUpdates', JSON.stringify(operationalUpdates));
+        gasSaveVpData('vpOpUpdates', base);
+      });
     }
 
     const initialData = initialDataRaw.map(applyRefinementRule);
@@ -9335,8 +9356,14 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       }
     }
 
+    function makeDeliveryId(){
+      return 'dlv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    }
+
     function addDelivery(){
+      const editingExisting = editingDeliveryIndex !== null && deliveries[editingDeliveryIndex];
       const delivery = {
+        id: (editingExisting && editingExisting.id) || makeDeliveryId(),
         name: normalize($('deliveryName').value) || 'Entrega sem nome',
         squad: normalize($('deliverySquad').value) || ($('squadFilter').value === 'Todas' ? '' : $('squadFilter').value),
         frente: isDeliveryExpressoSquad() ? getDeliveryFrente() : 'Todas',
@@ -9352,7 +9379,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       }else{
         deliveries.unshift(delivery);
       }
-      saveDeliveries();
+      saveDeliveries({type:'upsert', delivery});
       focusCreatedDelivery(delivery);
       clearDeliveryForm(false);
       $('deliveryForm').classList.remove('show');
@@ -9365,7 +9392,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const name = d.name || 'esta entrega final';
       showDeleteModal(name, () => {
         deliveries.splice(index, 1);
-        saveDeliveries();
+        saveDeliveries(d.id ? {type:'delete', id:d.id} : null);
         if(editingDeliveryIndex === index){
           clearDeliveryForm(false);
           $('deliveryForm').classList.remove('show');
@@ -9471,9 +9498,32 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       }).join('') : '<div class="empty">Nenhuma história encontrada para a busca atual.</div>';
     }
 
-    function saveDeliveries(){
+    // vpDeliveries fica DE PROPÓSITO fora do merge server-side (apps-script-backlog.gs,
+    // ver comentário em MERGE_MAP_KEYS): tem exclusão intencional pelo usuário, e mesclar
+    // no servidor ressuscitaria uma entrega excluída. Por isso, igual a vpOpUpdates acima,
+    // busca o vpDeliveries mais recente do servidor e aplica por cima só a MUDANÇA desta
+    // operação (a entrega cadastrada/editada, ou o id excluído) — em vez de reenviar o
+    // array local inteiro, que pode estar desatualizado em relação a uma entrega que outra
+    // pessoa cadastrou/editou entre o último poll e agora.
+    // `op` é {type:'upsert', delivery} | {type:'delete', id} | null (sem id pra rastrear —
+    // entrega antiga anterior a esta correção; nesse caso reenvia o array local mesmo).
+    function saveDeliveries(op){
       storageSet('jiraDashboardDeliveries', JSON.stringify(deliveries));
-      gasSaveVpData('vpDeliveries', deliveries);
+      gasLoadVpData('vpDeliveries', function(err, remote){
+        var base = (!err && Array.isArray(remote)) ? remote.slice() : deliveries.slice();
+        if(op && op.type === 'delete'){
+          base = base.filter(function(item){ return item && item.id !== op.id; });
+        } else if(op && op.type === 'upsert' && op.delivery){
+          var idx = base.findIndex(function(item){ return item && item.id === op.delivery.id; });
+          if(idx >= 0) base[idx] = op.delivery; else base.unshift(op.delivery);
+        } else {
+          base = deliveries.slice();
+        }
+        deliveries = base;
+        storageSet('jiraDashboardDeliveries', JSON.stringify(deliveries));
+        gasSaveVpData('vpDeliveries', base);
+        renderAll();
+      });
     }
 
     function getDeliveryStories(d){

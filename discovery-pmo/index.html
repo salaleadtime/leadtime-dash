@@ -10356,10 +10356,19 @@
       document.head.appendChild(script);
     }
 
-    function discGasLoad(cb) {
+    // Camada de "retry de conteúdo" (padrão do repo): mesmo com o transporte OK, a
+    // resposta pode chegar com ok:false (contenção de lock do lado do servidor) —
+    // tenta de novo 1x (2s de respiro) antes de repassar a falha pro chamador, em vez
+    // de tratar isso como "base vazia"/desistir na primeira tentativa.
+    function discGasLoad(cb, _retriesLeft) {
       if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
+      const retriesLeft = (_retriesLeft === undefined) ? 1 : _retriesLeft;
       _discGasJsonp(DISC_GAS_URL + '?action=getVpData&key=' + DISC_GAS_KEY + '&t=' + Date.now(), (err, json) => {
-        if (err) { if (cb) cb(err); return; }
+        if (err || (json && json.ok === false)) {
+          if (retriesLeft > 0) { setTimeout(() => discGasLoad(cb, retriesLeft - 1), 2000); return; }
+          if (cb) cb(err || 'ok:false');
+          return;
+        }
         if (json && typeof json.revision === 'number') _discLastKnownRevision = json.revision;
         if (json && json.ok && json.data) { if (cb) cb(null, json.data); }
         else { if (cb) cb(null, null); }
@@ -10371,10 +10380,15 @@
     // _discLastKnownRevision a cada carga bem-sucedida, então essa referência fica certa
     // logo depois do boot, do refresh manual ou de qualquer outra chamada normal.
     let _discLastKnownRevision = null;
-    function discGasCheckRevision(cb) {
+    function discGasCheckRevision(cb, _retriesLeft) {
       if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
+      const retriesLeft = (_retriesLeft === undefined) ? 1 : _retriesLeft;
       _discGasJsonp(DISC_GAS_URL + '?action=getRevisions&t=' + Date.now(), (err, json) => {
-        if (err || !json || !json.ok || !json.revisions) { if (cb) cb(err || 'sem dados'); return; }
+        if (err || !json || !json.ok || !json.revisions) {
+          if (retriesLeft > 0) { setTimeout(() => discGasCheckRevision(cb, retriesLeft - 1), 2000); return; }
+          if (cb) cb(err || 'sem dados');
+          return;
+        }
         const rev = json.revisions[DISC_GAS_KEY];
         if (_discLastKnownRevision !== null && rev === _discLastKnownRevision) { if (cb) cb(null, false); return; }
         discGasSyncPull((err2, applied) => { if (cb) cb(err2, true); });
@@ -10446,24 +10460,38 @@
         // nunca era reenviado e ficava só no localStorage).
         if (_discGasSaving) { scheduleDiscGasSave(); return; }
         _discGasSaving = true;
-        // Busca o estado remoto e mescla por registro antes de gravar por cima —
-        // sem isso, o save sempre reenviava o `data` local puro, e duas pessoas
-        // salvando na mesma janela de ~15s do polling faziam a segunda gravação
-        // apagar silenciosamente o que a primeira acabara de salvar, mesmo com
-        // todo o merge por registro já existente (ele só rodava na leitura).
-        discGasLoad((err, remote) => {
-          if (err || !remote || !Array.isArray(remote.projects) || !remote.projects.length) {
-            _discGasSaving = false;
-            return;
-          }
-          _discRemoteHydrated = true;
-          _discUsingFallback = false;
-          mergeRemoteIntoData(remote);
+        _discGasSavePreFetchAndSend(1);
+      }, 400);
+    }
+
+    // Busca o estado remoto e mescla por registro antes de gravar por cima — sem
+    // isso, o save sempre reenviava o `data` local puro, e duas pessoas salvando na
+    // mesma janela de ~15s do polling faziam a segunda gravação apagar silenciosamente
+    // o que a primeira acabara de salvar, mesmo com todo o merge por registro já
+    // existente (ele só rodava na leitura). Se essa busca falhar (ok:false por
+    // contenção de lock, timeout etc.), tenta de novo 1x (2s) antes de desistir — e,
+    // mesmo desistindo, NUNCA abandona a edição em silêncio: envia o `data` local sem
+    // merge, deixando confirmDiscGasSave() (chamado por dentro de discGasSave) cuidar
+    // da verificação + merge + retry no reenvio. Antes desta correção, uma falha nessa
+    // busca fazia a edição do usuário ficar presa só no localStorage até ele editar
+    // mais alguma coisa — ou pra sempre, se ele fechasse a aba antes disso.
+    function _discGasSavePreFetchAndSend(retriesLeft) {
+      discGasLoad((err, remote) => {
+        const remoteOk = !err && remote && Array.isArray(remote.projects) && remote.projects.length;
+        if (!remoteOk) {
+          if (retriesLeft > 0) { setTimeout(() => _discGasSavePreFetchAndSend(retriesLeft - 1), 2000); return; }
           storageSet(STORAGE_KEY, JSON.stringify(data));
           discGasSave(data);
           setTimeout(() => { _discGasSaving = false; }, 800);
-        });
-      }, 400);
+          return;
+        }
+        _discRemoteHydrated = true;
+        _discUsingFallback = false;
+        mergeRemoteIntoData(remote);
+        storageSet(STORAGE_KEY, JSON.stringify(data));
+        discGasSave(data);
+        setTimeout(() => { _discGasSaving = false; }, 800);
+      });
     }
 
     // Aplica a base vinda do servidor se ela for mais recente que a local. Preserva a
@@ -13509,34 +13537,6 @@
     }
 
 
-    function normalizeNeutralInitiativeNumbers(base) {
-      const projects = base?.projects || [];
-      const used = new Set();
-      let counter = 1;
-      const nextCode = () => {
-        let code = `DISC-${String(counter).padStart(3, '0')}`;
-        while (used.has(code)) {
-          counter += 1;
-          code = `DISC-${String(counter).padStart(3, '0')}`;
-        }
-        used.add(code);
-        counter += 1;
-        return code;
-      };
-      projects.forEach(project => {
-        const current = String(project.initiativeNumber || '').trim().toUpperCase();
-        if (/^DISC-\d{3,}$/.test(current) && !used.has(current)) {
-          project.initiativeNumber = current;
-          used.add(current);
-          const n = Number(current.split('-')[1]);
-          if (Number.isFinite(n)) counter = Math.max(counter, n + 1);
-        } else {
-          project.initiativeNumber = nextCode();
-        }
-      });
-      return base;
-    }
-
     function enhanceSquadData(payload) {
       const base = payload || { projects: [] };
       base.squads = Array.isArray(base.squads) ? base.squads.map(normalizeSquadRecord) : [];
@@ -13987,10 +13987,6 @@
     function normalizeNeutralInitiativeNumbers(base) {
       // Números oficiais da planilha devem ser preservados. Sem geração DISC automática nesta versão.
       return base;
-    }
-
-    function nextInitiativeNumber() {
-      return '';
     }
 
     function formatHours(value) {
