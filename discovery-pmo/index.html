@@ -10356,17 +10356,17 @@
       document.head.appendChild(script);
     }
 
-    // Camada de "retry de conteúdo" (padrão do repo): mesmo com o transporte OK, a
-    // resposta pode chegar com ok:false (contenção de lock do lado do servidor) —
-    // tenta de novo 1x (2s de respiro) antes de repassar a falha pro chamador, em vez
-    // de tratar isso como "base vazia"/desistir na primeira tentativa.
     function discGasLoad(cb, _retriesLeft) {
       if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
       const retriesLeft = (_retriesLeft === undefined) ? 1 : _retriesLeft;
       _discGasJsonp(DISC_GAS_URL + '?action=getVpData&key=' + DISC_GAS_KEY + '&t=' + Date.now(), (err, json) => {
-        if (err || (json && json.ok === false)) {
-          if (retriesLeft > 0) { setTimeout(() => discGasLoad(cb, retriesLeft - 1), 2000); return; }
-          if (cb) cb(err || 'ok:false');
+        if (err) { if (cb) cb(err); return; }
+        // Retry de conteúdo: o transporte pode responder OK mesmo com o servidor
+        // devolvendo ok:false (lock do Apps Script ocupado por outra ação — ver
+        // "Padrão de resiliência" no CLAUDE.md). Sem isso, essa contenção
+        // transitória virava "tela não carrega" sem nenhuma nova tentativa.
+        if ((!json || !json.ok) && retriesLeft > 0) {
+          setTimeout(() => discGasLoad(cb, retriesLeft - 1), 2000);
           return;
         }
         if (json && typeof json.revision === 'number') _discLastKnownRevision = json.revision;
@@ -10631,6 +10631,27 @@
     // applyRemoteDiscData para ser reaproveitado também no caminho de SAVE — antes,
     // só o polling mesclava; o save sempre sobrescrevia o servidor com o `data`
     // local puro, perdendo o que outra aba tivesse acabado de salvar.
+    // Mescla o mapa key->{ini,ts} de jiraStoryInitiativeOverrides por RECÊNCIA (ts),
+    // igual ao critério usado pelos demais merges deste arquivo (mergeProjectRecord,
+    // mergeNestedById) — em vez de "o lado local sempre vence" (Object.assign com
+    // local por último), que descartaria silenciosamente uma correção mais nova vinda
+    // de outro navegador sempre que o local ainda tivesse um valor antigo em cache
+    // para a mesma história.
+    function mergeOverridesByRecency(local, remote) {
+      const merged = {};
+      const keys = new Set([...Object.keys(local || {}), ...Object.keys(remote || {})]);
+      keys.forEach(key => {
+        const l = local && local[key];
+        const r = remote && remote[key];
+        if (l && r) {
+          merged[key] = (Date.parse(r.ts || '') || 0) > (Date.parse(l.ts || '') || 0) ? r : l;
+        } else {
+          merged[key] = l || r;
+        }
+      });
+      return merged;
+    }
+
     function mergeRemoteIntoData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
       const normalizedRemote = normalizeData(deepClone(remote));
@@ -10639,7 +10660,17 @@
       const projectsMerge = mergeProjectsById(data.projects, normalizedRemote.projects, deletedIds);
       const squadsMerge = mergeById(data.squads, normalizedRemote.squads, deletedIds);
       const historyMerge = mergeById(data.importHistory, normalizedRemote.importHistory);
-      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
+      // Histórias órfãs do Ops4Ops (rótulo #Nº ausente/errado) e os vínculos manuais
+      // feitos em "Ver detalhes" (jiraStoryInitiativeOverrides) também são estado
+      // compartilhado — sem entrar aqui, ficavam de fora de todo merge (inclusive o do
+      // primeiro load) e o próximo save de QUALQUER outro usuário sobrescrevia essas
+      // duas listas no servidor com a cópia local desatualizada, apagando em silêncio
+      // o que outro navegador tinha acabado de importar/vincular.
+      const unassignedMerged = mergeNestedById(data.unassignedJiraStories, normalizedRemote.unassignedJiraStories, deletedIds);
+      const overridesMerged = mergeOverridesByRecency(data.jiraStoryInitiativeOverrides, normalizedRemote.jiraStoryInitiativeOverrides);
+      const unassignedChanged = JSON.stringify(unassignedMerged) !== JSON.stringify(data.unassignedJiraStories || []);
+      const overridesChanged = JSON.stringify(overridesMerged) !== JSON.stringify(data.jiraStoryInitiativeOverrides || {});
+      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed && !unassignedChanged && !overridesChanged) return false;
       if (!projectsMerge.list.length) return false; // nunca fica sem nenhuma iniciativa por causa do merge
 
       data.tombstones = tombstones;
@@ -10648,6 +10679,8 @@
       data.importHistory = historyMerge.list
         .sort((a, b) => (Date.parse(b.at || '') || 0) - (Date.parse(a.at || '') || 0))
         .slice(0, 30);
+      data.unassignedJiraStories = unassignedMerged;
+      data.jiraStoryInitiativeOverrides = overridesMerged;
       // Flags de migração única (ex.: reset de cards, sync de nomes de squad) também
       // precisam propagar — sem isso, uma base remota que ainda não tem a flag faria
       // a migração "de uma vez só" rodar de novo a cada poll sobre o clone normalizado.
@@ -10714,8 +10747,8 @@
     // uma revisão nova (raro). Se a líder fechar, o heartbeat expira e outra aba assume
     // sozinha, sem F5. localStorage indisponível faz a aba agir sozinha, como antes.
     const _discTabId = Date.now() + '_' + Math.random().toString(36).slice(2);
-    const _discLeaderKey = 'sala_leader_discovery_v1';
-    const _discSharedRevKey = 'sala_shared_rev_discovery_v1';
+    const _discLeaderSlot = 'sala_leader_discovery_v1';
+    const _discSharedRevSlot = 'sala_shared_rev_discovery_v1';
     const _discLeaderStaleMs = 75000; // 2.5x o intervalo de 30s
     let _discLastInteraction = Date.now();
     const _discIdleMs = 300000; // 5min sem interação numa aba visível = "esquecida"
@@ -10727,18 +10760,18 @@
       try {
         const now = Date.now();
         let leader = null;
-        try { leader = JSON.parse(localStorage.getItem(_discLeaderKey)); } catch (e) {}
+        try { leader = JSON.parse(localStorage.getItem(_discLeaderSlot)); } catch (e) {}
         const amLeader = leader && leader.id === _discTabId;
         const leaderStale = !leader || (now - leader.heartbeat) > _discLeaderStaleMs;
-        if (amLeader || leaderStale) { localStorage.setItem(_discLeaderKey, JSON.stringify({ id: _discTabId, heartbeat: now })); return true; }
+        if (amLeader || leaderStale) { localStorage.setItem(_discLeaderSlot, JSON.stringify({ id: _discTabId, heartbeat: now })); return true; }
         return false;
       } catch (e) { return true; }
     }
     function _discPublishRevision() {
-      try { if (typeof _discLastKnownRevision === 'number') localStorage.setItem(_discSharedRevKey, String(_discLastKnownRevision)); } catch (e) {}
+      try { if (typeof _discLastKnownRevision === 'number') localStorage.setItem(_discSharedRevSlot, String(_discLastKnownRevision)); } catch (e) {}
     }
     window.addEventListener('storage', ev => {
-      if (ev.key !== _discSharedRevKey || ev.newValue == null) return;
+      if (ev.key !== _discSharedRevSlot || ev.newValue == null) return;
       const rev = Number(ev.newValue);
       if (!isNaN(rev) && rev !== _discLastKnownRevision) discGasSyncPull();
     });
@@ -13766,14 +13799,13 @@
       const squad = isEdit ? squadById(squadId) : { id: uid('squad'), name: '', code: '', business: '', rteOwner: '', owner: '', techLead: '' };
       if (!squad) { toast('Squad não encontrada'); return; }
       modalState = { type: 'squad', isEdit, squad: deepClone(squad), originalSquadId: squadId };
-      openModal(isEdit ? 'Editar Squad' : 'Cadastro de Squads', 'Cadastre a Squad uma vez e reutilize em várias iniciativas. O número da iniciativa é sequencial e independente da sigla.', `
-        <div class="automation-note"><span class="automation-dot"></span><div><strong>Cadastro único por Squad</strong>A Squad organiza as iniciativas, mas o Nº da Iniciativa é neutro e sequencial: exemplo DISC-001, DISC-002.</div></div>
+      openModal(isEdit ? 'Editar Squad' : 'Cadastro de Squads', 'Cadastre a Squad uma vez e reutilize em várias iniciativas.', `
+        <div class="automation-note"><span class="automation-dot"></span><div><strong>Cadastro único por Squad</strong>A Squad organiza as iniciativas. O Nº da Iniciativa é o número oficial da planilha, informado no cadastro de cada iniciativa.</div></div>
         ${squadListHtml(squadId || '')}
         <div class="form-grid">
           ${field('Nome da Squad', 'squad-name', squad.name)}
           ${field('Tech Lead padrão', 'squad-tech-lead', squad.techLead || '')}
           ${field('RTE padrão', 'squad-rte-owner', squad.rteOwner)}
-          <div class="form-field"><label>Próximo Nº previsto</label><input type="text" readonly value="${escapeAttr(nextInitiativeNumber(squad.id))}" /></div>
         </div>
       `, [
         isEdit ? `<button type="button" class="btn" onclick="deleteSquad('${squad.id}')">Excluir</button>` : '',
@@ -16792,8 +16824,8 @@
         let tag = rec.tag || '';
         let project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         if (!project && overrides[rec.key]) {
-          tag = overrides[rec.key];
-          project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag));
+          tag = overrides[rec.key].ini || '';
+          project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         }
         if (!tag) { untagged++; unassignedRecords.push(rec); return; }
         if (!project) { unmatchedTags.add(tag); unassignedRecords.push(rec); return; }
@@ -17171,7 +17203,10 @@
       const ini = initiativeNumber(project);
       if (!ini) { toast('Essa iniciativa não tem nº oficial cadastrado — não é possível vincular por aqui.'); return; }
       data.jiraStoryInitiativeOverrides = data.jiraStoryInitiativeOverrides || {};
-      data.jiraStoryInitiativeOverrides[key] = ini;
+      // Guarda com timestamp (não só o nº da iniciativa) para o merge entre
+      // navegadores poder resolver por recência em vez de "local sempre vence" —
+      // ver mergeOverridesByRecency em mergeRemoteIntoData.
+      data.jiraStoryInitiativeOverrides[key] = { ini, ts: new Date().toISOString() };
       project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
       const existing = project.jiraStories.find(s => s.key === key);
       const fields = { key: story.key, epicKey: story.epicKey, summary: story.summary, status: story.status, team: story.team, labels: story.labels, created: story.created, updated: story.updated, tipo: story.tipo };
@@ -17813,8 +17848,13 @@
   <script src="senior-initiatives-view.js?v=20260811-1"></script>
   <script>
     /* Compatibilidade de publicação: mantém a carteira navegável mesmo quando o
-       navegador bloqueia o arquivo externo recém-publicado. Não cria nova base. */
+       navegador bloqueia o arquivo externo recém-publicado. Não cria nova base.
+       Só entra em ação quando senior-initiatives-view.js NÃO carregou — sem essa
+       guarda, este bloco (que roda depois, sempre) sobrescrevia openSeniorInitiativesView/
+       setSeniorInitiativeFilter incondicionalmente e tornava o arquivo externo (com
+       dashboardPortfolioMode/openSquadsExecutiveView) morto mesmo quando ele carregava bem. */
     (function () {
+      if (typeof window.openSeniorInitiativesView === 'function') return;
       const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const cut = (v, n = 100) => { const t = String(v || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
       const state = s => ({'Crítico':'crit','Atenção':'warn','Concluído':'good'})[s] || 'good';
