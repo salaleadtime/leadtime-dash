@@ -1402,10 +1402,6 @@ body{min-height:100vh}
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17V7l5 5-5 5z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
     <span>🎯 Visão de Projetos</span>
   </a>
-  <a class="tbtn" href="discovery-pmo/" style="background:linear-gradient(135deg,#bf1830,#8e1125);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(191,24,48,.4);text-decoration:none" title="Discovery PMO Tracker · Acompanhamento de Discovery por Iniciativa">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <span>🔍 Discovery PMO</span>
-  </a>
   <button class="tbtn" id="jbBtn" onclick="openJB()" title="Conectar ao JSONBin para sincronizar em tempo real com o time">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
     <span id="jbBtnLabel">☁️ Nuvem Tempo Real</span>
@@ -2169,16 +2165,15 @@ tr:nth-child(even):hover td,
   <div class="sv-upbar" id="opsUpbar">
     <span style="font-size:13px;flex-shrink:0">🔧</span>
     <span class="sv-up-name" id="opsUpName">Ops4Ops · dados do Discovery</span>
-    <span class="sv-up-sub" id="opsUpSub">As histórias são importadas e sincronizadas pelo Discovery PMO Tracker.</span>
+    <span class="sv-up-sub" id="opsUpSub">Discovery PMO Tracker descontinuado — dados mantidos apenas para consulta histórica.</span>
     <span class="up-saved hidden" id="opsUpSaved">☁️ <span id="opsUpSavedTxt">Aguardando sincronização</span></span>
-    <a class="up-btn" href="discovery-pmo/" style="text-decoration:none">Abrir Discovery</a>
   </div>
 
   <div class="ep" id="ops4opsContent">
     <div class="empty" style="padding:2rem 2rem;text-align:center">
       <div style="font-size:28px;margin-bottom:.6rem">🔧</div>
       <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado do Ops4Ops disponível ainda</div>
-      <div style="font-size:12px;color:#94a3b8">Importe e sincronize as histórias no Discovery PMO Tracker.</div>
+      <div style="font-size:12px;color:#94a3b8">Discovery PMO Tracker descontinuado — sem nova sincronização disponível.</div>
     </div>
   </div>
   </section>
@@ -6189,9 +6184,9 @@ function gasLoadOps4opsFromDiscovery(cb, _retries){
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
 function loadOps4opsXlsx(file){
-  // Fonte única: a importação é feita no Discovery PMO Tracker.
-  // Esta aba não aceita carga local, mesmo se a função for chamada indiretamente.
-  toast('Ops4Ops é gerenciado pelo Discovery','Abra o Discovery PMO Tracker para importar ou atualizar as histórias.','warn');
+  // Discovery PMO Tracker foi descontinuado — esta aba não aceita mais carga
+  // local nem tem fonte de atualização, mesmo se a função for chamada indiretamente.
+  toast('Ops4Ops indisponível','Discovery PMO Tracker foi descontinuado — sem fonte de atualização disponível.','warn');
   return;
   if(typeof XLSX==='undefined'){
     loadXlsxLib(function(){loadOps4opsXlsx(file);});
@@ -6270,7 +6265,7 @@ function renderOps4opsView(){
         '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
         '<div style="font-size:28px;margin-bottom:.6rem">⚠️</div>'+
         '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Não foi possível sincronizar o Ops4Ops</div>'+
-        '<div style="font-size:12px;color:#94a3b8">Tente atualizar novamente. Os dados permanecem no Discovery PMO Tracker.</div>'+
+        '<div style="font-size:12px;color:#94a3b8">Tente atualizar novamente. Discovery PMO Tracker foi descontinuado.</div>'+
         '</div>';
       return;
     }
@@ -6278,7 +6273,7 @@ function renderOps4opsView(){
       '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
       '<div style="font-size:28px;margin-bottom:.6rem">🔧</div>'+
       '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado do Ops4Ops disponível ainda</div>'+
-      '<div style="font-size:12px;color:#94a3b8">Importe e sincronize as histórias no Discovery PMO Tracker.</div>'+
+      '<div style="font-size:12px;color:#94a3b8">Discovery PMO Tracker descontinuado — sem nova sincronização disponível.</div>'+
       '</div>';
     return;
   }
@@ -7383,23 +7378,6 @@ function loadMultipleFiles(files, propagate){
     }catch(e){ return false; }
   }
 
-  // O vínculo Épico↔Iniciativa usado pelo Discovery PMO Tracker vem do rótulo "#Nº"
-  // das HISTÓRIAS, não do arquivo de Épicos em si (que só lista o épico, sem rótulo
-  // de iniciativa). Por isso propaga a lista de fontes (épicos + todo arquivo que
-  // tenha história com "Chave do item") em vez de só o arquivo de épicos — antes,
-  // só o arquivo de épicos ia para o Discovery PMO e, como ele nunca tem "#Nº",
-  // a importação lá sempre dava zero grupos vinculados, mesmo com "Importar em Todos".
-  function _saveCrossImportSources(key, sources, mainFileName){
-    try{
-      var payload=sources.map(function(s){
-        var ws=s.wb.Sheets[s.wb.SheetNames[0]];
-        return {matrix:XLSX.utils.sheet_to_json(ws,{header:1,defval:''}), fileName:s.file.name};
-      });
-      storageSet(key,JSON.stringify({sources:payload,fileName:mainFileName,savedAt:new Date().toISOString()}));
-      return true;
-    }catch(e){ return false; }
-  }
-
   function processWhenReady(){
     // Portão de segurança: somente depois de todos os arquivos serem lidos e
     // validados localmente é permitido chamar handlers que gravam dados.
@@ -7412,20 +7390,6 @@ function loadMultipleFiles(files, propagate){
       loadXlsx(detected.epics.file);
       lines.push('📊 Épicos → Tab Épicos');
     }
-    if(propagate){
-      // Junta épicos + qualquer arquivo com histórias (Acomp. Geral, Sprint Ativa, QTD
-      // Épicos, Backlog, Homologação): o rótulo "#Nº da iniciativa" que liga cada
-      // história ao Discovery PMO Tracker só existe nesses arquivos de história.
-      var jiraSources=[];
-      if(detected.epics) jiraSources.push(detected.epics);
-      if(detected.stories) jiraSources.push(detected.stories);
-      jiraSources=jiraSources.concat(detected.backlog, detected.ops4ops, detected.sprint_visao, detected.general_visao, detected.homologation_visao);
-      if(jiraSources.length){
-        var okEp=_saveCrossImportSources('sala_cross_import_epics_v1',jiraSources,jiraSources[0].file.name);
-        lines.push(okEp ? '🧭 Épicos & Histórias → propagado para Discovery PMO Tracker automaticamente'
-                        : '🧭 Épicos & Histórias → abra o Discovery PMO Tracker e use "⇪ Importar Jira"');
-      }
-    }
     if(detected.stories){
       loadStoriesXlsx(detected.stories.file);
       lines.push('📋 QTD Story/Épicos → Tab Qtd Story/Épicos');
@@ -7435,7 +7399,7 @@ function loadMultipleFiles(files, propagate){
       lines.push('📥 Backlog → Tab Backlog/Refinamento');
     });
     if(detected.ops4ops.length){
-      lines.push('🔧 Ops4Ops → propagado para Discovery PMO Tracker (não mistura com Backlog)');
+      lines.push('🔧 Ops4Ops → Discovery PMO Tracker descontinuado, arquivo ignorado');
     }
     if(detected.sprint_visao.length){
       if(propagate){
