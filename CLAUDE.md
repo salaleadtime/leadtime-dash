@@ -1,12 +1,45 @@
 # leadtime-dash — guia para trabalhar neste repositório
 
+## Status atual: Discovery PMO Tracker descontinuado (09/09/2026)
+
+A pasta `discovery-pmo/` (Discovery PMO Tracker, cliente JSONP `_discGasJsonp`,
+e seu relatório semanal `discovery-pmo/report-semanal.html`) foi **removida
+deste repositório** a pedido explícito da pessoa responsável — a ferramenta
+não estava atendendo o cliente e a solicitação foi descontinuar pra parar de
+consumir recursos (chamadas ao Apps Script, quota). `https://.../discovery-pmo/`
+dá 404 no GitHub Pages desde então. O código completo continua no histórico
+do git (branch `main`, commits até `879aaad` e anteriores) — reversível, mas
+**não recrie essa pasta sem confirmar antes com a pessoa responsável.**
+
+O que isso muda pra sessões futuras:
+
+- As seções abaixo que descrevem `discovery-pmo/` (arquitetura, exemplos de
+  entrega, checklist de importação, histórico de incidentes) foram deixadas
+  como **registro técnico histórico** — o raciocínio dos padrões de
+  resiliência/polling/eleição de líder documentados ali continua válido e se
+  aplica a `index.html` e `visao-projetos/`, só não há mais uma página viva
+  pra aplicar contra.
+- `index.html` ainda tem um painel "Ops4Ops" que **dependia** de dados
+  importados no Discovery PMO Tracker. Ele foi deixado como está (não foi
+  pedido remover) — mostra dado congelado (sem forma de importar algo novo) e
+  ainda faz uma leitura ao Apps Script (`getOps4opsData`) uma vez por
+  carregamento de página. Os textos desse painel foram corrigidos pra não
+  instruir mais ninguém a "abrir o Discovery PMO Tracker".
+- O botão "🌐 Importar Tudo" não propaga mais nada pro Discovery (função
+  `_saveCrossImportSources` removida de `index.html`) — arquivo do tipo
+  `ops4ops` (item 7 da tabela de importação abaixo) é detectado e ignorado.
+- No ambiente do cliente (cópia manual fora deste repo), alguém com acesso
+  lá precisa apagar a pasta `discovery-pmo/` manualmente — isso não acontece
+  sozinho só com o merge em `main`.
+
 ## Diretriz permanente
 
 Toda melhoria ou correção precisa funcionar **para todos os usuários, em qualquer
 navegador**, de forma consistente — não só "no meu teste". Isso não é negociável
-por página ou por feature: vale para o dashboard principal, para o Discovery PMO
-Tracker, para a Visão de Projetos e para qualquer página nova que vier a existir
-aqui. Concretamente, isso significa:
+por página ou por feature: vale para o dashboard principal, para a Visão de
+Projetos e para qualquer página nova que vier a existir aqui (o Discovery PMO
+Tracker foi descontinuado — ver seção "Status atual" acima). Concretamente,
+isso significa:
 
 - Toda chamada nova ao Apps Script (JSONP) precisa ter timeout e retry
   automático — nunca uma chamada de tentativa única. Veja "Padrão de
@@ -35,10 +68,9 @@ arquivo:
 
 - `index.html` — dashboard principal ("SALA — Lead Time"). Cliente JSONP:
   `_gasJsonp`.
-- `discovery-pmo/index.html` — Discovery PMO Tracker. Cliente JSONP:
-  `_discGasJsonp`.
-- `discovery-pmo/report-semanal.html` — relatório semanal do Discovery.
-  Cliente JSONP: `jsonp` (baseado em Promise).
+- ~~`discovery-pmo/index.html` — Discovery PMO Tracker~~ e
+  ~~`discovery-pmo/report-semanal.html`~~ — **descontinuados e removidos do
+  repositório em 09/09/2026** (ver "Status atual" no topo deste arquivo).
 - `visao-projetos/index.html` — Visão de Projetos. Cliente JSONP:
   `_vpGasJsonp`.
 - `visao-projetos/report-semanal-operacional.html` — relatório semanal
@@ -54,8 +86,7 @@ gera uma URL `/exec` diferente e quebra todo mundo que aponta pra URL antiga).
 também uma cópia hospedada no ambiente do cliente (fora deste repositório),
 mantida por substituição manual de arquivo, espelhando **a mesma estrutura de
 pastas deste repositório** (ex.: `visao-projetos/index.html` daqui vai na
-pasta `visao-projetos/` de lá, `discovery-pmo/index.html` vai em
-`discovery-pmo/`, etc.). É essa cópia que os usuários reais normalmente
+pasta `visao-projetos/` de lá, etc.). É essa cópia que os usuários reais normalmente
 acessam, não necessariamente a URL pública do GitHub Pages. Por isso,
 "mesclou em `main`" não é o mesmo que "chegou em quem usa de verdade".
 
@@ -99,7 +130,9 @@ validado:
 | 1 | `index.html` | Raiz do projeto |
 | 2 | `apps-script-backlog.gs` | Não é arquivo de pasta — precisa ser colado no editor do Google Apps Script e implantado como Nova versão (não é upload de arquivo) |
 | 3 | `visao-projetos/index.html` | Pasta `visao-projetos/` |
-| 4 | `discovery-pmo/index.html` | Pasta `discovery-pmo/` |
+
+(exemplo histórico — a linha 4 original citava `discovery-pmo/index.html`,
+descontinuado em 09/09/2026; ver "Status atual" no topo deste arquivo.)
 
 Arquivos deste repositório que **não fazem parte do espelho** (não precisam
 ser entregues, mesmo que alterados) — confirmado pela pessoa responsável:
@@ -123,9 +156,11 @@ funciona normalmente e não avisa nada de errado) — só atualiza as áreas
 correspondentes aos arquivos entregues, e o resto do site continua com o
 dado antigo até a próxima importação que inclua o que falta.
 
-Pra atualizar **tudo de uma vez** (dashboard principal, Discovery PMO
-Tracker e Visão de Projetos), a rotina precisa reunir os 7 relatórios do
-Jira abaixo antes de clicar em "Importar Tudo":
+Pra atualizar **tudo de uma vez** (dashboard principal e Visão de
+Projetos — o Discovery PMO Tracker foi descontinuado em 09/09/2026, ver
+"Status atual" no topo; o arquivo 7 abaixo hoje é detectado e ignorado), a
+rotina precisa reunir os relatórios do Jira abaixo antes de clicar em
+"Importar Tudo":
 
 | # | Arquivo (contém no nome) | Tipo detectado | Atualiza |
 |---|---|---|---|
@@ -135,15 +170,15 @@ Jira abaixo antes de clicar em "Importar Tudo":
 | 4 | Acomp. Geral (Todas Squads) | `general_visao` | Visão de Projetos |
 | 5 | Sprint ativa (Story, Melhorias e Bug) | `sprint_visao` | Visão de Projetos |
 | 6 | Story em Homologação com data | `homologation_visao` | Visão de Projetos + SLA |
-| 7 | Ops4Ops Refinada x Backlog | `ops4ops` | Discovery PMO Tracker |
+| 7 | Ops4Ops Refinada x Backlog | `ops4ops` | Nada (Discovery PMO Tracker descontinuado — arquivo detectado e ignorado) |
 
 Note que o arquivo 7 tem "Backlog" no nome mas **nunca** vai para a tab
 Backlog do dashboard principal — `detectUnifiedFileType` prioriza a
 detecção de "ops4ops" no nome de propósito (comentário no código: "Ops4Ops
 tem a mesma estrutura e pode conter 'Backlog' no nome, mas sua fonte é o
-Discovery PMO — nunca pode entrar no Backlog geral"). Quem não souber
-disso pode achar que importou o Backlog quando na verdade importou pro
-Discovery.
+Discovery PMO — nunca pode entrar no Backlog geral"). Esse desvio de rota
+continua existindo mesmo com o Discovery descontinuado — só evita que o
+arquivo 7 seja importado sem querer como Backlog geral.
 
 **Sintoma de quando falta o arquivo 3 especificamente**: uma história que
 já apareceu em Demandas Emergenciais (via snapshot de Backlog confirmado)
