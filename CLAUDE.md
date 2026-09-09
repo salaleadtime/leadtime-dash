@@ -76,6 +76,16 @@ pedido de novo a cada vez):
    etc.).
 5. Se mais de um arquivo mudou, entregar todos juntos, prontos pra
    substituir de uma vez — não em rodadas separadas.
+6. Além de enviar os arquivos individualmente, entregar também um **.zip**
+   com todos os arquivos tocados na sessão, cada um dentro da mesma
+   subpasta indicada na 2ª coluna da tabela do item 1+2 (ex.:
+   `visao-projetos/index.html` dentro de uma pasta `visao-projetos/` no
+   zip, `index.html` na raiz do zip) — pra dar pra descompactar direto por
+   cima do ambiente do cliente, sem renomear nem mover nada na mão.
+   `apps-script-backlog.gs`, quando fizer parte da entrega, entra no zip na
+   raiz mesmo assim (é só um arquivo a mais pra referência/backup — o aviso
+   do item 3 sobre colar no editor do Apps Script continua valendo do mesmo
+   jeito, o zip não muda isso).
 
 **Formato validado pela pessoa responsável para o item 1+2**: uma tabela
 `# | Arquivo | Onde substituir no ambiente do cliente`, uma linha por
@@ -101,6 +111,50 @@ ele faz parte do espelho ou não — não adivinhe.
 
 `BACKLOG_SCRIPT_VERSION` no topo do arquivo deve ser incrementado a cada
 mudança, e conferido via `?action=health` depois do redeploy.
+
+## Checklist de importação completa (Jira → dashboard)
+
+O botão "🌐 Importar Tudo" (`index.html`, função `loadMultipleFiles` /
+`detectUnifiedFileType`) aceita vários arquivos de uma vez e roteia **cada
+um automaticamente** pro destino certo, por nome/conteúdo do arquivo — não
+existe uma etapa manual de "escolher pra onde vai". Isso é importante
+porque **importar só parte dos arquivos não é erro** (a importação
+funciona normalmente e não avisa nada de errado) — só atualiza as áreas
+correspondentes aos arquivos entregues, e o resto do site continua com o
+dado antigo até a próxima importação que inclua o que falta.
+
+Pra atualizar **tudo de uma vez** (dashboard principal, Discovery PMO
+Tracker e Visão de Projetos), a rotina precisa reunir os 7 relatórios do
+Jira abaixo antes de clicar em "Importar Tudo":
+
+| # | Arquivo (contém no nome) | Tipo detectado | Atualiza |
+|---|---|---|---|
+| 1 | Épicos Pós-Identificado | `epics` | Tab Épicos |
+| 2 | Qtd Épicos atrelados a Story | `stories` | Tab 📋 Qtd Story/Épicos |
+| 3 | Story no Backlog Refinadas | `backlog` | Tab Backlog/Refinamento + **Demandas Emergenciais** |
+| 4 | Acomp. Geral (Todas Squads) | `general_visao` | Visão de Projetos |
+| 5 | Sprint ativa (Story, Melhorias e Bug) | `sprint_visao` | Visão de Projetos |
+| 6 | Story em Homologação com data | `homologation_visao` | Visão de Projetos + SLA |
+| 7 | Ops4Ops Refinada x Backlog | `ops4ops` | Discovery PMO Tracker |
+
+Note que o arquivo 7 tem "Backlog" no nome mas **nunca** vai para a tab
+Backlog do dashboard principal — `detectUnifiedFileType` prioriza a
+detecção de "ops4ops" no nome de propósito (comentário no código: "Ops4Ops
+tem a mesma estrutura e pode conter 'Backlog' no nome, mas sua fonte é o
+Discovery PMO — nunca pode entrar no Backlog geral"). Quem não souber
+disso pode achar que importou o Backlog quando na verdade importou pro
+Discovery.
+
+**Sintoma de quando falta o arquivo 3 especificamente**: uma história que
+já apareceu em Demandas Emergenciais (via snapshot de Backlog confirmado)
+muda de status no Jira pra algo diferente de "Product Backlog" (ex.: "Em
+Desenvolvimento") — isso a tira do relatório de Backlog, e ela só continua
+visível em Demandas Emergenciais se a base de Estórias (arquivo 3) for
+reimportada com o status novo. Sem isso, a história some de Demandas
+Emergenciais **e de qualquer outro lugar do dashboard principal**, mesmo
+que ela apareça normalmente nos arquivos 4-7 (que vão pra outras páginas).
+Caso real: card SLOPC-42490, 12/08/26 — sumiu de Demandas Emergenciais
+porque só os arquivos 4-7 tinham sido importados naquele dia.
 
 ## Padrão de resiliência (histórico: falha "Não foi possível sincronizar")
 
@@ -184,6 +238,61 @@ sem confirmar que ela não estoura esse limite.
 Se adicionar um novo polling automático no futuro, siga o mesmo padrão: ping
 de revisão + busca condicional, nunca um relógio fixo buscando tudo.
 
+## Eleição de aba líder + pausa por inatividade (histórico: 15/08, v23)
+
+Motivação: mesmo com o ping de revisão da seção anterior, uma pessoa só pode
+multiplicar o consumo sozinha — usuária real flagrada com **10 janelas do
+mesmo painel abertas ao mesmo tempo** no ambiente do cliente, cada uma
+fazendo o próprio ping de revisão no mesmo ritmo. 10x o necessário para uma
+única pessoa, sem nenhum bug envolvido, só do jeito que o navegador foi
+usado.
+
+**Correção (v23)**: os 3 painéis (`index.html`, `discovery-pmo/index.html`,
+`visao-projetos/index.html`) ganharam duas camadas novas, sempre em cima do
+ping de revisão já existente — nunca no lugar dele:
+
+1. **Pausa por inatividade**: além de pausar quando `document.hidden`
+   (aba em segundo plano), agora também pausa quando a aba está **visível
+   mas sem interação** (mouse/teclado/scroll/toque) há 5 minutos —
+   `_bkIsIdle()` / `_discIsIdle()` / `_vpIsIdle()`. Cobre o caso de aba
+   aberta numa tela que ninguém está olhando. Qualquer interação retoma o
+   ritmo normal na hora; não é um risco de dado ficar escondido, só evita
+   gastar ping à toa em aba esquecida.
+2. **Eleição de líder por `localStorage`**: entre várias abas do MESMO
+   painel no MESMO navegador, só uma vira "líder" (heartbeat em
+   `localStorage`, chave `sala_leader_<painel>_v1`) e de fato chama o
+   Apps Script a cada tick — `_bkClaimOrIsLeader()` /
+   `_discClaimOrIsLeader()` / `_vpClaimOrIsLeader()`. As demais ficam
+   ouvindo o evento `storage` na chave `sala_shared_rev_<painel>_v1`: a
+   líder publica a(s) revisão(ões) mais recente(s) que conhece a cada
+   ciclo, e uma seguidora só dispara sua PRÓPRIA busca completa quando
+   percebe uma revisão diferente da que já tinha — ou seja, o custo de N
+   abas ociosas-mas-vivas continua sendo só o de uma. Se a aba líder for
+   fechada, o heartbeat expira (2,5x o intervalo do painel) e a próxima
+   aba que ticar assume sozinha, sem F5. `localStorage` indisponível (ex.:
+   navegação anônima bloqueando) faz a aba agir sozinha, como antes da v23
+   — nunca trava por causa disso.
+
+**Isso é ortogonal ao ping de revisão, não substitui**: o ping de revisão
+decide "vale a pena buscar tudo?"; a eleição de líder decide "sou eu quem
+deveria estar perguntando isso agora, ou já tem outra aba minha cuidando?".
+As duas camadas continuam funcionando mesmo com uma desativada — útil pra
+depurar isoladamente se um dia for preciso.
+
+**Ops4Ops (`OPS4OPS_LEAN_CACHE_TTL_SEC`, apps-script-backlog.gs)**: subiu de
+10 para 25 min na mesma leva. Isso NÃO atrasa a visibilidade de uma
+importação — a invalidação em `saveVpData/discoveryPmo` já limpa o cache **na
+hora**, para todo mundo, independente do TTL (ver v19 no cabeçalho do
+arquivo); o TTL só controla quanto tempo o cache sobrevive quando ninguém
+grava nada, então esticá-lo só reduz quantas vezes por hora o
+reprocessamento caro acontece à toa.
+
+**Como validar mudança nesse mecanismo**: harness Node com `vm`, múltiplas
+"abas" (sandboxes separados) compartilhando a MESMA instância de
+`localStorage` falso — não basta 1 sandbox só, o ponto é provar que 10 abas
+concorrendo pela mesma chave resultam em exatamente 1 líder por rodada. Ver
+histórico de commits deste arquivo para o modelo do harness.
+
 ## Armadilhas conhecidas deste repositório
 
 - **Funções duplicadas**: vários arquivos aqui têm a mesma função declarada
@@ -203,6 +312,25 @@ de revisão + busca condicional, nunca um relógio fixo buscando tudo.
   aparecer divergente, é sinal de que `main` avançou em paralelo; reconstrua o
   branch a partir de `origin/main` e reaplique (cherry-pick) só os commits
   realmente novos antes de abrir/mesclar o PR.
+- **Nomes de variável com "Key" disparam falso positivo no GitLeaks do
+  Bradesco**: a esteira de segurança do ambiente do cliente (action
+  `Bradesco-Actions/brad-gitleaks-actions@v2`, fora deste repositório) usa a
+  regra genérica `generic-api-key`, que bate em qualquer
+  `algumaCoisaKey = "string comprida"` — mesmo quando o valor é só um nome de
+  chave de `localStorage` (ex.: variável `_vpLeaderKey` guardando o texto
+  `sala_leader_visaoprojetos_v1`), sem ser credencial nenhuma. Já aconteceu
+  (27/08) com as variáveis do
+  mecanismo de "eleição de aba líder" (`_bkLeaderKey`/`_bkSharedRevKey` em
+  `index.html`, `_discLeaderKey`/`_discSharedRevKey` em
+  `discovery-pmo/index.html`, `_vpLeaderKey`/`_vpSharedRevKey` em
+  `visao-projetos/index.html`) e travou o pipeline de lá. Corrigido
+  renomeando pra `..._vpLeaderSlot`/`..._vpSharedRevSlot` (sufixo `Slot` no
+  lugar de `Key`) — não muda nenhum valor salvo, só o nome da variável no
+  código. Pedir pra incluir esse achado numa allowlist do lado do Bradesco é
+  possível mas depende do time deles (burocracia); evitar a palavra "key"
+  (case-insensitive) no nome de qualquer variável nova que guarde um nome de
+  chave de `localStorage`/`sessionStorage` já evita o problema de origem, sem
+  depender de ninguém de fora.
 
 ## Histórico: incidente de sincronização de 04–05/08
 

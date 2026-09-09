@@ -5773,27 +5773,27 @@
     <section id="gerencial" class="view active">
       <!-- KPIs estratégicos (4 colunas) -->
       <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr)">
-        <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad())">
+        <article class="kpi" onclick="openList('Todas as histórias da squad', filteredBySquad().filter(r=>!isCancelledStatus(r.situacao)))">
           <span>Total de histórias</span>
           <strong id="kpiTotal">0</strong>
           <small>Escopo total da squad no filtro selecionado.</small>
         </article>
-        <article class="kpi" onclick="openList('Histórias em Product Backlog', filteredBySquad().filter(r=>r.product_backlog))">
+        <article class="kpi" onclick="openList('Histórias em Product Backlog', filteredBySquad().filter(r=>r.product_backlog && !isCancelledStatus(r.situacao)))">
           <span>Product Backlog</span>
           <strong id="kpiPB">0</strong>
           <small>Itens ainda não iniciados — pipeline de entrada.</small>
         </article>
-        <article class="kpi" onclick="openList('Histórias refinadas', filteredBySquad().filter(r=>r.refinada))">
+        <article class="kpi" onclick="openList('Histórias refinadas', filteredBySquad().filter(r=>r.refinada && !isCancelledStatus(r.situacao)))">
           <span>Refinadas</span>
           <strong id="kpiRefinadas">0</strong>
           <small id="kpiRefinedasDetail">Histórias com refinamento concluído.</small>
         </article>
-        <article class="kpi" onclick="openList('Alertas: bloqueios e dependências', filteredBySquad().filter(r=>r.bloqueio||r.dependencia))">
+        <article class="kpi" onclick="openList('Alertas: bloqueios e dependências', filteredBySquad().filter(r=>(r.bloqueio||r.dependencia) && !isCancelledStatus(r.situacao)))">
           <span>Alertas</span>
           <strong id="kpiAlertas">0</strong>
           <small id="kpiAlertasDetail">Bloqueios e dependências que requerem ação.</small>
         </article>
-        <article class="kpi" onclick="openList('Rota de produção e homologação', filteredBySquad().filter(r=>/produção|producao|deploy|homolog|teste/i.test(r.situacao||'')))">
+        <article class="kpi" onclick="openList('Rota de produção e homologação', filteredBySquad().filter(r=>/produção|producao|deploy|homolog|teste/i.test(r.situacao||'') && !isCancelledStatus(r.situacao)))">
           <span>Próximas entregas</span>
           <strong id="kpiEntregas">0</strong>
           <small id="kpiEntregasDetail">Itens em homologação ou rota de produção.</small>
@@ -6538,11 +6538,30 @@
       gasLoadAndApplyVpAllLegacy();
     }
 
+    // O badge "Última importação" (importDateTime) só era atualizado quando ESTE
+    // navegador importava um arquivo localmente (registrarImportacaoBase/etc) —
+    // nunca quando os dados chegavam via sync do servidor (boot ou polling). Resultado:
+    // cada navegador mostrava a data da SUA última importação local, divergentes entre
+    // si, nenhuma refletindo a importação real mais recente feita por qualquer pessoa.
+    // vpGeral/vpSprint/vpHomologation já carregam importedAt (setado por quem importou
+    // e salvo via gasSaveVpData) — usamos o mais recente entre os três pra manter o
+    // badge igual pra todo mundo, em qualquer navegador, sem chamada extra ao Apps Script.
+    function syncImportBadgeFromServer(all){
+      var candidates = [all.vpGeral, all.vpSprint, all.vpHomologation]
+        .map(function(d){ return d && d.importedAt ? Date.parse(d.importedAt) : NaN; })
+        .filter(function(t){ return !Number.isNaN(t) && t > 0; });
+      if(!candidates.length) return;
+      var maxT = Math.max.apply(null, candidates);
+      if(!importDateTime || maxT > importDateTime.getTime()){
+        importDateTime = new Date(maxT);
+        storageSet(IMPORT_BASE_KEY, importDateTime.toISOString());
+        updateLastUpdatedBadge();
+      }
+    }
+
     function applyVpDataAll(all){
       var needsRender = false;
-      // Datas (importedAt) das bases que este ciclo realmente aplicou — usadas só
-      // pra badge "Última importação" no topo, nunca mais pra decidir se aplica.
-      var appliedTimes = [];
+      syncImportBadgeFromServer(all);
 
       // As 3 checagens abaixo comparavam importedAt (relógio de quem clicou
       // "Importar", não confiável entre máquinas — sujeito a fuso/clock skew) para
@@ -6578,7 +6597,6 @@
           if(vpGeral.sourceName) sourceName = vpGeral.sourceName;
           storageSet('vpBaseGeralImportada', JSON.stringify(Object.assign({}, vpGeral, {appliedRevision: serverGeralRev})));
           needsRender = true;
-          if(serverGeralTime) appliedTimes.push(serverGeralTime);
         }
       }
 
@@ -6593,7 +6611,6 @@
           if(vpSprint.sourceName) sprintSourceName = vpSprint.sourceName;
           storageSet('vpBaseSprintImportada', JSON.stringify(Object.assign({}, vpSprint, {appliedRevision: serverSprintRev})));
           needsRender = true;
-          if(serverSprintTime) appliedTimes.push(serverSprintTime);
         }
       }
 
@@ -6610,7 +6627,6 @@
           homologationSourceName = vpHomologation.sourceName || 'Homologação compartilhada';
           storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(Object.assign({}, vpHomologation, {appliedRevision: serverHomologRev})));
           needsRender = true;
-          if(serverHomologTime) appliedTimes.push(serverHomologTime);
         }
       } else if(hasLocalHomolog){
         // Uma resposta vazia nunca pode apagar a última carga válida deste
@@ -6664,19 +6680,6 @@
         deliveries = vpDeliveries;
         storageSet('jiraDashboardDeliveries', JSON.stringify(deliveries));
         needsRender = true;
-      }
-
-      // Badge "Última importação" (topbar) precisa refletir a base compartilhada
-      // mesmo para quem nunca clicou em "Importar aqui" neste navegador — a
-      // imensa maioria de quem só abre o painel pra consultar. Antes, importDateTime
-      // só era setado por uma importação local (registrarImportacaoBase) ou pela
-      // propagação do "Importar Tudo" do SALA, então o badge ficava permanentemente
-      // escondido (e sem nenhum sinal de quando os números na tela foram gerados)
-      // pra qualquer um que só sincronizasse com o servidor via polling/boot.
-      if(appliedTimes.length){
-        var newestApplied = Math.max.apply(null, appliedTimes);
-        if(!importDateTime || newestApplied > importDateTime.getTime()) importDateTime = new Date(newestApplied);
-        updateLastUpdatedBadge();
       }
 
       if(needsRender){ try{ renderAll(); }catch(e){} }
@@ -6915,11 +6918,14 @@
     const CROSS_IMPORT_SPRINT_KEY = 'sala_cross_import_sprint_v1';
     const CROSS_IMPORT_GENERAL_KEY = 'sala_cross_import_general_v1';
     const CROSS_IMPORT_HOMOLOGATION_KEY = 'sala_cross_import_homologation_v1';
-    function persistHomologationBase(){
+    // importedAtOverride existe pra edição pontual de campo (ex.: updateHomologationDate)
+    // conseguir preservar o importedAt da última carga real do Jira, em vez de fingir
+    // uma importação nova toda vez que alguém só edita uma data numa linha.
+    function persistHomologationBase(importedAtOverride){
       const data = {
         rows: homologationRows,
         sourceName: homologationSourceName,
-        importedAt: new Date().toISOString()
+        importedAt: importedAtOverride || new Date().toISOString()
       };
       storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(data));
       gasSaveVpData('vpHomologation', data, {officialSnapshot:true, sourceFile:homologationSourceName});
@@ -7158,6 +7164,7 @@
       const st = normalize($('statusFilter')?.value) || 'Todos';
       const q = lower($('searchFilter')?.value);
       if(st !== 'Todos') data = data.filter(r => sameText(r.situacao, st));
+      else data = data.filter(r => !isCancelledStatus(r.situacao));
       if(q) data = data.filter(r => [r.chave,r.epic,r.resumo,r.squad,r.situacao,r.responsavel,r.proximo,(r.rotulos||[]).join(' ')].some(x => lower(x).includes(q)));
       return data;
     }
@@ -7194,7 +7201,7 @@
       if(/deploy|implant|change|cab|release|pronto para prod|pronto para produção|pronto para producao/.test(s)) return 'status-deploy';
 
       // Verde suave: produção
-      if(/produção|producao|prod/.test(s)) return 'status-prod';
+      if(/produção|producao|\bprod\b/.test(s)) return 'status-prod';
 
       // Laranja: desenvolvimento/andamento
       if(/desenv|andamento|doing|progress|em execução|execucao|execução|in progress/.test(s)) return 'status-dev';
@@ -7214,6 +7221,17 @@
     function renderStatusBadge(status){
       const label = normalize(status) || 'Sem status';
       return `<span class="status-badge ${statusClass(label)}" title="${escapeAttr(label)}">${escapeHtml(label)}</span>`;
+    }
+
+    // Cancelada/removida no Jira não é mais trabalho operacional em andamento.
+    // O Acomp. Geral costuma nem trazer mais o item depois de cancelado (some
+    // sozinho na próxima importação), mas a Sprint ativa traz status de TUDO
+    // que está no sprint, cancelados inclusive — por isso o item pode chegar
+    // aqui com situação "Cancelada" e ficar contando como história ativa na
+    // Tabela operacional/Sprint se ninguém filtrar. Continua selecionável no
+    // filtro de status (dropdown) para quem quiser auditar cancelados.
+    function isCancelledStatus(situacao){
+      return statusClass(situacao) === 'status-cancel';
     }
 
     function barColorClass(label){
@@ -7409,7 +7427,11 @@
       const item = homologationRows.find(row => sameText(storyKey(row), key));
       if(!item) return;
       item.homologacaoData = value ? formatHomologationDate(value) : '';
-      persistHomologationBase();
+      // Editar a data de uma única linha não é uma importação nova — preserva o
+      // importedAt da última carga real do Jira pra não inflar o badge
+      // "Última importação" a cada edição pontual (ver syncImportBadgeFromServer).
+      const existing = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
+      persistHomologationBase(existing && existing.importedAt);
       renderAll();
     }
 
@@ -7525,7 +7547,11 @@
 
     function renderManagement(){
       const squad = getSelectedSquad();
-      const rawData = baseRowsForSquad(squad);
+      // Cancelada não é mais escopo ativo: some dos KPIs, do resumo executivo
+      // e dos gráficos (ver isCancelledStatus, mesma regra da Tabela
+      // operacional/Sprint atual). rows.length/sprintRows.length abaixo (para
+      // o empty state) continuam olhando a base bruta de propósito.
+      const rawData = baseRowsForSquad(squad).filter(r => !isCancelledStatus(r.situacao));
       const data = applyDateFilter(rawData);
 
       if($('insights')) $('insights').innerHTML = '';
@@ -7571,9 +7597,11 @@
       const prodItems = data.filter(r=>/produção|producao|deploy/i.test(r.situacao||'')).length;
       const entregas = homolog + prodItems;
 
-      // Dataset combinado: rows + sprintRows (deduplicado por chave)
+      // Dataset combinado: rows + sprintRows (deduplicado por chave). A Sprint
+      // ativa do Jira traz status de tudo que está no sprint, cancelados
+      // inclusive — exclui aqui pelo mesmo motivo do rawData acima.
       const sprintDataForSquad = effectiveSprintRows().filter(r =>
-        sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)
+        (sameSquad(squad, 'Todas') || sameSquad(r.squad, squad)) && !isCancelledStatus(r.situacao)
       );
       const seenKeys = new Set(data.map(r => r.chave).filter(Boolean));
       const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
@@ -7736,7 +7764,7 @@
       // (ex.: texto dizia "8 história(s)" e os épicos somavam 23 cards). Agora soma
       // só o que a sprint tem de NOVO (por chave) e aplica o mesmo filtro de data —
       // igual ao padrão já usado no KPI combinado (ver renderManagement).
-      const sprintDataForSquad = effectiveSprintRows().filter(r => sameSquad(selectedSquad, 'Todas') || sameSquad(r.squad, selectedSquad));
+      const sprintDataForSquad = effectiveSprintRows().filter(r => (sameSquad(selectedSquad, 'Todas') || sameSquad(r.squad, selectedSquad)) && !isCancelledStatus(r.situacao));
       const seenKeys = new Set(data.map(r => r.chave).filter(Boolean));
       const extraFromSprint = sprintDataForSquad.filter(r => !seenKeys.has(r.chave));
       const scope = applyDateFilter([...data, ...extraFromSprint]);
@@ -8123,6 +8151,7 @@
       const q = lower($('searchFilter')?.value);
 
       if(st !== 'Todos') data = data.filter(r => sameText(r.situacao, st));
+      else data = data.filter(r => !isCancelledStatus(r.situacao));
       if(q) data = data.filter(r => [r.chave,r.epic,r.resumo,r.squad,r.situacao,r.responsavel,r.proximo,(r.rotulos||[]).join(' ')].some(x => lower(x).includes(q)));
       return data;
     }
@@ -8199,14 +8228,21 @@
 
       const byKey = new Map(squadRows.map(row => [storyKey(row), row]));
       const committedRows = snapshot.storyKeys.map(key => byKey.get(key)).filter(Boolean);
-      const delivered = committedRows.filter(isSprintDelivered);
-      const pending = snapshot.storyKeys.length - delivered.length;
-      const percent = Math.round((delivered.length / snapshot.storyKeys.length) * 100);
-      const blocked = committedRows.filter(row => row.bloqueio || row.dependencia).length;
-      const retest = committedRows.filter(row => /reteste/i.test(`${row.situacao} ${(row.rotulos || []).join(' ')}`)).length;
-      const withoutOwner = committedRows.filter(row => !normalize(row.responsavel)).length;
-      const validation = committedRows.filter(row => !isSprintDelivered(row) && /teste|homolog/i.test(row.situacao)).length;
-      const unplannedDelivered = squadRows.filter(row => !snapshot.storyKeys.includes(storyKey(row)) && isSprintDelivered(row)).length;
+      // Uma história cancelada depois do planning saiu de escopo — não é
+      // "não entregue". Tira ela do compromisso em vez de deixá-la pesar
+      // contra o percentual (mesma regra de isCancelledStatus usada na
+      // Tabela operacional/Sprint atual/KPIs).
+      const cancelledCommitted = committedRows.filter(row => isCancelledStatus(row.situacao));
+      const activeCommittedRows = committedRows.filter(row => !isCancelledStatus(row.situacao));
+      const commitment = snapshot.storyKeys.length - cancelledCommitted.length;
+      const delivered = activeCommittedRows.filter(isSprintDelivered);
+      const pending = commitment - delivered.length;
+      const percent = commitment ? Math.round((delivered.length / commitment) * 100) : 100;
+      const blocked = activeCommittedRows.filter(row => row.bloqueio || row.dependencia).length;
+      const retest = activeCommittedRows.filter(row => /reteste/i.test(`${row.situacao} ${(row.rotulos || []).join(' ')}`)).length;
+      const withoutOwner = activeCommittedRows.filter(row => !normalize(row.responsavel)).length;
+      const validation = activeCommittedRows.filter(row => !isSprintDelivered(row) && /teste|homolog/i.test(row.situacao)).length;
+      const unplannedDelivered = squadRows.filter(row => !isCancelledStatus(row.situacao) && !snapshot.storyKeys.includes(storyKey(row)) && isSprintDelivered(row)).length;
       const status = percent >= 90 ? 'Atingido' : percent >= 60 ? 'Parcialmente atingido' : 'Não atingido';
       const forecast = percent >= 90 ? 'No alvo' : percent >= 60 ? 'Atenção' : 'Comprometida';
       const reasons = [];
@@ -8216,7 +8252,8 @@
         if(validation) reasons.push(`${validation} ${validation === 1 ? 'história ainda está em teste ou homologação' : 'histórias ainda estão em teste ou homologação'}`);
         if(withoutOwner) reasons.push(`${withoutOwner} ${withoutOwner === 1 ? 'história está sem responsável' : 'histórias estão sem responsável'}`);
       }
-      return { hasSnapshot:true, ended, objective, commitment:snapshot.storyKeys.length, delivered:delivered.length, pending, percent, status, forecast, reasons, unplannedDelivered };
+      if(cancelledCommitted.length) reasons.push(`${cancelledCommitted.length} ${cancelledCommitted.length === 1 ? 'história do compromisso foi cancelada e saiu do cálculo' : 'histórias do compromisso foram canceladas e saíram do cálculo'}`);
+      return { hasSnapshot:true, ended, objective, commitment, delivered:delivered.length, pending, percent, status, forecast, reasons, unplannedDelivered, cancelledCommitted: cancelledCommitted.length };
     }
 
     function renderSprintOutcome(squadRows, squad){
@@ -8260,7 +8297,9 @@
       carryLabel.textContent = outcome.ended ? 'Transbordo' : 'Risco transbordo';
       carry.textContent = outcome.pending;
       if(outcome.pending === 0){
-        reason.textContent = 'Compromisso concluído. Não há itens previstos para transbordar.';
+        reason.textContent = outcome.cancelledCommitted
+          ? `Compromisso concluído. ${outcome.cancelledCommitted} ${outcome.cancelledCommitted === 1 ? 'história cancelada foi removida' : 'histórias canceladas foram removidas'} do cálculo — não há itens previstos para transbordar.`
+          : 'Compromisso concluído. Não há itens previstos para transbordar.';
       }else if(outcome.reasons.length){
         reason.textContent = `${outcome.ended ? 'Justificativa automática:' : 'Motivos observados:'} ${outcome.reasons.join('; ')}.`;
       }else{
@@ -9172,7 +9211,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     }
 
     function openResponsibleInfo(){
-      const data = filteredBySquad().filter(r=>normalize(r.responsavel));
+      const data = filteredBySquad().filter(r=>normalize(r.responsavel) && !isCancelledStatus(r.situacao));
       if(data.length) openList('Histórias com responsável informado', data);
       else openList('Responsáveis não encontrados na extração', []);
     }
@@ -10238,6 +10277,47 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     // visíveis para todo o time sem re-importar. Essa primeira carga continua completa
     // (as 9 chaves), sem gate de revisão, pra garantir hidratação correta no boot.
     gasLoadAndApplyVpAll();
+    // v23: eleição de aba líder (localStorage) + pausa por inatividade. Motivação:
+    // usuária flagrada com 10 janelas abertas ao mesmo tempo no ambiente do cliente —
+    // cada uma fazendo o ping das 9 chaves no mesmo ritmo, 10x o necessário pra uma só
+    // pessoa. Só a aba "líder" (heartbeat em localStorage) chama o backend; as demais
+    // ficam ouvindo o evento 'storage' e só buscam de verdade quando a líder publica
+    // alguma revisão nova entre as 9 (raro). Se a líder fechar, o heartbeat expira e
+    // outra aba assume sozinha, sem F5. localStorage indisponível faz a aba agir
+    // sozinha, como antes.
+    var _vpTabId=Date.now()+'_'+Math.random().toString(36).slice(2);
+    var _vpLeaderSlot='sala_leader_visaoprojetos_v1';
+    var _vpSharedRevSlot='sala_shared_rev_visaoprojetos_v1';
+    var _vpLeaderStaleMs=150000; // 2.5x o intervalo de 60s
+    var _vpLastInteraction=Date.now();
+    var _vpIdleMs=300000; // 5min sem interação numa aba visível = "esquecida"
+    ['mousemove','keydown','scroll','click','touchstart'].forEach(function(ev){
+      document.addEventListener(ev, function(){ _vpLastInteraction=Date.now(); }, {passive:true});
+    });
+    function _vpIsIdle(){ return (Date.now()-_vpLastInteraction)>_vpIdleMs; }
+    function _vpClaimOrIsLeader(){
+      try{
+        var now=Date.now();
+        var leader=null;
+        try{ leader=JSON.parse(localStorage.getItem(_vpLeaderSlot)); }catch(e){}
+        var amLeader=leader && leader.id===_vpTabId;
+        var leaderStale=!leader || (now-leader.heartbeat)>_vpLeaderStaleMs;
+        if(amLeader || leaderStale){ localStorage.setItem(_vpLeaderSlot,JSON.stringify({id:_vpTabId,heartbeat:now})); return true; }
+        return false;
+      }catch(e){ return true; }
+    }
+    function _vpPublishRevisions(){
+      try{ localStorage.setItem(_vpSharedRevSlot,JSON.stringify(_vpLastKnownRevisions)); }catch(e){}
+    }
+    window.addEventListener('storage', function(ev){
+      if(ev.key!==_vpSharedRevSlot || ev.newValue==null || !_VP_GAS_URL) return;
+      var shared=null;
+      try{ shared=JSON.parse(ev.newValue); }catch(e){ return; }
+      if(!shared) return;
+      var changed=Object.keys(shared).some(function(k){ return _vpLastKnownRevisions[k]===undefined || shared[k]!==_vpLastKnownRevisions[k]; });
+      if(changed) gasCheckVpRevisionsAndApply(function(){});
+    });
+
     // v21: o polling recorrente passa a usar o ping barato de revisão em vez de buscar
     // as 9 chaves sempre, no ritmo fixo de 2min — ver gasCheckVpRevisionsAndApply acima.
     // Pausa quando a aba está em segundo plano; resincroniza na hora ao voltar o foco.
@@ -10245,13 +10325,17 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     var _vpPollTicks = 0;
     setInterval(function(){
       if(document.hidden || !_VP_GAS_URL) return;
+      if(_vpIsIdle()) return;
+      if(!_vpClaimOrIsLeader()) return;
       _vpPollTicks++;
-      if(_vpPollTicks % 15 === 0){ gasLoadAndApplyVpAll(); return; }
-      gasCheckVpRevisionsAndApply(function(){});
+      if(_vpPollTicks % 15 === 0){ gasLoadAndApplyVpAll(); _vpPublishRevisions(); return; }
+      gasCheckVpRevisionsAndApply(function(){ _vpPublishRevisions(); });
     }, 60000);
     document.addEventListener('visibilitychange', function(){
       if(document.hidden || !_VP_GAS_URL) return;
-      gasCheckVpRevisionsAndApply(function(){});
+      _vpLastInteraction=Date.now();
+      if(!_vpClaimOrIsLeader()) return;
+      gasCheckVpRevisionsAndApply(function(){ _vpPublishRevisions(); });
     });
   </script>
 </body>

@@ -2458,7 +2458,10 @@ var SEED_VERSION='2026-06-23-v34-sync-bulletproof';
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
+// Épicos e Backlog usam a mesma implantação controlada pelo time. Na primeira
+// abertura ela importa automaticamente a base legada e, depois, passa a
+// persistir Data Inicial, Data Prevista e Data Fim nessa fonte única.
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
 var BK_GAS_URL     = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
@@ -4154,7 +4157,33 @@ function toggleSortLT(){
   pg=1; renderTbl();
 }
 
+// Evita que um redesenho em segundo plano (poll automático do Sheets, a cada
+// SHEETS_POLL_MS) apague um valor que o usuário está no meio de digitar/
+// selecionar num input da tabela de Épicos: renderTbl() reconstrói o
+// innerHTML inteiro, e um <input type="date"> com o seletor ainda aberto
+// (ou uma edição de texto ainda não confirmada) não dispara onchange/onblur
+// antes de ser destruído — a digitação some sem nunca chegar a fc(), e por
+// isso nem o Sheets recebe o valor (não é o Sheets que "não pegou": o valor
+// nunca chegou a ser enviado).
+var _tblRenderPending=false;
+function _tblEditInProgress(){
+  var ae=document.activeElement;
+  if(!ae||!ae.classList) return false;
+  var body=$id('tblBody');
+  if(!body||!body.contains(ae)) return false;
+  return ae.classList.contains('einp')||ae.classList.contains('eimp');
+}
+document.addEventListener('focusout',function(e){
+  if(!_tblRenderPending) return;
+  var body=$id('tblBody');
+  if(body&&e.target&&body.contains(e.target)){
+    _tblRenderPending=false;
+    setTimeout(renderTbl,80);
+  }
+},true);
+
 function renderTbl(){
+  if(_tblEditInProgress()){ _tblRenderPending=true; return; }
   var fd=getFiltered(), tot=fd.length;
   // Apply LT sort if active
   if(sortLT==='desc') fd=fd.slice().sort(function(a,b){return b.lt-a.lt;});
@@ -5474,6 +5503,12 @@ function gasCheckBacklogRevision(cb){
     // aparece sozinha, sem precisar de F5 manual.
     var emRev=json.revisions.emergencyDemand;
     if(typeof emRev==='number' && _emergencyRevision!==null && emRev!==_emergencyRevision){ emLoadCloud(); }
+    // Estórias (arquivo 3) também é servida pelo mesmo ping: sem isso, uma
+    // reimportação feita por outra pessoa só aparecia nesta aba depois de um
+    // F5 manual, mesmo com o backlog já sincronizando sozinho — Demandas
+    // Emergenciais (que lê allStories) ficava desatualizada em silêncio.
+    var stRev=json.revisions.stories;
+    if(typeof stRev==='number' && _storiesRevision!==null && stRev!==_storiesRevision){ gasLoadStories(function(){}); }
     if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
     gasLoadBacklog(function(err2){ if(cb) cb(err2,true); });
   }, 28000, 0);
@@ -6823,7 +6858,7 @@ var SV_STATUS=[
 ];
 
 function classifySvStatus(status){
-  var s=(status||'').toLowerCase().trim();
+  var s=stripAcc((status||'')).toLowerCase().trim();
   for(var i=0;i<SV_STATUS.length;i++){if(SV_STATUS[i].test(s)) return SV_STATUS[i].key;}
   return 'other';
 }
@@ -8585,7 +8620,12 @@ var SEED=[
           USER_FIELDS.forEach(function(f){
             var locVal=loc[f];
             var seedVal=seedR[f];
-            if(locVal!==undefined&&locVal!==null&&locVal!==''){
+            // Preserva o valor do navegador mesmo quando vazio/nulo: um campo
+            // apagado de propósito (ex.: Data Fim revertida de Medição pra
+            // Épicos) é uma decisão do usuário e não pode ser "desfeita" pelo
+            // SEED no próximo deploy. Só cai pro SEED quando a chave nem
+            // existe no registro salvo (épico salvo antes desse campo existir).
+            if(locVal!==undefined){
               out[f]=locVal;
               // Registra divergência auditável se o valor difere do SEED
               if(AUDIT_FIELDS.indexOf(f)>=0 && locVal!==seedVal && (locVal||seedVal)){
@@ -8833,6 +8873,44 @@ setTimeout(function(){ try{ flushPendingWrites(); }catch(e){} }, 5000);
 // Pré-carrega o html2canvas para que "Copiar" funcione já no 1º clique (sem perder o gesto do usuário)
 setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL); }catch(e){} }, 2500);
 
+// v23: eleição de aba líder (localStorage) + pausa por inatividade. Motivação:
+// usuária flagrada com 10 janelas abertas ao mesmo tempo no ambiente do cliente —
+// cada uma fazendo o ping de revisão a cada minuto, 10x o necessário pra uma só
+// pessoa. Só a aba "líder" (heartbeat em localStorage) chama o backend; as demais
+// ficam ouvindo o evento 'storage' e só buscam de verdade quando a líder publica
+// uma revisão nova (raro — a maioria dos ticks não muda nada). Se a líder fechar,
+// o heartbeat expira e outra aba assume sozinha, sem F5. localStorage indisponível
+// (ex.: navegação anônima bloqueando) faz a aba agir sozinha, como antes da v23.
+var _bkTabId=Date.now()+'_'+Math.random().toString(36).slice(2);
+var _bkLeaderSlot='sala_leader_backlog_v1';
+var _bkSharedRevSlot='sala_shared_rev_backlog_v1';
+var _bkLeaderStaleMs=150000; // 2.5x o intervalo de 60s: folga generosa antes de considerar a líder morta
+var _bkLastInteraction=Date.now();
+var _bkIdleMs=300000; // 5min sem interação numa aba visível = considera "esquecida"
+['mousemove','keydown','scroll','click','touchstart'].forEach(function(ev){
+  document.addEventListener(ev, function(){ _bkLastInteraction=Date.now(); }, {passive:true});
+});
+function _bkIsIdle(){ return (Date.now()-_bkLastInteraction)>_bkIdleMs; }
+function _bkClaimOrIsLeader(){
+  try{
+    var now=Date.now();
+    var leader=null;
+    try{ leader=JSON.parse(localStorage.getItem(_bkLeaderSlot)); }catch(e){}
+    var amLeader=leader && leader.id===_bkTabId;
+    var leaderStale=!leader || (now-leader.heartbeat)>_bkLeaderStaleMs;
+    if(amLeader || leaderStale){ localStorage.setItem(_bkLeaderSlot,JSON.stringify({id:_bkTabId,heartbeat:now})); return true; }
+    return false;
+  }catch(e){ return true; }
+}
+function _bkPublishRevision(){
+  try{ if(typeof _bkLastKnownRevision==='number') localStorage.setItem(_bkSharedRevSlot,String(_bkLastKnownRevision)); }catch(e){}
+}
+window.addEventListener('storage', function(ev){
+  if(ev.key!==_bkSharedRevSlot || ev.newValue==null || !BK_GAS_URL) return;
+  var rev=Number(ev.newValue);
+  if(!isNaN(rev) && rev!==_bkLastKnownRevision){ gasLoadBacklog(function(){}); }
+});
+
 // Reconfere o backlog com o servidor periodicamente — janelas abertas convergem sozinhas.
 // v21: em vez de buscar os dados completos a cada tick, faz um ping barato de revisão
 // (getRevisions) e só busca de verdade quando algo mudou. Pausa quando a aba está em
@@ -8843,15 +8921,19 @@ setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL
 var _bkPollTicks=0;
 setInterval(function(){
   if(document.hidden || !BK_GAS_URL) return;
+  if(_bkIsIdle()) return;
+  if(!_bkClaimOrIsLeader()) return;
   try{
     _bkPollTicks++;
-    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){}); return; }
-    gasCheckBacklogRevision(function(){});
+    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){ _bkPublishRevision(); }); gasLoadStories(function(){}); return; }
+    gasCheckBacklogRevision(function(){ _bkPublishRevision(); });
   }catch(e){}
 }, 60000);
 document.addEventListener('visibilitychange', function(){
   if(document.hidden || !BK_GAS_URL) return;
-  try{ gasCheckBacklogRevision(function(){}); }catch(e){}
+  _bkLastInteraction=Date.now();
+  if(!_bkClaimOrIsLeader()) return;
+  try{ gasCheckBacklogRevision(function(){ _bkPublishRevision(); }); }catch(e){}
 });
 
 // ═══════════════════════════════════════
@@ -8891,7 +8973,7 @@ function calSave(){ try{ storageSet(CAL_KEY, JSON.stringify(calData)); }catch(e)
 // detectActiveSprint() (visao-projetos/index.html) esperam ler. Sem isso, o
 // calendário existia só no localStorage de quem editou — a confirmação
 // automática de planning no Apps Script nunca achava sprint nenhuma.
-function calSaveToCloud(){
+function calSaveToCloud(isRetry){
   if(!BK_GAS_URL || !Array.isArray(calData)) return;
   var sprints = calData.reduce(function(acc,tri){
     return acc.concat(Array.isArray(tri && tri.sprints) ? tri.sprints : []);
@@ -8900,7 +8982,25 @@ function calSaveToCloud(){
     method:'POST', mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:'action=saveVpData&key=vpSprintCalendar&payload='+encodeURIComponent(JSON.stringify({sprints:sprints}))
-  }).catch(function(){});
+  }).then(function(){
+    // mode:'no-cors' torna a resposta do POST opaca — dá pra saber que o
+    // navegador conseguiu ENVIAR, nunca que o servidor realmente gravou (lock
+    // ocupado, proxy truncando). Mesmo risco de "salvou na tela e não chegou
+    // no servidor" já corrigido em gasSaveBacklog/discGasSave. Confirma com um
+    // GET separado e reenvia 1x antes de avisar; caminho feliz fica em
+    // silêncio de propósito — isso roda a cada edição do calendário.
+    setTimeout(function(){
+      _gasJsonp(BK_GAS_URL+'?action=getVpData&key=vpSprintCalendar&t='+Date.now(), function(err,json){
+        var remoteLen=(!err && json && json.ok && json.data && Array.isArray(json.data.sprints)) ? json.data.sprints.length : -1;
+        if(remoteLen>=sprints.length) return;
+        if(!isRetry){ calSaveToCloud(true); return; }
+        toast('⚠️ Calendário de sprints','Não foi possível confirmar a gravação no servidor. A alteração continua salva só neste navegador.','warn');
+      });
+    }, 2500);
+  }).catch(function(){
+    if(!isRetry){ setTimeout(function(){ calSaveToCloud(true); }, 2000); return; }
+    toast('⚠️ Calendário de sprints','Falha de rede ao salvar. A alteração continua salva só neste navegador.','warn');
+  });
 }
 
 // planejamento padrão — datas exatas dos trimestres apresentados
