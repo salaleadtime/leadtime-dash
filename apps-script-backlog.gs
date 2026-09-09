@@ -1,6 +1,14 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v23 — OPS4OPS_LEAN_CACHE_TTL_SEC 10min → 25min. O cache já era invalidado
+ * NA HORA em qualquer saveVpData de discoveryPmo (ver v19 abaixo) — quem
+ * importa continua vendo o dado novo imediatamente, para todo mundo, porque
+ * essa invalidação não depende do TTL. O TTL só governa quanto tempo o
+ * cache sobrevive quando NINGUÉM grava nada; esticar essa janela só reduz
+ * quantas vezes por hora o reprocessamento caro (leitura + parse de alguns
+ * MB) acontece à toa, sem atrasar visibilidade de importação nenhuma.
+ *
  * v21 — action=getRevisions: devolve só os contadores de revisão (backlog,
  * stories, cada chave de VP_SHEET_MAP), sem ler planilha nem disputar lock.
  * Motivação: os 3 painéis (index.html a cada 2min, visao-projetos a cada
@@ -104,10 +112,18 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-05-v21-getrevisions-ping';
+var BACKLOG_SCRIPT_VERSION = '2026-08-16-v24-discovery-pmo-report-edits';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
+// Base oficial dos Épicos exibidos no painel principal. Ela é separada do
+// Backlog para que a migração não misture snapshots de histórias com as datas
+// manuais de início/fim dos épicos.
+var LEADTIME_EPICS_SHEET = '_leadtime_epics';
+// Fonte legada, usada uma única vez quando a nova aba ainda estiver vazia.
+// Depois da primeira leitura bem-sucedida, todas as leituras e escritas passam
+// a usar exclusivamente LEADTIME_EPICS_SHEET neste Apps Script.
+var LEGACY_LEADTIME_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
 var CHUNK_SIZE = 45000;
 var MAX_PAYLOAD_CHARS = 4000000;
 
@@ -137,7 +153,13 @@ var VP_SHEET_MAP = {
   // Semanal (discovery-pmo/report-semanal.html). Antes só existia no
   // localStorage de quem clicou em "×" — em outro navegador o item "voltava
   // do nada", mesmo o código já pretendendo que a exclusão fosse definitiva.
-  discoveryPmoReportResolved: '_discovery_pmo_report_resolved'
+  discoveryPmoReportResolved: '_discovery_pmo_report_resolved',
+  // Complementos executivos do Report Semanal (Observação executiva, Evolução
+  // relevante, Alinhamento, Pendência/Risco/Dependência adicional, Avanço
+  // confirmado) — mesmo problema do item acima: até aqui só existiam no
+  // localStorage de quem digitou. v24 adiciona push/pull compartilhado
+  // (ver pushEdits/pullEdits/mergeEditsMaps em report-semanal.html).
+  discoveryPmoReportEdits: '_discovery_pmo_report_edits'
 };
 
 // v19 — cache da projeção enxuta do getOps4opsData (CacheService, nativo do
@@ -145,7 +167,7 @@ var VP_SHEET_MAP = {
 // ativamente em saveVpData/discoveryPmo (ver commitWrite_ da chave abaixo),
 // então o TTL alto aqui é só uma rede de segurança.
 var OPS4OPS_LEAN_CACHE_KEY = 'ops4opsLeanV1';
-var OPS4OPS_LEAN_CACHE_TTL_SEC = 600;
+var OPS4OPS_LEAN_CACHE_TTL_SEC = 1500;
 
 // Cargas Jira compartilhadas. Para essas bases, uma lista vazia não é uma
 // "nova fotografia": ela normalmente indica arquivo errado, filtro vazio ou
@@ -203,7 +225,15 @@ var MERGE_MAP_KEYS = {
   vpEpicMeta: true,
   // Mapa plano assinatura→estado (excluído/concluído); nunca uma fotografia
   // completa, então merge por chave está certo aqui também.
-  discoveryPmoReportResolved: true
+  discoveryPmoReportResolved: true,
+  // Mapa plano semana→complementos; o cliente nunca remove uma chave de
+  // semana (itens dentro dela são "apagados" via tumba, não removendo a
+  // semana do mapa — ver recordEditTombstone em report-semanal.html), então
+  // a mesma regra de "somar é sempre correto" vale aqui. Rede de segurança
+  // por trás do merge por item que o cliente já faz antes de cada push
+  // (pushEdits faz pull+merge antes de enviar) — cobre o caso de um
+  // navegador cujo `edits` local ainda nem conhece todas as semanas.
+  discoveryPmoReportEdits: true
 };
 
 // Propriedades do Script (Configurações do projeto → Propriedades do script).
@@ -473,7 +503,22 @@ function doGet(e) {
       return jsonOut_({ ok: true, data: allData.out, revisions: allData.revisions }, callback);
     }
 
-    return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, data: [] }, callback);
+    // Compatibilidade com o painel principal: ele lê os épicos sem action e
+    // grava alterações pontuais com action=update.
+    if (action === 'update') {
+      var updatePayload = getParam_(e, 'payload');
+      var parsedUpdate = parsePayload_(updatePayload, true);
+      if (!parsedUpdate.ok) return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: parsedUpdate.error }, callback);
+      var updateResult = updateLeadtimeEpics_(parsedUpdate.data, String(updatePayload || '').length);
+      return jsonOut_(updateResult, callback);
+    }
+
+    if (!action) {
+      var leadtimeRows = getLeadtimeEpics_();
+      return jsonOut_({ ok: true, version: BACKLOG_SCRIPT_VERSION, data: leadtimeRows, count: leadtimeRows.length, updatedAt: new Date().toISOString() }, callback);
+    }
+
+    return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'unknown action: ' + action }, callback);
   } catch (err) {
     Logger.log('doGet falhou: ' + (err && err.stack || err));
     return jsonOut_({ ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'falha ao ler dados: ' + String(err && err.message || err) }, callback);
@@ -986,6 +1031,88 @@ function parseBody_(body) {
 function readBacklogStore_() {
   var data = readJsonFromSheet_(BACKLOG_SHEET, []);
   return Array.isArray(data) ? data : [];
+}
+
+// ── Épicos do painel principal: migração única e atualizações manuais ────
+function leadtimeDate_(value) {
+  var text = String(value == null ? '' : value).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '';
+}
+
+function normalizeLeadtimeEpic_(row) {
+  row = row || {};
+  return {
+    id: String(row.id || '').trim(),
+    squad: String(row.squad || ''),
+    resumo: String(row.resumo || ''),
+    status: String(row.status || ''),
+    statusAntes: String(row.statusAntes || ''),
+    ini: leadtimeDate_(row.ini),
+    fim: leadtimeDate_(row.fim),
+    fimAntes: leadtimeDate_(row.fimAntes),
+    dataPrevista: leadtimeDate_(row.dataPrevista),
+    chg: String(row.chg || ''),
+    impedimento: String(row.impedimento || '')
+  };
+}
+
+function readLeadtimeEpicsInsideLock_() {
+  var saved = readJsonFromSheet_(LEADTIME_EPICS_SHEET, []);
+  if (Array.isArray(saved) && saved.length) return saved.map(normalizeLeadtimeEpic_).filter(function(row) { return row.id; });
+
+  // A base nova ainda não existe: copia a fotografia atual da fonte legada
+  // antes de o painel começar a salvar nesta implantação.
+  var response = UrlFetchApp.fetch(LEGACY_LEADTIME_ENDPOINT + '?migration=' + Date.now(), { muteHttpExceptions: true });
+  if (response.getResponseCode() !== 200) throw new Error('não foi possível importar a base atual de Épicos (HTTP ' + response.getResponseCode() + ')');
+  var json = JSON.parse(response.getContentText());
+  var imported = Array.isArray(json && json.data) ? json.data.map(normalizeLeadtimeEpic_).filter(function(row) { return row.id; }) : [];
+  if (!imported.length) throw new Error('a fonte legada não devolveu Épicos válidos para a migração');
+
+  var chunks = readChunks_(LEADTIME_EPICS_SHEET);
+  var write = commitWrite_(LEADTIME_EPICS_SHEET, 'migrarEpicosLegados', chunks, [], imported, response.getContentText().length);
+  if (!write.ok) throw new Error(write.error);
+  return imported;
+}
+
+function getLeadtimeEpics_() {
+  return withLock_(function() { return readLeadtimeEpicsInsideLock_(); });
+}
+
+function updateLeadtimeEpics_(changes, payloadChars) {
+  try {
+    if (!Array.isArray(changes) || !changes.length) return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'payload deve conter ao menos um Épico' };
+    return withLock_(function() {
+      var before = readLeadtimeEpicsInsideLock_();
+      var byId = {};
+      before.forEach(function(row, index) { byId[row.id] = index; });
+      var next = before.map(function(row) { return normalizeLeadtimeEpic_(row); });
+
+      changes.forEach(function(change) {
+        var normalized = normalizeLeadtimeEpic_(change);
+        if (!normalized.id) throw new Error('Épico sem id');
+        var index = byId[normalized.id];
+        if (index === undefined) {
+          byId[normalized.id] = next.length;
+          next.push(normalized);
+          return;
+        }
+        // O payload do painel traz todos os campos editáveis. Atualizamos só
+        // esses campos, preservando resumo/squad quando uma edição pontual não
+        // os envia e impedindo perda de dados por uma atualização concorrente.
+        var current = next[index];
+        ['squad','resumo','status','statusAntes','ini','fim','fimAntes','dataPrevista','chg','impedimento'].forEach(function(field) {
+          if (Object.prototype.hasOwnProperty.call(change, field)) current[field] = normalized[field];
+        });
+      });
+
+      var chunks = readChunks_(LEADTIME_EPICS_SHEET);
+      var write = commitWrite_(LEADTIME_EPICS_SHEET, 'updateLeadtimeEpics', chunks, before, next, payloadChars || 0);
+      if (!write.ok) return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: write.error, conflict: !!write.conflict, currentRevision: write.currentRevision };
+      return { ok: true, version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revision: write.revision };
+    });
+  } catch (err) {
+    return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.message || err) };
+  }
 }
 
 // v13: saveBacklog passou a gravar via commitWrite_ (guarda + snapshot + auditoria),

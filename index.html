@@ -2458,7 +2458,10 @@ var SEED_VERSION='2026-06-23-v34-sync-bulletproof';
 // GOOGLE SHEETS — configuração
 // ═══════════════════════════════════════
 var SHEETS_ID      = '1e90q221sLmF52E7r_Wv-_EvBdzHfz_UMT8rvp3V_5iw';
-var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
+// Épicos e Backlog usam a mesma implantação controlada pelo time. Na primeira
+// abertura ela importa automaticamente a base legada e, depois, passa a
+// persistir Data Inicial, Data Prevista e Data Fim nessa fonte única.
+var SHEETS_WEBAPP  = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
 var BK_GAS_URL     = 'https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
 var _sheetsSyncing = false;
 var _sheetsWriteSyncing = false;
@@ -2734,6 +2737,24 @@ function _jbMergeAndRender(msg){
 function isValidDate(d){
   return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
 }
+// O Sheets (SHEETS_WEBAPP, um Apps Script separado deste repositório) pode devolver
+// uma data já gravada num formato que isValidDate rejeita de cara (ex.: um objeto
+// Date do Google Sheets serializado com hora/timezone, tipo "2026-08-11T00:00:00.000Z",
+// em vez do texto puro "2026-08-11"). Sem esta função, makeRow tratava isso como "sem
+// data" e ZERAVA um campo que na verdade tinha valor — e a fila de escrita pendente só
+// protege por até 24h antes de aceitar esse zero como definitivo. Extrai o prefixo
+// YYYY-MM-DD por STRING (nunca via `new Date()` + getters locais) para não introduzir
+// o mesmo bug de troca de dia por fuso horário já registrado no histórico deste
+// arquivo (ver comentário "bug visual 12/3 → 3/12" em replaceFromSharedSource).
+function coerceDateStr(v){
+  if(v===null||v===undefined||v==='') return null;
+  if(isValidDate(v)) return v;
+  var s=String(v).trim();
+  var m=s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if(m && isValidDate(m[1])) return m[1];
+  console.warn('[Épicos] Data em formato inesperado veio do Sheets e foi descartada — valor bruto:', v);
+  return null;
+}
 function isValidIsoDate(value){
   if(!value) return true;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -2804,9 +2825,9 @@ function normalizeWorkflowAll(){
   allData=allData.map(function(r){ return normalizeWorkflowRecord(r); });
 }
 function makeRow(r){
-  var sIni = isValidDate(r.ini) ? r.ini : null;
-  var sFim = isValidDate(r.fim) ? r.fim : null;
-  var sPrev = isValidDate(r.dataPrevista) ? r.dataPrevista : null;
+  var sIni = coerceDateStr(r.ini);
+  var sFim = coerceDateStr(r.fim);
+  var sPrev = coerceDateStr(r.dataPrevista);
   return normalizeWorkflowRecord({
     id:String(r.id||''),
     squad:String(r.squad||''),
@@ -2815,7 +2836,7 @@ function makeRow(r){
     statusAntes:r.statusAntes||null,
     ini:sIni,
     fim:sFim,
-    fimAntes:isValidDate(r.fimAntes)?r.fimAntes:null,
+    fimAntes:coerceDateStr(r.fimAntes),
     dataPrevista:sPrev,
     chg:(_SEED_CHG_CORRECTIONS[r.id] && r.chg===_SEED_CHG_CORRECTIONS[r.id]) ? '' : (r.chg||''),
     impedimento:r.impedimento||'',
@@ -2899,6 +2920,16 @@ function replaceFromSharedSource(rows){
           if((r[field]||'') === (pend.fields[field]||'')){
             delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
           } else {
+            // Diagnóstico: se isto aparecer repetidamente pro MESMO id/campo em
+            // sincronizações sucessivas (em vez de confirmar e sumir), é sinal de
+            // que o Sheets nunca está devolvendo o valor gravado — a proteção
+            // abaixo seguirá mostrando o valor local até PENDING_EDIT_TTL (24h)
+            // expirar, quando o valor do Sheets (possivelmente vazio) passa a valer.
+            if(['ini','fim','dataPrevista'].indexOf(field)!==-1){
+              console.warn('[Épicos] Data pendente ainda não confirmada pelo Sheets — id:', r.id,
+                'campo:', field, '| local (mantido na tela):', pend.fields[field],
+                '| Sheets devolveu:', r[field]||'(vazio)');
+            }
             r[field]=pend.fields[field];                              // ainda não refletiu — preserva
           }
         });
@@ -4126,7 +4157,33 @@ function toggleSortLT(){
   pg=1; renderTbl();
 }
 
+// Evita que um redesenho em segundo plano (poll automático do Sheets, a cada
+// SHEETS_POLL_MS) apague um valor que o usuário está no meio de digitar/
+// selecionar num input da tabela de Épicos: renderTbl() reconstrói o
+// innerHTML inteiro, e um <input type="date"> com o seletor ainda aberto
+// (ou uma edição de texto ainda não confirmada) não dispara onchange/onblur
+// antes de ser destruído — a digitação some sem nunca chegar a fc(), e por
+// isso nem o Sheets recebe o valor (não é o Sheets que "não pegou": o valor
+// nunca chegou a ser enviado).
+var _tblRenderPending=false;
+function _tblEditInProgress(){
+  var ae=document.activeElement;
+  if(!ae||!ae.classList) return false;
+  var body=$id('tblBody');
+  if(!body||!body.contains(ae)) return false;
+  return ae.classList.contains('einp')||ae.classList.contains('eimp');
+}
+document.addEventListener('focusout',function(e){
+  if(!_tblRenderPending) return;
+  var body=$id('tblBody');
+  if(body&&e.target&&body.contains(e.target)){
+    _tblRenderPending=false;
+    setTimeout(renderTbl,80);
+  }
+},true);
+
 function renderTbl(){
+  if(_tblEditInProgress()){ _tblRenderPending=true; return; }
   var fd=getFiltered(), tot=fd.length;
   // Apply LT sort if active
   if(sortLT==='desc') fd=fd.slice().sort(function(a,b){return b.lt-a.lt;});
@@ -4164,13 +4221,13 @@ function renderTbl(){
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-i="'+gi+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
-      '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
-      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.ini||'')+'" data-id="'+esc(r.id)+'" data-f="ini" onchange="fc(this)" title="Data In\u00edcio"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.dataPrevista||'')+'" data-id="'+esc(r.id)+'" data-f="dataPrevista" onchange="fc(this)" title="Data Prevista"></td>'+
+      '<td><input type="date" class="einp date'+(semFimRow?' einp-warn':'')+'" value="'+esc(r.fim||'')+'" data-id="'+esc(r.id)+'" data-f="fim" onchange="fc(this)" title="'+(semFimRow?'⚠ Data Fim ausente — preencha para fixar o LT':'Data Fim')+'"></td>'+
+      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-id="'+esc(r.id)+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+(cancelado?'— não medido':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
       '<td class="cimp">'+
-        '<textarea class="eimp" rows="2" data-i="'+gi+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
+        '<textarea class="eimp" rows="2" data-id="'+esc(r.id)+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
       '</td>'+
     '</tr>';
   });
@@ -4345,12 +4402,21 @@ function renderHistorico(){
 }
 
 var _impDraftTimers={};
+// Achado numa revisão independente: o input/textarea da linha carregava um ÍNDICE
+// (data-i, posição em allData no momento do render) em vez do id do épico. Entre o
+// usuário abrir/focar o campo e o evento disparar (onchange no blur, ou os 700ms de
+// debounce aqui), um poll automático, o save de outro usuário, ou até o PRÓPRIO
+// saveLocal() desta função (que filtra allData e pode deslocar posições) podiam
+// fazer esse índice apontar pra um registro DIFERENTE — a edição haveria de ir pro
+// épico errado, e o épico que o usuário via na tela ficaria sem a mudança (parecendo
+// "sumir"). Resolver por id (estável, nunca muda) em vez de índice elimina a classe
+// inteira desse problema.
 function saveImpedimentoDraft(el){
-  var gi=parseInt(el&&el.dataset&&el.dataset.i);
-  if(isNaN(gi)||!allData[gi]) return;
-  clearTimeout(_impDraftTimers[gi]);
-  _impDraftTimers[gi]=setTimeout(function(){
-    var rec=allData[gi];
+  var id=el&&el.dataset&&el.dataset.id;
+  if(!id) return;
+  clearTimeout(_impDraftTimers[id]);
+  _impDraftTimers[id]=setTimeout(function(){
+    var rec=allData.find(function(x){return x&&x.id===id;});
     if(!rec) return;
     rec.impedimento=el.value||'';
     saveLocal();
@@ -4362,9 +4428,13 @@ function saveImpedimentoDraft(el){
 }
 function fc(el){
   var tabToRestore=rememberTab();
-  var gi=parseInt(el.dataset.i), f=el.dataset.f;
-  if(isNaN(gi)||!allData[gi]) return;
+  var id=el.dataset.id, f=el.dataset.f;
+  var gi=allData.findIndex(function(x){return x&&x.id===id;});
+  if(gi<0) return;
 
+  // rec é a referência do OBJETO (não a posição no array): continua correta mesmo
+  // que allData seja reordenado/filtrado mais adiante nesta mesma função (ver
+  // saveLocal() abaixo) ou por um redraw concorrente antes do evento chegar aqui.
   var rec=allData[gi];
   var oldVal=rec[f];
   var rawVal=(el.value||'').trim();
@@ -4437,7 +4507,7 @@ function fc(el){
     jbSave();
   }
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
-    var r=allData[gi];
+    var r=rec;
     // Enfileira TODOS os campos editáveis como pendentes até o Sheets confirmar.
     // Protege qualquer edição (inclusive apagar um campo) contra ser sobrescrita
     // por uma releitura antecipada ou perdida por uma gravação que falhou.
@@ -4664,9 +4734,9 @@ function renderMed(){
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
       '<td>'+sBadge(r.status)+'</td>'+
-      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-i="'+gi+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
-      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-i="'+gi+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
-      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-i="'+gi+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
+      '<td><input type="date" class="einp date'+(ltAlto?' einp-warn':'')+'" value="'+esc(r.ini||'')+'" data-id="'+esc(r.id)+'" data-f="ini" onchange="fc(this)" title="'+(ltAlto?'⚠ LT acima de 100d — verifique a Data Início':'Data Início')+'"></td>'+
+      '<td><input type="date" class="einp date" value="'+esc(r.fim||'')+'" data-id="'+esc(r.id)+'" data-f="fim" onchange="fc(this)" title="Data Fim"></td>'+
+      '<td><input type="text" class="einp num" value="'+esc(r.chg||'')+'" data-id="'+esc(r.id)+'" data-f="chg" onblur="fc(this)" placeholder="—" title="CHG"></td>'+
       '<td class="clt '+lc+'">'+(cancelado?'— não contabilizado':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
     '</tr>';
   }).join('');
@@ -5433,6 +5503,12 @@ function gasCheckBacklogRevision(cb){
     // aparece sozinha, sem precisar de F5 manual.
     var emRev=json.revisions.emergencyDemand;
     if(typeof emRev==='number' && _emergencyRevision!==null && emRev!==_emergencyRevision){ emLoadCloud(); }
+    // Estórias (arquivo 3) também é servida pelo mesmo ping: sem isso, uma
+    // reimportação feita por outra pessoa só aparecia nesta aba depois de um
+    // F5 manual, mesmo com o backlog já sincronizando sozinho — Demandas
+    // Emergenciais (que lê allStories) ficava desatualizada em silêncio.
+    var stRev=json.revisions.stories;
+    if(typeof stRev==='number' && _storiesRevision!==null && stRev!==_storiesRevision){ gasLoadStories(function(){}); }
     if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
     gasLoadBacklog(function(err2){ if(cb) cb(err2,true); });
   }, 28000, 0);
@@ -6782,7 +6858,7 @@ var SV_STATUS=[
 ];
 
 function classifySvStatus(status){
-  var s=(status||'').toLowerCase().trim();
+  var s=stripAcc((status||'')).toLowerCase().trim();
   for(var i=0;i<SV_STATUS.length;i++){if(SV_STATUS[i].test(s)) return SV_STATUS[i].key;}
   return 'other';
 }
@@ -7164,23 +7240,41 @@ function detectUnifiedFileType(wb, fileName){
       // 1. Arquivo de Épicos: tem linhas "Épico" no Tipo de Item
       if(epicCnt>0) return 'epics';
 
+      // 2-7. Roteamento por nome de arquivo: aplica sempre que o cabeçalho
+      // "Tipo de Item" + "Chave" foi encontrado, independente de a amostra
+      // de 40 linhas conter alguma "História". Um relatório misto (ex.:
+      // "Sprint ativa - Story, Melhorias e Bug") pode não ter nenhuma
+      // História nas primeiras 40 linhas amostradas (ex.: sprint ordenada
+      // com Bugs/Melhorias no topo) — nesse caso o nome do arquivo é o
+      // único sinal confiável, e antes ele era ignorado porque essas
+      // checagens só rodavam dentro do "if(historiaCnt>0)", fazendo a
+      // detecção cair no fallback estrutural genérico (detectStoriesFormat),
+      // que não olha nome de arquivo e classificava tudo como "stories" —
+      // colidindo com outro arquivo (ex.: "QTD Épicos atrelados a Story")
+      // e cancelando a importação inteira ("Importação cancelada
+      // localmente: Há mais de um arquivo para 'stories'").
+      // 2. Arquivo de Homologação → Visão de Projetos: aba Homologação
+      if(fn.indexOf('homolog')>=0) return 'homologation_visao';
+      // 3. Sprint ativa → Visão de Projetos (Importar Sprint do Jira)
+      if(fn.indexOf('sprint')>=0) return 'sprint_visao';
+      // 4. Acomp. Geral → Visão de Projetos (botão JIRA)
+      if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
+      // 5. Ops4Ops tem a mesma estrutura e pode conter “Backlog” no nome,
+      // mas sua fonte é o Discovery PMO — nunca pode entrar no Backlog geral.
+      if(fn.indexOf('ops4ops')>=0) return 'ops4ops';
+      // 6. Story no Backlog → Tab Backlog/Refinamento
+      if(fn.indexOf('backlog')>=0) return 'backlog';
+      // 7. QTD Epicos → Tab Qtd Story/Épicos
+      if(fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
+
       if(historiaCnt>0){
-        // 2. Arquivo de Homologação → Visão de Projetos: aba Homologação
-        if(fn.indexOf('homolog')>=0) return 'homologation_visao';
-        // 3. Sprint ativa → Visão de Projetos (Importar Sprint do Jira)
-        if(fn.indexOf('sprint')>=0) return 'sprint_visao';
-        // 4. Acomp. Geral → Visão de Projetos (botão JIRA)
-        if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
-        // 5. Ops4Ops tem a mesma estrutura e pode conter “Backlog” no nome,
-        // mas sua fonte é o Discovery PMO — nunca pode entrar no Backlog geral.
-        if(fn.indexOf('ops4ops')>=0) return 'ops4ops';
-        // 6. Story no Backlog → Tab Backlog/Refinamento
-        if(fn.indexOf('backlog')>=0) return 'backlog';
-        // 7. QTD Epicos → Tab Qtd Story/Épicos
-        if(fn.indexOf('qtd')>=0||fn.indexOf('epico')>=0) return 'stories';
-        // Heurística de conteúdo: ≥90% Product Backlog → backlog; senão → stories
+        // Nenhum nome de arquivo reconhecido: heurística de conteúdo
+        // (≥90% Product Backlog → backlog; senão → stories).
         return (pbCnt/historiaCnt>=0.9)?'backlog':'stories';
       }
+      // Nem nome de arquivo nem amostra de conteúdo bateram para este
+      // cabeçalho: continua procurando outro cabeçalho candidato (próxima
+      // linha/aba) em vez de decidir errado com base em nada.
     }
   }
   // Fallback para detectores já existentes (formatos anteriores)
@@ -8544,7 +8638,12 @@ var SEED=[
           USER_FIELDS.forEach(function(f){
             var locVal=loc[f];
             var seedVal=seedR[f];
-            if(locVal!==undefined&&locVal!==null&&locVal!==''){
+            // Preserva o valor do navegador mesmo quando vazio/nulo: um campo
+            // apagado de propósito (ex.: Data Fim revertida de Medição pra
+            // Épicos) é uma decisão do usuário e não pode ser "desfeita" pelo
+            // SEED no próximo deploy. Só cai pro SEED quando a chave nem
+            // existe no registro salvo (épico salvo antes desse campo existir).
+            if(locVal!==undefined){
               out[f]=locVal;
               // Registra divergência auditável se o valor difere do SEED
               if(AUDIT_FIELDS.indexOf(f)>=0 && locVal!==seedVal && (locVal||seedVal)){
@@ -8673,14 +8772,10 @@ var SEED=[
     calLoad();
     calSaveToCloud();
 
-    // Carrega backlog/Ops4Ops/estórias em paralelo com o health check, em vez de
-    // esperar a resposta dele primeiro. O health check existia para "pré-aquecer"
-    // um cold-start do Apps Script antes das cargas reais — mas isso serializava
-    // tudo atrás dele: se o health check demorasse (ou desse timeout), a tela
-    // ficava presa esperando mesmo com dados disponíveis. gasLoadBacklog e
-    // gasLoadOps4opsFromDiscovery já têm retry-em-timeout próprio para cold-start,
-    // então essa espera extra deixou de ser necessária.
-    function _afterWarmup(){
+    // O health check é apenas diagnóstico. Não pode segurar o primeiro conteúdo:
+    // em aba anônima não há cache e uma espera por cold-start deixava Backlog e
+    // Ops4Ops em "Sincronizando" antes mesmo de suas cargas começarem.
+    function loadSharedPanels(){
       emLoadCloud();
       gasLoadBacklog(function(err, count){
         if(!err && count>0){
@@ -8711,10 +8806,10 @@ var SEED=[
         }
       });
     }
+    loadSharedPanels();
     if(BK_GAS_URL){
-      _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){});
+      _gasJsonp(BK_GAS_URL+'?action=health&t='+Date.now(), function(){ /* diagnóstico assíncrono */ });
     }
-    _afterWarmup();
     loadJiraEpicSnapshotFromCloud(function(){
       loadFromSheets(function(err, sheetsData){
         if(!err && Array.isArray(sheetsData) && sheetsData.length){
@@ -8796,6 +8891,44 @@ setTimeout(function(){ try{ flushPendingWrites(); }catch(e){} }, 5000);
 // Pré-carrega o html2canvas para que "Copiar" funcione já no 1º clique (sem perder o gesto do usuário)
 setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL); }catch(e){} }, 2500);
 
+// v23: eleição de aba líder (localStorage) + pausa por inatividade. Motivação:
+// usuária flagrada com 10 janelas abertas ao mesmo tempo no ambiente do cliente —
+// cada uma fazendo o ping de revisão a cada minuto, 10x o necessário pra uma só
+// pessoa. Só a aba "líder" (heartbeat em localStorage) chama o backend; as demais
+// ficam ouvindo o evento 'storage' e só buscam de verdade quando a líder publica
+// uma revisão nova (raro — a maioria dos ticks não muda nada). Se a líder fechar,
+// o heartbeat expira e outra aba assume sozinha, sem F5. localStorage indisponível
+// (ex.: navegação anônima bloqueando) faz a aba agir sozinha, como antes da v23.
+var _bkTabId=Date.now()+'_'+Math.random().toString(36).slice(2);
+var _bkLeaderSlot='sala_leader_backlog_v1';
+var _bkSharedRevSlot='sala_shared_rev_backlog_v1';
+var _bkLeaderStaleMs=150000; // 2.5x o intervalo de 60s: folga generosa antes de considerar a líder morta
+var _bkLastInteraction=Date.now();
+var _bkIdleMs=300000; // 5min sem interação numa aba visível = considera "esquecida"
+['mousemove','keydown','scroll','click','touchstart'].forEach(function(ev){
+  document.addEventListener(ev, function(){ _bkLastInteraction=Date.now(); }, {passive:true});
+});
+function _bkIsIdle(){ return (Date.now()-_bkLastInteraction)>_bkIdleMs; }
+function _bkClaimOrIsLeader(){
+  try{
+    var now=Date.now();
+    var leader=null;
+    try{ leader=JSON.parse(localStorage.getItem(_bkLeaderSlot)); }catch(e){}
+    var amLeader=leader && leader.id===_bkTabId;
+    var leaderStale=!leader || (now-leader.heartbeat)>_bkLeaderStaleMs;
+    if(amLeader || leaderStale){ localStorage.setItem(_bkLeaderSlot,JSON.stringify({id:_bkTabId,heartbeat:now})); return true; }
+    return false;
+  }catch(e){ return true; }
+}
+function _bkPublishRevision(){
+  try{ if(typeof _bkLastKnownRevision==='number') localStorage.setItem(_bkSharedRevSlot,String(_bkLastKnownRevision)); }catch(e){}
+}
+window.addEventListener('storage', function(ev){
+  if(ev.key!==_bkSharedRevSlot || ev.newValue==null || !BK_GAS_URL) return;
+  var rev=Number(ev.newValue);
+  if(!isNaN(rev) && rev!==_bkLastKnownRevision){ gasLoadBacklog(function(){}); }
+});
+
 // Reconfere o backlog com o servidor periodicamente — janelas abertas convergem sozinhas.
 // v21: em vez de buscar os dados completos a cada tick, faz um ping barato de revisão
 // (getRevisions) e só busca de verdade quando algo mudou. Pausa quando a aba está em
@@ -8806,15 +8939,19 @@ setTimeout(function(){ try{ if(typeof html2canvas==='undefined') loadLib(H2C_URL
 var _bkPollTicks=0;
 setInterval(function(){
   if(document.hidden || !BK_GAS_URL) return;
+  if(_bkIsIdle()) return;
+  if(!_bkClaimOrIsLeader()) return;
   try{
     _bkPollTicks++;
-    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){}); return; }
-    gasCheckBacklogRevision(function(){});
+    if(_bkPollTicks%15===0){ gasLoadBacklog(function(){ _bkPublishRevision(); }); gasLoadStories(function(){}); return; }
+    gasCheckBacklogRevision(function(){ _bkPublishRevision(); });
   }catch(e){}
 }, 60000);
 document.addEventListener('visibilitychange', function(){
   if(document.hidden || !BK_GAS_URL) return;
-  try{ gasCheckBacklogRevision(function(){}); }catch(e){}
+  _bkLastInteraction=Date.now();
+  if(!_bkClaimOrIsLeader()) return;
+  try{ gasCheckBacklogRevision(function(){ _bkPublishRevision(); }); }catch(e){}
 });
 
 // ═══════════════════════════════════════
@@ -8854,7 +8991,7 @@ function calSave(){ try{ storageSet(CAL_KEY, JSON.stringify(calData)); }catch(e)
 // detectActiveSprint() (visao-projetos/index.html) esperam ler. Sem isso, o
 // calendário existia só no localStorage de quem editou — a confirmação
 // automática de planning no Apps Script nunca achava sprint nenhuma.
-function calSaveToCloud(){
+function calSaveToCloud(isRetry){
   if(!BK_GAS_URL || !Array.isArray(calData)) return;
   var sprints = calData.reduce(function(acc,tri){
     return acc.concat(Array.isArray(tri && tri.sprints) ? tri.sprints : []);
@@ -8863,7 +9000,25 @@ function calSaveToCloud(){
     method:'POST', mode:'no-cors',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:'action=saveVpData&key=vpSprintCalendar&payload='+encodeURIComponent(JSON.stringify({sprints:sprints}))
-  }).catch(function(){});
+  }).then(function(){
+    // mode:'no-cors' torna a resposta do POST opaca — dá pra saber que o
+    // navegador conseguiu ENVIAR, nunca que o servidor realmente gravou (lock
+    // ocupado, proxy truncando). Mesmo risco de "salvou na tela e não chegou
+    // no servidor" já corrigido em gasSaveBacklog/discGasSave. Confirma com um
+    // GET separado e reenvia 1x antes de avisar; caminho feliz fica em
+    // silêncio de propósito — isso roda a cada edição do calendário.
+    setTimeout(function(){
+      _gasJsonp(BK_GAS_URL+'?action=getVpData&key=vpSprintCalendar&t='+Date.now(), function(err,json){
+        var remoteLen=(!err && json && json.ok && json.data && Array.isArray(json.data.sprints)) ? json.data.sprints.length : -1;
+        if(remoteLen>=sprints.length) return;
+        if(!isRetry){ calSaveToCloud(true); return; }
+        toast('⚠️ Calendário de sprints','Não foi possível confirmar a gravação no servidor. A alteração continua salva só neste navegador.','warn');
+      });
+    }, 2500);
+  }).catch(function(){
+    if(!isRetry){ setTimeout(function(){ calSaveToCloud(true); }, 2000); return; }
+    toast('⚠️ Calendário de sprints','Falha de rede ao salvar. A alteração continua salva só neste navegador.','warn');
+  });
 }
 
 // planejamento padrão — datas exatas dos trimestres apresentados

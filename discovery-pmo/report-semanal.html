@@ -912,7 +912,7 @@ const CFG={
   trackerKey:'discovery_pmo_tracker_planejamento2026_planilha_oficial_v3',
   cacheKey:'sala_rep_cache_v3', editKey:'sala_rep_edit_v4', snapKey:'sala_rep_snap_v4',
   syncKey:'sala_rep_last_sync_v1', resolveKey:'sala_rep_resolved_v1',
-  resolveGasKey:'discoveryPmoReportResolved',
+  resolveGasKey:'discoveryPmoReportResolved', editsGasKey:'discoveryPmoReportEdits',
   horizon:14, staleDays:10
 };
 const TL_STAGES=[{id:'entendimento',title:'Entendimento do Problema'},{id:'analise',title:'Levantamento e Análise'},{id:'desenho',title:'Desenho da Solução'},{id:'validacao',title:'Validação e Prontidão'}];
@@ -1345,10 +1345,204 @@ function prioridadeNarrativa(a,prevSnap){
 }
 
 /* ════════════ complementos executivos (por período) ════════════ */
-function loadEdits(){try{edits=JSON.parse(localStorage.getItem(CFG.editKey)||'{}')}catch(e){edits={}}}
-const EMPTY_EDIT=()=>({obs:'',evolucao:[],avancos:[],alinhamentos:[],itens:[],riscos:[],dependencias:[]});
+const EDIT_ARRAY_KEYS=['evolucao','alinhamentos','itens','riscos','dependencias','avancos'];
+function newEditId(){return 'edit_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)}
+/* Complementos salvos ANTES desta versão não tinham id/updatedAt (o merge por
+   item — ver mergeEditItemsById — é novo). Sem backfill, o primeiro pull desta
+   versão descartaria em silêncio todo item sem id (tratado como registro
+   inválido) e qualquer "obs" sem obsUpdatedAt perderia para um remoto vazio
+   (a chave é nova no servidor, então o remoto sempre começa vazio) — ou seja,
+   todo mundo que já usava a função perderia o que tinha escrito, garantido,
+   no primeiro carregamento após o deploy. Roda sempre (idempotente: item que
+   já tem id/updatedAt não é tocado) e devolve true só se encontrou algo pra
+   migrar, pra decidir se vale empurrar pro servidor logo no boot (ver init). */
+function backfillLegacyEdits(){
+  let touched=false;
+  const now=new Date().toISOString();
+  Object.keys(edits).forEach(w=>{
+    if(w==='__deleted')return;
+    const week=edits[w];
+    if(!week||typeof week!=='object')return;
+    EDIT_ARRAY_KEYS.forEach(k=>{
+      if(!Array.isArray(week[k]))return;
+      week[k].forEach(item=>{
+        if(!item||typeof item!=='object')return;
+        if(!item.id){item.id=newEditId();touched=true}
+        if(!item.updatedAt){item.updatedAt=now;touched=true}
+      });
+    });
+    if(week.obs&&!week.obsUpdatedAt){week.obsUpdatedAt=now;touched=true}
+  });
+  return touched;
+}
+function loadEdits(){
+  try{edits=JSON.parse(localStorage.getItem(CFG.editKey)||'{}')}catch(e){edits={}}
+  const backfilled=backfillLegacyEdits();
+  if(backfilled)saveEdits();
+  return backfilled;
+}
+const EMPTY_EDIT=()=>({obs:'',obsUpdatedAt:'',evolucao:[],avancos:[],alinhamentos:[],itens:[],riscos:[],dependencias:[]});
 function weekEdit(){const atual=edits[curWeek]||{};edits[curWeek]={...EMPTY_EDIT(),...atual};return edits[curWeek]}
 function saveEdits(){try{localStorage.setItem(CFG.editKey,JSON.stringify(edits))}catch(e){toast('Não consegui salvar no navegador',' err')}}
+/* "Tumba" de exclusão por item — o mapa {semana:{arrays}} nunca perde uma
+   CHAVE DE SEMANA no cliente (ver MERGE_MAP_KEYS/discoveryPmoReportEdits no
+   Apps Script), então excluir um item precisa de um marcador próprio, senão
+   um merge aditivo faria o item "voltar do nada" ao mesclar com um remoto que
+   ainda não sabe da exclusão — mesmo problema que resolvedMap já resolve
+   para riscos/dependências, replicado aqui pros complementos manuais. */
+function recordEditTombstone(id){
+  edits.__deleted=(Array.isArray(edits.__deleted)?edits.__deleted:[]).filter(t=>t.id!==id);
+  edits.__deleted.push({id,deletedAt:new Date().toISOString()});
+}
+function mergeEditTombstones(local,remote){
+  const map=new Map();
+  (local||[]).forEach(t=>{if(t&&t.id)map.set(t.id,t)});
+  (remote||[]).forEach(t=>{
+    if(!t||!t.id)return;
+    const existing=map.get(t.id);
+    if(!existing||(Date.parse(t.deletedAt||'')||0)>(Date.parse(existing.deletedAt||'')||0))map.set(t.id,t);
+  });
+  return Array.from(map.values());
+}
+/* Mescla um array de itens (evolução/riscos/dependências/etc.) por id — item
+   ausente de um lado entra (união aditiva); item presente dos dois lados vence
+   pelo updatedAt mais recente; item com tumba de exclusão nunca entra. Mesmo
+   princípio de mergeNestedById do Discovery PMO Tracker (index.html). */
+function mergeEditItemsById(localList,remoteList,deletedIds){
+  const map=new Map();
+  (localList||[]).forEach(item=>{if(item&&item.id&&!deletedIds.has(item.id))map.set(item.id,item)});
+  (remoteList||[]).forEach(item=>{
+    if(!item||!item.id||deletedIds.has(item.id))return;
+    const existing=map.get(item.id);
+    if(!existing){map.set(item.id,item);return}
+    if((Date.parse(item.updatedAt||'')||0)>(Date.parse(existing.updatedAt||'')||0))map.set(item.id,item);
+  });
+  return Array.from(map.values());
+}
+/* Até aqui, Observação executiva/Evolução/Alinhamentos/Pendências/Riscos e
+   Dependências adicionais/Avanços confirmados só existiam no localStorage de
+   quem digitou — em outro navegador (ou depois de limpar dados), o conteúdo
+   simplesmente não existia, sem erro nenhum. Mescla por ITEM (não por semana
+   inteira): duas pessoas adicionando complementos DIFERENTES na MESMA semana,
+   em navegadores diferentes, não se apagam mais uma à outra — cada item tem
+   seu próprio id e só perde pra outra versão do MESMO id com updatedAt maior.
+   obs (texto livre, um valor só por semana) usa last-write-wins por
+   obsUpdatedAt, já que não é uma lista de itens independentes. */
+function mergeEditsMaps(local,remote){
+  const tombstones=mergeEditTombstones(local?.__deleted,remote?.__deleted);
+  const deletedIds=new Set(tombstones.map(t=>t.id));
+  const weeks=new Set([...Object.keys(local||{}),...Object.keys(remote||{})].filter(k=>k!=='__deleted'));
+  const out={__deleted:tombstones};
+  weeks.forEach(w=>{
+    const l=local?.[w]||EMPTY_EDIT(), r=remote?.[w]||EMPTY_EDIT();
+    const merged={...EMPTY_EDIT()};
+    EDIT_ARRAY_KEYS.forEach(k=>{merged[k]=mergeEditItemsById(l[k],r[k],deletedIds)});
+    const lo=Date.parse(l.obsUpdatedAt||'')||0, ro=Date.parse(r.obsUpdatedAt||'')||0;
+    merged.obs=ro>=lo?(r.obs||''):(l.obs||'');
+    merged.obsUpdatedAt=ro>=lo?(r.obsUpdatedAt||''):(l.obsUpdatedAt||'');
+    out[w]=merged;
+  });
+  return out;
+}
+/* Confirma que tudo que o navegador tem localmente para esta semana (itens +
+   obs + tumbas) já está refletido no que o servidor devolveu — não basta a
+   chave da semana existir remotamente, cada item precisa bater por id com
+   updatedAt igual ou mais novo (pega inclusive uma EDIÇÃO de item já
+   existente, não só criação/remoção). */
+function weekConfirmed(week,remote){
+  const local=edits[week]||EMPTY_EDIT();
+  const r=remote?.[week]||{};
+  const arraysOk=EDIT_ARRAY_KEYS.every(k=>(local[k]||[]).every(item=>{
+    const match=(r[k]||[]).find(x=>x&&x.id===item.id);
+    return match&&(Date.parse(match.updatedAt||'')||0)>=(Date.parse(item.updatedAt||'')||0);
+  }));
+  // Compara por obsUpdatedAt, não por local.obs estar vazio — rmObs() zera o
+  // texto MAS atualiza obsUpdatedAt, então "obs vazia" ainda precisa confirmar
+  // que a exclusão chegou no servidor (senão uma falha silenciosa deixava a
+  // observação antiga viva lá, pronta pra "voltar" no próximo pull de outra pessoa).
+  const obsOk=!local.obsUpdatedAt||((Date.parse(r.obsUpdatedAt||'')||0)>=(Date.parse(local.obsUpdatedAt||'')||0));
+  const remoteTomb=remote?.__deleted||[];
+  const tombOk=(edits.__deleted||[]).every(t=>{
+    const match=remoteTomb.find(x=>x&&x.id===t.id);
+    return match&&(Date.parse(match.deletedAt||'')||0)>=(Date.parse(t.deletedAt||'')||0);
+  });
+  return arraysOk&&obsOk&&tombOk;
+}
+// Tenta ler o estado atual do servidor pra mesclar antes de gravar por cima,
+// com 1 retry. Devolve o payload remoto, ou null se não conseguiu de jeito
+// nenhum (nunca lança) — pushEdits decide o que fazer com esse null.
+// jsonp() já tenta de novo sozinho em falha de TRANSPORTE (timeout/rede) — ver
+// seu próprio retry interno. Este retry aqui é só para o caso "resposta OK mas
+// sem conteúdo útil" (mesma distinção que loadLiveDiscoveryData já faz mais
+// acima neste arquivo). Importante NÃO envolver o `await jsonp(...)` num
+// try/catch que re-tenta: isso empilharia retry de transporte em cima do
+// retry de transporte que o jsonp() já faz sozinho — exatamente o padrão que
+// o CLAUDE.md deste repo documenta como causa do incidente de 04-05/08 (quase
+// 5 minutos de espera antes de desistir). Uma rejeição de jsonp() aqui
+// simplesmente propaga pro chamador (pushEdits), que trata como falha única.
+async function pullEditsForPush(retriesLeft=1){
+  const resp=await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.editsGasKey}`);
+  // resp.ok===true com data ausente/null é uma resposta VÁLIDA (chave que ainda
+  // não teve nenhuma gravação — ex.: o primeiríssimo save desta chave em toda a
+  // vida do projeto) — normaliza pra objeto vazio em vez de tratar como falha.
+  // Sem essa distinção, o primeiro save nunca confirmava o pull, `pushEdits`
+  // sempre abortava, e a chave nova NUNCA chegava a ser criada no servidor.
+  if(resp&&resp.ok)return (resp.data&&typeof resp.data==='object')?resp.data:{};
+  if(retriesLeft>0){await new Promise(r=>setTimeout(r,2000));return pullEditsForPush(retriesLeft-1)}
+  return null;
+}
+// Grava os complementos no Apps Script. Antes de enviar, PRECISA confirmar o
+// que o servidor já tem e mesclar (mesmo cuidado do scheduleDiscGasSave no
+// index.html) — o merge do próprio Apps Script (mergeMap_) só protege por
+// CHAVE DE SEMANA inteira, não item a item; se este navegador gravasse por
+// cima sem saber o que o servidor tem agora, um item que outra pessoa acabou
+// de adicionar naquela mesma semana seria apagado do servidor em silêncio,
+// sem tumba e sem aviso. Por isso, se não der pra confirmar o estado do
+// servidor (nem no retry de conteúdo, nem sobrevivendo a uma falha de
+// transporte), a gravação é ABORTADA — o complemento já está salvo localmente
+// (saveEdits() já rodou antes de chamar pushEdits), só não sincroniza agora;
+// a próxima tentativa de salvar tenta de novo.
+async function pushEdits(week,isRetry){
+  let remote=null;
+  try{remote=await pullEditsForPush()}catch(e){/* falha de transporte — jsonp() já tentou de novo sozinho */}
+  if(!remote){
+    toast('Sem conexão para confirmar o estado atual do report antes de salvar. Complemento ficou salvo só neste navegador — tente de novo em instantes.','err');
+    return;
+  }
+  edits=mergeEditsMaps(edits,remote);
+  saveEdits();
+  fetch(CFG.gasUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveVpData&key='+CFG.editsGasKey+'&payload='+encodeURIComponent(JSON.stringify(edits))
+  }).then(()=>{
+    setTimeout(async()=>{
+      try{
+        const resp=await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.editsGasKey}`);
+        const remote=resp&&resp.ok&&resp.data&&typeof resp.data==='object'?resp.data:null;
+        if(remote&&weekConfirmed(week,remote))return;
+        if(!isRetry){pushEdits(week,true);return}
+        toast('Não foi possível confirmar a gravação dos complementos no servidor','err');
+      }catch(e){
+        if(!isRetry){pushEdits(week,true);return}
+        toast('Não foi possível confirmar a gravação dos complementos no servidor','err');
+      }
+    },2500);
+  }).catch(()=>{
+    if(!isRetry){setTimeout(()=>pushEdits(week,true),2000);return}
+    toast('Falha de rede ao salvar. Complemento ficou salvo só neste navegador','err');
+  });
+}
+// Puxa complementos compartilhados na abertura da página, antes do primeiro
+// generate() — sem isso, o que outra pessoa escreveu em outro navegador nunca
+// aparecia aqui. Mescla com o que já está local (nunca descarta em silêncio).
+async function pullEdits(){
+  try{
+    const resp=await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.editsGasKey}`);
+    const remote=resp&&resp.ok&&resp.data&&typeof resp.data==='object'?resp.data:null;
+    if(!remote)return;
+    edits=mergeEditsMaps(edits,remote);
+    saveEdits();
+  }catch(e){/* servidor indisponível — segue só com o que já está salvo localmente */}
+}
 let modalKind=null;
 let modalEdit=null;
 const MODAL_DEF={
@@ -1411,24 +1605,34 @@ function saveModal(){
   d.f.forEach(([id])=>o[id]=(el('f_'+id)?.value||'').trim());
   if(!o.texto){toast('Preencha o texto principal','err');return}
   const E=weekEdit();
-  if(modalKind==='obs')E.obs=o.texto;
-  else if(modalEdit&&Number.isInteger(modalEdit.index)&&E[modalKind]?.[modalEdit.index])E[modalKind][modalEdit.index]=o;
-  else E[modalKind].push(o);
+  const now=new Date().toISOString();
+  if(modalKind==='obs'){E.obs=o.texto;E.obsUpdatedAt=now}
+  else if(modalEdit&&Number.isInteger(modalEdit.index)&&E[modalKind]?.[modalEdit.index]){
+    o.id=E[modalKind][modalEdit.index].id||newEditId();o.updatedAt=now;
+    E[modalKind][modalEdit.index]=o;
+  }else{
+    o.id=newEditId();o.updatedAt=now;
+    E[modalKind].push(o);
+  }
   const edited=!!modalEdit;
-  saveEdits();closeModal();render();
+  saveEdits();pushEdits(curWeek);closeModal();render();
   toast(edited?'Complemento atualizado':'Complemento incluído no report')
 }
 function removeComplement(kind,index,label='este complemento'){
   if(!confirm(`Excluir ${label}? Esta ação remove somente o registro selecionado da semana ${curWeek}.`))return;
   const E=weekEdit();
   if(!Array.isArray(E[kind])||!E[kind][index])return;
+  const item=E[kind][index];
+  if(item&&item.id)recordEditTombstone(item.id);
   E[kind].splice(index,1);
-  saveEdits();render();toast('Complemento removido')
+  saveEdits();pushEdits(curWeek);render();toast('Complemento removido')
 }
 function rmItem(k,i){removeComplement(k,i,'este complemento')}
 function rmObs(){
   if(!confirm(`Excluir a observação executiva da semana ${curWeek}? Os complementos das outras semanas serão preservados.`))return;
-  weekEdit().obs='';saveEdits();render();toast('Observação removida')
+  const E=weekEdit();
+  E.obs='';E.obsUpdatedAt=new Date().toISOString();
+  saveEdits();pushEdits(curWeek);render();toast('Observação removida')
 }
 function compActions(kind,index,label='complemento'){
   return `<div class="comp-actions edit-ui"><button class="comp-btn" onclick="openEdit('${kind}',${index})" title="Editar ${label}" aria-label="Editar ${label}">✎</button><button class="comp-btn delete" onclick="removeComplement('${kind}',${index},'${label.replace(/'/g,"\\'")}')" title="Excluir ${label}" aria-label="Excluir ${label}">×</button></div>`
@@ -1456,11 +1660,37 @@ function resolvedMap(){try{return JSON.parse(localStorage.getItem(CFG.resolveKey
    ou depois de limpar dados, o item "voltava do nada" — mesmo os comentários
    deste arquivo já dizendo que a exclusão deveria "sumir de vez". */
 function saveResolvedMap(o,skipPush){try{localStorage.setItem(CFG.resolveKey,JSON.stringify(o))}catch(e){}if(!skipPush)pushResolvedMap(o)}
-function pushResolvedMap(map){
-  try{
-    fetch(CFG.gasUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'action=saveVpData&key='+CFG.resolveGasKey+'&payload='+encodeURIComponent(JSON.stringify(map))}).catch(()=>{});
-  }catch(e){}
+// Confirma via GET separado que o servidor recebeu a gravação, reenviando 1x
+// antes de avisar o usuário — mesmo padrão de pushEdits/confirmDiscGasSave.
+// mode:'no-cors' deixa a resposta do POST opaca, então o único jeito de saber
+// se "concluir"/"excluir"/"reabrir" um risco realmente persistiu é reler.
+function pushResolvedMap(map,isRetry){
+  fetch(CFG.gasUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveVpData&key='+CFG.resolveGasKey+'&payload='+encodeURIComponent(JSON.stringify(map))
+  }).then(()=>{
+    setTimeout(async()=>{
+      try{
+        const resp=await jsonp(`${CFG.gasUrl}?action=getVpData&key=${CFG.resolveGasKey}`);
+        const remote=resp&&resp.ok&&resp.data&&typeof resp.data==='object'?resp.data:null;
+        // Compara o VALOR de cada chave, não só a presença — reopenResolvedAt muda
+        // "kind" de uma chave já existente, e "k in remote" sozinho confirmaria
+        // uma gravação que não chegou a atualizar esse valor.
+        const confirmed=remote&&Object.keys(map).every(k=>JSON.stringify(remote[k])===JSON.stringify(map[k]));
+        if(confirmed)return;
+        // Reenvia o estado ATUAL (não o `map` capturado no momento da chamada
+        // original) — se o usuário resolveu outro item enquanto este retry
+        // esperava, reenviar a versão velha sobrescreveria a mudança mais nova.
+        if(!isRetry){pushResolvedMap(resolvedMap(),true);return}
+        toast('Não foi possível confirmar a gravação no servidor','err');
+      }catch(e){
+        if(!isRetry){pushResolvedMap(resolvedMap(),true);return}
+        toast('Não foi possível confirmar a gravação no servidor','err');
+      }
+    },2500);
+  }).catch(()=>{
+    if(!isRetry){setTimeout(()=>pushResolvedMap(resolvedMap(),true),2000);return}
+    toast('Falha de rede ao salvar. Ficou salvo só neste navegador','err');
+  });
 }
 /* Puxa o mapa compartilhado e mescla com o local (união simples — o servidor
    já faz o mesmo merge por chave). Chamado na carga da página para que
@@ -2605,7 +2835,7 @@ function SAMPLE(){
 }
 
 /* ════════════ init ════════════ */
-loadEdits();
+const _editsBackfilled=loadEdits();
 const __period=currentWeekBounds();
 el('weekInput').value=/^\d{4}-W\d{2}$/.test(initialWeek||'')?initialWeek:weekStrOf(__period.start);
 try{const m=localStorage.getItem('sala_rep_model');if(m)setModel(m);else setModel('A')}catch(e){setModel('A')}
@@ -2616,9 +2846,18 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 let __detState=null;
 window.addEventListener('beforeprint',()=>{const det=[...document.querySelectorAll('details.blk-more')];__detState=det.map(d=>d.open);det.forEach(d=>d.open=true)});
 window.addEventListener('afterprint',()=>{if(!__detState)return;[...document.querySelectorAll('details.blk-more')].forEach((d,i)=>d.open=__detState[i]);__detState=null});
-// Puxa exclusões/conclusões de outros navegadores antes do primeiro render,
-// pra não mostrar por um instante um risco que outra pessoa já tratou.
-pullResolvedMap().catch(()=>{}).finally(generate);
+// Puxa exclusões/conclusões e complementos executivos de outros navegadores
+// antes do primeiro render — pra não mostrar por um instante um risco que
+// outra pessoa já tratou, nem gerar o report sem a observação/complemento que
+// alguém escreveu numa outra máquina. Se o boot achou complemento salvo antes
+// desta versão (sem id/updatedAt — ver backfillLegacyEdits), empurra pro
+// servidor uma vez aqui: sem isso, quem já usava a função continuaria com o
+// conteúdo visível só localmente até editar algo de novo.
+(async()=>{
+  await Promise.allSettled([pullResolvedMap(),pullEdits()]);
+  await generate();
+  if(_editsBackfilled)pushEdits(curWeek);
+})();
 </script>
 
 

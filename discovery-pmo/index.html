@@ -7630,7 +7630,7 @@
       <div id="projectList" class="project-list"></div>
 
       <div class="side-actions">
-        <button type="button" class="ghost-btn" onclick="focusDashboardSection('uxV6SquadsSection')" title="Ver iniciativas por Squad">▣ Iniciativas</button>
+        <button type="button" class="ghost-btn" onclick="openSeniorInitiativesView()" title="Ver carteira executiva de iniciativas">▣ Iniciativas</button>
         <button type="button" class="ghost-btn" id="macroTimelineBtn" onclick="openMacroTimelinePanel()" title="Ver Roadmap por Squad e iniciativa">🗓 Roadmap <span id="macroTimelineBadge" class="tab-badge hidden" style="margin-left:4px">Atualizado</span></button>
         <button type="button" class="ghost-btn" id="discSyncBtn" onclick="manualSyncRefresh()" title="Buscar atualizações de outros usuários agora">↻ Atualizar</button>
         <button type="button" class="ghost-btn" onclick="openCalendarModal()" title="Ver calendário de Discoveries">📅 Calendário</button>
@@ -10362,10 +10362,19 @@
       document.head.appendChild(script);
     }
 
-    function discGasLoad(cb) {
+    function discGasLoad(cb, _retriesLeft) {
       if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
+      const retriesLeft = (_retriesLeft === undefined) ? 1 : _retriesLeft;
       _discGasJsonp(DISC_GAS_URL + '?action=getVpData&key=' + DISC_GAS_KEY + '&t=' + Date.now(), (err, json) => {
         if (err) { if (cb) cb(err); return; }
+        // Retry de conteúdo: o transporte pode responder OK mesmo com o servidor
+        // devolvendo ok:false (lock do Apps Script ocupado por outra ação — ver
+        // "Padrão de resiliência" no CLAUDE.md). Sem isso, essa contenção
+        // transitória virava "tela não carrega" sem nenhuma nova tentativa.
+        if ((!json || !json.ok) && retriesLeft > 0) {
+          setTimeout(() => discGasLoad(cb, retriesLeft - 1), 2000);
+          return;
+        }
         if (json && typeof json.revision === 'number') _discLastKnownRevision = json.revision;
         if (json && json.ok && json.data) { if (cb) cb(null, json.data); }
         else { if (cb) cb(null, null); }
@@ -10377,24 +10386,72 @@
     // _discLastKnownRevision a cada carga bem-sucedida, então essa referência fica certa
     // logo depois do boot, do refresh manual ou de qualquer outra chamada normal.
     let _discLastKnownRevision = null;
-    function discGasCheckRevision(cb) {
+    function discGasCheckRevision(cb, _retriesLeft) {
       if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
+      const retriesLeft = (_retriesLeft === undefined) ? 1 : _retriesLeft;
       _discGasJsonp(DISC_GAS_URL + '?action=getRevisions&t=' + Date.now(), (err, json) => {
-        if (err || !json || !json.ok || !json.revisions) { if (cb) cb(err || 'sem dados'); return; }
+        if (err || !json || !json.ok || !json.revisions) {
+          if (retriesLeft > 0) { setTimeout(() => discGasCheckRevision(cb, retriesLeft - 1), 2000); return; }
+          if (cb) cb(err || 'sem dados');
+          return;
+        }
         const rev = json.revisions[DISC_GAS_KEY];
         if (_discLastKnownRevision !== null && rev === _discLastKnownRevision) { if (cb) cb(null, false); return; }
         discGasSyncPull((err2, applied) => { if (cb) cb(err2, true); });
       });
     }
 
-    function discGasSave(payload) {
+    function discGasSave(payload, isRetry) {
       if (!DISC_GAS_URL) return;
       fetch(DISC_GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'action=saveVpData&key=' + DISC_GAS_KEY + '&payload=' + encodeURIComponent(JSON.stringify(payload))
-      }).catch(() => {});
+      }).then(() => {
+        confirmDiscGasSave(payload, isRetry);
+      }).catch(() => {
+        // Falha de rede no POST em si (fetch nem chegou a sair) — reenvia 1x antes de
+        // incomodar o usuário, mesma regra de "nunca uma chamada de tentativa única"
+        // do restante do app. Só avisa se o reenvio também falhar.
+        if (!isRetry) { setTimeout(() => discGasSave(payload, true), 2000); return; }
+        toast('⚠️ Falha de rede ao salvar. A alteração ficou salva só neste navegador por enquanto.');
+      });
+    }
+
+    // mode:'no-cors' torna a resposta do POST opaca: o .then acima só confirma que o
+    // navegador conseguiu ENVIAR a requisição, nunca que o Apps Script realmente
+    // gravou (lock do servidor, proxy truncando a resposta, timeout — tudo isso
+    // passa batido em silêncio). Sem essa verificação, uma squad/iniciativa cadastrada
+    // podia "salvar" com sucesso na tela e nunca chegar de fato na base compartilhada,
+    // só sendo percebido dias depois como "sumiu". Mesmo padrão de verify-and-retry já
+    // validado em gasSaveBacklog (index.html): confirma via GET separado, reenvia 1x
+    // automaticamente se o servidor não refletir o que acabamos de mandar, e só then
+    // incomoda o usuário com um toast se o reenvio também não confirmar. Caminho feliz
+    // (a grande maioria dos saves) fica silencioso de propósito — o autosave roda a
+    // cada edição e não pode virar um toast a cada poucos segundos.
+    function confirmDiscGasSave(payload, isRetry) {
+      const localSquads = Array.isArray(payload?.squads) ? payload.squads.length : 0;
+      const localProjects = Array.isArray(payload?.projects) ? payload.projects.length : 0;
+      setTimeout(() => {
+        discGasLoad((err, remote) => {
+          const remoteSquads = Array.isArray(remote?.squads) ? remote.squads.length : 0;
+          const remoteProjects = Array.isArray(remote?.projects) ? remote.projects.length : 0;
+          const confirmed = !err && remote && remoteProjects >= localProjects && remoteSquads >= localSquads;
+          if (confirmed) return;
+          if (!isRetry) {
+            // Mescla por registro o que o servidor tem agora antes de reenviar — sem isso,
+            // reenviar o snapshot local original por cima podia apagar uma edição
+            // concorrente de outra sessão que tenha chegado ao servidor entre o POST e
+            // esta confirmação (mesmo cuidado que gasSaveBacklog toma com mergeBacklog
+            // antes de reenviar).
+            if (remote) mergeRemoteIntoData(remote);
+            discGasSave(payload, true);
+            return;
+          }
+          toast('⚠️ Não foi possível confirmar a última gravação no servidor. A alteração continua salva neste navegador; edite algo nela de novo para tentar sincronizar automaticamente.');
+        });
+      }, 2500);
     }
 
     function scheduleDiscGasSave() {
@@ -10409,24 +10466,38 @@
         // nunca era reenviado e ficava só no localStorage).
         if (_discGasSaving) { scheduleDiscGasSave(); return; }
         _discGasSaving = true;
-        // Busca o estado remoto e mescla por registro antes de gravar por cima —
-        // sem isso, o save sempre reenviava o `data` local puro, e duas pessoas
-        // salvando na mesma janela de ~15s do polling faziam a segunda gravação
-        // apagar silenciosamente o que a primeira acabara de salvar, mesmo com
-        // todo o merge por registro já existente (ele só rodava na leitura).
-        discGasLoad((err, remote) => {
-          if (err || !remote || !Array.isArray(remote.projects) || !remote.projects.length) {
-            _discGasSaving = false;
-            return;
-          }
-          _discRemoteHydrated = true;
-          _discUsingFallback = false;
-          mergeRemoteIntoData(remote);
+        _discGasSavePreFetchAndSend(1);
+      }, 400);
+    }
+
+    // Busca o estado remoto e mescla por registro antes de gravar por cima — sem
+    // isso, o save sempre reenviava o `data` local puro, e duas pessoas salvando na
+    // mesma janela de ~15s do polling faziam a segunda gravação apagar silenciosamente
+    // o que a primeira acabara de salvar, mesmo com todo o merge por registro já
+    // existente (ele só rodava na leitura). Se essa busca falhar (ok:false por
+    // contenção de lock, timeout etc.), tenta de novo 1x (2s) antes de desistir — e,
+    // mesmo desistindo, NUNCA abandona a edição em silêncio: envia o `data` local sem
+    // merge, deixando confirmDiscGasSave() (chamado por dentro de discGasSave) cuidar
+    // da verificação + merge + retry no reenvio. Antes desta correção, uma falha nessa
+    // busca fazia a edição do usuário ficar presa só no localStorage até ele editar
+    // mais alguma coisa — ou pra sempre, se ele fechasse a aba antes disso.
+    function _discGasSavePreFetchAndSend(retriesLeft) {
+      discGasLoad((err, remote) => {
+        const remoteOk = !err && remote && Array.isArray(remote.projects) && remote.projects.length;
+        if (!remoteOk) {
+          if (retriesLeft > 0) { setTimeout(() => _discGasSavePreFetchAndSend(retriesLeft - 1), 2000); return; }
           storageSet(STORAGE_KEY, JSON.stringify(data));
           discGasSave(data);
           setTimeout(() => { _discGasSaving = false; }, 800);
-        });
-      }, 400);
+          return;
+        }
+        _discRemoteHydrated = true;
+        _discUsingFallback = false;
+        mergeRemoteIntoData(remote);
+        storageSet(STORAGE_KEY, JSON.stringify(data));
+        discGasSave(data);
+        setTimeout(() => { _discGasSaving = false; }, 800);
+      });
     }
 
     // Aplica a base vinda do servidor se ela for mais recente que a local. Preserva a
@@ -10566,6 +10637,27 @@
     // applyRemoteDiscData para ser reaproveitado também no caminho de SAVE — antes,
     // só o polling mesclava; o save sempre sobrescrevia o servidor com o `data`
     // local puro, perdendo o que outra aba tivesse acabado de salvar.
+    // Mescla o mapa key->{ini,ts} de jiraStoryInitiativeOverrides por RECÊNCIA (ts),
+    // igual ao critério usado pelos demais merges deste arquivo (mergeProjectRecord,
+    // mergeNestedById) — em vez de "o lado local sempre vence" (Object.assign com
+    // local por último), que descartaria silenciosamente uma correção mais nova vinda
+    // de outro navegador sempre que o local ainda tivesse um valor antigo em cache
+    // para a mesma história.
+    function mergeOverridesByRecency(local, remote) {
+      const merged = {};
+      const keys = new Set([...Object.keys(local || {}), ...Object.keys(remote || {})]);
+      keys.forEach(key => {
+        const l = local && local[key];
+        const r = remote && remote[key];
+        if (l && r) {
+          merged[key] = (Date.parse(r.ts || '') || 0) > (Date.parse(l.ts || '') || 0) ? r : l;
+        } else {
+          merged[key] = l || r;
+        }
+      });
+      return merged;
+    }
+
     function mergeRemoteIntoData(remote) {
       if (!remote || typeof remote !== 'object' || !Array.isArray(remote.projects) || !remote.projects.length) return false;
       const normalizedRemote = normalizeData(deepClone(remote));
@@ -10574,7 +10666,17 @@
       const projectsMerge = mergeProjectsById(data.projects, normalizedRemote.projects, deletedIds);
       const squadsMerge = mergeById(data.squads, normalizedRemote.squads, deletedIds);
       const historyMerge = mergeById(data.importHistory, normalizedRemote.importHistory);
-      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed) return false;
+      // Histórias órfãs do Ops4Ops (rótulo #Nº ausente/errado) e os vínculos manuais
+      // feitos em "Ver detalhes" (jiraStoryInitiativeOverrides) também são estado
+      // compartilhado — sem entrar aqui, ficavam de fora de todo merge (inclusive o do
+      // primeiro load) e o próximo save de QUALQUER outro usuário sobrescrevia essas
+      // duas listas no servidor com a cópia local desatualizada, apagando em silêncio
+      // o que outro navegador tinha acabado de importar/vincular.
+      const unassignedMerged = mergeNestedById(data.unassignedJiraStories, normalizedRemote.unassignedJiraStories, deletedIds);
+      const overridesMerged = mergeOverridesByRecency(data.jiraStoryInitiativeOverrides, normalizedRemote.jiraStoryInitiativeOverrides);
+      const unassignedChanged = JSON.stringify(unassignedMerged) !== JSON.stringify(data.unassignedJiraStories || []);
+      const overridesChanged = JSON.stringify(overridesMerged) !== JSON.stringify(data.jiraStoryInitiativeOverrides || {});
+      if (!projectsMerge.changed && !squadsMerge.changed && !historyMerge.changed && !unassignedChanged && !overridesChanged) return false;
       if (!projectsMerge.list.length) return false; // nunca fica sem nenhuma iniciativa por causa do merge
 
       data.tombstones = tombstones;
@@ -10583,6 +10685,8 @@
       data.importHistory = historyMerge.list
         .sort((a, b) => (Date.parse(b.at || '') || 0) - (Date.parse(a.at || '') || 0))
         .slice(0, 30);
+      data.unassignedJiraStories = unassignedMerged;
+      data.jiraStoryInitiativeOverrides = overridesMerged;
       // Flags de migração única (ex.: reset de cards, sync de nomes de squad) também
       // precisam propagar — sem isso, uma base remota que ainda não tem a flag faria
       // a migração "de uma vez só" rodar de novo a cada poll sobre o clone normalizado.
@@ -10641,6 +10745,43 @@
       });
     }
 
+    // v23: eleição de aba líder (localStorage) + pausa por inatividade. Motivação:
+    // usuária flagrada com 10 janelas abertas ao mesmo tempo no ambiente do cliente —
+    // cada uma fazendo o ping de revisão no mesmo ritmo, 10x o necessário pra uma só
+    // pessoa. Só a aba "líder" (heartbeat em localStorage) chama o backend; as demais
+    // ficam ouvindo o evento 'storage' e só buscam de verdade quando a líder publica
+    // uma revisão nova (raro). Se a líder fechar, o heartbeat expira e outra aba assume
+    // sozinha, sem F5. localStorage indisponível faz a aba agir sozinha, como antes.
+    const _discTabId = Date.now() + '_' + Math.random().toString(36).slice(2);
+    const _discLeaderSlot = 'sala_leader_discovery_v1';
+    const _discSharedRevSlot = 'sala_shared_rev_discovery_v1';
+    const _discLeaderStaleMs = 75000; // 2.5x o intervalo de 30s
+    let _discLastInteraction = Date.now();
+    const _discIdleMs = 300000; // 5min sem interação numa aba visível = "esquecida"
+    ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'].forEach(ev => {
+      document.addEventListener(ev, () => { _discLastInteraction = Date.now(); }, { passive: true });
+    });
+    function _discIsIdle() { return (Date.now() - _discLastInteraction) > _discIdleMs; }
+    function _discClaimOrIsLeader() {
+      try {
+        const now = Date.now();
+        let leader = null;
+        try { leader = JSON.parse(localStorage.getItem(_discLeaderSlot)); } catch (e) {}
+        const amLeader = leader && leader.id === _discTabId;
+        const leaderStale = !leader || (now - leader.heartbeat) > _discLeaderStaleMs;
+        if (amLeader || leaderStale) { localStorage.setItem(_discLeaderSlot, JSON.stringify({ id: _discTabId, heartbeat: now })); return true; }
+        return false;
+      } catch (e) { return true; }
+    }
+    function _discPublishRevision() {
+      try { if (typeof _discLastKnownRevision === 'number') localStorage.setItem(_discSharedRevSlot, String(_discLastKnownRevision)); } catch (e) {}
+    }
+    window.addEventListener('storage', ev => {
+      if (ev.key !== _discSharedRevSlot || ev.newValue == null) return;
+      const rev = Number(ev.newValue);
+      if (!isNaN(rev) && rev !== _discLastKnownRevision) discGasSyncPull();
+    });
+
     // v21: ping barato (getRevisions) no lugar de puxar a base completa do Discovery a
     // cada 15s — esse timer era, de longe, a maior fonte de chamadas do projeto (240x
     // mais chamadas/hora que os outros paineis). Agora só busca a base completa quando a
@@ -10650,11 +10791,18 @@
     let _discPollTicks = 0;
     setInterval(() => {
       if (document.hidden) return;
+      if (_discIsIdle()) return;
+      if (!_discClaimOrIsLeader()) return;
       _discPollTicks++;
-      if (_discPollTicks % 20 === 0) { discGasSyncPull(); return; }
-      discGasCheckRevision();
+      if (_discPollTicks % 20 === 0) { discGasSyncPull(() => _discPublishRevision()); return; }
+      discGasCheckRevision(() => _discPublishRevision());
     }, 30000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) discGasCheckRevision(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      _discLastInteraction = Date.now();
+      if (!_discClaimOrIsLeader()) return;
+      discGasCheckRevision(() => _discPublishRevision());
+    });
     // Migrações únicas só valem para toda a base quando chegam ao servidor — sem isso,
     // ficariam apenas no localStorage de quem abriu a página primeiro.
     if ((_cardsJustReset || _scheduleLegacyCleanupJustRan) && !_discUsingFallback) {
@@ -11513,70 +11661,10 @@
       return compactProjectName(project?.name || 'Projeto sem nome', 30);
     }
 
-    function renderSidebar() {
-      const wrap = document.getElementById('projectList');
-      wrap.innerHTML = data.projects.map(p => {
-        const progress = calculateProgress(p);
-        return `<button type="button" class="project-pill ${p.id === activeProjectId ? 'active' : ''}" onclick="setActiveProject('${p.id}')" aria-pressed="${p.id === activeProjectId}" title="Abrir visão executiva de ${escapeHtml(displayProjectTitle(p))}">
-          <div class="pill-top"><span>${escapeHtml(projectMenuTitle(p))}</span><span class="pill-percent">${progress}%</span></div>
-          <div class="pill-meta"><span><span class="selected-mark">●</span>${escapeHtml(p.status)} · ${escapeHtml(p.criticality)}</span><div class="mini-progress"><span style="width:${progress}%"></span></div></div>
-        </button>`;
-      }).join('');
-      const selected = wrap.querySelector('.project-pill.active');
-      if (selected && typeof selected.scrollIntoView === 'function') {
-        selected.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-    }
-
-    function renderHero(project) {
-      const progress = calculateProgress(project);
-      const readiness = deliveryReadinessDetails(project);
-      const pdca = readiness.pdca;
-      const decisionNeeded = readiness.blocked > 0 || readiness.risks > 0 || pdca > 0 || readiness.readiness !== 'Alta';
-      const next = nextMilestone(project);
-      document.getElementById('projectName').textContent = project.name || 'Projeto sem nome';
-      document.getElementById('projectSummary').textContent = buildExecutiveReading(project);
-      document.getElementById('scoreValue').textContent = progress + '%';
-      document.getElementById('progressRing').dataset.progress = progress;
-      document.getElementById('progressRing').style.setProperty('--deg', (progress * 3.6) + 'deg');
-      document.getElementById('mainProgress').style.width = progress + '%';
-      document.getElementById('scoreText').textContent = progress >= 80 ? 'Discovery maduro para tomada de decisão e próximo passo.' : progress >= 55 ? 'Discovery em boa evolução, com pontos de atenção controláveis.' : 'Discovery ainda precisa de decisões, dados e clareza para avançar com segurança.';
-
-      const ini = initiativeNumber(project);
-      const breadcrumbCode = document.getElementById('breadcrumbProjectCode');
-      if (breadcrumbCode) breadcrumbCode.textContent = ini || 'Iniciativa';
-      document.getElementById('projectTags').innerHTML = `
-        ${ini ? `<span class="initiative-highlight">Nº Iniciativa: ${escapeHtml(ini)}</span><span class="dot">•</span>` : ''}
-        <span>Squad: <strong>${escapeHtml(project.squad || inferSquad(project))}</strong></span><span class="dot">•</span>
-        <span>Área: <strong>${escapeHtml(project.business || 'Não informado')}</strong></span><span class="dot">•</span>
-        <span>RTE: <strong>${escapeHtml(project.rteOwner || project.owner || 'PMO/RTE')}</strong></span><span class="dot">•</span>
-        <span>PMO: <strong>${escapeHtml(project.owner || 'PMO/RTE')}</strong></span>
-      `;
-
-      const indicators = [
-        { label: 'Status', value: project.status || 'Não informado', note: project.criticality ? `Criticidade ${project.criticality}` : 'Saúde geral do projeto', color: statusColor(project.status) },
-        { label: 'Target', value: formatBR(project.target), note: project.startDate ? `Início ${formatBR(project.startDate)}` : 'Data alvo executiva', color: 'var(--blue)' },
-        { label: 'Delivery', value: readiness.readiness, note: readiness.readiness === 'Alta' ? 'Pode evoluir com segurança' : 'Ainda exige maturação', color: readiness.readiness === 'Alta' ? 'var(--green)' : readiness.readiness === 'Média' ? 'var(--amber)' : 'var(--primary)' },
-        { label: 'Decisão', value: decisionNeeded ? 'Sim' : 'Não', note: decisionNeeded ? 'Existe ponto de gestão' : 'Sem decisão crítica agora', color: decisionNeeded ? 'var(--primary)' : 'var(--green)' }
-      ];
-      document.getElementById('executiveHeroIndicators').innerHTML = indicators.map(i => `
-        <div class="exec-indicator-card" style="--indicator-color:${i.color}">
-          <div class="exec-indicator-label">${escapeHtml(i.label)}</div>
-          <div class="exec-indicator-value" title="${escapeAttr(i.value)}">${escapeHtml(i.value)}</div>
-          <div class="exec-indicator-note">${escapeHtml(i.note)}</div>
-        </div>
-      `).join('');
-
-      const alert = document.getElementById('executiveAttentionBlock');
-      if (decisionNeeded) {
-        const action = readiness.recommendation || managementActionText(project, { progress, blocked: readiness.blocked, risks: readiness.risks, late: pdca, attention: pdca });
-        alert.classList.remove('hidden');
-        alert.innerHTML = `<strong>Ponto de atenção executivo</strong><span>Próximo marco: ${escapeHtml(next)}. Ação esperada: ${escapeHtml(action)}</span>`;
-      } else {
-        alert.classList.add('hidden');
-        alert.innerHTML = '';
-      }
-    }
+    // renderSidebar e renderHero estavam duplicadas nesta base (mesma armadilha
+    // "Funções duplicadas" do CLAUDE.md deste repo) — como só a ÚLTIMA declaração de
+    // uma função vale em JS, estas cópias nunca executavam; removidas em vez de
+    // mantidas como código morto. As versões vigentes estão mais abaixo no arquivo.
 
     function renderMetrics(project) {
       const progress = calculateProgress(project);
@@ -13380,31 +13468,8 @@
       setTimeout(() => el.classList.remove('show'), 1800);
     }
 
-    function copyExecutiveSummary() {
-      const p = getProject();
-      const d = deliveryReadinessDetails(p);
-      const text = `Prontidão para Delivery - ${displayProjectTitle(p)}
-Iniciativa: ${initiativeNumber(p) || 'Não informada'}
-Projeto: ${p.name}
-Squad: ${p.squad || inferSquad(p)}
-Área/Negócio: ${p.business}
-RTE responsável: ${p.rteOwner || p.owner || 'PMO/RTE'}
-Início do projeto: ${formatBR(p.startDate)}
-Status executivo: ${p.status}
-Data target: ${formatBR(p.target)}
-Prontidão atual: ${d.readiness}
-Maturidade do Discovery: ${d.progress}%
-Fase atual: ${currentDiscoveryPhase(p)}
-Próximo marco: ${nextMilestone(p)}
-MVP definido: ${d.mvp.label}
-Critérios de aceite: ${d.acceptance.label}
-Dependências técnicas: ${d.dependencies.label}
-Backlog inicial: ${d.backlog.label}
-Riscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma
-Anexos relevantes: ${(p.attachments || []).length}
-Recomendação PMO: ${d.recommendation}`;
-      copyText(text);
-    }
+    // copyExecutiveSummary também estava duplicada — mesma armadilha, mesma correção
+    // (ver comentário equivalente mais acima nesta base). Versão vigente mais abaixo.
 
     function copyText(text, message = 'Leitura executiva copiada') {
       if (navigator.clipboard && window.isSecureContext) {
@@ -13510,34 +13575,6 @@ Recomendação PMO: ${d.recommendation}`;
       };
     }
 
-
-    function normalizeNeutralInitiativeNumbers(base) {
-      const projects = base?.projects || [];
-      const used = new Set();
-      let counter = 1;
-      const nextCode = () => {
-        let code = `DISC-${String(counter).padStart(3, '0')}`;
-        while (used.has(code)) {
-          counter += 1;
-          code = `DISC-${String(counter).padStart(3, '0')}`;
-        }
-        used.add(code);
-        counter += 1;
-        return code;
-      };
-      projects.forEach(project => {
-        const current = String(project.initiativeNumber || '').trim().toUpperCase();
-        if (/^DISC-\d{3,}$/.test(current) && !used.has(current)) {
-          project.initiativeNumber = current;
-          used.add(current);
-          const n = Number(current.split('-')[1]);
-          if (Number.isFinite(n)) counter = Math.max(counter, n + 1);
-        } else {
-          project.initiativeNumber = nextCode();
-        }
-      });
-      return base;
-    }
 
     function enhanceSquadData(payload) {
       const base = payload || { projects: [] };
@@ -13768,14 +13805,13 @@ Recomendação PMO: ${d.recommendation}`;
       const squad = isEdit ? squadById(squadId) : { id: uid('squad'), name: '', code: '', business: '', rteOwner: '', owner: '', techLead: '' };
       if (!squad) { toast('Squad não encontrada'); return; }
       modalState = { type: 'squad', isEdit, squad: deepClone(squad), originalSquadId: squadId };
-      openModal(isEdit ? 'Editar Squad' : 'Cadastro de Squads', 'Cadastre a Squad uma vez e reutilize em várias iniciativas. O número da iniciativa é sequencial e independente da sigla.', `
-        <div class="automation-note"><span class="automation-dot"></span><div><strong>Cadastro único por Squad</strong>A Squad organiza as iniciativas, mas o Nº da Iniciativa é neutro e sequencial: exemplo DISC-001, DISC-002.</div></div>
+      openModal(isEdit ? 'Editar Squad' : 'Cadastro de Squads', 'Cadastre a Squad uma vez e reutilize em várias iniciativas.', `
+        <div class="automation-note"><span class="automation-dot"></span><div><strong>Cadastro único por Squad</strong>A Squad organiza as iniciativas. O Nº da Iniciativa é o número oficial da planilha, informado no cadastro de cada iniciativa.</div></div>
         ${squadListHtml(squadId || '')}
         <div class="form-grid">
           ${field('Nome da Squad', 'squad-name', squad.name)}
           ${field('Tech Lead padrão', 'squad-tech-lead', squad.techLead || '')}
           ${field('RTE padrão', 'squad-rte-owner', squad.rteOwner)}
-          <div class="form-field"><label>Próximo Nº previsto</label><input type="text" readonly value="${escapeAttr(nextInitiativeNumber(squad.id))}" /></div>
         </div>
       `, [
         isEdit ? `<button type="button" class="btn" onclick="deleteSquad('${squad.id}')">Excluir</button>` : '',
@@ -13846,39 +13882,11 @@ Recomendação PMO: ${d.recommendation}`;
       saveData(true);
     }
 
-    function insertSquadAutomationControls() {
-      const actions = document.querySelector('.side-actions');
-      if (!actions) return;
-      const newBtn = actions.querySelector('button[onclick="openProjectModal()"]');
-      if (newBtn) {
-        newBtn.textContent = '+ Iniciativa';
-        newBtn.title = 'Cadastrar nova iniciativa com número automático';
-      }
-
-      if (!document.getElementById('dashboardViewBtn')) {
-        const dashBtn = document.createElement('button');
-        dashBtn.type = 'button';
-        dashBtn.id = 'dashboardViewBtn';
-        dashBtn.className = 'ghost-btn';
-        dashBtn.textContent = 'Dashboard';
-        dashBtn.title = 'Visualizar dashboard executivo de Squads';
-        dashBtn.onclick = () => setDashboardMode();
-        actions.insertBefore(dashBtn, actions.firstChild);
-      }
-
-      if (!document.getElementById('squadManagerBtn')) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.id = 'squadManagerBtn';
-        btn.className = 'ghost-btn';
-        btn.textContent = 'Squads';
-        btn.title = 'Cadastrar e gerenciar Squads';
-        btn.onclick = () => openSquadModal();
-        if (newBtn?.nextSibling) actions.insertBefore(btn, newBtn.nextSibling);
-        else actions.appendChild(btn);
-      }
-    }
-
+    // insertSquadAutomationControls estava duplicada nesta base (2 declarações no
+    // mesmo escopo) — como só a ÚLTIMA declaração de uma função vale em JS, esta
+    // cópia nunca executava; removida em vez de mantida como código morto (ver
+    // "Funções duplicadas" no CLAUDE.md deste repo). A versão que realmente roda
+    // está mais abaixo, perto de renderProjectCardsForSquad/renderSquadOverview.
 
     function squadProjects(squadId) {
       return (data.projects || []).filter(p => (p.squadId || squadForProject(p)?.id) === squadId);
@@ -14000,225 +14008,24 @@ Recomendação PMO: ${d.recommendation}`;
       return words[0][0].toUpperCase();
     }
 
-    function renderProjectCardsForSquad(squad) {
-      const projects = squadProjects(squad.id);
-      if (!projects.length) {
-        return `<div class="dash-empty-projects">
-          <strong>Nenhuma iniciativa vinculada a esta Squad.</strong><br>
-          Cadastre uma nova iniciativa e selecione a Squad ${escapeHtml(squad.name)} para ela aparecer aqui.
-          <div style="margin-top:12px;"><button type="button" class="btn soft" onclick="openProjectModalForSquad('${escapeAttr(squad.id)}')">+ Nova iniciativa nesta Squad</button></div>
-        </div>`;
-      }
-      return `<div class="dashboard-project-grid">${projects.map(project => {
-        const progress = calculateProgress(project);
-        const readiness = deliveryReadinessDetails(project);
-        const alerts = projectAlertCount(project);
-        return `<button type="button" class="dashboard-project-card" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" title="Abrir projeto ${escapeAttr(displayProjectTitle(project))}">
-          <div class="dash-project-head">
-            <strong>${escapeHtml(displayProjectTitle(project))}</strong>
-            <span class="dash-project-code">${escapeHtml(initiativeNumber(project) || 'DISC')}</span>
-          </div>
-          <div class="dash-project-meta">
-            <span>${escapeHtml(project.status || 'Sem status')}</span>
-            <span>Criticidade ${escapeHtml(project.criticality || 'N/I')}</span>
-            <span>Target ${escapeHtml(formatBR(project.target))}</span>
-            <span>${alerts} alerta(s)</span>
-          </div>
-          <div class="dash-project-footer">
-            <div>
-              <div class="dash-project-progress"><span style="width:${progress}%"></span></div>
-              <div class="dash-kpi-note">Prontidão: ${escapeHtml(readiness.readiness)} · ${progress}% maturidade</div>
-            </div>
-            <span class="squad-card-link">Abrir →</span>
-          </div>
-        </button>`;
-      }).join('')}</div>`;
-    }
+    // renderProjectCardsForSquad e renderSquadOverview estavam duplicadas nesta base
+    // (3 declarações cada, no mesmo escopo) — como só a ÚLTIMA declaração vale em JS,
+    // esta cópia (e a intermediária, mais abaixo) nunca executavam; removidas em vez
+    // de mantidas como código morto (ver "Funções duplicadas" no CLAUDE.md deste
+    // repo). renderHero e copyExecutiveSummary também estavam duplicadas — mantida
+    // só a versão mais completa (com breadcrumbProjectCode em formato "IN <nº>" e
+    // squadInitiativeCount tolerante a squad ausente), já presente mais abaixo no
+    // arquivo, junto da versão vigente de renderProjectCardsForSquad/renderSquadOverview.
 
-    function renderSquadOverview() {
-      data = enhanceSquadData(data);
-      const el = document.getElementById('squadOverview');
-      if (!el) return;
-      const squads = sortedSquadsList();
-      ensureDefaultDashboardSquad();
-      const allProjects = data.projects || [];
-      const totalProjects = allProjects.length;
-      const avgProgress = totalProjects
-        ? Math.round(allProjects.reduce((acc, project) => acc + calculateProgress(project), 0) / totalProjects)
-        : 0;
-      const activeDiscoveries = allProjects.filter(project => automaticProjectStatus(project) !== 'Concluído').length;
-      const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-      const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
-
-      const squadCards = squads.map(squad => {
-        const projects = squadProjects(squad.id);
-        const count = projects.length;
-        const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
-        const alerts = projects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-        const critical = projects.filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
-        const statusCounts = projects.reduce((acc, project) => {
-          const key = project.status || 'Sem status';
-          acc[key] = (acc[key] || 0) + 1;
-          return acc;
-        }, {});
-        const statusHtml = Object.entries(statusCounts).slice(0, 3).map(([status, total]) => `<span class="squad-status-tag">${escapeHtml(status)} · ${total}</span>`).join('') || '<span class="squad-status-tag">Sem projetos</span>';
-        return `<button type="button" class="squad-dash-card ${selectedSquad?.id === squad.id ? 'active' : ''}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
-          <div class="squad-dash-top">
-            <div class="squad-avatar">${escapeHtml(squadInitials(squad.name))}</div>
-            <div class="squad-title-text">
-              <strong>${escapeHtml(squad.name || 'Squad sem nome')}</strong>
-              <span>${escapeHtml(squad.business || 'Área não informada')}</span>
-            </div>
-            <div class="squad-dash-count"><strong>${count}</strong><span>Projetos</span></div>
-          </div>
-          <div class="squad-mini-metrics">
-            <div class="squad-mini-metric"><strong>${average}%</strong><span>Maturidade média</span></div>
-            <div class="squad-mini-metric"><strong>${critical}</strong><span>Atenção / crítico</span></div>
-            <div class="squad-mini-metric"><strong>${alerts}</strong><span>Alertas PMO</span></div>
-          </div>
-          <div class="squad-status-row">${statusHtml}</div>
-          <div class="squad-dash-progress"><div class="squad-dash-progress-track"><span style="width:${average}%"></span></div><em>${average}%</em></div>
-          <span class="squad-card-link">Ver projetos da Squad →</span>
-        </button>`;
-      }).join('');
-
-      const selectedPanel = selectedSquad ? `<section id="squadProjectListPanel" class="squad-projects-dock" aria-label="Projetos da Squad selecionada">
-        <div class="dash-panel-head">
-          <div class="dash-panel-title">
-            <strong>Projetos da Squad ${escapeHtml(selectedSquad.name)}</strong>
-            <span>Clique em um projeto para abrir a visão completa do Discovery, com cards, cronograma, checklist, riscos e anexos.</span>
-          </div>
-          <div class="dash-panel-actions">
-            <span class="dash-filter-pill">${squadProjects(selectedSquad.id).length} projeto(s)</span>
-            <button type="button" class="btn soft" onclick="openProjectModalForSquad('${escapeAttr(selectedSquad.id)}')">+ Nova iniciativa</button>
-          </div>
-        </div>
-        ${renderProjectCardsForSquad(selectedSquad)}
-      </section>` : `<section class="squad-projects-dock" aria-label="Orientação do dashboard">
-        <div class="dash-empty-projects">
-          <strong>Escolha uma Squad acima.</strong><br>
-          Ao clicar, o APP mostra somente os projetos daquela Squad. Depois, clique no projeto para abrir a visão completa do Discovery.
-        </div>
-      </section>`;
-
-      el.innerHTML = `<div class="squad-dashboard-shell">
-        <section class="dashboard-command" aria-label="Resumo executivo das Squads">
-          <div>
-            <span class="dash-eyebrow">Visão executiva</span>
-            <h2>Dashboard de Squads e Discoveries</h2>
-            <p>Visão inicial focada em gestão: acompanhe quantos projetos existem por Squad, maturidade média, alertas PMO e status. Clique em uma Squad para visualizar apenas os projetos vinculados a ela.</p>
-          </div>
-          <div class="dash-kpi-board">
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Squads cadastradas</div><div class="dash-kpi-value">${squads.length}</div><div class="dash-kpi-note">Base de organização do Discovery</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Projetos / iniciativas</div><div class="dash-kpi-value">${totalProjects}</div><div class="dash-kpi-note">Total em acompanhamento</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Em acompanhamento</div><div class="dash-kpi-value">${activeDiscoveries}</div><div class="dash-kpi-note">A iniciar, Discovery ou atenção</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Alertas PMO</div><div class="dash-kpi-value">${totalAlerts}</div><div class="dash-kpi-note">Riscos, bloqueios e PDCA</div></div>
-          </div>
-        </section>
-
-        <section class="squad-dashboard-panel" aria-label="Cards clicáveis das Squads">
-          <div class="dash-panel-head">
-            <div class="dash-panel-title">
-              <strong>Squads</strong>
-              <span>Cards clicáveis para navegar até os projetos de cada Squad.</span>
-            </div>
-            <div class="dash-panel-actions">
-              <span class="dash-filter-pill">Maturidade média geral: ${avgProgress}%</span>
-              <button type="button" class="btn" onclick="openSquadModal()">Gerenciar Squads</button>
-            </div>
-          </div>
-          <div class="squad-dashboard-grid">${squadCards}</div>
-        </section>
-
-        ${selectedPanel}
-      </div>`;
-    }
-
-    function renderSidebar() {
-      data = enhanceSquadData(data);
-      insertSquadAutomationControls();
-      const wrap = document.getElementById('projectList');
-      wrap.innerHTML = data.projects.map(p => {
-        const progress = calculateProgress(p);
-        const squad = squadForProject(p);
-        return `<button type="button" class="project-pill ${p.id === activeProjectId ? 'active' : ''}" onclick="setActiveProject('${p.id}')" aria-pressed="${p.id === activeProjectId}" title="Abrir visão executiva de ${escapeHtml(displayProjectTitle(p))}">
-          <div class="pill-top"><span>${escapeHtml(projectMenuTitle(p))}</span><span class="pill-percent">${progress}%</span></div>
-          <div class="pill-meta"><span><span class="selected-mark">●</span>${escapeHtml(squad?.name || p.squad || 'Squad')} · ${escapeHtml(p.status)}</span><div class="mini-progress"><span style="width:${progress}%"></span></div></div>
-        </button>`;
-      }).join('');
-      const selected = wrap.querySelector('.project-pill.active');
-      if (selected && typeof selected.scrollIntoView === 'function') selected.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-
-    function renderHero(project) {
-      data = enhanceSquadData(data);
-      const progress = calculateProgress(project);
-      const readiness = deliveryReadinessDetails(project);
-      const schedulePhase = schedulePhaseSummary(project);
-      const schedulePending = schedulePendingSummary(project);
-      const pdca = readiness.pdca;
-      const decisionNeeded = readiness.blocked > 0 || readiness.risks > 0 || pdca > 0 || readiness.readiness !== 'Alta';
-      const next = nextMilestone(project);
-      const squad = squadForProject(project);
-      document.getElementById('projectName').textContent = project.name || 'Projeto sem nome';
-      document.getElementById('projectSummary').textContent = buildExecutiveReading(project);
-      document.getElementById('scoreValue').textContent = progress + '%';
-      document.getElementById('progressRing').dataset.progress = progress;
-      document.getElementById('progressRing').style.setProperty('--deg', (progress * 3.6) + 'deg');
-      document.getElementById('mainProgress').style.width = progress + '%';
-      document.getElementById('scoreText').textContent = progress >= 80 ? 'Discovery maduro para tomada de decisão e próximo passo.' : progress >= 55 ? 'Discovery em boa evolução, com pontos de atenção controláveis.' : 'Discovery ainda precisa de decisões, dados e clareza para avançar com segurança.';
-      const ini = initiativeNumber(project);
-      const breadcrumbCode = document.getElementById('breadcrumbProjectCode');
-      if (breadcrumbCode) breadcrumbCode.textContent = ini || 'Iniciativa';
-      document.getElementById('projectTags').innerHTML = `
-        ${ini ? `<span class="initiative-highlight">Nº Iniciativa: ${escapeHtml(ini)}</span><span class="dot">•</span>` : ''}
-        <span>Squad: <strong>${escapeHtml(squad?.name || project.squad || inferSquad(project))}</strong></span><span class="dot">•</span>
-        <span>Área: <strong>${escapeHtml(project.business || squad?.business || 'Não informado')}</strong></span><span class="dot">•</span>
-        <span>RTE: <strong>${escapeHtml(project.rteOwner || squad?.rteOwner || project.owner || 'PMO/RTE')}</strong></span><span class="dot">•</span>
-        <span>PMO: <strong>${escapeHtml(project.owner || squad?.owner || 'PMO/RTE')}</strong></span>
-      `;
-      const indicators = [
-        { label: 'Status', value: project.status || 'Não informado', note: project.criticality ? `Criticidade ${project.criticality}` : 'Saúde geral do projeto', color: statusColor(project.status) },
-        { label: 'Squad', value: squad?.name || project.squad || 'A definir', note: `${squadInitiativeCount(squad?.id)} iniciativa(s) vinculada(s)`, color: 'var(--blue)' },
-        { label: 'Target', value: formatBR(project.target), note: project.startDate ? `Início ${formatBR(project.startDate)}` : 'Data alvo executiva', color: 'var(--purple)' },
-        { label: 'Delivery', value: readiness.readiness, note: readiness.readiness === 'Alta' ? 'Pode evoluir com segurança' : 'Ainda exige maturação', color: readiness.readiness === 'Alta' ? 'var(--green)' : readiness.readiness === 'Média' ? 'var(--amber)' : 'var(--primary)' }
-      ];
-      document.getElementById('executiveHeroIndicators').innerHTML = indicators.map(i => `
-        <div class="exec-indicator-card" style="--indicator-color:${i.color}">
-          <div class="exec-indicator-label">${escapeHtml(i.label)}</div>
-          <div class="exec-indicator-value" title="${escapeAttr(i.value)}">${escapeHtml(i.value)}</div>
-          <div class="exec-indicator-note">${escapeHtml(i.note)}</div>
-        </div>
-      `).join('');
-      const alert = document.getElementById('executiveAttentionBlock');
-      if (decisionNeeded) {
-        const action = readiness.recommendation || managementActionText(project, { progress, blocked: readiness.blocked, risks: readiness.risks, late: pdca, attention: pdca });
-        alert.classList.remove('hidden');
-        alert.innerHTML = `<strong>Ponto de atenção executivo</strong><span>Próximo marco: ${escapeHtml(next)}. Ação esperada: ${escapeHtml(action)}</span>`;
-      } else {
-        alert.classList.add('hidden');
-        alert.innerHTML = '';
-      }
-    }
-
-    function copyExecutiveSummary() {
-      const p = getProject();
-      const d = deliveryReadinessDetails(p);
-      const squad = squadForProject(p);
-      const text = `Leitura executiva — Discovery PMO Tracker\n\nIniciativa: ${initiativeNumber(p) || 'Não informada'}\nNome: ${p.name}\nSquad: ${squad?.name || p.squad || 'Não informada'}${squad?.code ? ` (${squad.code})` : ''}\nÁrea/negócio: ${p.business || squad?.business || 'Não informado'}\nStatus executivo: ${p.status}\nData target: ${formatBR(p.target)}\nProntidão atual: ${d.readiness}\nMaturidade do Discovery: ${d.progress}%\nFase atual: ${currentDiscoveryPhase(p)}\nPróximo marco: ${nextMilestone(p)}\nMVP definido: ${d.mvp.label}\nCritérios de aceite: ${d.acceptance.label}\nDependências técnicas: ${d.dependencies.label}\nBacklog inicial: ${d.backlog.label}\nRiscos/decisões: ${d.risks} risco(s)/issue(s), ${d.blocked} bloqueio(s), ${d.pdca} PDCA no cronograma\nAnexos relevantes: ${(p.attachments || []).length}\nRecomendação PMO: ${d.recommendation}`;
-      copyText(text);
-    }
-
-
+    // Segunda cópia morta de renderSidebar removida (mesma armadilha; ver comentário
+    // acima). A versão vigente (mais abaixo) esvazia/esconde a lista lateral de
+    // propósito — faz parte do redesenho que passou a navegar pelos cards de Squad
+    // ("ux-v6") em vez da lista de pílulas de projeto na barra lateral.
 
     /* === PATCH Planejamento 2026 validado: preservar números oficiais e enriquecer Discovery === */
     function normalizeNeutralInitiativeNumbers(base) {
       // Números oficiais da planilha devem ser preservados. Sem geração DISC automática nesta versão.
       return base;
-    }
-
-    function nextInitiativeNumber() {
-      return '';
     }
 
     function formatHours(value) {
@@ -17023,8 +16830,8 @@ Recomendação PMO: ${d.recommendation}`;
         let tag = rec.tag || '';
         let project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         if (!project && overrides[rec.key]) {
-          tag = overrides[rec.key];
-          project = data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag));
+          tag = overrides[rec.key].ini || '';
+          project = tag ? data.projects.find(p => matchesInitiativeNumber(p.initiativeNumber, tag)) : null;
         }
         if (!tag) { untagged++; unassignedRecords.push(rec); return; }
         if (!project) { unmatchedTags.add(tag); unassignedRecords.push(rec); return; }
@@ -17445,7 +17252,10 @@ Recomendação PMO: ${d.recommendation}`;
       const ini = initiativeNumber(project);
       if (!ini) { toast('Essa iniciativa não tem nº oficial cadastrado — não é possível vincular por aqui.'); return; }
       data.jiraStoryInitiativeOverrides = data.jiraStoryInitiativeOverrides || {};
-      data.jiraStoryInitiativeOverrides[key] = ini;
+      // Guarda com timestamp (não só o nº da iniciativa) para o merge entre
+      // navegadores poder resolver por recência em vez de "local sempre vence" —
+      // ver mergeOverridesByRecency em mergeRemoteIntoData.
+      data.jiraStoryInitiativeOverrides[key] = { ini, ts: new Date().toISOString() };
       project.jiraStories = Array.isArray(project.jiraStories) ? project.jiraStories : [];
       const existing = project.jiraStories.find(s => s.key === key);
       const fields = { key: story.key, epicKey: story.epicKey, summary: story.summary, status: story.status, team: story.team, labels: story.labels, created: story.created, updated: story.updated, tipo: story.tipo };
@@ -17685,154 +17495,10 @@ Recomendação PMO: ${d.recommendation}`;
       }
     }
 
-    function renderProjectCardsForSquad(squad) {
-      const projects = squadProjects(squad.id);
-      if (!projects.length) {
-        return `<div class="dash-empty-projects"><strong>Nenhuma iniciativa vinculada a esta Squad.</strong><br>Cadastre uma iniciativa oficial e selecione a Squad ${escapeHtml(squad.name)}.</div>`;
-      }
-      return `<div class="dashboard-project-grid">${projects.map(project => {
-        const progress = calculateProgress(project);
-        const readiness = deliveryReadinessDetails(project);
-        const alerts = projectAlertCount(project);
-        return `<button type="button" class="dashboard-project-card" onclick="openProjectFromDashboard('${escapeAttr(project.id)}')" title="Abrir projeto ${escapeAttr(displayProjectTitle(project))}">
-          <div class="dash-project-head">
-            <strong>${escapeHtml(displayProjectTitle(project))}</strong>
-            <span class="dash-project-code">${initiativeCodeHtml(project)}</span>
-          </div>
-          <div class="dash-project-meta">
-            <span>Discovery ${escapeHtml(formatBR(project.discoveryDate))}</span>
-            <span>Dev ${escapeHtml(formatBR(project.startDev))}</span>
-            <span>${escapeHtml(formatHours(project.hours2026))}</span>
-            <span>${subInitiativeCount(project)} filha(s)</span>
-            <span>${alerts} alerta(s)</span>
-            <span>${escapeHtml(readiness.readiness)} prontidão</span>
-          </div>
-          <div class="dash-project-people">
-            <span>Líder: ${escapeHtml(peopleValue(project, 'frontLeader'))}</span>
-            <span>PO: ${escapeHtml(peopleValue(project, 'po'))}</span>
-            <span>TL: ${escapeHtml(peopleValue(project, 'techLead'))}</span>
-            <span>Dados: ${escapeHtml(peopleValue(project, 'dataArea'))}</span>
-          </div>
-          <div class="dash-project-footer">
-            <div>
-              <div class="dash-project-progress"><span style="width:${progress}%"></span></div>
-              <div class="dash-kpi-note">${progress}% maturidade · ${escapeHtml(project.status || 'Sem status')}</div>
-            </div>
-            <span class="squad-card-link">Abrir →</span>
-          </div>
-        </button>`;
-      }).join('')}</div>`;
-    }
-
-    function renderSquadOverview() {
-      data = enhanceSquadData(data);
-      const el = document.getElementById('squadOverview');
-      if (!el) return;
-      const squads = sortedSquadsList();
-      ensureDefaultDashboardSquad();
-      const allProjects = data.projects || [];
-      const totalProjects = allProjects.length;
-      const totalChildren = allProjects.reduce((acc, project) => acc + subInitiativeCount(project), 0);
-      const totalHours = allProjects.reduce((acc, project) => acc + Number(project.hours2026 || 0), 0);
-      const avgProgress = totalProjects ? Math.round(allProjects.reduce((acc, project) => acc + calculateProgress(project), 0) / totalProjects) : 0;
-      const activeDiscoveries = allProjects.filter(p => ['Em Discovery', 'A iniciar', 'Atenção', 'Crítico', 'No prazo'].includes(p.status)).length;
-      const totalAlerts = allProjects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-      const selectedSquad = dashboardSquadId ? squadById(dashboardSquadId) : null;
-
-      const squadCards = squads.map(squad => {
-        const projects = squadProjects(squad.id);
-        const count = projects.length;
-        const average = count ? Math.round(projects.reduce((acc, project) => acc + calculateProgress(project), 0) / count) : 0;
-        const alerts = projects.reduce((acc, p) => acc + projectAlertCount(p), 0);
-        const critical = projects.filter(p => ['Crítico', 'Atenção'].includes(p.status) || ['Alta', 'Crítica'].includes(p.criticality)).length;
-        const hours = hoursForSquad(squad.id);
-        const children = childCountForSquad(squad.id);
-        const nextScheduleDate = nextScheduleDateForSquad(squad.id);
-        const missing = projects.reduce((acc, project) => acc + (missingDataCount(project) > 0 ? 1 : 0), 0);
-        const statusCounts = projects.reduce((acc, project) => {
-          const key = project.status || 'Sem status';
-          acc[key] = (acc[key] || 0) + 1;
-          return acc;
-        }, {});
-        const statusHtml = Object.entries(statusCounts).slice(0, 3).map(([status, total]) => `<span class="squad-status-tag">${escapeHtml(status)} · ${total}</span>`).join('') || '<span class="squad-status-tag">Sem projetos</span>';
-        return `<button type="button" class="squad-dash-card ${selectedSquad?.id === squad.id ? 'active' : ''}" onclick="openSquadProjects('${escapeAttr(squad.id)}')" title="Ver projetos da Squad ${escapeAttr(squad.name)}">
-          <div class="squad-dash-top">
-            <div class="squad-avatar">${escapeHtml(squadInitials(squad.name))}</div>
-            <div class="squad-title-text">
-              <strong>${escapeHtml(squad.name || 'Squad sem nome')}</strong>
-              <span>${escapeHtml(squad.business || 'Área não informada')}</span>
-            </div>
-            <div class="squad-dash-count"><strong>${count}</strong><span>Projetos</span></div>
-          </div>
-          <div class="squad-mini-metrics">
-            <div class="squad-mini-metric"><strong>${formatHours(hours)}</strong><span>Horas 2026</span></div>
-            <div class="squad-mini-metric"><strong>${children}</strong><span>Filhas</span></div>
-            <div class="squad-mini-metric"><strong>${alerts}</strong><span>Alertas</span></div>
-          </div>
-          <div class="squad-extra-line">
-            <span>Próx. Discovery: ${escapeHtml(formatBR(nextDisc))}</span>
-            <span>${critical} atenção/crítico</span>
-            <span>${missing} com dados pendentes</span>
-          </div>
-          <div class="squad-status-row">${statusHtml}</div>
-          <div class="squad-dash-progress"><div class="squad-dash-progress-track"><span style="width:${average}%"></span></div><em>${average}%</em></div>
-          <span class="squad-card-link">Ver projetos da Squad →</span>
-        </button>`;
-      }).join('');
-
-      const selectedPanel = selectedSquad ? `<section id="squadProjectListPanel" class="squad-projects-dock" aria-label="Projetos da Squad selecionada">
-        <div class="dash-panel-head">
-          <div class="dash-panel-title">
-            <strong>Projetos da Squad ${escapeHtml(selectedSquad.name)}</strong>
-            <span>Clique em um projeto para abrir a visão completa do Discovery. A contagem considera apenas iniciativas principais; filhas ficam dentro da iniciativa mãe.</span>
-          </div>
-          <div class="dash-panel-actions">
-            <span class="dash-filter-pill">${squadProjects(selectedSquad.id).length} projeto(s)</span>
-            <span class="dash-filter-pill">${formatHours(hoursForSquad(selectedSquad.id))}</span>
-          </div>
-        </div>
-        ${renderProjectCardsForSquad(selectedSquad)}
-      </section>` : `<section class="squad-projects-dock" aria-label="Orientação do dashboard">
-        <div class="dash-empty-projects">
-          <strong>Escolha uma Squad acima.</strong><br>
-          Ao clicar, o APP mostra somente os projetos daquela Squad. Depois, clique no projeto para abrir a visão completa do Discovery.
-        </div>
-      </section>`;
-
-      el.innerHTML = `<div class="squad-dashboard-shell">
-        <div class="plan-source-strip"><strong>Planejamento 2026</strong><span>Números oficiais preservados · ${totalProjects} iniciativas principais · ${totalChildren} filhas vinculadas · ${formatHours(totalHours)}</span></div>
-        <section class="dashboard-command" aria-label="Resumo executivo das Squads">
-          <div>
-            <span class="dash-eyebrow">Visão executiva</span>
-            <h2>Dashboard de Squads e Discoveries</h2>
-            <p>Visão inicial focada em gestão: acompanhe quantos projetos existem por Squad, horas 2026, próximos Discoveries, filhas vinculadas e dados pendentes. Clique em uma Squad para visualizar apenas os projetos vinculados a ela.</p>
-          </div>
-          <div class="dash-kpi-board">
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Squads cadastradas</div><div class="dash-kpi-value">${squads.length}</div><div class="dash-kpi-note">Base de organização do Discovery</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Iniciativas principais</div><div class="dash-kpi-value">${totalProjects}</div><div class="dash-kpi-note">Filhas não contam como projeto principal</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Iniciativas filhas</div><div class="dash-kpi-value">${totalChildren}</div><div class="dash-kpi-note">Vinculadas dentro da mãe</div></div>
-            <div class="dash-kpi-card"><div class="dash-kpi-label">Horas 2026</div><div class="dash-kpi-value">${formatHours(totalHours)}</div><div class="dash-kpi-note">Consumo total importado</div></div>
-          </div>
-        </section>
-
-        <section class="squad-dashboard-panel" aria-label="Cards clicáveis das Squads">
-          <div class="dash-panel-head">
-            <div class="dash-panel-title">
-              <strong>Squads</strong>
-              <span>Cards clicáveis para navegar até os projetos de cada Squad.</span>
-            </div>
-            <div class="dash-panel-actions">
-              <span class="dash-filter-pill">Maturidade média geral: ${avgProgress}%</span>
-              <span class="dash-filter-pill">${activeDiscoveries} em acompanhamento</span>
-              <span class="dash-filter-pill">${totalAlerts} alerta(s)</span>
-            </div>
-          </div>
-          <div class="squad-dashboard-grid">${squadCards}</div>
-        </section>
-
-        ${selectedPanel}
-      </div>`;
-    }
+    // Segunda cópia morta de renderProjectCardsForSquad/renderSquadOverview removida
+    // (ver comentário equivalente mais acima nesta base). Bônus: esta cópia referenciava
+    // uma variável `nextDisc` nunca declarada — só não quebrava a tela porque, sendo
+    // código morto, nunca chegava a executar.
 
     function renderExecutiveRows(project) {
       const d = deliveryReadinessDetails(project);
@@ -17998,9 +17664,11 @@ Recomendação PMO: ${d.recommendation}`;
       if (!_discRemoteHydrated) { renderSharedDataPending(_discSyncStatusMessage); return; }
       data = enhanceSquadData(data);
 
-      // Squad sem nenhuma iniciativa vinculada não aparece no painel executivo;
-      // assim que uma iniciativa é cadastrada nela, passa a aparecer para todos.
-      const squads = sortedSquadsList().filter(squad => squadProjects(squad.id).length > 0);
+      // Squad aparece no painel assim que é cadastrada, mesmo sem nenhuma iniciativa
+      // vinculada ainda (antes, o filtro abaixo escondia a squad até a 1ª iniciativa
+      // ser criada nela, sem nenhum aviso — parecia "a squad sumiu" quando na
+      // verdade nunca tinha chegado a aparecer).
+      const squads = sortedSquadsList();
       ensureDefaultDashboardSquad();
       const allProjects = data.projects || [];
       const totalProjects = allProjects.length;
@@ -18291,6 +17959,58 @@ Recomendação PMO: ${d.recommendation}`;
     window.addEventListener('storage', function(e){
       if (e.key === CROSS_IMPORT_EPICS_KEY) applyCrossImportEpicsFromSala();
     });
+  </script>
+  <script src="senior-initiatives-view.js?v=20260811-1"></script>
+  <script>
+    /* Compatibilidade de publicação: mantém a carteira navegável mesmo quando o
+       navegador bloqueia o arquivo externo recém-publicado. Não cria nova base.
+       Só entra em ação quando senior-initiatives-view.js NÃO carregou — sem essa
+       guarda, este bloco (que roda depois, sempre) sobrescrevia openSeniorInitiativesView/
+       setSeniorInitiativeFilter incondicionalmente e tornava o arquivo externo (com
+       dashboardPortfolioMode/openSquadsExecutiveView) morto mesmo quando ele carregava bem. */
+    (function () {
+      if (typeof window.openSeniorInitiativesView === 'function') return;
+      const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const cut = (v, n = 100) => { const t = String(v || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
+      const state = s => ({'Crítico':'crit','Atenção':'warn','Concluído':'good'})[s] || 'good';
+      const rank = s => ({'Crítico':0,'Atenção':1,'A iniciar':2,'Saudável':3,'Concluído':4})[s] ?? 3;
+      const name = p => displayProjectTitle(p) || p.name || 'Iniciativa sem nome';
+      const no = p => initiativeNumber(p) || '—';
+      const br = d => d ? formatBR(d) : 'Sem prazo';
+      function seniorRows() {
+        data = enhanceSquadData(data);
+        const all = data.projects || [];
+        const rows = all.map(project => {
+          const health = automaticProjectStatus(project);
+          const late = collectLateScheduleMarcos([project]);
+          const raids = allRaidRows(project).filter(row => !row.done);
+          const risk = raids.find(row => raidIsLate(row)) || raids[0];
+          const overdue = late[0]?.item;
+          const next = (project.schedule || []).filter(item => !item.jira && !item.deleted && !scheduleCompleted(item)).sort((a,b) => String(a.start || a.end || '9999').localeCompare(String(b.start || b.end || '9999')))[0];
+          const deadline = overdue?.end || overdue?.start || risk?.due || next?.end || next?.start || project.target || project.endDev || '';
+          const days = overdue?.end ? Math.max(0, Math.round((parseISODate(fmtDate(new Date())) - parseISODate(overdue.end)) / 86400000)) : 0;
+          const fact = overdue ? `${overdue.item || 'Marco'} ${days ? `atrasado há ${days} dia(s)` : 'requer revisão de prazo'}.` : risk ? `${raidGroupLabel(risk.group)}: ${cut(risk.text, 82)}` : next ? `Próximo marco: ${next.item || 'Marco sem nome'}.` : 'Sem exceção operacional registrada.';
+          const readiness = deliveryReadinessDetails(project);
+          const direction = overdue ? 'Validar recuperação, dono e nova data.' : risk ? 'Confirmar responsável, prazo e mitigação.' : cut(readiness.recommendation || 'Acompanhar a iniciativa.', 82);
+          return { project, health, late:late.length, raids:raids.length, deadline, days, fact, direction };
+        }).sort((a,b) => rank(a.health) - rank(b.health) || b.late - a.late || b.raids - a.raids || name(a.project).localeCompare(name(b.project), 'pt-BR'));
+        return rows;
+      }
+      function drawSenior() {
+        const host = document.getElementById('squadOverview'); if (!host) return;
+        const rows = seniorRows();
+        const priority = rows.filter(row => ['Crítico','Atenção'].includes(row.health) || row.late || row.raids);
+        const shown = window._seniorAll ? rows : priority;
+        const critical = rows.filter(row => row.health === 'Crítico').length;
+        const impacted = rows.filter(row => row.late).length;
+        const lateTotal = rows.reduce((total,row) => total + row.late, 0);
+        const raids = rows.reduce((total,row) => total + row.raids, 0);
+        const lines = shown.map(row => { const p=row.project, squad=squadForProject(p)?.name || p.squad || 'A definir', overdue=row.days ? `${row.days}d atrasado` : row.deadline ? 'Acompanhar prazo' : 'Sem data'; return `<button type="button" class="senior-live-row" onclick="openProjectFromDashboard('${esc(p.id)}')"><span class="senior-live-title"><b>IN ${esc(no(p))}</b><strong>${esc(name(p))}</strong></span><span>${esc(squad)}</span><span><i class="senior-live-status ${state(row.health)}">${esc(row.health)}</i></span><span>${esc(row.fact)}</span><span><b>${esc(br(row.deadline))}</b><small>${esc(overdue)}</small></span><span><em>Encaminhamento</em>${esc(row.direction)}</span><span class="senior-live-arrow">›</span></button>`; }).join('') || '<div class="senior-live-empty">Nenhuma iniciativa corresponde ao recorte.</div>';
+        host.innerHTML = `<style>.senior-live{max-width:1480px;margin:0 auto;color:#202938}.senior-live-source{display:flex;justify-content:space-between;gap:18px;padding:13px 17px;background:#f8fafc;border:1px solid #dbe2ea;color:#657184;font-size:12px}.senior-live-source strong,.senior-live h2{color:#202938}.senior-live-hero{display:flex;justify-content:space-between;gap:24px;padding:27px 3px 20px}.senior-live-kicker{margin:0 0 7px;color:#c41536;font-size:11px;font-weight:900;letter-spacing:1.6px}.senior-live h2{margin:0;font-size:28px;letter-spacing:-.8px}.senior-live-hero p{margin:8px 0 0;color:#657184;font-size:13px}.senior-live-update{font-size:11px;text-align:right;color:#657184}.senior-live-summary{display:grid;grid-template-columns:1.4fr repeat(4,1fr);background:#fff;border:1px solid #dce3ea;margin-bottom:18px}.senior-live-summary>div{padding:18px 20px;border-right:1px solid #edf0f4;min-height:92px}.senior-live-summary>div:last-child{border:0}.senior-live-summary strong{display:block;font-size:14px;margin-bottom:6px}.senior-live-summary span{font-size:12px;color:#4c596d;line-height:1.35}.senior-live-summary b{display:block;font-size:27px;letter-spacing:-1px}.senior-live-summary label{display:block;margin-top:4px;color:#697589;font-size:11px;font-weight:750}.senior-live-red{color:#c41536}.senior-live-amber{color:#c98200}.senior-live-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}.senior-live-action{border:1px solid #dce3ea;background:#fff;border-left:4px solid #c98200;padding:16px 18px;min-height:112px}.senior-live-action.critical{border-left-color:#c41536}.senior-live-action p{margin:0 0 7px;color:#c41536;font-size:9px;font-weight:900;letter-spacing:1.2px}.senior-live-action strong{display:block;margin-bottom:6px;font-size:14px}.senior-live-action span{color:#566378;font-size:11px;line-height:1.35}.senior-live-card{background:#fff;border:1px solid #dce3ea;box-shadow:0 12px 28px rgba(34,47,68,.05)}.senior-live-head{display:flex;justify-content:space-between;align-items:end;gap:18px;padding:21px 24px;border-bottom:1px solid #e3e8ee}.senior-live-head h3{margin:0;font-size:21px}.senior-live-head p{margin:6px 0 0;color:#657184;font-size:12px}.senior-live-tabs button{border:1px solid #dbe1e8;border-radius:16px;padding:6px 10px;background:#fff;color:#657184;font-size:10px;font-weight:800}.senior-live-tabs button.active{background:#fff3f5;border-color:#f0cad3;color:#c41536}.senior-live-cols,.senior-live-row{display:grid;grid-template-columns:1.8fr .72fr .88fr 1.55fr .88fr 1.45fr 25px;gap:14px;align-items:center}.senior-live-cols{padding:11px 24px;background:#f8fafc;color:#778398;font-size:9px;letter-spacing:.9px;font-weight:900}.senior-live-row{width:100%;border:0;border-top:1px solid #edf0f4;background:#fff;text-align:left;padding:14px 24px;min-height:76px;color:#46546a;font-size:11px;cursor:pointer}.senior-live-row:hover{background:#fff8f9}.senior-live-title{display:flex;gap:9px;align-items:start}.senior-live-title b{color:#c41536;font-size:10px;white-space:nowrap;padding-top:2px}.senior-live-title strong{color:#202938;font-size:12px;line-height:1.22}.senior-live-status{display:inline-block;border-radius:11px;padding:4px 7px;color:#fff;font-size:9px;font-style:normal;font-weight:900}.senior-live-status.crit{background:#c41536}.senior-live-status.warn{background:#c98200}.senior-live-status.good{background:#16805c}.senior-live-row small,.senior-live-row em{display:block;margin-top:3px;color:#c41536;font-size:10px;font-style:normal;font-weight:800}.senior-live-row em{color:#788496;font-size:9px;letter-spacing:.7px;text-transform:uppercase}.senior-live-arrow{color:#c41536;font-size:22px;text-align:right}.senior-live-empty{padding:45px;text-align:center;color:#718095}.senior-live-foot{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}.senior-live-foot section{padding:16px 19px;background:#fff;border:1px solid #dce3ea}.senior-live-foot strong{display:block;font-size:12px;margin-bottom:5px}.senior-live-foot p{margin:0;color:#58657a;font-size:11px;line-height:1.4}@media(max-width:1000px){.senior-live-summary{grid-template-columns:repeat(2,1fr)}.senior-live-summary>div:first-child{grid-column:span 2}.senior-live-actions{grid-template-columns:1fr}.senior-live-card{overflow:auto}.senior-live-card>*{min-width:980px}}@media(max-width:620px){.senior-live-source{display:block}.senior-live-source span{display:block;margin-top:4px}.senior-live-hero{padding:22px 0}.senior-live-update,.senior-live-tabs{display:none}.senior-live-summary{grid-template-columns:1fr}.senior-live-summary>div:first-child{grid-column:span 1}.senior-live-summary>div{border-right:0;border-bottom:1px solid #edf0f4}.senior-live-foot{grid-template-columns:1fr}}</style><div class="senior-live"><div class="senior-live-source"><strong>Planejamento 2026</strong><span>Mesma base do Discovery · ${rows.length} iniciativas principais · ${formatBRDateTime(data.updatedAt)}</span></div><header class="senior-live-hero"><div><p class="senior-live-kicker">DISCOVERY PMO · VISÃO SÊNIOR</p><h2>Carteira Executiva de Iniciativas</h2><p>Prioridade por exceção: atraso, risco, bloqueio e decisão. Clique para abrir o Discovery completo.</p></div><span class="senior-live-update">${priority.length} em leitura prioritária<br>${rows.length} no portfólio</span></header><section class="senior-live-summary"><div><strong>O que requer atuação agora</strong><span>${critical} crítica(s) · ${impacted} impactada(s) por atraso · ${raids} risco(s) ou dependência(s) em aberto.</span></div><div><b>${rows.length}</b><label>Iniciativas principais</label></div><div><b class="senior-live-red">${critical}</b><label>Críticas</label></div><div><b class="senior-live-red">${impacted}</b><label>Impactadas por atraso</label></div><div><b class="senior-live-amber">${lateTotal}</b><label>Marcos vencidos</label></div></section><section class="senior-live-actions"><article class="senior-live-action critical"><p>ATUAÇÃO DE GESTÃO</p><strong>Recuperar cronogramas críticos</strong><span>Validar plano de recuperação, novo prazo e dono nas ${impacted} iniciativas impactadas.</span></article><article class="senior-live-action ${raids ? 'critical' : ''}"><p>RISCOS E DEPENDÊNCIAS</p><strong>Destravar itens em aberto</strong><span>${raids} item(ns) demandam confirmação de responsável, prazo e mitigação.</span></article><article class="senior-live-action"><p>REGRA DA VISÃO</p><strong>Preservar foco em exceções</strong><span>Iniciativas sem alerta seguem acessíveis, sem competir com a pauta executiva.</span></article></section><section class="senior-live-card"><header class="senior-live-head"><div><p class="senior-live-kicker">CARTEIRA NAVEGÁVEL</p><h3>Iniciativas em acompanhamento</h3><p>Ao abrir a linha, cronograma, riscos, ações, anexos e responsáveis continuam disponíveis na ficha existente.</p></div><div class="senior-live-tabs"><button class="${window._seniorAll ? '' : 'active'}" onclick="setSeniorInitiativeFilter('exceptions')">Exceções prioritárias · ${priority.length}</button><button class="${window._seniorAll ? 'active' : ''}" onclick="setSeniorInitiativeFilter('all')">Portfólio completo · ${rows.length}</button></div></header><div class="senior-live-cols"><span>INICIATIVA</span><span>SQUAD</span><span>SAÚDE</span><span>FATO RELEVANTE</span><span>PRAZO</span><span>ENCAMINHAMENTO EXECUTIVO</span><span></span></div>${lines}</section><footer class="senior-live-foot"><section><strong>Navegação sem perda de informação</strong><p>Esta é uma camada de leitura. O clique abre a iniciativa que já existe no Tracker; não há segunda ficha nem dados duplicados.</p></section><section><strong>Leitura para diretoria</strong><p>O portfólio começa por decisão, atraso, risco e impedimento. O detalhe operacional fica a um clique quando necessário.</p></section></footer></div>`;
+      }
+      window.setSeniorInitiativeFilter = function(filter) { window._seniorAll = filter === 'all'; drawSenior(); };
+      window.openSeniorInitiativesView = function() { viewMode = 'dashboard'; squadDrawerOpen = false; render(); drawSenior(); setTimeout(() => document.getElementById('squadOverview')?.scrollIntoView({behavior:'smooth',block:'start'}),40); };
+    })();
   </script>
 </body>
 </html>
