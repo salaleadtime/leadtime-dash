@@ -10356,10 +10356,19 @@
       document.head.appendChild(script);
     }
 
-    function discGasLoad(cb) {
+    function discGasLoad(cb, _retriesLeft) {
       if (!DISC_GAS_URL) { if (cb) cb('no url'); return; }
+      const retriesLeft = (_retriesLeft === undefined) ? 1 : _retriesLeft;
       _discGasJsonp(DISC_GAS_URL + '?action=getVpData&key=' + DISC_GAS_KEY + '&t=' + Date.now(), (err, json) => {
         if (err) { if (cb) cb(err); return; }
+        // Retry de conteúdo: o transporte pode responder OK mesmo com o servidor
+        // devolvendo ok:false (lock do Apps Script ocupado por outra ação — ver
+        // "Padrão de resiliência" no CLAUDE.md). Sem isso, essa contenção
+        // transitória virava "tela não carrega" sem nenhuma nova tentativa.
+        if ((!json || !json.ok) && retriesLeft > 0) {
+          setTimeout(() => discGasLoad(cb, retriesLeft - 1), 2000);
+          return;
+        }
         if (json && typeof json.revision === 'number') _discLastKnownRevision = json.revision;
         if (json && json.ok && json.data) { if (cb) cb(null, json.data); }
         else { if (cb) cb(null, null); }
