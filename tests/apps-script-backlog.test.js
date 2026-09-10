@@ -293,7 +293,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-08-16-v24-discovery-pmo-report-edits');
+  t('versão correta', h.version, '2026-09-10-v25-date-integrity');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -448,5 +448,167 @@ console.log('\n═══ 17. getRevisions: ping barato para o polling automátic
   t('revision de getBacklog bate com a de getRevisions', bk.revision, afterVpSave.revisions.backlog);
 }
 
+// Funções reais do HTML; DOM/render e transporte são adaptadores, não cópias da lógica.
+const html=fs.readFileSync(SP+'index.html','utf8');
+function frontFunction(name){
+  const start=html.indexOf('function '+name+'(');
+  if(start<0) throw Error('Função ausente: '+name);
+  for(let end=html.indexOf('}',start);end>=0;end=html.indexOf('}',end+1)){
+    const code=html.slice(start,end+1);
+    try{new vm.Script(code);return code;}catch(e){}
+  }
+  throw Error('Função incompleta: '+name);
+}
+function dateBrowser(store=new Map()){
+  const c={console:{log(){},warn(){},error(){}},Date,JSON,Math,String,Number,
+    document:{activeElement:null},_SEED_CHG_CORRECTIONS:{},_epicMetaCloud:{},
+    PENDING_KEY:'pending',FIM_LOG_KEY:'history',STORAGE_KEY:'data',STORAGE_META:'meta',STORAGE_VERSION_KEY:'version',SEED_VERSION:'test',
+    PENDING_EDIT_TTL:86400000,EDITABLE_FIELDS:['status','statusAntes','chg','impedimento','ini','fim','fimAntes','dataPrevista'],
+    SHEETS_WEBAPP:'test',_sheetsWriteSyncing:false,_jbSaveTimer:null,META:62,allData:[],sent:[],alerts:[],
+    storageGet:k=>store.get(k)||null,storageSet:(k,v)=>{store.set(k,v);return true;},
+    $id:()=>null,toast:(...a)=>c.alerts.push(a),esc:String,
+    clearTimeout(){},setTimeout(){},rememberTab:()=> 'ep',saveTab(){},activateTab(){},
+    renderTbl(){},renderMed(){},renderDash(){},renderAll(){},updateTabCounts(){},jbSave(){},jbAutoSave(){},showSavedBadge(){},
+    loadResumoCache:()=>({}),loadSquadCache:()=>({}),loadJiraEpicSnapshot:()=>null,
+    loadCancelledSnapshots:()=>({}),saveCancelledSnapshots(){},rememberCancelledRecord(){},
+    loadDeletedWarned:()=>({}),saveDeletedWarned(){},saveToSheets:items=>c.sent.push(JSON.parse(JSON.stringify(items))),
+    stripAcc:s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')};
+  vm.createContext(c);
+  ['isValidDate','coerceDateStr','isValidIsoDate','parseD','parseLocalDate','calcLT','ltCls',
+    'isCancelled','isHistoricEpic','normalizeWorkflowRecord','normalizeWorkflowAll','makeRow','isValidEpicId',
+    'saveLocal','loadLocal','loadPending','savePending','queuePendingWrite','_sheetsItem','flushPendingWrites',
+    'logFimChange','validateDateIntegrity','mergeImportedEpicDates','replaceFromSharedSource','fc',
+    'activeEpics','measuredEpics'].forEach(n=>vm.runInContext(frontFunction(n),c));
+  c.allData=c.loadLocal()||[];
+  return c;
+}
+const fixture=()=>({id:'TEST-12345',squad:'QA',status:'Em Execução',ini:'2026-09-01',dataPrevista:'2026-09-30',fim:'',fimAntes:''});
+const edit=(c,field,value)=>c.fc({dataset:{id:'TEST-12345',f:field},value});
+console.log('\n═══ 18. Calendário e paridade frontend/backend ═══');
+{
+  const {ctx}=novoAmbiente(),c=dateBrowser();
+  for(const [input,want] of [['30/09/2026','2026-09-30'],['1/9/2026','2026-09-01'],
+    ['2026-09-30T00:00:00.000Z','2026-09-30'],['2024-02-29','2024-02-29'],['2026-02-29',''],
+    ['2026-02-30',''],['2026-13-01',''],['2026-12-31','2026-12-31'],['2027-01-01','2027-01-01'],['2026-09-30lixo',''],[null,''],[undefined,'']]){
+    t('GAS '+input,ctx.leadtimeDate_(input),want);
+    t('HTML '+input,c.coerceDateStr(input)||'',want);
+  }
+  t('Jira em português',c.parseD('03/jul/26 10:56 AM'),'2026-07-03');
+  t('data brasileira curta renderizável',c.parseD('1/9/2026'),'2026-09-01');
+  t('LT 62 dias',c.calcLT('2026-07-01','2026-09-01'),62);
+  t('cores 39/40/61/62',[39,40,61,62].map(c.ltCls),['g','a','a','r']);
+}
+console.log('\n═══ 19. Editar → salvar → recarregar → importar → sincronizar → recarregar ═══');
+{
+  const store=new Map(),{ctx,SHEETS}=novoAmbiente();
+  ctx.writeJsonToSheet_(ctx.LEADTIME_EPICS_SHEET,[fixture()]);
+  let c=dateBrowser(store);c.allData=[fixture()];
+  for(const [field,value] of [['ini','2026-09-02'],['dataPrevista','2026-10-01'],['fim','2026-10-02']]){
+    edit(c,field,value);
+    const sent=c.sent.at(-1);
+    t('salvar '+field,ctx.updateLeadtimeEpics_(sent,JSON.stringify(sent).length).ok,true);
+    c=dateBrowser(store);
+    t('reload local '+field,c.allData[0][field],value);
+    const old=c.allData[0],incoming={...old};
+    c.mergeImportedEpicDates(old,incoming,{ini:null,dataPrevista:null,fim:null});
+    c.allData=[incoming];c.saveLocal();
+    t('import vazio preserva '+field,incoming[field],value);
+    c.replaceFromSharedSource(ctx.readLeadtimeEpicsInsideLock_());
+    c=dateBrowser(store);
+    t('reload pós sync '+field,c.allData[0][field],value);
+  }
+  t('fim move para Medição',c.measuredEpics().length,1);
+  edit(c,'fim','');
+  t('remoção UI aceita',ctx.updateLeadtimeEpics_(c.sent.at(-1),100).ok,true);
+  c.replaceFromSharedSource(ctx.readLeadtimeEpicsInsideLock_());c=dateBrowser(store);
+  t('remoção não ressuscita no reload',c.allData[0].fim||'','');
+  t('volta a Épicos',c.activeEpics().length,1);
+  t('demais datas permanecem',[c.allData[0].ini,c.allData[0].dataPrevista],['2026-09-02','2026-10-01']);
+  const result=ctx.updateLeadtimeEpics_([{id:fixture().id,dataPrevista:''}],80);
+  t('sync vazio é sinalizado',result.dateWarnings.length,1);
+  t('sync vazio preservado no servidor',ctx.readLeadtimeEpicsInsideLock_()[0].dataPrevista,'2026-10-01');
+  const rows=SHEETS.get('_audit')._rows.filter(r=>r[6]==='DATE_PRESERVED');
+  const event=JSON.parse(rows.at(-1)[7]);
+  t('auditoria por campo completa',[event.epicId,event.squad,event.field,event.previousValue,event.newValue,event.source,event.action],
+    [fixture().id,'QA','dataPrevista','2026-10-01','','IMPORT_SYNC','PRESERVED']);
+  t('auditoria tem timestamp',!!event.timestamp,true);
+}
+console.log('\n═══ 20. Pendências, concorrência e perda silenciosa ═══');
+{
+  const store=new Map();let a=dateBrowser(store);a.allData=[fixture()];a.saveLocal();
+  const b=dateBrowser(store);
+  edit(a,'dataPrevista','2026-10-10');
+  let pending=a.loadPending();pending[fixture().id].ts=Date.now()-90000000;a.savePending(pending);
+  a.flushPendingWrites();
+  t('25h offline ainda reenvia',a.sent.at(-1)[0].dataPrevista,'2026-10-10');
+  t('25h offline preserva fila',!!a.loadPending()[fixture().id],true);
+  b.replaceFromSharedSource([fixture()]);
+  t('outra aba protege edição pendente',b.allData[0].dataPrevista,'2026-10-10');
+  t('outro campo não vira vazio no retry',Object.hasOwn(a.sent.at(-1)[0],'ini'),false);
+  a=dateBrowser(store);t('fechar depois de change preserva edição',a.allData[0].dataPrevista,'2026-10-10');
+  a.replaceFromSharedSource([{...fixture(),dataPrevista:'2026-10-10'}]);
+  t('eco remove pendência',a.loadPending()[fixture().id],undefined);
+  a.replaceFromSharedSource([{...fixture(),dataPrevista:''}]);
+  t('vazio sem intenção não apaga data confirmada',a.allData[0].dataPrevista,'2026-10-10');
+  t('alerta de integridade visível',a.alerts.some(x=>x[0].includes('PERDA')),true);
+  const before=JSON.stringify(a.allData);
+  a.document.activeElement={matches:()=>true};
+  t('sync durante digitação é adiado',a.replaceFromSharedSource([fixture()]),false);
+  t('estado não mudou durante digitação',JSON.stringify(a.allData),before);
+  a.document.activeElement=null;
+  t('duplicidade remota recusada',a.replaceFromSharedSource([fixture(),fixture()]),false);
+  t('duplicidade não altera estado',JSON.stringify(a.allData),before);
+  edit(a,'dataPrevista','2026-02-30');
+  t('edição inválida não altera data',a.allData[0].dataPrevista,'2026-10-10');
+  const current=a.allData[0];a.allData=[{id:'OTHER-12345'},current];
+  edit(a,'ini','2026-09-03');
+  t('edição por ID após reordenar',current.ini,'2026-09-03');
+  t('outro épico intacto',a.allData[0].ini,undefined);
+}
+console.log('\n═══ 21. Guarda no servidor e conflitos reais ═══');
+{
+  const {ctx}=novoAmbiente();ctx.writeJsonToSheet_(ctx.LEADTIME_EPICS_SHEET,[fixture()]);
+  const manual=(previousValue,newValue)=>[{id:fixture().id,dataPrevista:newValue,
+    _dateChanges:{dataPrevista:{source:'UI',previousValue,newValue}}}];
+  t('aba A grava',ctx.updateLeadtimeEpics_(manual('2026-09-30','2026-10-02'),80).ok,true);
+  t('aba B desatualizada recusada',ctx.updateLeadtimeEpics_(manual('2026-09-30','2026-10-03'),80).ok,false);
+  t('vencedor preservado',ctx.readLeadtimeEpicsInsideLock_()[0].dataPrevista,'2026-10-02');
+  t('retry idempotente',ctx.updateLeadtimeEpics_(manual('2026-09-30','2026-10-02'),80).ok,true);
+  t('inválida não zera',ctx.updateLeadtimeEpics_([{id:fixture().id,dataPrevista:'31/02/2026'}],80).dateWarnings.length,1);
+  t('omitido não zera',ctx.updateLeadtimeEpics_([{id:fixture().id,chg:'123'}],80).ok,true);
+  t('data preservada',ctx.readLeadtimeEpicsInsideLock_()[0].dataPrevista,'2026-10-02');
+  t('duplicidade payload recusada',ctx.updateLeadtimeEpics_([fixture(),fixture()],80).ok,false);
+  ctx.writeJsonToSheet_(ctx.LEADTIME_EPICS_SHEET,[fixture(),fixture()]);
+  t('duplicidade base recusada',ctx.updateLeadtimeEpics_([{id:fixture().id,chg:'x'}],80).ok,false);
+}
+console.log('\n═══ 22. Confirmação parcial, edição offline repetida e metadados ═══');
+{
+  const c=dateBrowser(),{ctx}=novoAmbiente();c.allData=[fixture()];
+  ctx.writeJsonToSheet_(ctx.LEADTIME_EPICS_SHEET,[fixture()]);
+  edit(c,'dataPrevista','2026-10-02');edit(c,'dataPrevista','2026-10-03');
+  t('última edição offline aceita a base original',ctx.updateLeadtimeEpics_(c.sent.at(-1),100).ok,true);
+  t('última edição offline persistida',ctx.readLeadtimeEpicsInsideLock_()[0].dataPrevista,'2026-10-03');
+  c.replaceFromSharedSource(ctx.readLeadtimeEpicsInsideLock_());
+  c.queuePendingWrite({...fixture(),ini:'2026-09-02',dataPrevista:'2026-10-03'});
+  c.replaceFromSharedSource([{...fixture(),ini:'2026-09-02'}]);
+  c.flushPendingWrites();
+  t('confirmação parcial remove ini do retry',Object.hasOwn(c.sent.at(-1)[0],'ini'),false);
+  t('confirmação parcial mantém dataPrevista pendente',c.sent.at(-1)[0].dataPrevista,'2026-10-03');
+  c.savePending({});
+  const old={...fixture(),_dateState:{dataPrevista:{updatedAt:'2026-09-10T12:00:00Z',newValue:'2026-09-30',source:'UI'}}};
+  const incoming={...fixture(),dataPrevista:'2026-08-01',_dateState:{dataPrevista:{updatedAt:'2026-09-09T12:00:00Z',newValue:'2026-08-01',source:'UI'}}};
+  c.validateDateIntegrity(old,incoming,'SYNC');
+  t('resposta anterior identificada por metadados é rejeitada',incoming.dataPrevista,'2026-09-30');
+  const imported={...fixture()};
+  c.mergeImportedEpicDates(fixture(),imported,{ini:'2026-09-02',dataPrevista:'2026-10-04',fim:'2026-10-05'});
+  t('import válido atualiza os três campos',[imported.ini,imported.dataPrevista,imported.fim],['2026-09-02','2026-10-04','2026-10-05']);
+  c.storageSet=()=>false;c.saveLocal();c.queuePendingWrite(fixture());
+  t('falha do storage não é silenciosa',c.alerts.some(x=>x[0].includes('Falha ao salvar localmente'))&&c.alerts.some(x=>x[0].includes('Pendência não salva')),true);
+}
+
+// A suíte verifica também a sintaxe dos scripts completos, inclusive código não
+// extraído pelo harness. A prova funcional dos inputs é feita no navegador local.
+for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);
+t('scripts completos têm sintaxe válida',true,true);
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
 process.exit(fail ? 1 : 0);
