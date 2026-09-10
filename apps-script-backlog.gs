@@ -1125,13 +1125,14 @@ function updateLeadtimeEpics_(changes, payloadChars) {
           if(['ini','fim','fimAntes','dataPrevista'].indexOf(field)>=0){
             var old=current[field]||'',value=normalized[field],meta=change._dateChanges&&change._dateChanges[field];
             var manual=meta&&meta.source==='UI'&&meta.newValue===(change[field]||'');
+            var relatedManual=field==='fimAntes'&&change._dateChanges&&change._dateChanges.fim&&change._dateChanges.fim.source==='UI';
             if(manual&&old!==value&&leadtimeDate_(meta.previousValue)!==old&&
                 (meta.baseValue===undefined||leadtimeDate_(meta.baseValue)!==old)){
               audit_('updateLeadtimeEpics',payloadChars,1,1,'DATE_CONFLICT',JSON.stringify({id:current.id,squad:current.squad,field:field,previousValue:old,newValue:change[field],source:'UI',action:'CONFLICT'}));
               throw new Error('Conflito de data em '+current.id+'/'+field+': releia o valor compartilhado antes de editar.');
             }
             var invalid=change[field]!=null&&String(change[field]).trim()!==''&&!value;
-            var blocked=invalid||!!(old&&!value&&!manual);
+            var blocked=invalid||!!(old&&!value&&!manual&&!relatedManual);
             if(old!==value||invalid){
               var event={timestamp:new Date().toISOString(),epicId:current.id,squad:current.squad,field:field,
                 previousValue:old,newValue:change[field]==null?null:change[field],source:manual?'UI':'IMPORT_SYNC',action:blocked?'PRESERVED':'CHANGED'};
