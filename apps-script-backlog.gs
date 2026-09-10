@@ -112,7 +112,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-08-16-v24-discovery-pmo-report-edits';
+var BACKLOG_SCRIPT_VERSION = '2026-09-10-v25-date-integrity';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -1036,13 +1036,27 @@ function readBacklogStore_() {
 // ── Épicos do painel principal: migração única e atualizações manuais ────
 function leadtimeDate_(value) {
   var text = String(value == null ? '' : value).trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '';
+  var br=text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(br) text=br[3]+'-'+('0'+br[2]).slice(-2)+'-'+('0'+br[1]).slice(-2);
+  var iso=text.match(/^(\d{4}-\d{2}-\d{2})(?=$|[T ]\d{2}:\d{2})/);
+  if(!iso) return '';
+  text=iso[1];
+  var y=Number(text.slice(0,4)),m=Number(text.slice(5,7)),d=Number(text.slice(8,10));
+  var days=[31,(y%4===0&&(y%100!==0||y%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+  return y>0&&m>=1&&m<=12&&d>=1&&d<=days[m-1]?text:'';
 }
 
 function normalizeLeadtimeEpic_(row) {
   row = row || {};
+  ['ini','fim','fimAntes','dataPrevista'].forEach(function(field){
+    if(row[field]!=null&&String(row[field]).trim()!==''&&!leadtimeDate_(row[field])){
+      audit_('normalizeLeadtimeEpic',0,1,1,'DATE_INVALID',JSON.stringify({epicId:row.id,squad:row.squad||'',field:field,
+        previousValue:row[field],newValue:null,source:'READ_OR_IMPORT',action:'INVALID',timestamp:new Date().toISOString()}));
+    }
+  });
   return {
     id: String(row.id || '').trim(),
+    _dateState: JSON.parse(JSON.stringify(row._dateState || {})),
     squad: String(row.squad || ''),
     resumo: String(row.resumo || ''),
     status: String(row.status || ''),
@@ -1084,12 +1098,18 @@ function updateLeadtimeEpics_(changes, payloadChars) {
     return withLock_(function() {
       var before = readLeadtimeEpicsInsideLock_();
       var byId = {};
-      before.forEach(function(row, index) { byId[row.id] = index; });
+      before.forEach(function(row, index) {
+        if(Object.prototype.hasOwnProperty.call(byId,row.id)) throw new Error('ID duplicado na base: '+row.id);
+        byId[row.id] = index;
+      });
       var next = before.map(function(row) { return normalizeLeadtimeEpic_(row); });
+      var seen={},events=[];
 
       changes.forEach(function(change) {
         var normalized = normalizeLeadtimeEpic_(change);
         if (!normalized.id) throw new Error('Épico sem id');
+        if(seen[normalized.id]) throw new Error('ID duplicado no payload: '+normalized.id);
+        seen[normalized.id]=true;
         var index = byId[normalized.id];
         if (index === undefined) {
           byId[normalized.id] = next.length;
@@ -1101,14 +1121,35 @@ function updateLeadtimeEpics_(changes, payloadChars) {
         // os envia e impedindo perda de dados por uma atualização concorrente.
         var current = next[index];
         ['squad','resumo','status','statusAntes','ini','fim','fimAntes','dataPrevista','chg','impedimento'].forEach(function(field) {
-          if (Object.prototype.hasOwnProperty.call(change, field)) current[field] = normalized[field];
+          if (!Object.prototype.hasOwnProperty.call(change, field)) return;
+          if(['ini','fim','fimAntes','dataPrevista'].indexOf(field)>=0){
+            var old=current[field]||'',value=normalized[field],meta=change._dateChanges&&change._dateChanges[field];
+            var manual=meta&&meta.source==='UI'&&meta.newValue===(change[field]||'');
+            if(manual&&old!==value&&leadtimeDate_(meta.previousValue)!==old&&
+                (meta.baseValue===undefined||leadtimeDate_(meta.baseValue)!==old)){
+              audit_('updateLeadtimeEpics',payloadChars,1,1,'DATE_CONFLICT',JSON.stringify({id:current.id,squad:current.squad,field:field,previousValue:old,newValue:change[field],source:'UI',action:'CONFLICT'}));
+              throw new Error('Conflito de data em '+current.id+'/'+field+': releia o valor compartilhado antes de editar.');
+            }
+            var invalid=change[field]!=null&&String(change[field]).trim()!==''&&!value;
+            var blocked=invalid||!!(old&&!value&&!manual);
+            if(old!==value||invalid){
+              var event={timestamp:new Date().toISOString(),epicId:current.id,squad:current.squad,field:field,
+                previousValue:old,newValue:change[field]==null?null:change[field],source:manual?'UI':'IMPORT_SYNC',action:blocked?'PRESERVED':'CHANGED'};
+              events.push(event);
+              if(!blocked) current._dateState[field]={source:manual?'UI':'IMPORT_SYNC',newValue:value,previousValue:old,updatedAt:event.timestamp};
+            }
+            if(blocked) return;
+          }
+          current[field] = normalized[field];
         });
       });
 
       var chunks = readChunks_(LEADTIME_EPICS_SHEET);
       var write = commitWrite_(LEADTIME_EPICS_SHEET, 'updateLeadtimeEpics', chunks, before, next, payloadChars || 0);
       if (!write.ok) return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: write.error, conflict: !!write.conflict, currentRevision: write.currentRevision };
-      return { ok: true, version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revision: write.revision };
+      events.forEach(function(event){ audit_('updateLeadtimeEpics',payloadChars,1,1,'DATE_'+event.action,JSON.stringify(event)); });
+      return { ok: true, version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revision: write.revision,
+        dateWarnings:events.filter(function(event){return event.action==='PRESERVED';}) };
     });
   } catch (err) {
     return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.message || err) };
