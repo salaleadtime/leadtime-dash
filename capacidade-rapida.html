@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estimativa de Entrega — Ops4Ops | SALA Transformação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#f4f5f7; --card:#ffffff; --border:#e2e5ea; --border-soft:#eceef1;
+  --text:#1a2432; --text-muted:#667085; --text-faint:#98a2b3;
+  --red:#cc0000; --red-dark:#8b0000;
+  --green:#1a9c53; --green-bg:#e9f9f0;
+  --yellow:#b9770e; --yellow-bg:#fdf3e0;
+  --crimson:#d93025; --crimson-bg:#fdeceb;
+  --blue:#2f6fed; --blue-bg:#eaf1fe;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.4;}
+header{background:linear-gradient(135deg,#cc0000 0%,#8b0000 50%,#1a2432 100%);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+header h1{margin:0;font-size:19px;font-weight:600;}
+header p{margin:2px 0 0;font-size:12.5px;color:#f2d9d9;}
+.badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 12px;font-size:11px;letter-spacing:.04em;font-weight:600;}
+.header-right{display:flex;align-items:center;gap:12px;font-size:11.5px;color:#f2d9d9;}
+main{max-width:1400px;margin:0 auto;padding:20px 24px 60px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:18px;box-shadow:0 1px 2px rgba(20,20,30,.03);}
+.card h2{margin:0 0 12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.card h2 .cnt{font-weight:400;color:var(--text-muted);font-size:12px;}
+.row{display:flex;flex-wrap:wrap;gap:14px;}
+.field{display:flex;flex-direction:column;gap:4px;min-width:130px;}
+.field label{font-size:11px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:.03em;}
+.field.wide{min-width:190px;}
+input,select{font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:-1px;}
+input[type=number]{width:90px;}
+input[type=date]{width:145px;}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:6px;font-weight:600;font-size:12.5px;padding:8px 14px;}
+.btn-primary{background:var(--red);color:#fff;}
+.btn-primary:hover{background:var(--red-dark);}
+.btn-ghost{background:#fff;border:1px solid var(--border);color:var(--text);}
+.btn-ghost:hover{background:#f2f3f5;}
+.btn-sm{padding:4px 8px;font-size:12px;}
+.btn-icon{background:transparent;border:1px solid var(--border);width:26px;height:26px;padding:0;border-radius:5px;color:var(--text-muted);font-size:13px;line-height:1;}
+.btn-icon:hover{background:#f2f3f5;color:var(--text);}
+.toggle-link{background:none;border:none;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline;}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;}
+.kpi{background:#fbfbfc;border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;}
+.kpi .lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;}
+.kpi .val{font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+.kpi .sub{font-size:11.5px;color:var(--text-faint);margin-top:2px;}
+.table-wrap{overflow-x:auto;}
+table{border-collapse:collapse;width:100%;min-width:1120px;}
+th{text-align:left;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:6px 8px;border-bottom:1px solid var(--border-soft);vertical-align:middle;}
+tr.imped td{background:var(--crimson-bg);}
+tr.refino td{background:var(--yellow-bg);}
+td input[type=text]{width:100%;min-width:160px;}
+td.num{font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.pill-green{background:var(--green-bg);color:var(--green);}
+.pill-yellow{background:var(--yellow-bg);color:var(--yellow);}
+.pill-crimson{background:var(--crimson-bg);color:var(--crimson);}
+.pill-muted{background:#f2f3f5;color:var(--text-muted);}
+.actions-cell{display:flex;gap:3px;}
+.chk{width:16px;height:16px;cursor:pointer;}
+.imped-motivo{width:110px !important;min-width:110px !important;font-size:11.5px;}
+.foot-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:10px;}
+.tip{color:var(--text-faint);font-size:11.5px;}
+.adv-panel{display:none;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);}
+.adv-panel.open{display:block;}
+.mini-block{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;flex:1;min-width:220px;}
+.mini-block h3{margin:0 0 8px;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;}
+.mini-block ul{margin:0;padding-left:16px;font-size:12.5px;}
+.mini-block li{margin-bottom:4px;}
+.mini-block .empty{color:var(--text-faint);font-size:12px;}
+.footer-note{text-align:center;color:var(--text-faint);font-size:11.5px;margin-top:24px;}
+#toast-wrap{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:9999;}
+.toast{max-width:320px;background:#1a2432;color:#fff;padding:11px 14px;border-radius:8px;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.25);border-left:4px solid var(--blue);}
+.toast.err{border-left-color:var(--crimson);}
+.toast.ok{border-left-color:var(--green);}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Estimativa de Entrega — Ops4Ops</h1>
+    <p>Capacidade rápida · estime com o dev, veja a data na hora</p>
+  </div>
+  <div class="header-right">
+    <span class="badge">SALA TRANSFORMAÇÃO</span>
+    <span id="lastUpdate">—</span>
+  </div>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>Configuração</h2>
+    <div class="row">
+      <div class="field">
+        <label>Devs disponíveis</label>
+        <input type="number" id="cfgDevs" min="1" max="20" value="2">
+      </div>
+      <div class="field">
+        <label>Horas/dia por dev</label>
+        <input type="number" id="cfgHoursDay" min="1" max="12" value="6">
+      </div>
+      <div class="field wide">
+        <label>Início da fila (hoje/planejado)</label>
+        <input type="date" id="cfgQueueStart">
+      </div>
+      <div class="field wide">
+        <label>Início da sprint atual</label>
+        <input type="date" id="cfgSprintStart">
+      </div>
+      <div class="field wide">
+        <label>Fim da sprint atual</label>
+        <input type="date" id="cfgSprintEnd">
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <button class="btn-ghost btn-sm" id="btnSuggestDevs">Sugerir nº mínimo de devs</button>
+      </div>
+    </div>
+    <button class="toggle-link" id="toggleAdv" style="margin-top:10px;">⚙ Config avançada (eficiência marginal, SP 22)</button>
+    <div class="adv-panel" id="advPanel">
+      <p class="tip" style="margin:0 0 8px;">Eficiência por dev extra cai quando o squad cresce (coordenação, revisão cruzada) — ajuste só se souber que o seu squad se comporta diferente.</p>
+      <div class="row">
+        <div class="field"><label>1–2 devs</label><input type="number" id="effA" min="1" max="100" value="100">%</div>
+        <div class="field"><label>3 devs</label><input type="number" id="effB" min="1" max="100" value="90">%</div>
+        <div class="field"><label>4 devs</label><input type="number" id="effC" min="1" max="100" value="80">%</div>
+        <div class="field"><label>5+ devs</label><input type="number" id="effD" min="1" max="100" value="70">%</div>
+        <div class="field wide"><label>Horas de um card "22 SP" (sprint inteiro)</label><input type="number" id="cfgSp22Hours" min="1" value="80"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Resumo</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Capacidade da fila / dia</div><div class="val" id="kpiCapDaily">—</div><div class="sub">horas úteis, já com eficiência aplicada</div></div>
+      <div class="kpi"><div class="lbl">Horas na fila (elegíveis)</div><div class="val" id="kpiTotalHours">—</div><div class="sub" id="kpiTotalHoursSub">—</div></div>
+      <div class="kpi"><div class="lbl">Cabem até o fim da sprint</div><div class="val" id="kpiFitCount">—</div><div class="sub" id="kpiFitSub">—</div></div>
+      <div class="kpi"><div class="lbl">Capacidade até o fim da sprint</div><div class="val" id="kpiCapSprint">—</div><div class="sub" id="kpiCapSprintSub">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Cards <span class="cnt" id="cardsCount"></span></h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th style="min-width:200px;">Card</th>
+            <th>Refinada</th>
+            <th>SP</th>
+            <th>Horas manual</th>
+            <th>Impedimento</th>
+            <th>Horas</th>
+            <th>Início prev.</th>
+            <th>Entrega prev.</th>
+            <th>Sprint</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cardsBody"></tbody>
+      </table>
+    </div>
+    <div class="foot-row">
+      <button class="btn-primary btn-sm" id="btnAddCard">+ Adicionar card</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-ghost btn-sm" id="btnExample">Carregar exemplo</button>
+        <button class="btn-ghost btn-sm" id="btnCsv">Exportar CSV</button>
+        <button class="btn-ghost btn-sm" id="btnClear">Limpar tudo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="mini-block">
+      <h3>Aguardando refino <span id="cntRefino"></span></h3>
+      <ul id="listRefino"><li class="empty">Nenhum card aqui.</li></ul>
+    </div>
+    <div class="mini-block">
+      <h3>Com impedimento <span id="cntImped"></span></h3>
+      <ul id="listImped"><li class="empty">Nenhum card aqui.</li></ul>
+    </div>
+  </div>
+
+  <p class="footer-note">Dados salvos só neste navegador (localStorage) — ferramenta de simulação pessoal, não sincroniza entre usuários.</p>
+
+</main>
+
+<div id="toast-wrap"></div>
+
+<script>
+'use strict';
+var LS_KEY='sala_capacidade_rapida_v1';
+
+// ---- Tabela SP→Horas (versão B, mesma validada na Projeção de Capacidade v2) ----
+var SP_HOURS_TABLE_B={1:4,2:6,3:8,4:12,5:16,6:20,8:24,9:32,10:40,11:48,13:60,21:80,22:'sprint'};
+var SP_OPTIONS=[1,2,3,4,5,6,8,9,10,11,13,21,22];
+
+function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function parseLocalDate(iso){if(!iso)return null;var p=String(iso).split('-');if(p.length!==3)return null;var d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d;}
+function isoFromDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function isBusinessDay(d){var n=d.getDay();return n!==0&&n!==6;}
+function addBusinessDaysInclusive(iso,count){
+  var d=parseLocalDate(iso); if(!d) return '';
+  count=Math.max(1,count);
+  var n=0; while(n<count){ if(isBusinessDay(d)) n++; if(n<count) d.setDate(d.getDate()+1); }
+  return isoFromDate(d);
+}
+function businessDaysBetweenInclusive(fromISO,toISO){
+  var a=parseLocalDate(fromISO), b=parseLocalDate(toISO);
+  if(!a||!b||a>b) return 0;
+  var n=0, d=new Date(a);
+  while(d<=b){ if(isBusinessDay(d)) n++; d.setDate(d.getDate()+1); }
+  return n;
+}
+function fmtDateBR(iso){ if(!iso) return '—'; var p=String(iso).split('-'); if(p.length<3) return iso; return p[2]+'/'+p[1]+'/'+p[0]; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+function toast(msg,type){
+  var el=document.createElement('div');
+  el.className='toast'+(type==='err'?' err':type==='ok'?' ok':'');
+  el.textContent=msg;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(function(){ el.remove(); },4200);
+}
+
+// ---- Estado ----
+function defaultConfig(){
+  return {
+    devs:2, hoursPerDay:6,
+    queueStart:todayISO(), sprintStart:todayISO(), sprintEnd:'',
+    efficiencyCurve:[{minDev:1,maxDev:2,pct:100},{minDev:3,maxDev:3,pct:90},{minDev:4,maxDev:4,pct:80},{minDev:5,maxDev:99,pct:70}],
+    sp22Hours:80
+  };
+}
+function defaultState(){ return {config:defaultConfig(),cards:[]}; }
+function loadState(){
+  try{
+    var raw=localStorage.getItem(LS_KEY);
+    if(raw){
+      var p=JSON.parse(raw);
+      p.config=Object.assign(defaultConfig(),p.config||{});
+      p.cards=p.cards||[];
+      return p;
+    }
+  }catch(e){}
+  return defaultState();
+}
+function saveState(){
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }
+  catch(e){ toast('Não foi possível salvar localmente: '+e.message,'err'); }
+}
+var state=loadState();
+var uidSeq=1;
+function newCardId(){ return 'c'+(Date.now())+'_'+(uidSeq++); }
+
+// ---- Motor de cálculo (mesma lógica validada na Projeção de Capacidade v2) ----
+function effFactor(N,curve){
+  for(var i=0;i<curve.length;i++){ var r=curve[i]; if(N>=r.minDev&&N<=r.maxDev) return r.pct/100; }
+  return curve.length?curve[curve.length-1].pct/100:1;
+}
+function capDaily(N,cfg){ return N*cfg.hoursPerDay*effFactor(N,cfg.efficiencyCurve); }
+
+function classify(card){
+  if(!card.refinada) return 'refino';
+  if(card.impedimento) return 'impedimento';
+  return 'elegivel';
+}
+function hoursFor(card,cfg){
+  if(card.horasManual!=='' && card.horasManual!=null && !isNaN(Number(card.horasManual))) return Number(card.horasManual);
+  if(card.sp==='' || card.sp==null) return null;
+  var v=SP_HOURS_TABLE_B[Number(card.sp)];
+  if(v===undefined) return null;
+  return v==='sprint'?Number(cfg.sp22Hours)||80:v;
+}
+function dateForCumHours(cum,N,cfg,fromISO){
+  var daily=capDaily(N,cfg);
+  if(daily<=0) return '';
+  return addBusinessDaysInclusive(fromISO,Math.ceil(cum/daily));
+}
+function sprintLength(cfg){
+  var d=businessDaysBetweenInclusive(cfg.sprintStart,cfg.sprintEnd);
+  return d>0?d:null;
+}
+// classifica uma data em "sprint atual" (0), "sprint seguinte" (1), "+N sprints" (>=2)
+function sprintIndexForDate(dateISO,cfg){
+  if(!dateISO||!cfg.sprintEnd) return null;
+  if(dateISO<=cfg.sprintEnd) return 0;
+  var lenBiz=sprintLength(cfg);
+  if(!lenBiz) return null;
+  var idx=0, cursor=cfg.sprintEnd;
+  while(idx<12){
+    cursor=addBusinessDaysInclusive(addBusinessDaysInclusive(cursor,2),lenBiz-1); // próximo bloco útil após o fim do anterior
+    idx++;
+    if(dateISO<=cursor) return idx;
+  }
+  return idx;
+}
+function sprintPill(idx){
+  if(idx==null) return '<span class="pill pill-muted">defina as datas</span>';
+  if(idx===0) return '<span class="pill pill-green">Sprint atual</span>';
+  if(idx===1) return '<span class="pill pill-yellow">Sprint seguinte</span>';
+  return '<span class="pill pill-crimson">+'+idx+' sprints</span>';
+}
+
+function computeQueue(){
+  var cfg=state.config;
+  var elig=[], refino=[], imped=[];
+  state.cards.forEach(function(c){
+    var cls=classify(c), hours=hoursFor(c,cfg);
+    var entry={card:c,hours:hours};
+    if(cls==='refino') refino.push(entry);
+    else if(cls==='impedimento') imped.push(entry);
+    else elig.push(entry);
+  });
+  var cum=0;
+  elig.forEach(function(e){
+    if(e.hours!=null) cum+=e.hours;
+    e.cumHours=cum;
+    e.start=cfg.queueStart;
+    e.dateN=dateForCumHours(e.cumHours,cfg.devs,cfg,cfg.queueStart);
+    e.sprintIdx=sprintIndexForDate(e.dateN,cfg);
+  });
+  return {elig:elig,refino:refino,imped:imped,totalHours:cum};
+}
+
+// ---- Render ----
+function syncConfigInputs(){
+  var cfg=state.config;
+  document.getElementById('cfgDevs').value=cfg.devs;
+  document.getElementById('cfgHoursDay').value=cfg.hoursPerDay;
+  document.getElementById('cfgQueueStart').value=cfg.queueStart;
+  document.getElementById('cfgSprintStart').value=cfg.sprintStart;
+  document.getElementById('cfgSprintEnd').value=cfg.sprintEnd;
+  document.getElementById('effA').value=cfg.efficiencyCurve[0].pct;
+  document.getElementById('effB').value=cfg.efficiencyCurve[1].pct;
+  document.getElementById('effC').value=cfg.efficiencyCurve[2].pct;
+  document.getElementById('effD').value=cfg.efficiencyCurve[3].pct;
+  document.getElementById('cfgSp22Hours').value=cfg.sp22Hours;
+}
+function readConfigFromInputs(){
+  var cfg=state.config;
+  cfg.devs=Math.max(1,Number(document.getElementById('cfgDevs').value)||1);
+  cfg.hoursPerDay=Math.max(0.5,Number(document.getElementById('cfgHoursDay').value)||6);
+  cfg.queueStart=document.getElementById('cfgQueueStart').value||todayISO();
+  cfg.sprintStart=document.getElementById('cfgSprintStart').value||'';
+  cfg.sprintEnd=document.getElementById('cfgSprintEnd').value||'';
+  cfg.efficiencyCurve=[
+    {minDev:1,maxDev:2,pct:Number(document.getElementById('effA').value)||100},
+    {minDev:3,maxDev:3,pct:Number(document.getElementById('effB').value)||90},
+    {minDev:4,maxDev:4,pct:Number(document.getElementById('effC').value)||80},
+    {minDev:5,maxDev:99,pct:Number(document.getElementById('effD').value)||70}
+  ];
+  cfg.sp22Hours=Math.max(1,Number(document.getElementById('cfgSp22Hours').value)||80);
+}
+
+function spOptionsHtml(selected,cfg){
+  var html='<option value="">—</option>';
+  SP_OPTIONS.forEach(function(sp){
+    var v=SP_HOURS_TABLE_B[sp];
+    var label=sp+' SP ('+(v==='sprint'?'~'+(cfg.sp22Hours||80)+'h, sprint inteiro':v+'h')+')';
+    html+='<option value="'+sp+'"'+(String(selected)===String(sp)?' selected':'')+'>'+label+'</option>';
+  });
+  return html;
+}
+
+function render(){
+  var cfg=state.config;
+  document.getElementById('lastUpdate').textContent='Atualizado '+new Date().toLocaleTimeString('pt-BR');
+
+  var q=computeQueue();
+
+  // KPIs
+  var daily=capDaily(cfg.devs,cfg);
+  document.getElementById('kpiCapDaily').textContent=daily.toFixed(1)+'h';
+  document.getElementById('kpiTotalHours').textContent=q.totalHours.toFixed(1)+'h';
+  document.getElementById('kpiTotalHoursSub').textContent=q.elig.length+' card(s) elegível(is)';
+
+  var fitCount=q.elig.filter(function(e){return e.sprintIdx===0;}).length;
+  document.getElementById('kpiFitCount').textContent=cfg.sprintEnd?fitCount:'—';
+  document.getElementById('kpiFitSub').textContent=cfg.sprintEnd?('de '+q.elig.length+' na fila'):'defina o fim da sprint';
+
+  if(cfg.sprintEnd){
+    var capSprint=daily*businessDaysBetweenInclusive(cfg.queueStart,cfg.sprintEnd);
+    document.getElementById('kpiCapSprint').textContent=capSprint.toFixed(1)+'h';
+    var diff=capSprint-q.totalHours;
+    document.getElementById('kpiCapSprintSub').textContent=diff>=0?('sobram ~'+diff.toFixed(1)+'h'):('faltam ~'+Math.abs(diff).toFixed(1)+'h');
+  } else {
+    document.getElementById('kpiCapSprint').textContent='—';
+    document.getElementById('kpiCapSprintSub').textContent='defina início/fim da sprint';
+  }
+
+  // tabela de cards
+  var byId={}; q.elig.concat(q.refino).concat(q.imped).forEach(function(e){ byId[e.card.id]=e; });
+  document.getElementById('cardsCount').textContent='('+state.cards.length+')';
+  var tbody=document.getElementById('cardsBody');
+  tbody.innerHTML='';
+  state.cards.forEach(function(card,idx){
+    var e=byId[card.id];
+    var cls=classify(card);
+    var tr=document.createElement('tr');
+    tr.className=cls==='refino'?'refino':cls==='impedimento'?'imped':'';
+    var hoursTxt=e.hours!=null?e.hours.toFixed(1)+'h':'<span class="tip">sem estimativa</span>';
+    var startTxt=cls==='elegivel'?fmtDateBR(e.start):'—';
+    var endTxt=cls==='elegivel'&&e.hours!=null?fmtDateBR(e.dateN):'—';
+    var sprintTxt=cls==='elegivel'&&e.hours!=null?sprintPill(e.sprintIdx):'<span class="pill pill-muted">'+(cls==='refino'?'aguard. refino':'impedido')+'</span>';
+    tr.innerHTML=
+      '<td class="num">'+(idx+1)+'</td>'+
+      '<td><input type="text" data-f="titulo" value="'+esc(card.titulo)+'" placeholder="Título ou chave do card"></td>'+
+      '<td style="text-align:center;"><input type="checkbox" class="chk" data-f="refinada" '+(card.refinada?'checked':'')+'></td>'+
+      '<td><select data-f="sp">'+spOptionsHtml(card.sp,cfg)+'</select></td>'+
+      '<td><input type="number" data-f="horasManual" value="'+(card.horasManual===''||card.horasManual==null?'':card.horasManual)+'" placeholder="opcional" style="width:80px;"></td>'+
+      '<td style="text-align:center;"><input type="checkbox" class="chk" data-f="impedimento" '+(card.impedimento?'checked':'')+'>'+
+        (card.impedimento?'<input type="text" class="imped-motivo" data-f="impedMotivo" value="'+esc(card.impedMotivo||'')+'" placeholder="motivo">':'')+
+      '</td>'+
+      '<td class="num">'+hoursTxt+'</td>'+
+      '<td class="num">'+startTxt+'</td>'+
+      '<td class="num">'+endTxt+'</td>'+
+      '<td>'+sprintTxt+'</td>'+
+      '<td class="actions-cell">'+
+        '<button class="btn-icon" data-act="up" title="Subir prioridade">↑</button>'+
+        '<button class="btn-icon" data-act="down" title="Descer prioridade">↓</button>'+
+        '<button class="btn-icon" data-act="del" title="Remover">✕</button>'+
+      '</td>';
+    tbody.appendChild(tr);
+    tr.querySelectorAll('[data-f]').forEach(function(inp){
+      var ev=inp.type==='checkbox'?'change':(inp.tagName==='SELECT'?'change':'input');
+      inp.addEventListener(ev,function(){
+        var f=inp.getAttribute('data-f');
+        var val=inp.type==='checkbox'?inp.checked:inp.value;
+        card[f]=val;
+        saveState(); render();
+      });
+    });
+    tr.querySelectorAll('[data-act]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var act=btn.getAttribute('data-act');
+        if(act==='del'){ state.cards.splice(idx,1); }
+        else if(act==='up'&&idx>0){ state.cards.splice(idx-1,0,state.cards.splice(idx,1)[0]); }
+        else if(act==='down'&&idx<state.cards.length-1){ state.cards.splice(idx+1,0,state.cards.splice(idx,1)[0]); }
+        saveState(); render();
+      });
+    });
+  });
+
+  // bloqueios
+  renderMiniList('listRefino','cntRefino',q.refino);
+  renderMiniList('listImped','cntImped',q.imped);
+}
+function renderMiniList(ulId,cntId,entries){
+  document.getElementById(cntId).textContent=entries.length?'('+entries.length+')':'';
+  var ul=document.getElementById(ulId);
+  if(!entries.length){ ul.innerHTML='<li class="empty">Nenhum card aqui.</li>'; return; }
+  ul.innerHTML=entries.map(function(e){
+    var extra=e.card.impedimento&&e.card.impedMotivo?' — '+esc(e.card.impedMotivo):'';
+    return '<li>'+esc(e.card.titulo||'(sem título)')+extra+'</li>';
+  }).join('');
+}
+
+// ---- Ações globais ----
+document.getElementById('btnAddCard').addEventListener('click',function(){
+  state.cards.push({id:newCardId(),titulo:'',refinada:true,sp:'',horasManual:'',impedimento:false,impedMotivo:''});
+  saveState(); render();
+});
+document.getElementById('btnClear').addEventListener('click',function(){
+  if(!confirm('Remover todos os cards da lista? Essa ação não pode ser desfeita.')) return;
+  state.cards=[]; saveState(); render();
+});
+document.getElementById('btnExample').addEventListener('click',function(){
+  if(state.cards.length && !confirm('Isso substitui os cards atuais pelo exemplo. Continuar?')) return;
+  state.cards=[
+    {id:newCardId(),titulo:'Automação de reprocessamento de filas travadas',refinada:true,sp:5,horasManual:'',impedimento:false,impedMotivo:''},
+    {id:newCardId(),titulo:'Rotina de expurgo de logs antigos',refinada:true,sp:3,horasManual:'',impedimento:false,impedMotivo:''},
+    {id:newCardId(),titulo:'Ajuste de alerta de SLA vencido',refinada:true,sp:2,horasManual:'',impedimento:false,impedMotivo:''},
+    {id:newCardId(),titulo:'Painel de monitoramento de jobs noturnos',refinada:false,sp:8,horasManual:'',impedimento:false,impedMotivo:''},
+    {id:newCardId(),titulo:'Migração de rotina de conciliação para novo cluster',refinada:true,sp:13,horasManual:'',impedimento:true,impedMotivo:'aguardando acesso ao ambiente'},
+    {id:newCardId(),titulo:'Correção de duplicidade em rotina de baixa automática',refinada:true,sp:1,horasManual:'',impedimento:false,impedMotivo:''}
+  ];
+  state.config.sprintStart=todayISO();
+  state.config.sprintEnd=addBusinessDaysInclusive(todayISO(),10);
+  saveState(); syncConfigInputs(); render();
+  toast('Exemplo carregado.','ok');
+});
+document.getElementById('btnCsv').addEventListener('click',function(){
+  var q=computeQueue();
+  var rows=[['#','Card','Refinada','SP','Horas manual','Impedimento','Motivo','Horas','Início previsto','Entrega prevista','Sprint']];
+  var byId={}; q.elig.concat(q.refino).concat(q.imped).forEach(function(e){ byId[e.card.id]=e; });
+  state.cards.forEach(function(card,idx){
+    var e=byId[card.id]; var cls=classify(card);
+    var sprintTxt=cls==='elegivel'&&e.hours!=null?(e.sprintIdx===0?'Sprint atual':e.sprintIdx===1?'Sprint seguinte':e.sprintIdx==null?'':'+'+e.sprintIdx+' sprints'):(cls==='refino'?'aguardando refino':'impedido');
+    rows.push([idx+1,card.titulo,card.refinada?'sim':'não',card.sp||'',card.horasManual||'',card.impedimento?'sim':'não',card.impedMotivo||'',e.hours!=null?e.hours:'',cls==='elegivel'?e.start:'',cls==='elegivel'&&e.hours!=null?e.dateN:'',sprintTxt]);
+  });
+  var csv=rows.map(function(r){ return r.map(function(v){ v=String(v==null?'':v); return /[",;\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(';'); }).join('\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='estimativa-entrega-ops4ops-'+todayISO()+'.csv';
+  a.click();
+});
+document.getElementById('btnSuggestDevs').addEventListener('click',function(){
+  readConfigFromInputs(); saveState();
+  var cfg=state.config;
+  if(!cfg.sprintEnd){ toast('Defina o fim da sprint atual primeiro.','err'); return; }
+  var q=computeQueue();
+  if(!q.elig.length){ toast('Não há cards elegíveis na fila.','err'); return; }
+  var lastCum=q.elig[q.elig.length-1].cumHours;
+  var found=null;
+  for(var n=1;n<=20;n++){
+    var d=dateForCumHours(lastCum,n,cfg,cfg.queueStart);
+    if(d&&d<=cfg.sprintEnd){ found=n; break; }
+  }
+  if(!found){ toast('Nem com 20 devs a fila inteira cabe até '+fmtDateBR(cfg.sprintEnd)+'. O gargalo pode ser refino/impedimento, não headcount.','err'); return; }
+  document.getElementById('cfgDevs').value=found;
+  cfg.devs=found; saveState(); render();
+  toast('Com '+found+' dev(s) a fila inteira cabe até '+fmtDateBR(cfg.sprintEnd)+'.','ok');
+});
+document.getElementById('toggleAdv').addEventListener('click',function(){
+  document.getElementById('advPanel').classList.toggle('open');
+});
+['cfgDevs','cfgHoursDay','cfgQueueStart','cfgSprintStart','cfgSprintEnd','effA','effB','effC','effD','cfgSp22Hours'].forEach(function(id){
+  document.getElementById(id).addEventListener('input',function(){ readConfigFromInputs(); saveState(); render(); });
+  document.getElementById(id).addEventListener('change',function(){ readConfigFromInputs(); saveState(); render(); });
+});
+
+// ---- Init ----
+if(!state.config.queueStart) state.config.queueStart=todayISO();
+syncConfigInputs();
+render();
+</script>
+</body>
+</html>
