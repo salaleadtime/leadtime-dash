@@ -9813,18 +9813,22 @@ function calSeedExample(){
   };
 
   function admCarregarEpicos(){
-    var data = (typeof allData !== 'undefined') ? allData.map(function(r,i){return {r:r,i:i};}).filter(function(item){return !isCancelled(item.r);}) : [];
+    var data = (typeof allData !== 'undefined') ? allData.filter(function(r){return !isCancelled(r);}) : [];
     var meta = parseInt(storageGet('sala_meta_dias') || '62');
     document.getElementById('admEpCount').textContent = '— ' + data.length + ' épicos';
     var html = '';
-    data.forEach(function(item){
-      var r=item.r, i=item.i;
+    data.forEach(function(r){
       var lt = r.lt || 0;
       var cls = lt >= meta ? 'adm-lt-r' : (lt >= 40 ? 'adm-lt-a' : 'adm-lt-g');
+      // data-id (não data-idx): allData é reatribuído em vários pontos (import de
+      // planilha, merge de SEED no boot) — um índice de posição capturado no render
+      // pode passar a apontar pra outro épico se isso acontecer antes do onchange
+      // disparar. Mesma lição do bug de datas de épico sumindo (ver CLAUDE.md,
+      // sessão 14/08): sempre resolver pelo id estável, nunca pela posição no array.
       html += '<tr>' +
         '<td style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + (r.id||'—') + '</td>' +
         '<td>' + (r.squad||'—') + '</td>' +
-        '<td><select data-idx="'+i+'" onchange="admStatusChange(this)">' +
+        '<td><select data-id="'+esc(r.id||'')+'" onchange="admStatusChange(this)">' +
           ['Em Execução','Executado','Concluído','Cancelado'].map(function(s){
             return '<option value="'+s+'"'+(r.status===s?' selected':'')+'>'+s+'</option>';
           }).join('') +
@@ -9836,9 +9840,10 @@ function calSeedExample(){
   }
 
   window.admStatusChange = function(sel){
-    var idx = parseInt(sel.getAttribute('data-idx'));
-    if(typeof allData !== 'undefined' && allData[idx]){
-      var rec=allData[idx], oldStatus=rec.status;
+    var id = sel.getAttribute('data-id');
+    var rec = (typeof allData !== 'undefined') ? allData.find(function(r){return r&&r.id===id;}) : null;
+    if(rec){
+      var oldStatus=rec.status;
       rec.status = sel.value;
       if(sel.value==='Cancelado' && oldStatus!=='Cancelado') rec.statusAntes=oldStatus;
       if(sel.value==='Cancelado') rememberCancelledRecord(rec);
