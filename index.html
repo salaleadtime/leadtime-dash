@@ -2730,7 +2730,10 @@ function _jbMergeAndRender(msg){
 // ═══════════════════════════════════════
 // Valida se uma string é uma data válida no formato YYYY-MM-DD
 function isValidDate(d){
-  return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
+  if(typeof d!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  var y=Number(d.slice(0,4)),m=Number(d.slice(5,7)),day=Number(d.slice(8,10));
+  var days=[31,(y%4===0&&(y%100!==0||y%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+  return y>0&&m>=1&&m<=12&&day>=1&&day<=days[m-1];
 }
 // O Sheets (SHEETS_WEBAPP, um Apps Script separado deste repositório) pode devolver
 // uma data já gravada num formato que isValidDate rejeita de cara (ex.: um objeto
@@ -2745,16 +2748,15 @@ function coerceDateStr(v){
   if(v===null||v===undefined||v==='') return null;
   if(isValidDate(v)) return v;
   var s=String(v).trim();
-  var m=s.match(/^(\d{4}-\d{2}-\d{2})/);
+  var br=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(br) s=br[3]+'-'+br[2].padStart(2,'0')+'-'+br[1].padStart(2,'0');
+  var m=s.match(/^(\d{4}-\d{2}-\d{2})(?=$|[T ]\d{2}:\d{2})/);
   if(m && isValidDate(m[1])) return m[1];
   console.warn('[Épicos] Data em formato inesperado veio do Sheets e foi descartada — valor bruto:', v);
   return null;
 }
 function isValidIsoDate(value){
-  if(!value) return true;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  var d = new Date(value + 'T00:00:00');
-  return !isNaN(d.getTime()) && d.toISOString().slice(0,10) === value;
+  return !value || isValidDate(value);
 }
 function isCancelled(rec){ return !!rec && String(rec.status||'').trim()==='Cancelado'; }
 // Uma foto Jira define a carteira atual, mas nunca pode apagar evidências de
@@ -2825,6 +2827,7 @@ function makeRow(r){
   var sPrev = coerceDateStr(r.dataPrevista);
   return normalizeWorkflowRecord({
     id:String(r.id||''),
+    _dateState:r._dateState||{},
     squad:String(r.squad||''),
     resumo:String(r.resumo||''),
     status:String(r.status||'Em Execução'),
@@ -2839,7 +2842,17 @@ function makeRow(r){
   });
 }
 function replaceFromSharedSource(rows){
+  if(document.activeElement&&document.activeElement.matches&&document.activeElement.matches('input[data-id],textarea[data-id]')) return false;
   if(!Array.isArray(rows)||!rows.length) return false;
+  var uniqueIds={};
+  if(rows.some(function(r){
+    if(!r||!r.id) return false;
+    if(uniqueIds[r.id]) return true;
+    uniqueIds[r.id]=true; return false;
+  })){
+    toast('⚠ ID duplicado','Sincronização recusada: a base anterior foi preservada. Corrija os IDs duplicados na origem.','warn');
+    return false;
+  }
 
   // Diagnóstico: mostra no console o resumo que o Sheets está devolvendo
   try{
@@ -2910,16 +2923,20 @@ function replaceFromSharedSource(rows){
     // o vazio é mantido até o Sheets confirmar que também ficou vazio.
     var pend=_pend[r.id];
     if(pend){
-      if((_pendNow-(pend.ts||0)) < PENDING_EDIT_TTL && pend.fields){
+      if(pend.fields){
         Object.keys(pend.fields).forEach(function(field){
           if((r[field]||'') === (pend.fields[field]||'')){
-            delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
+            if(pend.dateChanges&&pend.dateChanges[field]&&!r._dateState[field]){
+              r._dateState[field]=pend.dateChanges[field];
+            }
+            delete pend.fields[field];
+            if(pend.dateChanges) delete pend.dateChanges[field];
+            _pendChanged=true;                                      // Sheets confirmou
           } else {
             // Diagnóstico: se isto aparecer repetidamente pro MESMO id/campo em
             // sincronizações sucessivas (em vez de confirmar e sumir), é sinal de
             // que o Sheets nunca está devolvendo o valor gravado — a proteção
-            // abaixo seguirá mostrando o valor local até PENDING_EDIT_TTL (24h)
-            // expirar, quando o valor do Sheets (possivelmente vazio) passa a valer.
+            // abaixo mantém o valor local até confirmação, mesmo após 24h.
             if(['ini','fim','dataPrevista'].indexOf(field)!==-1){
               console.warn('[Épicos] Data pendente ainda não confirmada pelo Sheets — id:', r.id,
                 'campo:', field, '| local (mantido na tela):', pend.fields[field],
@@ -2930,10 +2947,12 @@ function replaceFromSharedSource(rows){
         });
         if(!Object.keys(pend.fields).length){ delete _pend[r.id]; _pendChanged=true; }
       } else {
-        delete _pend[r.id]; _pendChanged=true;                       // expirou
+        delete _pend[r.id]; _pendChanged=true;                       // entrada malformada
       }
     }
 
+    validateDateIntegrity(old,r,'SYNC');
+    normalizeWorkflowRecord(r);
     if(isCancelled(r) && !cancelledSnapshots[r.id]){
       cancelledSnapshots[r.id]={
         status:'Cancelado', statusAntes:r.statusAntes||'', ini:r.ini||'',
@@ -3074,7 +3093,7 @@ function saveLocal(){
     // entrado por versões antigas ou pela nuvem.
     allData=allData.filter(function(r){ return r&&r.id&&isValidEpicId(r.id); });
     normalizeWorkflowAll();
-    storageSet(STORAGE_KEY, JSON.stringify(allData));
+    if(!storageSet(STORAGE_KEY, JSON.stringify(allData))) throw new Error('Armazenamento indisponível');
     storageSet(STORAGE_META, JSON.stringify({savedAt:new Date().toISOString()}));
     storageSet(STORAGE_VERSION_KEY, SEED_VERSION);
     showSavedBadge();
@@ -3094,6 +3113,12 @@ function loadLocal(){
     if(!raw) return null;
     var data=JSON.parse(raw);
     if(Array.isArray(data)) data=data.filter(function(r){ return r&&r.id&&isValidEpicId(r.id); });
+    var pending=loadPending();
+    if(Array.isArray(data)) data=data.map(function(r){
+      var ent=pending[r.id];
+      if(ent&&ent.fields) Object.keys(ent.fields).forEach(function(f){r[f]=ent.fields[f];});
+      return makeRow(r);
+    });
     return Array.isArray(data)&&data.length?data:null;
   }catch(e){ return null; }
 }
@@ -3172,7 +3197,9 @@ function loadPending(){
   try{ return JSON.parse(storageGet(PENDING_KEY)||'{}')||{}; }catch(e){ return {}; }
 }
 function savePending(p){
-  try{ storageSet(PENDING_KEY, JSON.stringify(p||{})); }catch(e){}
+  if(!storageSet(PENDING_KEY, JSON.stringify(p||{}))){
+    toast('⚠️ Pendência não salva','Não feche esta aba até confirmar a gravação no Sheets. Exporte uma cópia dos dados.','err');
+  }
 }
 function loadDeletedWarned(){
   try{ return JSON.parse(storageGet(DELETED_WARN_KEY)||'{}')||{}; }catch(e){ return {}; }
@@ -3182,29 +3209,44 @@ function saveDeletedWarned(m){
 }
 // Registra os campos editáveis de um épico como pendentes de confirmação.
 // Chamado em TODA edição local antes de enviar ao Sheets.
-function queuePendingWrite(rec){
+function queuePendingWrite(rec, fields, dateChanges){
   if(!rec||!rec.id) return;
   var p=loadPending();
   var ent=p[rec.id]||{fields:{}};
-  EDITABLE_FIELDS.forEach(function(f){ ent.fields[f]=rec[f]||''; });
+  (fields||EDITABLE_FIELDS).forEach(function(f){ ent.fields[f]=rec[f]||''; });
+  ent.dateChanges=ent.dateChanges||{};
+  Object.keys(dateChanges||{}).forEach(function(f){
+    var prior=ent.dateChanges[f];
+    dateChanges[f].baseValue=prior?(prior.baseValue===undefined?prior.previousValue:prior.baseValue):dateChanges[f].previousValue;
+    ent.dateChanges[f]=dateChanges[f];
+  });
   ent.ts=Date.now();
   p[rec.id]=ent;
   savePending(p);
+  return ent;
 }
 // Monta o payload padrão enviado ao Sheets a partir de um conjunto de campos.
-function _sheetsItem(id, f){
-  return {id:id, status:f.status||'', statusAntes:f.statusAntes||'',
-    chg:f.chg||'', impedimento:f.impedimento||'', ini:f.ini||'',
-    fim:f.fim||'', fimAntes:f.fimAntes||'', dataPrevista:f.dataPrevista||''};
+function _sheetsItem(id, f, dateChanges){
+  var item={id:id};
+  EDITABLE_FIELDS.forEach(function(field){
+    if(Object.prototype.hasOwnProperty.call(f,field)) item[field]=f[field]||'';
+  });
+  var ent=loadPending()[id];
+  if(dateChanges||(ent&&ent.dateChanges)) item._dateChanges=dateChanges||ent.dateChanges;
+  return item;
 }
-// Reenvia ao Sheets tudo que ainda não foi confirmado (e não expirou).
+// Reenvia ao Sheets tudo que ainda não foi confirmado, sem expiração destrutiva.
 // Rede de segurança para gravações que falharam ou se perderam.
 function flushPendingWrites(){
   if(!SHEETS_WEBAPP || _sheetsWriteSyncing) return;
   var p=loadPending(), now=Date.now(), items=[], changed=false;
   Object.keys(p).forEach(function(id){
     var ent=p[id];
-    if(!ent||!ent.fields||(now-(ent.ts||0))>PENDING_EDIT_TTL){ delete p[id]; changed=true; return; }
+    if(!ent||!ent.fields){ delete p[id]; changed=true; return; }
+    if((now-(ent.ts||0))>PENDING_EDIT_TTL && !ent.warned){
+      ent.warned=true; changed=true;
+      toast('⚠ DATA AINDA NÃO CONFIRMADA',esc(id)+': pendência com mais de 24h preservada. Verifique a conexão e o backend.','warn');
+    }
     items.push(_sheetsItem(id, ent.fields));
   });
   if(changed) savePending(p);
@@ -3285,6 +3327,9 @@ function saveToSheets(items){
         throw new Error((json&&json.error) ? json.error : 'Apps Script retornou erro ao salvar');
       }
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+      if(json.dateWarnings&&json.dateWarnings.length){
+        toast('⚠ DATA ALTERADA OU REMOVIDA',json.dateWarnings.length+' tentativa(s) preservada(s) pelo servidor. Consulte a auditoria de datas.','warn');
+      }
       // Confirma a gravação lendo novamente a fonte oficial.
       setTimeout(function(){ _trySheets(true); }, 500);
     })
@@ -4242,11 +4287,12 @@ function renderTbl(){
 // ═══════════════════════════════════════
 // HISTÓRICO DE FIM — rastreabilidade de movimentações Medição ↔ Épicos
 // ═══════════════════════════════════════
-function logFimChange(epicId,fimDe,fimPara,origem){
+function logFimChange(epicId,fimDe,fimPara,origem,field,squad){
   var log=[];
   try{ log=JSON.parse(storageGet(FIM_LOG_KEY)||'[]'); }catch(e){}
   if(!Array.isArray(log)) log=[];
-  log.push({ts:new Date().toISOString(),id:epicId,de:fimDe||'',para:fimPara||'',origem:origem});
+  log.push({ts:new Date().toISOString(),id:epicId,de:fimDe||'',para:fimPara||'',origem:origem,
+    field:field||'fim',squad:squad||'',source:origem,action:origem});
   if(log.length>300) log=log.slice(-300);
   try{ storageSet(FIM_LOG_KEY,JSON.stringify(log)); }catch(e){}
   // Atualizar badge do botão de histórico
@@ -4256,6 +4302,41 @@ function logFimChange(epicId,fimDe,fimPara,origem){
     btn.style.borderColor='#fed7aa';
     btn.style.color='#c2410c';
   }
+}
+
+// Estende o histórico existente. Sem metadado de remoção explícita, um vazio
+// remoto não prova intenção. Pendências são lidas novamente para cobrir outra aba.
+function validateDateIntegrity(old, rec, source){
+  if(!rec) return;
+  var pending=loadPending()[rec.id];
+  ['ini','dataPrevista','fim','fimAntes'].forEach(function(field){
+    var previous=old&&old[field], raw=rec[field], next=coerceDateStr(raw);
+    var state=rec._dateState&&rec._dateState[field];
+    var oldState=old&&old._dateState&&old._dateState[field];
+    var explicitClear=state&&state.source==='UI'&&state.newValue==='';
+    if(pending&&pending.fields&&Object.prototype.hasOwnProperty.call(pending.fields,field)){
+      next=pending.fields[field]||null;
+    }else if(oldState&&state&&oldState.updatedAt>state.updatedAt){
+      next=previous;
+      rec._dateState[field]=oldState;
+      logFimChange(rec.id,previous,raw,'RESPOSTA_ANTIGA_'+source,field,rec.squad);
+    }else if(isValidDate(previous)&&!next&&!explicitClear){
+      logFimChange(rec.id,previous,raw,'POSSIVEL_PERDA_'+source,field,rec.squad);
+      toast('⚠ POSSÍVEL PERDA DE DATA DETECTADA',esc(rec.id)+' · '+esc(rec.squad||'')+' · '+esc(field)+
+        ': '+esc(previous)+' → '+esc(raw||'vazio')+' ('+esc(source)+'). Valor anterior preservado; consulte o Histórico.','warn');
+      next=previous;
+    }else if(old&&(previous||'')!==(next||'')){
+      logFimChange(rec.id,previous,next,'DATA_'+source,field,rec.squad);
+    }
+    rec[field]=next;
+  });
+}
+
+function mergeImportedEpicDates(old,rec,dates){
+  rec._dateState=old&&old._dateState||{};
+  ['ini','dataPrevista','fim'].forEach(function(field){rec[field]=dates[field];});
+  validateDateIntegrity(old,rec,'IMPORT');
+  return normalizeWorkflowRecord(rec);
 }
 
 function openHistorico(){
@@ -4285,8 +4366,8 @@ function restaurarFim(epicId,fimAntes){
   rec.lt=calcLT(rec.ini,rec.fim);
   logFimChange(epicId,'',fimAntes,'RESTAURADO');
   saveLocal();
-  queuePendingWrite(rec);
-  saveToSheets([_sheetsItem(rec.id, rec)]);
+  var write=queuePendingWrite(rec,['fim','fimAntes','status','statusAntes'],{fim:{source:'UI',previousValue:'',newValue:rec.fim,updatedAt:new Date().toISOString()}});
+  saveToSheets([_sheetsItem(rec.id,write.fields,write.dateChanges)]);
   renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab('me');
   toast('✓ Data Fim restaurada','<strong>'+esc(epicId)+'</strong> voltou para Medição com Data Fim <strong>'+fimAntes+'</strong>.');
   closeHistorico();
@@ -4363,10 +4444,14 @@ function renderHistorico(){
     else if(e.origem==='ALTERADO_SHEETS')        { tagClass='hist-entregue';          tagLabel='Alterado (Sheets)'; }
     else if(e.origem==='PRESERVADO_MERGE_FIM')   { tagClass='hist-revertido-ui';      tagLabel='🛡 Data Fim preservada'; rowBg='background:#fffbeb'; }
     else if(e.origem==='PRESERVADO_MERGE_INI')   { tagClass='hist-revertido-ui';      tagLabel='🛡 Data Início preservada'; rowBg='background:#fffbeb'; }
-    else                                          { tagClass='hist-entregue';          tagLabel=e.origem||'?'; }
+    else if(e.origem==='DATA_UI') { tagClass='hist-entregue'; tagLabel='Edição manual'; }
+    else if((e.origem||'').indexOf('POSSIVEL_PERDA_')===0) { tagClass='hist-revertido-ui'; tagLabel='Possível perda — valor preservado'; }
+    else if(e.origem==='DATA_SYNC') { tagClass='hist-entregue'; tagLabel='Alteração sincronizada'; }
+    else if(e.origem==='DATA_IMPORT') { tagClass='hist-entregue'; tagLabel='Alteração importada'; }
+    else { tagClass='hist-entregue'; tagLabel=e.origem||'?'; }
 
     // Botão restaurar: só para revertidos que o épico ainda existe sem fim
-    if(e.origem==='REVERTIDO_UI'||e.origem==='REVERTIDO_SHEETS'){
+    if((!e.field||e.field==='fim')&&(e.origem==='REVERTIDO_UI'||e.origem==='REVERTIDO_SHEETS')){
       var rec=allData.find(function(r){ return r.id===e.id; });
       if(rec&&!isValidDate(rec.fim)&&isValidDate(e.de)){
         acaoExtra='<button onclick="restaurarFim(\''+esc(jsq(e.id))+'\',\''+esc(jsq(e.de))+'\')" '+
@@ -4380,7 +4465,7 @@ function renderHistorico(){
     return '<tr style="'+rowBg+'">'+
       '<td style="padding:6px 10px;white-space:nowrap;color:#475569;font-size:10px">'+esc(ts)+'</td>'+
       '<td style="padding:6px 10px;font-family:ui-monospace,monospace;font-size:10px;font-weight:700">'+esc(e.id)+'</td>'+
-      '<td style="padding:6px 10px"><span class="hist-tag '+tagClass+'">'+tagLabel+'</span>'+acaoExtra+'</td>'+
+      '<td style="padding:6px 10px"><span class="hist-tag '+tagClass+'">'+esc(tagLabel)+'</span> '+esc(({ini:'Data Início',dataPrevista:'Data Prevista',fim:'Data Fim',fimAntes:'Data Fim anterior'})[e.field||'fim']||e.field)+' · '+esc(e.squad||'')+acaoExtra+'</td>'+
       '<td style="padding:6px 10px;color:#94a3b8;font-size:10px">'+esc(e.de||'—')+'</td>'+
       '<td style="padding:6px 10px;font-size:10px">'+esc(e.para||'—')+'</td>'+
     '</tr>';
@@ -4415,15 +4500,18 @@ function saveImpedimentoDraft(el){
     if(!rec) return;
     rec.impedimento=el.value||'';
     saveLocal();
-    queuePendingWrite(rec);
+    var write=queuePendingWrite(rec,['impedimento']);
     clearTimeout(_jbSaveTimer);
     jbSave();
-    saveToSheets([_sheetsItem(rec.id, rec)]);
+    saveToSheets([_sheetsItem(rec.id,write.fields,write.dateChanges)]);
   },700);
 }
 function fc(el){
   var tabToRestore=rememberTab();
   var id=el.dataset.id, f=el.dataset.f;
+  if(allData.filter(function(x){return x&&x.id===id;}).length>1){
+    toast('⚠ ID duplicado',esc(id)+': corrija a duplicidade antes de editar.','warn'); return;
+  }
   var gi=allData.findIndex(function(x){return x&&x.id===id;});
   if(gi<0) return;
 
@@ -4503,11 +4591,17 @@ function fc(el){
   }
   if(f==='chg'||f==='impedimento'||f==='fim'||f==='dataPrevista'||f==='ini'){
     var r=rec;
-    // Enfileira TODOS os campos editáveis como pendentes até o Sheets confirmar.
+    // Enfileira só os campos afetados; não reenvia datas antigas de outra aba.
     // Protege qualquer edição (inclusive apagar um campo) contra ser sobrescrita
     // por uma releitura antecipada ou perdida por uma gravação que falhou.
-    queuePendingWrite(r);
-    saveToSheets([_sheetsItem(r.id, r)]);
+    var fields=f==='fim'?['fim','fimAntes','status','statusAntes']:[f];
+    var changes={};
+    if(['ini','fim','dataPrevista'].indexOf(f)>=0){
+      changes[f]={previousValue:oldVal||'',newValue:r[f]||'',source:'UI',updatedAt:new Date().toISOString()};
+      logFimChange(r.id,oldVal,r[f],'DATA_UI',f,r.squad);
+    }
+    var write=queuePendingWrite(r,fields,changes);
+    saveToSheets([_sheetsItem(r.id,write.fields,write.dateChanges)]);
   }
 }
 
@@ -7865,6 +7959,7 @@ function loadXlsx(file){
           continue;
         }
 
+        if(seenIds[id]) throw new Error('ID duplicado na importação: '+id);
         var old=existing[id];
 
         // Extrai valores do IMPORT (todos com guarda contra -1)
@@ -7876,32 +7971,26 @@ function loadXlsx(file){
         var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
         var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
         var impStatusNorm = normalizeStatus(impStatus);
-        var shouldReactivate = !!(old && isValidDate(old.fim) && !impFim && m.status>=0 && importSaysActiveStatus(impStatus));
 
         // MERGE — regra: import só SOBRESCREVE se trouxer valor não-vazio.
         // Se import veio vazio e já existia dado local, PRESERVA.
         // CHG é campo 100% manual: a importação nunca escreve nele, somente
         // preserva o que já existe localmente (evita reintroduzir CHG indevido
         // vindo de qualquer arquivo/fonte externa).
-        // Se o Jira manda o épico como ativo sem Data Fim, a Data Fim antiga
-        // vira histórico para o card voltar à aba Épicos.
+        // Status ativo sem Data Fim não é remoção explícita: preserve a entrega.
         var rec={
           id: id,
           squad: normalizeSquad(impSquad, old?old.squad:'') || (old?old.squad:'') || '',
           resumo: impResumo || (old?old.resumo:'') || '',
           status: impStatusNorm || (old?old.status:'') || '',
           ini: (old&&old.ini) ? old.ini : (impIni || null),
-          fim: shouldReactivate ? null : (impFim || (old?old.fim:null) || null),
-          fimAntes: shouldReactivate ? old.fim : ((old&&old.fimAntes) || null),
+          fim: impFim || (old?old.fim:null) || null,
+          fimAntes: (old&&old.fimAntes) || null,
           dataPrevista: impPrev || (old?old.dataPrevista:null) || null,
           chg: old ? (old.chg||'') : '',
           impedimento: (impImp.trim() ? impImp : '') || (jimp[id]||'') || (old?old.impedimento:'') || ''
         };
-        rec.lt = calcLT(rec.ini, rec.fim);
-        if(shouldReactivate){
-          stats.reactivatedCount++;
-          logFimChange(id, old.fim, '', 'REVERTIDO_IMPORT');
-        }
+        mergeImportedEpicDates(old,rec,{ini:impIni,fim:impFim,dataPrevista:impPrev});
 
         merged.push(rec);
         seenIds[id]=true;
@@ -7932,6 +8021,7 @@ function loadXlsx(file){
       // históricos que não reapareceram no arquivo para não zerar Medição/Dashboard.
       var historical=(allData||[]).filter(function(old){ return old&&old.id&&!seenIds[old.id]&&isHistoricEpic(old); });
       allData = merged.concat(historical);
+      merged.forEach(function(rec){queuePendingWrite(rec);});
       saveJiraEpicSnapshot(merged);
       saveResumoCache(merged);
       saveEpicMetaToCloud(merged);
@@ -8013,7 +8103,7 @@ function parseD(v){
   var s=v.toString().trim();
   if(!s||s==='null'||s==='-') return null;
   var m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if(m) return m[3]+'-'+m[2]+'-'+m[1];
+  if(m) return coerceDateStr(s);
   // Export do Jira em português, como "03/jul/26 10:56 AM".
   var jira=s.match(/^(\d{1,2})[\/\s]([a-záàâãéêíóôõúç]+)[\/\s](\d{2,4})(?:,?\s+(\d{1,2}):(\d{2})(?:\s*([AP]M))?)?$/i);
   if(jira){
@@ -8022,12 +8112,12 @@ function parseD(v){
     var year=Number(jira[3]); if(year<100) year+=2000;
     if(month){
       var day=String(Number(jira[1])).padStart(2,'0');
-      return year+'-'+String(month).padStart(2,'0')+'-'+day;
+      return coerceDateStr(year+'-'+String(month).padStart(2,'0')+'-'+day);
     }
   }
   // ISO date or similar
   var iso=s.split('T')[0].split(' ')[0];
-  if(/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(iso)) return coerceDateStr(iso);
   return null;
 }
 
@@ -8403,7 +8493,8 @@ function loadGS(){
       if(!id) continue;
       if(/^\d+$/.test(id) && id.length<5) continue;
 
-      var old=existing[id];
+      if(seenIds[id]) throw new Error('ID duplicado na importação: '+id);
+        var old=existing[id];
       var impSquad  = m.squad>=0 ? (r[m.squad]||'').toString() : '';
       var impResumo = m.resumo>=0 ? (r[m.resumo]||'').toString() : '';
       var impStatus = m.status>=0 ? (r[m.status]||'').toString() : '';
@@ -8412,7 +8503,6 @@ function loadGS(){
       var impPrev   = m.prev>=0 ? parseD(r[m.prev]) : null;
       var impImp    = m.imp>=0 ? (r[m.imp]||'').toString() : '';
       var impStatusNorm = normalizeStatus(impStatus);
-      var shouldReactivate = !!(old && isValidDate(old.fim) && !impFim && m.status>=0 && importSaysActiveStatus(impStatus));
 
       // CHG é campo 100% manual: a importação nunca escreve nele, somente
       // preserva o que já existe localmente.
@@ -8422,17 +8512,13 @@ function loadGS(){
         resumo: impResumo || (old?old.resumo:'') || '',
         status: impStatusNorm || (old?old.status:'') || '',
         ini: impIni || (old?old.ini:null) || null,
-        fim: shouldReactivate ? null : (impFim || (old?old.fim:null) || null),
-        fimAntes: shouldReactivate ? old.fim : ((old&&old.fimAntes) || null),
+        fim: impFim || (old?old.fim:null) || null,
+        fimAntes: (old&&old.fimAntes) || null,
         dataPrevista: impPrev || (old?old.dataPrevista:null) || null,
         chg: old ? (old.chg||'') : '',
         impedimento: (impImp.trim()?impImp:'') || (old?old.impedimento:'') || ''
       };
-      rec.lt=calcLT(rec.ini, rec.fim);
-      if(shouldReactivate){
-        stats.reactivatedCount++;
-        logFimChange(id, old.fim, '', 'REVERTIDO_IMPORT');
-      }
+      mergeImportedEpicDates(old,rec,{ini:impIni,fim:impFim,dataPrevista:impPrev});
 
       merged.push(rec); seenIds[id]=true;
 
@@ -8458,6 +8544,7 @@ function loadGS(){
     });
 
     allData=merged;
+    merged.forEach(function(rec){queuePendingWrite(rec);});
     closeGS();
     $id('upName').textContent='Google Sheets (ao vivo)';
     $id('upSub').textContent=allData.length+' épicos · '+new Date().toLocaleDateString('pt-BR');
