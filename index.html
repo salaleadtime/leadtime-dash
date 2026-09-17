@@ -5299,8 +5299,21 @@ function loadEpicMetaFromCloud(cb){
 
 function saveEpicMetaToCloud(rows){
   if(!BK_GAS_URL || !rows || !rows.length) return;
+  // A base do merge precisa ser o mapa mais recente conhecido do SERVIDOR
+  // (_epicMetaCloud, carregado por loadEpicMetaFromCloud), nunca o cache local
+  // em storageGet(RESUMO_KEY+'_meta'): esse cache local podia ficar desatualizado
+  // em relação a uma edição feita por outro navegador, e como o servidor faz
+  // merge raso por chave de épico (mergeMap_ em apps-script-backlog.gs — "o que
+  // chega vence"), reenviar o mapa inteiro a partir do cache velho revertia
+  // silenciosamente squad/resumo de épicos que não estavam neste import.
   var meta = {};
-  try{ meta = JSON.parse(storageGet(RESUMO_KEY+'_meta')||'{}'); }catch(e){}
+  try{
+    if(_epicMetaCloud && typeof _epicMetaCloud==='object'){
+      Object.keys(_epicMetaCloud).forEach(function(id){ meta[id]=Object.assign({},_epicMetaCloud[id]); });
+    } else {
+      meta = JSON.parse(storageGet(RESUMO_KEY+'_meta')||'{}');
+    }
+  }catch(e){}
   (rows||[]).forEach(function(r){
     if(r&&r.id){
       if(!meta[r.id]) meta[r.id]={};
@@ -5308,6 +5321,7 @@ function saveEpicMetaToCloud(rows){
       if(r.resumo) meta[r.id].resumo = r.resumo;
     }
   });
+  _epicMetaCloud = meta;
   // Persiste localmente também para envio futuro caso a rede falhe
   try{ storageSet(RESUMO_KEY+'_meta', JSON.stringify(meta)); }catch(e){}
   fetch(BK_GAS_URL, {

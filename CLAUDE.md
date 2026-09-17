@@ -74,7 +74,27 @@ arquivo:
 - `visao-projetos/index.html` — Visão de Projetos. Cliente JSONP:
   `_vpGasJsonp`.
 - `visao-projetos/report-semanal-operacional.html` — relatório semanal
-  operacional. Cliente JSONP: `jsonp` (baseado em Promise).
+  operacional, denso, para quem trabalha o dia a dia da squad. Cliente JSONP:
+  `jsonp` (baseado em Promise).
+- `report-semanal/index.html` — **Resumo Executivo Semanal**, reformado em
+  17/09/2026. Antes desse dia era um relatório do Discovery PMO Tracker
+  (fonte `discoveryPmo`, key descontinuada) que ficou órfão depois da
+  descontinuação do Discovery (ver "Status atual" no topo) — sem retry na
+  chamada JSONP e sem sincronizar edições manuais, os dois bugs corrigidos
+  nesta reforma. Hoje é uma tela única e curta (painel de KPIs, Avanços da
+  semana, Pontos de atenção, Decisões pendentes da gestão), pensada pra ler
+  em segundos — não confundir com o relatório operacional acima, que é o
+  lugar certo pra Ações de gestão detalhadas, riscos/impedimentos completos,
+  radar de projetos e Backlog/Refinamento. Fontes: `vpGeral`, `vpHomologation`
+  (Visão de Projetos) e `emergencyDemand` (mesmas regras cadastradas em
+  Demandas Emergenciais de `index.html`, reaplicadas contra `vpGeral` — não é
+  o mesmo pipeline de origem exato do backlog de `index.html`, é uma
+  aproximação deliberada para um resumo enxuto). Cliente JSONP: `jsonp`
+  (baseado em Promise, mesmo padrão do operacional). Decisões pendentes
+  sincronizam via `saveVpData`/`getVpData` na key `vpWeeklySummaryNotes`
+  (mapa `{decisions:[...], deletedIds:[...]}`, merge por item com tumba de
+  exclusão — mesmo padrão de `vpQuickNotes`). Sem polling automático (mesma
+  regra dos demais relatórios semanais, ver "Padrão de polling" abaixo).
 
 `apps-script-backlog.gs` é a fonte de verdade do backend, mas **não tem deploy
 automático**. Alterá-lo aqui não basta: alguém precisa colar o arquivo
@@ -253,7 +273,7 @@ Todos os três: pausam quando `document.hidden` (aba em segundo plano não
 gasta nem o ping), resincronizam na hora em `visibilitychange` ao voltar o
 foco, e mantêm um resync completo incondicional bem espaçado (10–15 min) como
 rede de segurança — mesmo espírito do "janelas abertas convergem sozinhas"
-já usado no backlog. Os relatórios semanais (`report-semanal.html`,
+já usado no backlog. Os relatórios semanais (`report-semanal/index.html`,
 `report-semanal-operacional.html`) não têm polling automático nenhum — só
 carregam ao abrir a página — então não entram nesse padrão.
 
