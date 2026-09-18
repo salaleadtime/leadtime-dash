@@ -71,7 +71,7 @@
     // Página pausada: preserva a implementação para a futura revisão, mas não
     // consulta nem grava nenhuma fonte enquanto o informativo estiver ativo.
     return;
-    var GAS='https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
+    var GAS='https://script.google.com/macros/s/AKfycbx270pqFDXeKvx_6_gYuuBjHp61_GVuRtgqbWWc_Bvin2dJkUzEQb_ztlVYC4RWp9Lvuw/exec';
     var state={rows:[],homolog:[],homologSource:'',homologImportedAt:'',ops:{},quick:{},discovery:{projects:[]},backlog:[],backlogFallback:false,measurement:[],selectedWeek:'',loadedAt:null,errors:[]};
     var $=function(id){return document.getElementById(id)};
     function esc(v){var text=String(v==null?'':v);if(text==='Interestelar')text='Intrstelar';return text.replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
