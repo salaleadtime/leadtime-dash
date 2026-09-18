@@ -112,7 +112,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-09-18-v26-shared-import-audit';
+var BACKLOG_SCRIPT_VERSION = '2026-09-18-v27-lean-backlog-sync';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -126,6 +126,10 @@ var LEADTIME_EPICS_SHEET = '_leadtime_epics';
 var LEGACY_LEADTIME_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwnwBCa8QE74VueovjfSKLPyMcqkNax0JSyzrWQMSzFfPuYU6F2GtUaJlEUPoKNpeJ2/exec';
 var CHUNK_SIZE = 45000;
 var MAX_PAYLOAD_CHARS = 4000000;
+// O servidor preserva todo o histórico, mas o navegador recebe somente a mesma
+// janela que mantém localmente. Evita respostas JSONP de vários megabytes em
+// navegador novo sem apagar snapshots históricos da planilha.
+var BACKLOG_CLIENT_MAX_SNAPS = 20;
 
 var VP_SHEET_MAP = {
   vpGeral:      '_vp_geral',
@@ -399,11 +403,13 @@ function doGet(e) {
 
     if (action === 'getBacklog') {
       var backlog = withLock_(function() { return readBacklogStore_(); });
+      var clientBacklog = backlogForClient_(backlog);
       return jsonOut_({
         ok: true,
         version: BACKLOG_SCRIPT_VERSION,
-        backlog: backlog,
-        snapshots: backlog.length,
+        backlog: clientBacklog,
+        snapshots: clientBacklog.length,
+        totalSnapshots: backlog.length,
         maxStories: maxStoryCount_(backlog),
         revision: getRevision_(BACKLOG_SHEET)
       }, callback);
@@ -1320,6 +1326,15 @@ function currentSnap_(arr) {
 
 function maxStoryCount_(arr) {
   return (arr || []).reduce(function(m, s) { return Math.max(m, storyCount_(s)); }, 0);
+}
+
+function backlogForClient_(arr) {
+  var copy = (arr || []).slice().filter(function(s) { return !!s; });
+  copy.sort(compareSnaps_);
+  if (copy.length > BACKLOG_CLIENT_MAX_SNAPS) {
+    copy = copy.slice(copy.length - BACKLOG_CLIENT_MAX_SNAPS);
+  }
+  return copy;
 }
 
 function mergeSnaps_(base, incoming) {

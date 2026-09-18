@@ -260,6 +260,24 @@ console.log('\n═══ 10. saveStories e saveBacklog ═══');
     parse(ctx.doPost(post({action:'saveBacklog', payload: snaps(3)}))).savedSnapshots, 8);
 }
 
+console.log('\n═══ 10b. Leitura enxuta do Backlog para navegadores ═══');
+{
+  const { ctx, SHEETS } = novoAmbiente();
+  const history = Array.from({length:30}, (_,i) => ({
+    id:'snap-'+i,
+    seq:i+1,
+    stories:[{id:'ST-'+i}],
+    importedAt:'2026-09-'+String(i+1).padStart(2,'0')+'T12:00:00Z'
+  }));
+  t('histórico completo continua salvo no servidor',
+    parse(ctx.doPost(post({action:'saveBacklog', payload:JSON.stringify(history)}))).savedSnapshots, 30);
+  const lean = parse(ctx.doGet(post({action:'getBacklog'})));
+  t('navegador recebe no máximo 20 snapshots', lean.backlog.length, 20);
+  t('resposta informa o total preservado', lean.totalSnapshots, 30);
+  t('janela contém o snapshot mais recente', lean.backlog[19].id, 'snap-29');
+  t('planilha preserva os 30 snapshots', lerAba(SHEETS,'_backlog_chunks').length, 30);
+}
+
 console.log('\n═══ 11. Janela de redução liberada pelo admin ═══');
 {
   const { ctx, SHEETS } = novoAmbiente();
@@ -293,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-09-18-v26-shared-import-audit');
+  t('versão correta', h.version, '2026-09-18-v27-lean-backlog-sync');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);

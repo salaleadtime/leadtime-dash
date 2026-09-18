@@ -611,6 +611,11 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .hp-item-msg{font-size:11px;color:var(--tx2);line-height:1.4}
 .hp-tip{font-size:11px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:.55rem .9rem;margin:.6rem 1.2rem .8rem}
 .hp-empty{text-align:center;padding:2rem 1rem;color:var(--tx2);font-size:12px}
+.remote-trust-gate{display:none;margin:0;padding:18px 24px;background:#fff7ed;border-top:1px solid #fdba74;border-bottom:1px solid #fdba74;color:#9a3412;align-items:center;justify-content:space-between;gap:18px;font-size:13px}
+.remote-trust-gate strong{display:block;font-size:14px;color:#7c2d12;margin-bottom:3px}
+.remote-trust-gate button{border:0;border-radius:8px;background:#c2410c;color:#fff;font:600 12px inherit;padding:9px 14px;cursor:pointer;white-space:nowrap}
+body.remote-unconfirmed .remote-trust-gate{display:flex}
+body.remote-unconfirmed .risk-notif-panel,body.remote-unconfirmed .pane{display:none!important}
 
 @media(max-width:880px){.kgrid{grid-template-columns:1fr 1fr 1fr}.g2{grid-template-columns:1fr}}
 @media(max-width:580px){.kgrid{grid-template-columns:1fr 1fr}.top .tbtn span{display:none}}
@@ -1385,7 +1390,7 @@ body{min-height:100vh}
 
 </style>
 </head>
-<body>
+<body class="remote-unconfirmed">
 
 <!-- TOPBAR -->
 <header class="top">
@@ -1465,6 +1470,11 @@ body{min-height:100vh}
     Importação em andamento…
   </span>
   <style>@keyframes imp-spin{to{transform:rotate(360deg);}}</style>
+</div>
+
+<div class="remote-trust-gate" id="remoteTrustGate" role="alert">
+  <div><strong>Validando a fonte oficial…</strong><span id="remoteTrustGateText">Os indicadores ficam ocultos até Épicos, Backlog e histórias serem confirmados pelo servidor.</span></div>
+  <button onclick="location.reload()">Tentar novamente</button>
 </div>
 
 <!-- ══ RISK NOTIFICATION PANEL (tela inicial) ══ -->
@@ -2991,14 +3001,10 @@ function replaceFromSharedSource(rows){
   });
   if(delWarnedChanged) saveDeletedWarned(delWarned);
 
-  // Merge: Sheets é autoritativo para registros que existem nele.
-  // Registros locais (SEED/import) que NÃO existem no Sheets são preservados.
-  // Isso garante que épicos adicionados via import + "Salvar HTML (Git)"
-  // não desapareçam para o time quando o Sheets não os contém.
-  // (inIds já foi montado acima a partir de `incoming`.)
-  allData.forEach(function(r){
-    if(r&&r.id&&!inIds[r.id]&&(!jiraEpicSnapshot||isHistoricEpic(r))) incoming.push(r);
-  });
+  // A resposta completa do Sheets é a fotografia oficial. Não anexar registros
+  // ausentes vindos de SEED/cache local: essa união fazia a carteira crescer a
+  // cada navegador/importação (43 → 45 → 54) e mostrava totais divergentes.
+  // Campos manuais continuam preservados acima, mas somente para o mesmo ID.
 
   // Proteção: nunca substituir dados existentes por lista vazia
   if(!incoming.length && allData.length) return false;
@@ -3175,6 +3181,16 @@ function loadPending(){
 function savePending(p){
   try{ storageSet(PENDING_KEY, JSON.stringify(p||{})); }catch(e){}
 }
+function quarantinePendingWritesAfterEndpointCorrection(){
+  var marker='leadtime_sala_pending_quarantine_20260918_v1';
+  try{
+    if(storageGet(marker)) return;
+    var raw=storageGet(PENDING_KEY);
+    if(raw && raw!=='{}') storageSet(PENDING_KEY+'_quarantine_20260918',raw);
+    storageRemove(PENDING_KEY);
+    storageSet(marker,new Date().toISOString());
+  }catch(e){}
+}
 function loadDeletedWarned(){
   try{ return JSON.parse(storageGet(DELETED_WARN_KEY)||'{}')||{}; }catch(e){ return {}; }
 }
@@ -3236,12 +3252,15 @@ function loadFromSheets(callback, silent){
     })
     .then(function(json){
       if(json.ok && Array.isArray(json.data) && json.data.length){
+        setSourceTrust('epics',true,'');
         callback(null, json.data);
       } else {
-        callback('Sheets: resposta vazia ou inválida');
+        var msg='Sheets: resposta vazia ou inválida';
+        setSourceTrust('epics',false,msg);
+        callback(msg);
       }
     })
-    .catch(function(err){ callback(err.message||'falha ao conectar'); })
+    .catch(function(err){ var msg=err.message||'falha ao conectar'; setSourceTrust('epics',false,msg); callback(msg); })
     .finally(function(){ _sheetsSyncing = false; });
 }
 
@@ -3913,6 +3932,32 @@ function getDataAnomalies(){
   return out;
 }
 
+var _sourceTrust={
+  epics:{label:'Épicos/datas',ok:false,error:'aguardando servidor',checkedAt:null},
+  backlog:{label:'Backlog/Refinamento',ok:false,error:'aguardando servidor',checkedAt:null},
+  stories:{label:'Qtd Story/Épicos',ok:false,error:'aguardando servidor',checkedAt:null}
+};
+function sourceTrustRows(){return Object.keys(_sourceTrust).map(function(k){return _sourceTrust[k];});}
+function sourceTrustReady(){return sourceTrustRows().every(function(s){return s.ok;});}
+function fmtTrustTime(value){
+  if(!value) return 'ainda não verificado';
+  return new Date(value).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function setSourceTrust(name, ok, error){
+  var source=_sourceTrust[name]; if(!source) return;
+  source.ok=!!ok; source.error=ok?'':String(error||'resposta inválida'); source.checkedAt=new Date().toISOString();
+  var ready=sourceTrustReady();
+  document.body.classList.toggle('remote-unconfirmed',!ready);
+  var gate=$id('remoteTrustGateText');
+  if(gate){
+    var failed=sourceTrustRows().filter(function(s){return !s.ok;});
+    gate.textContent=ready
+      ? 'Todas as fontes foram confirmadas às '+fmtTrustTime(source.checkedAt)+'.'
+      : failed.map(function(s){return s.label+': '+s.error+' · '+fmtTrustTime(s.checkedAt);}).join(' | ');
+  }
+  renderHealthBadge(allData.length?getDataAnomalies():[]);
+}
+
 function runHealthCheck(silent){
   if(!allData.length) return [];
   var anomalies=getDataAnomalies();
@@ -3930,6 +3975,14 @@ function runHealthCheck(silent){
 
 function renderHealthBadge(anomalies){
   var el=$id('healthBadge'); if(!el) return;
+  var sourceRows=sourceTrustRows();
+  var sourceFailures=sourceRows.filter(function(s){return !s.ok;});
+  if(sourceFailures.length){
+    var checked=sourceFailures.filter(function(s){return !!s.checkedAt;}).length;
+    el.innerHTML='<span class="'+(checked?'hb-err':'hb-warn')+'" onclick="openHealthPanel()" title="Clique para ver fontes e horários">'+
+      (checked?'⚠ '+sourceFailures.length+' fonte(s) não confirmada(s)':'⏳ Validando fontes…')+'</span>';
+    return;
+  }
   var receipt=getLatestImportReceipt();
   var importIssues=getImportReceiptIssueCount(receipt);
   var totalIssues=anomalies.length+importIssues;
@@ -3965,6 +4018,10 @@ function openHealthPanel(receiptOverride){
           '<div class="hp-item-msg">'+esc(a.msg)+'</div></div>';
       }).join('')
     : '<div class="hp-empty">✅ Nenhuma inconsistência de lead time detectada.</div>';
+  var sourceRowsHtml='<div class="hp-ts" style="margin:0 -16px 8px">Fontes oficiais · status e horário da última tentativa</div>'+sourceTrustRows().map(function(source){
+    return '<div class="hp-item '+(source.ok?'':'high')+'"><div class="hp-item-hd">'+(source.ok?'✅ ':'⚠ ')+esc(source.label)+'</div><div class="hp-item-msg">'+
+      (source.ok?'Confirmada pelo servidor':'Não confirmada: '+esc(source.error))+' · '+esc(fmtTrustTime(source.checkedAt))+'</div></div>';
+  }).join('');
   var importRows='';
   if(receipt&&Array.isArray(receipt.verification)){
     importRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Última importação · esperado no CSV × inserido no painel</div>'+receipt.verification.map(function(item){
@@ -3976,7 +4033,7 @@ function openHealthPanel(receiptOverride){
       return '<div class="hp-item '+(item.severity==='error'?'high':'warn')+'"><div class="hp-item-hd">Qualidade da carga</div><div class="hp-item-msg">'+esc(item.message)+'</div></div>';
     }).join('');
   }
-  var rows=healthRows+importRows;
+  var rows=sourceRowsHtml+healthRows+importRows;
   var tip=(anomalies.length||getImportReceiptIssueCount(receipt))
     ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> corrija no Jira as chaves listadas como não inseridas, duplicadas ou sem vínculo; para épicos concluídos, preencha também a Data Fim. Depois repita a importação.</div>'
     : '';
@@ -5496,7 +5553,6 @@ function gasLoadBacklog(cb, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
   var retries = (_retries === undefined) ? 1 : _retries;
   if(!backlogSnaps.length){ _gasBacklogLoading=true; renderBacklogView(); }
-  var localMax=maxBacklogStoryCount(backlogSnaps);
   _gasJsonp(BK_GAS_URL+'?action=getBacklog&t='+Date.now(), function(err,json){
     if(err==='timeout' && retries>0){
       // Cold-start do GAS: retry automático após breve pausa
@@ -5506,25 +5562,29 @@ function gasLoadBacklog(cb, _retries){
     _gasBacklogLoading=false;
     if(err){
       _gasBacklogError=err;
+      setSourceTrust('backlog',false,err);
       renderBacklogView();
       if(cb) cb(err);
       return;
     }
-    if(json && json.ok && Array.isArray(json.backlog) && json.backlog.length){
+    if(json && json.ok && Array.isArray(json.backlog)){
+      setSourceTrust('backlog',true,'');
       var serverMax=maxBacklogStoryCount(json.backlog);
       emSyncServerBacklogStories(json.backlog);
-      mergeBacklog(json.backlog);
+      // O servidor é a fotografia compartilhada. Substituir o cache local evita
+      // que navegadores diferentes acumulem históricos distintos.
+      backlogSnaps=json.backlog.slice();
       sortBacklogSnaps();
       try{ storageSet(BACKLOG_KEY,JSON.stringify(backlogSnaps)); }catch(e){}
       renderBacklogView();
       if(curTab==='em') renderEmergencyView();
       updateTabCounts();
-      if(localMax>serverMax && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
       if(typeof json.revision==='number') _bkLastKnownRevision=json.revision;
       if(cb) cb(null, json.backlog.length);
     } else {
-      if(backlogSnaps.length && !_gasBacklogSaving){ setTimeout(function(){ gasSaveBacklog(); },500); }
-      if(cb) cb(null, 0);
+      var invalid='resposta vazia ou inválida';
+      setSourceTrust('backlog',false,invalid);
+      if(cb) cb(invalid);
     }
   }, 28000, 0);
 }
@@ -5633,14 +5693,16 @@ function gasLoadStories(cb, options, _retries){
       setTimeout(function(){ gasLoadStories(cb, options, retries-1); }, 3000);
       return;
     }
-    if(err){ if(cb) cb(err); return; }
+    if(err){ setSourceTrust('stories',false,err); if(cb) cb(err); return; }
     if(json && json.ok && Array.isArray(json.stories)){
       if(typeof json.revision==='number') _storiesRevision=json.revision;
       var expected=options&&options.expectedSignature;
       if(expected && storiesSignature(json.stories)!==expected){
+        setSourceTrust('stories',false,'aguardando confirmação da carga oficial');
         if(cb) cb('aguardando confirmação da carga oficial');
         return;
       }
+      setSourceTrust('stories',true,'');
       // O servidor é a fonte compartilhada. Nunca mesclar com cache local:
       // registros ausentes da carga oficial precisam realmente desaparecer.
       allStories=json.stories;
@@ -5654,7 +5716,9 @@ function gasLoadStories(cb, options, _retries){
       var upSvT=$id('svUpSavedTxt'); if(upSvT) upSvT.textContent='Servidor · '+allStories.length+' estórias';
       if(cb) cb(null, allStories.length);
     } else {
-      if(cb) cb(null, 0);
+      var invalid='resposta vazia ou inválida';
+      setSourceTrust('stories',false,invalid);
+      if(cb) cb(invalid);
     }
   }, 28000, 0);
 }
@@ -9020,6 +9084,10 @@ function _trySheets(silent){
 }
 
 // Auto-refresh somente por Google Sheets; JSONBin não sobrescreve a base quando Sheets está ativo.
+// A implantação anterior apontou temporariamente as datas para outro Web App.
+// Isola a fila criada nesse intervalo antes que valores vazios sejam reenviados
+// para a fonte oficial restaurada. A cópia fica recuperável no cache local.
+quarantinePendingWritesAfterEndpointCorrection();
 setInterval(function(){
   if(!SHEETS_WEBAPP || _sheetsSyncing || _sheetsWriteSyncing) return;
   flushPendingWrites();   // rede de segurança: reenvia edições que não foram confirmadas

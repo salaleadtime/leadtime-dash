@@ -49,6 +49,8 @@ test('datas de Épicos e Backlog usam Web Apps separados', () => {
   assert.notStrictEqual(sheets[1], backlog[1], 'SHEETS_WEBAPP não pode apontar para o backend de Backlog');
   assert(sheets[1].includes('AKfycbxOSQe41'), 'fonte oficial de datas foi alterada');
   assert(backlog[1].includes('AKfycbx270pqFDXeKvx'), 'backend v26 não está configurado');
+  assert(main.includes('function quarantinePendingWritesAfterEndpointCorrection()'));
+  assert(main.includes("storageSet(PENDING_KEY+'_quarantine_20260918',raw)"));
 });
 
 test('timeout JSONP mantém callback no-op para respostas tardias', () => {
@@ -74,6 +76,25 @@ test('carga parcial e fontes sem vínculo ficam explícitas', () => {
   assert(main.includes('⚠️ Importação parcial'));
   assert(main.includes('item(ns) sem Epic Link'));
   assert(projects.includes('Essas bases mantiveram a carga anterior e não foram marcadas como atualizadas'));
+});
+
+test('cache local nunca é apresentado como carteira oficial', () => {
+  assert(main.includes('<body class="remote-unconfirmed">'));
+  assert(main.includes('function setSourceTrust(name, ok, error)'));
+  assert(main.includes('Fontes oficiais · status e horário da última tentativa'));
+  assert(main.includes("setSourceTrust('epics',true,'');"));
+  assert(main.includes("setSourceTrust('backlog',true,'');"));
+  assert(main.includes("setSourceTrust('stories',true,'');"));
+  assert(main.includes('backlogSnaps=json.backlog.slice();'));
+  assert(!main.includes('if(localMax>serverMax && !_gasBacklogSaving)'));
+  assert(!main.includes('if(r&&r.id&&!inIds[r.id]&&(!jiraEpicSnapshot||isHistoricEpic(r))) incoming.push(r);'));
+});
+
+test('backend limita o Backlog entregue sem apagar histórico', () => {
+  assert(backend.includes("v27-lean-backlog-sync"));
+  assert(backend.includes('var BACKLOG_CLIENT_MAX_SNAPS = 20;'));
+  assert(backend.includes('var clientBacklog = backlogForClient_(backlog);'));
+  assert(backend.includes('totalSnapshots: backlog.length'));
 });
 
 test('robô audita toda carga e Iniciativas/Ops4Ops usa o CSV de refinamento', () => {
