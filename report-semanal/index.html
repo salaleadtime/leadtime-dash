@@ -13,6 +13,7 @@
   --ink:#182230;--muted:#64748b;--line:#e3e8f0;--canvas:#eef1f6;--paper:#fff;
   --green:#178667;--green-soft:#e9f8f2;--amber:#b76b00;--amber-soft:#fff7e6;
   --rose:#b4233c;--rose-soft:#fff1f3;--blue:#2458b8;--blue-soft:#edf4ff;
+  --purple:#6b4fbb;--purple-soft:#f2efff;
   --shadow:0 14px 34px rgba(15,25,35,.14)
 }
 *{box-sizing:border-box}
@@ -42,51 +43,49 @@ button,input,select{font:inherit}
 .hero-badge{background:rgba(255,255,255,.16);border-radius:999px;padding:4px 9px;font-size:9px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
 .hero-meta{margin-top:8px;font-size:10px;opacity:.9}
 .body-pad{padding:14px 20px 18px}
-.kpi-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-bottom:14px}
-.kpi{border:1px solid var(--line);border-top:3px solid var(--blue);border-radius:9px;padding:8px 8px 7px;background:#fbfcfe;min-height:56px}
-.kpi.red{border-top-color:var(--rose)}
-.kpi.green{border-top-color:var(--green)}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-top:3px solid var(--blue);border-radius:9px;padding:10px 12px;background:#fbfcfe}
 .kpi.amber{border-top-color:var(--amber)}
-.kpi small{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.03em;color:#5c6b80;font-weight:800;min-height:18px;line-height:1.25}
-.kpi b{display:block;font-size:19px;line-height:1.05;margin-top:2px;letter-spacing:-.4px}
-.section-title{display:flex;align-items:center;gap:6px;margin:0 0 7px;font-size:12px;font-weight:800;color:#26364b;text-transform:uppercase;letter-spacing:.03em}
+.kpi small{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:#5c6b80;font-weight:800}
+.kpi b{display:block;font-size:24px;line-height:1.1;margin-top:3px;letter-spacing:-.4px}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 0 7px}
+.section-title .name{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#26364b;text-transform:uppercase;letter-spacing:.03em}
 .section-title .dot{width:6px;height:6px;border-radius:50%;background:var(--red)}
-.block{margin-bottom:14px}
-.squad-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
-.squad-card{border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:#fbfcfe}
-.squad-card b{display:block;font-size:10px;color:#26364b}
-.squad-card .chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
-.chip{font-size:8px;font-weight:700;padding:2px 5px;border-radius:999px;background:var(--blue-soft);color:var(--blue)}
-.chip.g{background:var(--green-soft);color:var(--green)}
-.chip.a{background:var(--amber-soft);color:var(--amber)}
-.squad-card .empty-chip{font-size:8px;color:var(--muted)}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.item-list{display:grid;gap:5px}
-.item{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:7px;padding:6px 8px;background:#fbfcfe}
-.item.attn{border-left-color:var(--rose);background:var(--rose-soft)}
-.item b{font-size:10px;color:#1e293b}
-.item .jira-link{color:var(--blue);font-weight:700;text-decoration:none}
-.item .jira-link:hover{text-decoration:underline}
-.item span{display:block;color:var(--muted);font-size:9px;margin-top:2px;line-height:1.35}
-.item .tag{display:inline-block;margin-top:3px;padding:1px 6px;border-radius:999px;font-size:7px;font-weight:800;background:var(--rose-soft);color:var(--rose)}
+.section-title .badge-count{font-size:9px;font-weight:700;color:var(--muted)}
+.block{margin-bottom:16px}
 .empty{border:1px dashed #cbd5e1;border-radius:7px;padding:10px;color:var(--muted);background:#fbfdff;font-size:10px}
-.decision-list{display:grid;gap:5px}
-.decision{border:1px solid var(--line);border-radius:7px;padding:6px 9px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:#fbfcfe}
-.decision.done{opacity:.55}
-.decision.done b{text-decoration:line-through}
-.decision b{display:block;font-size:10px;color:#1e293b}
-.decision span{display:block;margin-top:2px;color:var(--muted);font-size:9px}
-.decision-actions{display:flex;gap:4px;flex:0 0 auto}
+.manual-list{display:grid;gap:5px}
+.manual-item{border:1px solid var(--line);border-left:3px solid var(--purple);border-radius:7px;padding:6px 9px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:#fbfcfe}
+.manual-item.risk{border-left-color:var(--rose)}
+.manual-item.done{opacity:.55}
+.manual-item.done b{text-decoration:line-through}
+.manual-item b{display:block;font-size:10px;color:#1e293b}
+.manual-item span{display:block;margin-top:2px;color:var(--muted);font-size:9px}
+.manual-actions{display:flex;gap:4px;flex:0 0 auto}
 .icon-btn{border:1px solid #d7e0e9;border-radius:6px;background:#fff;width:22px;height:22px;font-size:10px;color:#52647a;cursor:pointer}
 .icon-btn:hover{background:#eef3f8}
-.form-grid{display:grid;grid-template-columns:1.4fr 1fr .9fr auto;gap:6px;align-items:end;margin-bottom:10px}
+.form-grid{display:grid;grid-template-columns:1.3fr 1fr .8fr auto;gap:6px;align-items:end;margin-bottom:9px}
 .field label{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.03em;font-weight:800;color:#53647a;margin-bottom:3px}
 .field input{width:100%;border:1px solid #ccd7e5;border-radius:6px;padding:6px 7px;background:#fff;color:var(--ink);font-size:10px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px}
+.data-table{border-collapse:collapse;width:100%;font-size:10px}
+.data-table th{background:#f7f9fc;color:#52647b;text-align:left;padding:6px 8px;font-size:8px;text-transform:uppercase;letter-spacing:.03em}
+.data-table td{border-top:1px solid var(--line);padding:6px 8px;vertical-align:top}
+.data-table .story{font-weight:700;color:#1e293b}
+.data-table .story .sub{display:block;font-weight:400;color:var(--muted);margin-top:2px;max-width:260px}
+.jira-link{color:var(--blue);font-weight:700;text-decoration:none}
+.jira-link:hover{text-decoration:underline}
+.sla-badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:8px;font-weight:800}
+.sla-badge.ok{background:var(--green-soft);color:var(--green)}
+.sla-badge.late{background:var(--rose-soft);color:var(--rose)}
+.owner-btn{border:0;background:transparent;color:var(--blue);cursor:pointer;font-size:9px;font-weight:700;padding:0;text-decoration:underline}
+.owner-set{color:#1e293b;font-weight:600}
+.owner-edit{border:1px solid #d7e0e9;border-radius:5px;background:#fff;width:18px;height:18px;font-size:8px;color:#52647a;cursor:pointer;margin-left:3px}
 .foot-note{padding:9px 20px 14px;font-size:9px;color:#7c8aa0;border-top:1px solid var(--line)}
 .toast{position:fixed;right:14px;bottom:14px;background:#1f2b3d;color:#fff;padding:10px 13px;border-radius:8px;box-shadow:var(--shadow);font-size:11px;z-index:80;display:none;max-width:300px}
 .toast.show{display:block}
 .loading{padding:36px;text-align:center;color:var(--muted)}
-@media(max-width:760px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.two-col{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}
+@media(max-width:760px){.kpi-grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -110,7 +109,7 @@ button,input,select{font:inherit}
 (function(){
   'use strict';
   var GAS='https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
-  var state={rows:[],homolog:[],homologImportedAt:'',geralImportedAt:'',emergency:{rules:[]},summary:{decisions:[],deletedIds:[]},selectedWeek:'',errors:[]};
+  var state={rows:[],sprintRows:[],homolog:[],homologImportedAt:'',geralImportedAt:'',summary:{decisions:[],risks:[],milestones:[],homologOwners:{},deletedIds:[]},selectedWeek:'',errors:[]};
   var $=function(id){return document.getElementById(id)};
 
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -152,7 +151,7 @@ button,input,select{font:inherit}
   function fmtDate(v){var d=parseDate(v);return d?d.toLocaleDateString('pt-BR'):'—'}
   function dateISO(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
   function isHom(row){return /homolog/.test(norm(row.situacao||row.status))}
-  function stage(row){var s=norm(row.situacao||row.status);if(/deploy|producao/.test(s))return 'deploy';if(/homolog/.test(s))return 'homolog';if(/teste/.test(s))return 'teste';if(/desenvolvimento|em dev/.test(s))return 'dev';return 'other'}
+  function isBacklog(row){return norm(row.situacao||row.status).indexOf('product backlog')>=0}
 
   var BUSINESS_HOLIDAYS=['2026-01-01','2026-04-03','2026-04-21','2026-05-01','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25'];
   function isBusinessDate(d){return d&&d.getDay()!==0&&d.getDay()!==6&&BUSINESS_HOLIDAYS.indexOf(dateISO(d))<0}
@@ -170,131 +169,100 @@ button,input,select{font:inherit}
   function jiraKey(value){var match=String(value==null?'':value).match(/\bSLOPC-\d+\b/i);return match?match[0].toUpperCase():''}
   function jiraLink(code){var key=jiraKey(code);return key?'<a class="jira-link" href="https://jira.bradesco.com.br:8443/browse/'+key+'" target="_blank" rel="noopener">'+esc(key)+'</a>':esc(code||'—')}
 
-  // ═══ Demandas Emergenciais: reaplica as MESMAS regras cadastradas em
-  // index.html (chave emergencyDemand, {rules:[...]}) contra a base da Visão
-  // de Projetos (vpGeral). Não é a mesma base de origem exata do backlog de
-  // index.html (que soma backlog importado + stories do Jira + planilha de
-  // homologação cruzada) — é uma aproximação deliberada para um resumo
-  // enxuto, usando a MESMA definição de regra, não uma cópia de todo o
-  // pipeline de importação do backlog.
-  function ruleMatches(row,rule){
-    if(!rule||rule.active===false)return false;
-    var value=norm(rule.value),title=norm(titleFor(row)),labels=norm(row.labels||row.rotulos),squad=norm(row.squad);
-    if(!value)return false;
-    if(rule.type==='titleContains')return title.indexOf(value)>=0;
-    if(rule.type==='labelAny')return value.split(/[|,;]+/).some(function(v){v=v.trim();return v&&labels.indexOf(v)>=0});
-    if(rule.type==='squad')return squad===value;
-    return title.indexOf(value)===0;
-  }
-  function isBlocked(row){return row.bloqueio||row.dependencia||row.impedimento||/bloque|dependen|imped/.test(norm([row.status,row.situacao,row.alerta].join(' ')))}
-  function emergencyStories(){
-    var rules=(state.emergency&&state.emergency.rules||[]).filter(function(r){return r&&r.active!==false});
-    if(!rules.length)return [];
-    var map={};
-    (state.rows||[]).forEach(function(row){
-      if(rules.some(function(r){return ruleMatches(row,r)}))map[idFor(row)]=row;
-    });
-    return Object.keys(map).map(function(k){return map[k]});
-  }
-
   function nowText(){return new Date().toLocaleString('pt-BR',{dateStyle:'medium',timeStyle:'short'})}
   function dataUpdatedText(){var times=[];function add(v){var t=Date.parse(v||'');if(!isNaN(t))times.push(t)}add(state.geralImportedAt);add(state.homologImportedAt);if(!times.length)return nowText();return new Date(Math.max.apply(null,times)).toLocaleString('pt-BR',{dateStyle:'medium',timeStyle:'short'})}
 
-  function grouped(rows,fn){return rows.reduce(function(a,r){var k=fn(r)||'Não informada';(a[k]=a[k]||[]).push(r);return a},{})}
-
   function criticalHomolog(){
-    return (state.homolog||[]).filter(isHom).map(function(row){var entry=parseDate(row.homologacaoData),due=businessDue(entry);return {row:row,due:due,lateDays:businessDaysAfter(due)}});
+    return (state.homolog||[]).filter(isHom).map(function(row){var entry=parseDate(row.homologacaoData),due=businessDue(entry);return {row:row,entry:entry,due:due,lateDays:businessDaysAfter(due)}});
   }
-
-  function metricCard(label,value,cls){return '<article class="kpi '+(cls||'')+'"><small>'+esc(label)+'</small><b>'+value+'</b></article>'}
 
   function render(){
     if(!state.rows.length && !state.homolog.length){
       $('captureArea').innerHTML='<div class="loading">Não foi possível carregar a base. Use “Atualizar” para tentar novamente.</div>';
       return;
     }
-    var count=function(p){return state.rows.filter(p).length};
-    var metric={dev:count(function(r){return stage(r)==='dev'}),hom:count(function(r){return stage(r)==='homolog'}),teste:count(function(r){return stage(r)==='teste'}),deploy:count(function(r){return stage(r)==='deploy'})};
+    var backlogCount=state.rows.filter(isBacklog).length;
+    var sprintCount=state.sprintRows.length;
     var critical=criticalHomolog();
     var today=new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
-    var overdue=critical.filter(function(x){return x.due&&x.due<today});
-    var emergency=emergencyStories();
-    var emergencyAttn=emergency.filter(isBlocked);
     var range=weekRange(state.selectedWeek);
-
-    var avancos=(state.rows||[]).filter(function(r){var s=stage(r);return s==='homolog'||s==='deploy'}).slice(0,4);
-    var atencoes=overdue.slice(0,3).map(function(x){return {row:x.row,tag:'SLA VENCIDO',detail:(x.lateDays||0)+' dia(s) útil(eis) após o limite.'}})
-      .concat(emergencyAttn.slice(0,3).map(function(r){return {row:r,tag:'EMERGENCIAL',detail:'Bloqueio, impedimento ou dependência identificado.'}}))
-      .slice(0,4);
-
-    var bySquad=grouped(state.rows,function(r){return r.squad});
-    var squadNames=Object.keys(bySquad).filter(function(n){return n&&n!=='Não informada';}).sort(function(a,b){return bySquad[b].length-bySquad[a].length});
-    var squadCards=squadNames.slice(0,8).map(function(name){
-      var rows=bySquad[name];
-      var c=function(st){return rows.filter(function(r){return stage(r)===st}).length};
-      var dev=c('dev'),hom=c('homolog'),teste=c('teste'),deploy=c('deploy');
-      var chips=[];
-      if(deploy)chips.push('<span class="chip g">'+deploy+' deploy</span>');
-      if(hom)chips.push('<span class="chip a">'+hom+' homolog.</span>');
-      if(teste)chips.push('<span class="chip">'+teste+' teste</span>');
-      if(dev)chips.push('<span class="chip">'+dev+' dev</span>');
-      return '<article class="squad-card"><b>'+esc(name)+' · '+rows.length+'</b><div class="chips">'+(chips.length?chips.join(''):'<span class="empty-chip">sem item nas etapas críticas</span>')+'</div></article>';
-    }).join('');
 
     $('captureArea').innerHTML=''
       +'<div class="hero"><div class="hero-top"><div><div class="hero-eyebrow">SALA Transformação · Report Semanal</div><h1>Resumo Executivo Semanal</h1></div><div class="hero-badge">'+esc(range?'SEMANA '+range.week+'/'+range.year:'')+'</div></div><div class="hero-meta">Base atualizada em '+esc(dataUpdatedText())+' BRT</div></div>'
       +'<div class="body-pad">'
       +'<div class="block"><div class="kpi-grid">'
-      +metricCard('Em desenvolvimento',metric.dev,'')
-      +metricCard('Em homologação',metric.hom,'amber')
-      +metricCard('Em teste',metric.teste,'')
-      +metricCard('Em deploy',metric.deploy,'green')
-      +metricCard('SLA venc.',overdue.length,'red')
-      +metricCard('Emergenciais',emergency.length,'red')
+      +'<article class="kpi"><small>Histórias no Backlog</small><b>'+backlogCount+'</b></article>'
+      +'<article class="kpi amber"><small>Histórias na Sprint</small><b>'+sprintCount+'</b></article>'
       +'</div></div>'
-      +'<div class="block"><h2 class="section-title"><span class="dot"></span>Panorama por squad</h2>'
-      +(squadCards?'<div class="squad-grid">'+squadCards+'</div>':'<div class="empty">Nenhuma squad identificada na carga atual.</div>')
+      +renderManualSection('risks','Riscos',['risk'])
+      +renderManualSection('milestones','Marcos / Iniciativas concluídas',[])
+      +renderHomologSection(critical,today)
       +'</div>'
-      +'<div class="block two-col">'
-      +'<div><h2 class="section-title"><span class="dot"></span>Avanços da semana</h2>'
-      +(avancos.length?'<div class="item-list">'+avancos.map(function(r){return '<article class="item"><b>'+jiraLink(idFor(r))+' · '+esc(r.squad||'—')+'</b><span>'+esc(titleFor(r))+'</span></article>'}).join('')+'</div>':'<div class="empty">Nenhum item em homologação ou deploy.</div>')
-      +'</div>'
-      +'<div><h2 class="section-title"><span class="dot"></span>Pontos de atenção</h2>'
-      +(atencoes.length?'<div class="item-list">'+atencoes.map(function(x){return '<article class="item attn"><b>'+jiraLink(idFor(x.row))+' · '+esc(x.row.squad||'—')+'</b><span>'+esc(titleFor(x.row))+'</span><span class="tag">'+esc(x.tag)+'</span></article>'}).join('')+'</div>':'<div class="empty">Nenhum ponto crítico identificado.</div>')
-      +'</div>'
-      +'</div>'
-      +renderDecisions()
-      +'</div>'
-      +'<p class="foot-note">Fontes: Visão de Projetos (Acomp. Geral, Homologação) e Demandas Emergenciais (regras de index.html). Decisões pendentes ficam salvas para todo mundo.</p>';
+      +'<p class="foot-note">Fontes: Visão de Projetos (Acomp. Geral, Sprint, Homologação). Riscos, Marcos e Responsável de homologação são editados aqui e ficam salvos para todo mundo.</p>';
   }
 
-  function renderDecisions(){
-    var decisions=selectedDecisions();
-    return '<div class="block"><h2 class="section-title"><span class="dot"></span>Decisões pendentes da gestão</h2>'
+  // ═══ 3 listas manuais (Decisões, Riscos, Marcos) compartilham a mesma
+  // estrutura de edição/sincronização — só o nome da lista e o rótulo do
+  // campo de data mudam. ═══
+  var MANUAL_LISTS={
+    decisions:{label:'Decisão',dateLabel:'Prazo',cls:''},
+    risks:{label:'Risco',dateLabel:'Identificado em',cls:'risk'},
+    milestones:{label:'Marco / iniciativa',dateLabel:'Data',cls:''}
+  };
+
+  function selectedManualItems(list){return (state.summary[list]||[]).filter(function(d){return d.week===state.selectedWeek})}
+
+  function renderManualSection(list,title,extraClasses){
+    var def=MANUAL_LISTS[list],items=selectedManualItems(list);
+    return '<div class="block"><div class="section-title"><span class="name"><span class="dot"></span>'+esc(title)+'</span><span class="badge-count">'+items.length+'</span></div>'
       +'<div class="form-grid no-capture">'
-      +'<div class="field"><label>Decisão</label><input id="decTitle" placeholder="Ex.: Confirmar janela de homologação"></div>'
-      +'<div class="field"><label>Responsável</label><input id="decOwner" placeholder="Nome ou papel"></div>'
-      +'<div class="field"><label>Prazo</label><input id="decDue" type="date"></div>'
-      +'<button class="tool primary" type="button" onclick="addDecision()" style="height:29px">+ Adicionar</button>'
+      +'<div class="field"><label>'+esc(def.label)+'</label><input id="'+list+'Title" placeholder="Descreva aqui"></div>'
+      +'<div class="field"><label>Responsável</label><input id="'+list+'Owner" placeholder="Nome ou papel"></div>'
+      +'<div class="field"><label>'+esc(def.dateLabel)+'</label><input id="'+list+'Due" type="date"></div>'
+      +'<button class="tool primary" type="button" onclick="addManualItem(\''+list+'\')" style="height:29px">+ Adicionar</button>'
       +'</div>'
-      +(decisions.length?'<div class="decision-list">'+decisions.map(function(d){return '<article class="decision '+(d.done?'done':'')+'"><div><b>'+esc(d.title)+'</b><span>'+esc(d.owner||'Responsável não informado')+(d.dueDate?' · prazo '+esc(fmtDate(d.dueDate)):'')+'</span></div><div class="decision-actions no-capture"><button class="icon-btn" title="'+(d.done?'Reabrir':'Concluir')+'" onclick="toggleDecision(\''+jsq(d.id)+'\')">'+(d.done?'↺':'✓')+'</button><button class="icon-btn" title="Excluir" onclick="deleteDecision(\''+jsq(d.id)+'\')">×</button></div></article>'}).join('')+'</div>':'<div class="empty">Nenhuma decisão registrada para esta semana.</div>')
+      +(items.length?'<div class="manual-list">'+items.map(function(d){return '<article class="manual-item '+esc(def.cls)+' '+(d.done?'done':'')+'"><div><b>'+esc(d.title)+'</b><span>'+esc(d.owner||'Responsável não informado')+(d.dueDate?' · '+esc(def.dateLabel.toLowerCase())+' '+esc(fmtDate(d.dueDate)):'')+'</span></div><div class="manual-actions no-capture"><button class="icon-btn" title="'+(d.done?'Reabrir':'Concluir')+'" onclick="toggleManualItem(\''+list+'\',\''+jsq(d.id)+'\')">'+(d.done?'↺':'✓')+'</button><button class="icon-btn" title="Excluir" onclick="deleteManualItem(\''+list+'\',\''+jsq(d.id)+'\')">×</button></div></article>'}).join('')+'</div>':'<div class="empty">Nenhum '+esc(def.label.toLowerCase())+' registrado para esta semana.</div>')
       +'</div>';
   }
 
-  function weekText(){var range=weekRange(state.selectedWeek);return range?'Semana '+range.week+', '+range.year:state.selectedWeek}
-  function selectedDecisions(){return (state.summary.decisions||[]).filter(function(d){return d.week===state.selectedWeek})}
+  function renderHomologSection(critical,today){
+    var owners=state.summary.homologOwners||{};
+    var rows=critical.map(function(x){
+      var storyId=idFor(x.row),owner=owners[storyId]||'',late=x.due&&x.due<today,days=x.lateDays==null?'—':x.lateDays;
+      // O texto do responsável (nome ou "—") precisa SEMPRE aparecer na
+      // captura — só o controle de edição (botão/link clicável) é
+      // .no-capture. Uma célula em branco na imagem enviada por e-mail
+      // pareceria dado faltando, não "ainda não definido".
+      var ownerHtml=owner
+        ?'<span class="owner-set">'+esc(owner)+'</span><button class="owner-edit no-capture" onclick="editHomologOwner(\''+jsq(storyId)+'\',\''+jsq(owner)+'\')" title="Editar responsável">✎</button>'
+        :'<span class="owner-set" style="color:var(--muted)">—</span><button class="owner-btn no-capture" onclick="editHomologOwner(\''+jsq(storyId)+'\',\'\')" style="margin-left:4px">Definir</button>';
+      return '<tr><td class="story">'+jiraLink(storyId)+'<span class="sub">'+esc(titleFor(x.row))+'</span></td><td>'+esc(x.row.squad||'—')+'</td><td>'+esc(fmtDate(x.entry))+'</td><td>'+ownerHtml+'</td><td><span class="sla-badge '+(late?'late':'ok')+'">'+(late?'Vencido · '+esc(days)+' dia(s)':'No prazo')+'</span></td></tr>';
+    }).join('');
+    return '<div class="block"><div class="section-title"><span class="name"><span class="dot"></span>Histórias em Homologação</span><span class="badge-count">'+critical.length+'</span></div>'
+      +(critical.length?'<div class="table-wrap"><table class="data-table"><thead><tr><th>História</th><th>Squad</th><th>Data</th><th>Responsável</th><th>SLA</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">Nenhuma história em homologação na carga atual.</div>')
+      +'</div>';
+  }
 
   function toast(msg){var t=$('toast');t.textContent=msg;t.className='toast show';setTimeout(function(){t.className='toast'},3600)}
   function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
   function stableJson(value){if(Array.isArray(value))return '['+value.map(stableJson).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(function(k){return JSON.stringify(k)+':'+stableJson(value[k])}).join(',')+'}';return JSON.stringify(value)}
 
   // ═══ Tumba de exclusão: sem isso, mesclar o remoto buscado antes de salvar
-  // ressuscitaria uma decisão que este navegador acabou de excluir/concluir
-  // e que ainda não chegou no servidor (mesmo padrão de vpQuickNotes/
-  // discoveryPmoReportEdits, ver CLAUDE.md "Padrão de resiliência"). ═══
+  // ressuscitaria um item que este navegador acabou de excluir/concluir e
+  // que ainda não chegou no servidor (mesmo padrão de vpQuickNotes/
+  // discoveryPmoReportEdits, ver CLAUDE.md "Padrão de resiliência"). Os ids
+  // gerados por addManualItem já são únicos por lista (prefixo dec-/risk-/
+  // ms-), então uma tumba única serve pras 3 listas. ═══
   function recordDeletion(id){var list=Array.isArray(state.summary.deletedIds)?state.summary.deletedIds:[];state.summary.deletedIds=list.filter(function(t){return t&&t.id!==id}).concat([{id:id,deletedAt:new Date().toISOString()}]).slice(-500)}
   function mergeTombstones(localTs,remoteTs){var out={};(Array.isArray(remoteTs)?remoteTs:[]).forEach(function(t){if(t&&t.id)out[t.id]=t});(Array.isArray(localTs)?localTs:[]).forEach(function(t){if(!t||!t.id)return;var existing=out[t.id];if(!existing||(Date.parse(t.deletedAt||'')||0)>=(Date.parse(existing.deletedAt||'')||0))out[t.id]=t});return out}
-  function mergeDecisions(local,remote,deletedIds){var map={};function tomb(id){return !!deletedIds[id]}(Array.isArray(local)?local:[]).forEach(function(d){if(!d||!d.id||tomb(d.id))return;map[d.id]=d});(Array.isArray(remote)?remote:[]).forEach(function(d){if(!d||!d.id||tomb(d.id))return;var existing=map[d.id];if(!existing){map[d.id]=d;return}var rt=Date.parse(d.updatedAt||d.createdAt||'')||0,lt=Date.parse(existing.updatedAt||existing.createdAt||'')||0;if(rt>lt)map[d.id]=d});return Object.keys(map).map(function(k){return map[k]})}
+  function mergeItemList(local,remote,deletedIds){var map={};function tomb(id){return !!deletedIds[id]}(Array.isArray(local)?local:[]).forEach(function(d){if(!d||!d.id||tomb(d.id))return;map[d.id]=d});(Array.isArray(remote)?remote:[]).forEach(function(d){if(!d||!d.id||tomb(d.id))return;var existing=map[d.id];if(!existing){map[d.id]=d;return}var rt=Date.parse(d.updatedAt||d.createdAt||'')||0,lt=Date.parse(existing.updatedAt||existing.createdAt||'')||0;if(rt>lt)map[d.id]=d});return Object.keys(map).map(function(k){return map[k]})}
+  // Mapa chave→valor (homologOwners): mesma classe de bug do histórico deste
+  // repo (CLAUDE.md — "mapa dentro do mapa" do incidente de 14/08). Sem
+  // mesclar por chave ANTES de enviar, reenviar o objeto inteiro sobrescreve
+  // o responsável que outra pessoa acabou de definir para outra história —
+  // o merge raso do servidor (mergeMap_) só enxerga "homologOwners" como UM
+  // valor de topo, não o que tem dentro dele.
+  function mergeOwnerMap(local,remote){var out={};Object.keys(remote||{}).forEach(function(k){out[k]=remote[k]});Object.keys(local||{}).forEach(function(k){out[k]=local[k]});return out}
 
   async function persistSummary(){
     try{
@@ -302,7 +270,10 @@ button,input,select{font:inherit}
       var tsMap=mergeTombstones(state.summary.deletedIds,remote&&remote.deletedIds),deletedIds={};
       Object.keys(tsMap).forEach(function(k){deletedIds[k]=true});
       state.summary.deletedIds=Object.keys(tsMap).map(function(k){return tsMap[k]});
-      state.summary.decisions=mergeDecisions(state.summary.decisions,remote&&remote.decisions,deletedIds);
+      state.summary.decisions=mergeItemList(state.summary.decisions,remote&&remote.decisions,deletedIds);
+      state.summary.risks=mergeItemList(state.summary.risks,remote&&remote.risks,deletedIds);
+      state.summary.milestones=mergeItemList(state.summary.milestones,remote&&remote.milestones,deletedIds);
+      state.summary.homologOwners=mergeOwnerMap(state.summary.homologOwners,remote&&remote.homologOwners);
     }catch(error){}
     localStorage.setItem('vpWeeklySummaryNotesLocal',JSON.stringify(state.summary));
     await fetch(GAS,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=saveVpData&key=vpWeeklySummaryNotes&payload='+encodeURIComponent(JSON.stringify(state.summary))});
@@ -314,48 +285,81 @@ button,input,select{font:inherit}
     throw new Error('A alteração foi salva somente neste navegador; a confirmação da base compartilhada não retornou.');
   }
 
-  window.addDecision=async function(){
-    var title=($('decTitle').value||'').trim(),owner=($('decOwner').value||'').trim(),due=$('decDue').value;
-    if(!title){toast('Informe o texto da decisão.');return}
+  var LIST_PREFIX={decisions:'dec',risks:'risk',milestones:'ms'};
+
+  window.addManualItem=async function(list){
+    var title=($(list+'Title').value||'').trim(),owner=($(list+'Owner').value||'').trim(),due=$(list+'Due').value;
+    if(!title){toast('Preencha o campo principal antes de adicionar.');return}
     var stampNow=new Date().toISOString();
-    state.summary.decisions.push({id:'dec-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:title,owner:owner,dueDate:due,done:false,week:state.selectedWeek,createdAt:stampNow,updatedAt:stampNow});
+    (state.summary[list]=state.summary[list]||[]).push({id:LIST_PREFIX[list]+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:title,owner:owner,dueDate:due,done:false,week:state.selectedWeek,createdAt:stampNow,updatedAt:stampNow});
     render();
-    try{await persistSummary();render();toast('Decisão salva para '+weekText()+'.');$('decTitle').value='';$('decOwner').value='';$('decDue').value=''}
+    try{await persistSummary();render();toast('Salvo para '+weekText()+'.');$(list+'Title').value='';$(list+'Owner').value='';$(list+'Due').value=''}
     catch(error){toast(error.message)}
   };
-  window.toggleDecision=async function(id){
-    var d=(state.summary.decisions||[]).filter(function(x){return x.id===id})[0];if(!d)return;
+  window.toggleManualItem=async function(list,id){
+    var d=(state.summary[list]||[]).filter(function(x){return x.id===id})[0];if(!d)return;
     d.done=!d.done;d.updatedAt=new Date().toISOString();
     render();
-    try{await persistSummary();render();toast(d.done?'Decisão concluída.':'Decisão reaberta.')}
+    try{await persistSummary();render();toast(d.done?'Marcado como concluído.':'Reaberto.')}
     catch(error){toast(error.message)}
   };
-  window.deleteDecision=async function(id){
-    var d=(state.summary.decisions||[]).filter(function(x){return x.id===id})[0];if(!d)return;
-    if(!window.confirm('Excluir a decisão "'+d.title+'"?'))return;
-    state.summary.decisions=state.summary.decisions.filter(function(x){return x.id!==id});
+  window.deleteManualItem=async function(list,id){
+    var d=(state.summary[list]||[]).filter(function(x){return x.id===id})[0];if(!d)return;
+    if(!window.confirm('Excluir "'+d.title+'"?'))return;
+    state.summary[list]=state.summary[list].filter(function(x){return x.id!==id});
     recordDeletion(id);
     render();
-    try{await persistSummary();render();toast('Decisão excluída.')}
+    try{await persistSummary();render();toast('Excluído.')}
+    catch(error){toast(error.message)}
+  };
+  window.editHomologOwner=async function(storyId,current){
+    var value=window.prompt('Responsável por '+storyId+':',current||'');
+    if(value===null)return;
+    value=value.trim();
+    state.summary.homologOwners=state.summary.homologOwners||{};
+    if(value)state.summary.homologOwners[storyId]=value; else delete state.summary.homologOwners[storyId];
+    render();
+    try{await persistSummary();render();toast('Responsável atualizado.')}
     catch(error){toast(error.message)}
   };
 
-  function loadLocalSummary(){try{var raw=JSON.parse(localStorage.getItem('vpWeeklySummaryNotesLocal')||'{}');return {decisions:Array.isArray(raw.decisions)?raw.decisions:[],deletedIds:Array.isArray(raw.deletedIds)?raw.deletedIds:[]}}catch(e){return {decisions:[],deletedIds:[]}}}
+  function weekText(){var range=weekRange(state.selectedWeek);return range?'Semana '+range.week+', '+range.year:state.selectedWeek}
+
+  function loadLocalSummary(){
+    try{
+      var raw=JSON.parse(localStorage.getItem('vpWeeklySummaryNotesLocal')||'{}');
+      return {
+        decisions:Array.isArray(raw.decisions)?raw.decisions:[],
+        risks:Array.isArray(raw.risks)?raw.risks:[],
+        milestones:Array.isArray(raw.milestones)?raw.milestones:[],
+        homologOwners:raw.homologOwners&&typeof raw.homologOwners==='object'?raw.homologOwners:{},
+        deletedIds:Array.isArray(raw.deletedIds)?raw.deletedIds:[]
+      };
+    }catch(e){return {decisions:[],risks:[],milestones:[],homologOwners:{},deletedIds:[]}}
+  }
 
   window.loadAll=function(manual){
     $('captureArea').innerHTML='<div class="loading">Carregando resumo…</div>';
-    return Promise.allSettled([vp('vpGeral'),vp('vpHomologation'),vp('emergencyDemand'),vp('vpWeeklySummaryNotes')]).then(function(results){
+    return Promise.allSettled([vp('vpGeral'),vp('vpSprint'),vp('vpHomologation'),vp('vpWeeklySummaryNotes')]).then(function(results){
       state.errors=[];
       function data(index,fallback){if(results[index].status==='fulfilled')return results[index].value;state.errors.push(results[index].reason&&results[index].reason.message||'falha');return fallback}
       var geralData=data(0,null);
       state.rows=asRows(geralData);
       state.geralImportedAt=(geralData&&geralData.importedAt)||'';
-      var homologData=data(1,{rows:[]})||{rows:[]};
+      state.sprintRows=asRows(data(1,null));
+      var homologData=data(2,{rows:[]})||{rows:[]};
       state.homolog=asRows(homologData);
       state.homologImportedAt=homologData.importedAt||'';
-      state.emergency=data(2,{rules:[]})||{rules:[]};
       var summaryData=data(3,null);
-      state.summary=summaryData&&typeof summaryData==='object'?{decisions:Array.isArray(summaryData.decisions)?summaryData.decisions:[],deletedIds:Array.isArray(summaryData.deletedIds)?summaryData.deletedIds:[]}:loadLocalSummary();
+      state.summary=summaryData&&typeof summaryData==='object'
+        ?{
+            decisions:Array.isArray(summaryData.decisions)?summaryData.decisions:[],
+            risks:Array.isArray(summaryData.risks)?summaryData.risks:[],
+            milestones:Array.isArray(summaryData.milestones)?summaryData.milestones:[],
+            homologOwners:summaryData.homologOwners&&typeof summaryData.homologOwners==='object'?summaryData.homologOwners:{},
+            deletedIds:Array.isArray(summaryData.deletedIds)?summaryData.deletedIds:[]
+          }
+        :loadLocalSummary();
       render();
       if(manual)toast(state.errors.length?'Resumo carregado com '+state.errors.length+' fonte(s) indisponível(is).':'Resumo atualizado.');
     });
@@ -365,7 +369,7 @@ button,input,select{font:inherit}
   // report-semanal-operacional.html: html2canvas com windowWidth forçando
   // layout desktop e onclone travando a largura do card, pra não depender da
   // largura da janela de quem está clicando. Elementos .no-capture (toolbar,
-  // formulário de nova decisão, botões de ação) não entram na imagem. ═══
+  // formulários, botões de ação) não entram na imagem. ═══
   window.copyReportImage=async function(button){
     var original=button&&button.textContent,blob=null;
     try{
