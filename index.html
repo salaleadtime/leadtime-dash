@@ -7901,7 +7901,9 @@ $id('fi').onchange=function(e){
   this.value='';
   if(!file) return;
   if(!guardImportStart()) return;
-  loadXlsx(file);
+  // Mesmo uma carga de arquivo único passa pelo robô. Antes ela atualizava os
+  // Épicos, mas não gravava o comprovante compartilhado de Data Início.
+  loadMultipleFiles([file],true);
 };
 var ub=$id('upbar');
 ub.addEventListener('dragover',function(e){e.preventDefault();ub.classList.add('drag');});
@@ -7911,11 +7913,9 @@ ub.addEventListener('drop',function(e){
   var fs=e.dataTransfer.files;
   if(!fs.length) return;
   if(!guardImportStart()) return;
-  // Vários arquivos soltos aqui também propagam: "Importar Tudo" é o único
-  // ponto de importação em massa, então qualquer carga múltipla já atualiza
-  // Visão de Projetos e a visão própria de refinamento Ops4Ops automaticamente.
-  if(fs.length>1) loadMultipleFiles(fs, true);
-  else loadXlsx(fs[0]);
+  // Todo arraste passa pelo ponto único: carga simples também gera comprovante
+  // compartilhado para o robô, além de atualizar os destinos detectados.
+  loadMultipleFiles(fs, true);
 });
 // fiAllGlobal → ponto único de importação em massa (sempre propaga para todos os dashboards)
 $id('fiAllGlobal').onchange=function(e){
@@ -7928,16 +7928,18 @@ $id('fiAllGlobal').onchange=function(e){
 
 // Stories upload
 $id('fiSv').onchange=function(e){
-  if(!e.target.files[0]) return;
+  var file=e.target.files&&e.target.files[0]; this.value='';
+  if(!file) return;
   if(!guardImportStart()){ this.value=''; return; }
-  loadStoriesXlsx(e.target.files[0]);
+  loadMultipleFiles([file],true);
 };
 
 // Backlog upload
 $id('fiBk').onchange=function(e){
-  if(!e.target.files[0]) return;
+  var file=e.target.files&&e.target.files[0]; this.value='';
+  if(!file) return;
   if(!guardImportStart()){ this.value=''; return; }
-  loadBacklogXlsx(e.target.files[0]);
+  loadMultipleFiles([file],true);
 };
 $id('fiBkJson').onchange=function(e){if(e.target.files[0]){ importBacklogJson(e.target.files[0]); this.value=''; }};
 

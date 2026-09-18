@@ -137,6 +137,12 @@ test('robô registra a prova de Data Início ausente desde a importação', () =
   assert(main.includes('Antes da importação, o painel registrava'));
 });
 
+test('qualquer carga por seletor passa pelo comprovante compartilhado', () => {
+  assert(main.includes('loadMultipleFiles([file],true);'));
+  assert(main.includes('Todo arraste passa pelo ponto único'));
+  assert(!main.includes("$id('fi').onchange=function(e){\n  // Copia e limpa antes de processar: permite selecionar novamente o mesmo\n  // CSV/XLSX, situação comum em correções de carga no Jira.\n  var file=e.target.files&&e.target.files[0];\n  this.value='';\n  if(!file) return;\n  if(!guardImportStart()) return;\n  loadXlsx(file);"));
+});
+
 test('datas são exibidas por fonte e sprint histórica é bloqueada', () => {
   assert(projects.includes('Fontes · Geral ${compact(lastImportAt.general)}'));
   assert(projects.includes('Indicadores históricos — não representam a sprint atual.'));
