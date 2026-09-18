@@ -616,6 +616,7 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .remote-trust-gate button{border:0;border-radius:8px;background:#c2410c;color:#fff;font:600 12px inherit;padding:9px 14px;cursor:pointer;white-space:nowrap}
 body.remote-unconfirmed .remote-trust-gate{display:flex}
 body.remote-unconfirmed .risk-notif-panel,body.remote-unconfirmed .pane{display:none!important}
+body.remote-unconfirmed .tab-ct{visibility:hidden}
 
 @media(max-width:880px){.kgrid{grid-template-columns:1fr 1fr 1fr}.g2{grid-template-columns:1fr}}
 @media(max-width:580px){.kgrid{grid-template-columns:1fr 1fr}.top .tbtn span{display:none}}
@@ -1473,7 +1474,7 @@ body{min-height:100vh}
 </div>
 
 <div class="remote-trust-gate" id="remoteTrustGate" role="alert">
-  <div><strong>Validando a fonte oficial…</strong><span id="remoteTrustGateText">Os indicadores ficam ocultos até Épicos, Backlog e histórias serem confirmados pelo servidor.</span></div>
+  <div><strong>Atualizando dados oficiais…</strong><span id="remoteTrustGateText">Aguarde alguns segundos. Épicos, Backlog e histórias estão sendo conferidos com o servidor.</span></div>
   <button onclick="location.reload()">Tentar novamente</button>
 </div>
 
@@ -3034,6 +3035,9 @@ function replaceFromSharedSource(rows){
 
   saveLocal();
   renderAll(rememberTab());
+  var officialTime=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  var officialName=$id('upName'); if(officialName) officialName.textContent='Fonte oficial confirmada';
+  var officialSub=$id('upSub'); if(officialSub) officialSub.textContent=allData.length+' épicos oficiais · confirmado às '+officialTime;
   return true;
 }
 
@@ -3252,7 +3256,6 @@ function loadFromSheets(callback, silent){
     })
     .then(function(json){
       if(json.ok && Array.isArray(json.data) && json.data.length){
-        setSourceTrust('epics',true,'');
         callback(null, json.data);
       } else {
         var msg='Sheets: resposta vazia ou inválida';
@@ -3967,7 +3970,7 @@ function runHealthCheck(silent){
   renderHealthBadge(anomalies);
   if(!silent&&isNew&&anomalies.length){
     var high=anomalies.filter(function(a){return a.sev==='high';}).length;
-    if(high>0) toast('⚠ '+high+' inconsistência'+(high>1?'s':'')+' nos dados',
+    if(high>0) toast('⚠ '+high+' alerta'+(high>1?'s':'')+' de dados',
       high+' épico'+(high>1?'s':'')+' com status Executado/Concluído sem Data Fim — LT inflando diariamente.','warn');
   }
   return anomalies;
@@ -3992,7 +3995,7 @@ function renderHealthBadge(anomalies){
   var high=anomalies.filter(function(a){return a.sev==='high';}).length+(receipt&&receipt.status==='error'?1:0);
   var cls=high?'hb-err':'hb-warn', ico=high?'⚠':'⚡';
   el.innerHTML='<span class="'+cls+'" onclick="openHealthPanel()" title="Clique para ver detalhes">'+
-    ico+' '+totalIssues+' inconsistência'+(totalIssues>1?'s':'')+'</span>';
+    ico+' '+totalIssues+' alerta'+(totalIssues>1?'s':'')+' de dados</span>';
 }
 
 function getLatestImportReceipt(){
@@ -4988,9 +4991,16 @@ function doEmergencyRecover(){
       try{ storageClear(); }catch(e){}
       allData=SEED.map(makeRow);
       renderAll();
-      replaceFromSharedSource(sheetsData);
+      var applied=replaceFromSharedSource(sheetsData);
+      setSourceTrust('epics',applied,applied?'':'a resposta oficial não pôde ser aplicada');
+      if(!applied){
+        setSyncLabel('⚠️ Resposta oficial inválida — dados locais preservados');
+        if(btn) btn.disabled=false;
+        return false;
+      }
       setSyncLabel('✅ Dados recuperados — '+sheetsData.length+' épicos carregados');
       if(btn){ btn.style.display='none'; btn.disabled=false; }
+      return true;
     } else {
       setSyncLabel('⚠️ Sheets offline ou vazio — dados locais preservados, nada foi apagado');
       if(btn) btn.disabled=false;
@@ -8934,8 +8944,8 @@ var SEED=[
     }
     if(usedCache){
       updateSyncLblImportacao();
-      $id('upName').textContent='Dados salvos localmente';
-      $id('upSub').textContent=allData.length+' épicos · recarregados automaticamente';
+      $id('upName').textContent='Cache local carregado';
+      $id('upSub').textContent=allData.length+' épicos temporários · aguardando confirmação oficial';
       showSavedBadge();
     }else{
       registrarImportacaoSala();
@@ -9020,9 +9030,10 @@ var SEED=[
     loadJiraEpicSnapshotFromCloud(function(){
       loadFromSheets(function(err, sheetsData){
         if(!err && Array.isArray(sheetsData) && sheetsData.length){
-          replaceFromSharedSource(sheetsData);
-          registrarImportacaoSala();
-          return;
+          var applied=replaceFromSharedSource(sheetsData);
+          setSourceTrust('epics',applied,applied?'':'a resposta oficial não pôde ser aplicada');
+          if(applied) registrarImportacaoSala();
+          return applied;
         }
         setSyncLabel('⚠️ Sheets offline — usando cache local');
       }, false);
@@ -9074,7 +9085,9 @@ function _trySheets(silent){
       }
       _sheetsLastSuccessAt=Date.now();
       _sheetsOfflineWarned=false;
-      replaceFromSharedSource(sheetsData);
+      var applied=replaceFromSharedSource(sheetsData);
+      setSourceTrust('epics',applied,applied?'':'a resposta oficial não pôde ser aplicada');
+      if(!applied) return;
       registrarImportacaoSala();
       if(silent) toast('🔄 Dados atualizados','O dashboard recebeu os dados oficiais do Google Sheets.');
       // Garante que backlog e estórias também sejam atualizados junto com os épicos

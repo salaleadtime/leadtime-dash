@@ -82,12 +82,22 @@ test('cache local nunca é apresentado como carteira oficial', () => {
   assert(main.includes('<body class="remote-unconfirmed">'));
   assert(main.includes('function setSourceTrust(name, ok, error)'));
   assert(main.includes('Fontes oficiais · status e horário da última tentativa'));
-  assert(main.includes("setSourceTrust('epics',true,'');"));
+  assert(main.includes("setSourceTrust('epics',applied"));
+  assert(!main.includes("setSourceTrust('epics',true,'');"), 'Épicos não podem ser confirmados antes de aplicar a resposta');
   assert(main.includes("setSourceTrust('backlog',true,'');"));
   assert(main.includes("setSourceTrust('stories',true,'');"));
   assert(main.includes('backlogSnaps=json.backlog.slice();'));
   assert(!main.includes('if(localMax>serverMax && !_gasBacklogSaving)'));
   assert(!main.includes('if(r&&r.id&&!inIds[r.id]&&(!jiraEpicSnapshot||isHistoricEpic(r))) incoming.push(r);'));
+});
+
+test('sincronização explica o cache temporário em linguagem simples', () => {
+  assert(main.includes('Atualizando dados oficiais…'));
+  assert(main.includes('Aguarde alguns segundos. Épicos, Backlog e histórias estão sendo conferidos com o servidor.'));
+  assert(main.includes("officialName.textContent='Fonte oficial confirmada'"));
+  assert(main.includes("épicos temporários · aguardando confirmação oficial"));
+  assert(main.includes("alerta'+(totalIssues>1?'s':'')+' de dados"));
+  assert(main.includes('body.remote-unconfirmed .tab-ct{visibility:hidden}'));
 });
 
 test('backend limita o Backlog entregue sem apagar histórico', () => {
