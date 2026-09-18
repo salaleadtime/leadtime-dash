@@ -42,6 +42,15 @@ test('scripts inline continuam sintaticamente válidos', () => {
   compileInlineScripts(weekly, 'relatório semanal');
 });
 
+test('datas de Épicos e Backlog usam Web Apps separados', () => {
+  const sheets = main.match(/var SHEETS_WEBAPP\s*=\s*'([^']+)'/);
+  const backlog = main.match(/var BK_GAS_URL\s*=\s*'([^']+)'/);
+  assert(sheets && backlog, 'URLs dos Web Apps não encontradas');
+  assert.notStrictEqual(sheets[1], backlog[1], 'SHEETS_WEBAPP não pode apontar para o backend de Backlog');
+  assert(sheets[1].includes('AKfycbxOSQe41'), 'fonte oficial de datas foi alterada');
+  assert(backlog[1].includes('AKfycbx270pqFDXeKvx'), 'backend v26 não está configurado');
+});
+
 test('timeout JSONP mantém callback no-op para respostas tardias', () => {
   assert(main.includes('function retireCallback()'));
   assert(projects.includes('temporário absorve essa resposta tardia'));
