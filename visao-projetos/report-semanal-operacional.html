@@ -37,6 +37,7 @@
     @media(max-width:900px){.emergency-grid,.emergency-card.primary .emergency-epics{grid-template-columns:1fr}}
     @media(max-width:680px){.squad-status-grid{grid-template-columns:1fr}}
     @media(max-width:760px){.period-control{width:100%;min-width:0}.period-copy{flex:1;min-width:0}.tools{width:100%}}
+    .weekly-pause{min-height:100vh;display:grid;place-items:center;padding:24px;background:#f4f7fb}.weekly-pause-card{width:min(680px,100%);padding:38px;border:1px solid #dbe3ee;border-top:5px solid #c81932;border-radius:16px;background:#fff;box-shadow:0 16px 42px rgba(31,45,66,.12);text-align:center}.weekly-pause-card .status{display:inline-flex;padding:6px 11px;border-radius:999px;background:#fff1d9;color:#8b5300;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.weekly-pause-card h1{margin:18px 0 10px;color:#24344b;font-size:28px}.weekly-pause-card p{margin:0 auto;color:#60728a;font-size:14px;line-height:1.6;max-width:540px}.weekly-pause-card a{display:inline-flex;margin-top:22px;padding:10px 16px;border-radius:9px;background:#24344b;color:#fff;text-decoration:none;font-size:13px;font-weight:700}
   </style>
   <!-- html-to-image (usado no discovery-pmo/report-semanal.html) cortava a
        imagem nesta página: sem um parâmetro equivalente ao "windowWidth" do
@@ -47,6 +48,15 @@
   <script src="../vendor/html2canvas.min.js"></script>
 </head>
 <body>
+  <section class="weekly-pause" aria-labelledby="weeklyPauseTitle">
+    <div class="weekly-pause-card">
+      <span class="status">Relatório pausado</span>
+      <h1 id="weeklyPauseTitle">Relatório semanal em atualização</h1>
+      <p>Esta versão foi temporariamente suspensa para evitar a consulta de informações antigas ou divergentes. Uma nova versão está em preparação e será disponibilizada após validação.</p>
+      <a href="./index.html">Voltar ao Painel Estratégico de Entregas</a>
+    </div>
+  </section>
+  <div hidden>
   <nav class="topbar no-print"><div class="bar-inner"><div class="period-control"><button class="period-step" type="button" onclick="changeWeek(-1)" aria-label="Semana anterior">‹</button><div class="period-copy"><small>Semana</small><div class="period-row"><strong id="weekLabel">Semana 30, 2026</strong><label class="period-calendar" title="Escolher semana">▦<input type="week" id="weekInput" onchange="setWeek(this.value)" aria-label="Escolher semana"></label></div><span class="period-dates" id="weekDates">20/07/2026 – 24/07/2026</span></div><button class="period-step" type="button" onclick="changeWeek(1)" aria-label="Próxima semana">›</button></div><div class="tools"><select class="select" id="squadFilter" onchange="render()"><option value="">Todas as squads</option><option value="Contact">Contact</option><option value="Expresso-1">Expresso-1</option><option value="Guardioes">Guardioes</option><option value="Inception">Inception</option><option value="Intrstelar">Intrstelar</option><option value="MadMax">MadMax</option><option value="Terminator">Terminator</option></select><button class="tool primary" onclick="loadAll(true)">↻ Atualizar dados</button><button class="tool" onclick="openComplements()">✎ Complementos</button><button class="tool capture" onclick="copyReportImage(this)" title="Copia o relatório em alta resolução ou baixa o arquivo PNG">▣ Capturar PNG</button><button class="tool white" onclick="window.print()">⇩ Exportar PDF</button></div></div></nav>
   <main class="page">
     <header class="header"><div><p class="eyebrow">Overview DS / Planejamento 2026 / Report Semanal</p><h1>Status semanal das squads <span class="report">· executivo</span></h1></div><div class="freshness" id="freshness"><strong>Base atualizada</strong> em 28 de jul. de 2026, 13:39 BRT</div></header>
@@ -54,9 +64,13 @@
   </main>
   <div class="modal-backdrop" id="modalBackdrop"><div class="modal"><h2>Complementos executivos</h2><p>Inclua ação, observação ou risco sem criar uma nova base. O conteúdo é salvo na chave já existente <b>vpQuickNotes</b>.</p><div class="form-grid"><div class="field"><label>Tipo</label><select id="extraType"><option value="action">Ação de gestão</option><option value="risk">Risco / impedimento</option><option value="observation">Observação executiva</option></select></div><div class="field"><label>Squad</label><select id="extraSquad"></select></div><div class="field full"><label>Título</label><input id="extraTitle" placeholder="Ex.: Confirmar janela de homologação"></div><div class="field"><label>Responsável</label><input id="extraOwner" placeholder="Nome ou papel responsável"></div><div class="field"><label>Resultado esperado / prazo</label><input id="extraOutcome" placeholder="Ex.: decisão tomada até sexta-feira"></div><div class="field full"><label>Contexto</label><textarea id="extraText" placeholder="Descreva o risco, a decisão ou a observação que a gestão precisa conhecer."></textarea></div></div><div class="modal-actions"><button class="btn" onclick="closeComplements()">Cancelar</button><button class="btn red" onclick="saveComplement()">Salvar complemento</button></div></div></div>
   <div class="toast" id="toast"></div>
+  </div>
   <script>
   (function(){
     'use strict';
+    // Página pausada: preserva a implementação para a futura revisão, mas não
+    // consulta nem grava nenhuma fonte enquanto o informativo estiver ativo.
+    return;
     var GAS='https://script.google.com/macros/s/AKfycbxOSQe41hqngh7b0iscE_Bcb_Z2mBfbwfqaaMCU_cKXDfCKnDvsQ6jb2HTPbnLso30C/exec';
     var state={rows:[],homolog:[],homologSource:'',homologImportedAt:'',ops:{},quick:{},discovery:{projects:[]},backlog:[],backlogFallback:false,measurement:[],selectedWeek:'',loadedAt:null,errors:[]};
     var $=function(id){return document.getElementById(id)};

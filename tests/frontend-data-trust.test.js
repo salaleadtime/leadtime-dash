@@ -1,0 +1,101 @@
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const root = path.resolve(__dirname, '..');
+const main = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const projects = fs.readFileSync(path.join(root, 'visao-projetos', 'index.html'), 'utf8');
+const weekly = fs.readFileSync(path.join(root, 'visao-projetos', 'report-semanal-operacional.html'), 'utf8');
+const backend = fs.readFileSync(path.join(root, 'apps-script-backlog.gs'), 'utf8');
+
+function test(name, fn){
+  try{
+    fn();
+    console.log('✓', name);
+  }catch(error){
+    console.error('✗', name);
+    throw error;
+  }
+}
+
+function compileInlineScripts(html, label){
+  const regex = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
+  let match;
+  let count = 0;
+  while((match = regex.exec(html))){
+    const attrs = match[1] || '';
+    if(/\bsrc\s*=/.test(attrs)) continue;
+    if(/\btype\s*=\s*["']application\/json["']/.test(attrs)) continue;
+    const code = match[2].trim();
+    if(!code) continue;
+    new Function(code);
+    count++;
+  }
+  assert(count > 0, `${label}: nenhum script inline compilado`);
+}
+
+test('scripts inline continuam sintaticamente válidos', () => {
+  compileInlineScripts(main, 'index.html');
+  compileInlineScripts(projects, 'visao-projetos/index.html');
+  compileInlineScripts(weekly, 'relatório semanal');
+});
+
+test('timeout JSONP mantém callback no-op para respostas tardias', () => {
+  assert(main.includes('function retireCallback()'));
+  assert(projects.includes('temporário absorve essa resposta tardia'));
+  assert(!main.includes('if(done) return; done=true;\n    delete window[name];'));
+});
+
+test('persistência exige lista explícita de bases alteradas', () => {
+  assert(projects.includes('function persistImportedBases(changedTypes, importedAtByType)'));
+  assert(!/persistImportedBases\(\s*\)/.test(projects));
+  assert(projects.includes("persistImportedBases(['sprint'])"));
+});
+
+test('fotografias oficiais substituem a base anterior', () => {
+  assert(projects.includes('sprintRows = parsed.map(r => ({...r, sprintAtual: true}));'));
+  assert(projects.includes('homologationRows = parsed.filter(isHomologation);'));
+  assert(projects.includes('rows = parsed;'));
+  assert(!projects.includes('rows = mergeRowsByChave(rows, parsed, true);'));
+});
+
+test('carga parcial e fontes sem vínculo ficam explícitas', () => {
+  assert(main.includes('⚠️ Importação parcial'));
+  assert(main.includes('item(ns) sem Epic Link'));
+  assert(projects.includes('Essas bases mantiveram a carga anterior e não foram marcadas como atualizadas'));
+});
+
+test('robô audita toda carga e Iniciativas/Ops4Ops usa o CSV de refinamento', () => {
+  assert(main.includes('function runUnifiedImportAudit()'));
+  assert(main.includes("storageSet('sala_last_import_audit_v1'"));
+  assert(main.includes('loadOps4opsXlsx(detected.ops4ops[0].file)'));
+  assert(main.includes('Iniciativas / Refinamento → visão própria atualizada e salva'));
+  assert(main.includes("fn.indexOf('iniciativa')>=0"));
+  assert(!main.includes('gasLoadOps4opsFromDiscovery'));
+});
+
+test('comprovante do robô é compartilhado e usa Saúde dos Dados', () => {
+  assert(backend.includes("vpImportAudit: '_vp_import_audit'"));
+  assert(main.includes('function gasSaveImportAudit(report)'));
+  assert(main.includes("key=vpImportAudit"));
+  assert(main.includes('function gasLoadImportAudit()'));
+  assert(main.includes('openHealthPanel(report)'));
+  assert(main.includes('esperado no CSV × inserido no painel'));
+});
+
+test('datas são exibidas por fonte e sprint histórica é bloqueada', () => {
+  assert(projects.includes('Fontes · Geral ${compact(lastImportAt.general)}'));
+  assert(projects.includes('Indicadores históricos — não representam a sprint atual.'));
+  assert(projects.includes('id="sprintEyebrow"'));
+});
+
+test('relatório semanal está pausado sem consultar fontes', () => {
+  assert(weekly.includes('Relatório semanal em atualização'));
+  assert(weekly.includes('Página pausada: preserva a implementação'));
+  assert(/'use strict';[\s\S]{0,240}\breturn;/.test(weekly));
+  assert(projects.includes('Relatório · em atualização'));
+});
+
+console.log('Frontend data-trust regression tests passed.');

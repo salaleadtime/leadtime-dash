@@ -2135,7 +2135,7 @@ tr:nth-child(even):hover td,
       <h2 class="bk-vision-title">Visão de Backlog x Refinamento</h2>
       <p class="bk-vision-copy">Acompanhamento de refinamento por origem, squad e história.</p>
     </div>
-    <span class="bk-vision-rule">Backlog e Ops4Ops, sem misturar os dados.</span>
+    <span class="bk-vision-rule">Backlog e Iniciativas / Refinamento, sem misturar os dados.</span>
   </div>
 
   <div class="bk-sources-grid">
@@ -2164,16 +2164,16 @@ tr:nth-child(even):hover td,
   <section class="bk-source-panel bk-source-panel--ops">
   <div class="sv-upbar" id="opsUpbar">
     <span style="font-size:13px;flex-shrink:0">🔧</span>
-    <span class="sv-up-name" id="opsUpName">Ops4Ops · dados do Discovery</span>
-    <span class="sv-up-sub" id="opsUpSub">Discovery PMO Tracker descontinuado — dados mantidos apenas para consulta histórica.</span>
+    <span class="sv-up-name" id="opsUpName">Iniciativas / Refinamento Jira</span>
+    <span class="sv-up-sub" id="opsUpSub">Fonte atual: arquivo Iniciativas - Refinada x Backlog importado pelo usuário.</span>
     <span class="up-saved hidden" id="opsUpSaved">☁️ <span id="opsUpSavedTxt">Aguardando sincronização</span></span>
   </div>
 
   <div class="ep" id="ops4opsContent">
     <div class="empty" style="padding:2rem 2rem;text-align:center">
       <div style="font-size:28px;margin-bottom:.6rem">🔧</div>
-      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado do Ops4Ops disponível ainda</div>
-      <div style="font-size:12px;color:#94a3b8">Discovery PMO Tracker descontinuado — sem nova sincronização disponível.</div>
+      <div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado de Iniciativas / Refinamento disponível ainda</div>
+      <div style="font-size:12px;color:#94a3b8">Importe o arquivo Iniciativas - Refinada x Backlog pelo botão Importar Tudo.</div>
     </div>
   </div>
   </section>
@@ -2392,7 +2392,6 @@ var backlogSnaps=[];
 var OPS4OPS_KEY='leadtime_sala_v8_ops4ops_snaps';
 var OPS4OPS_CLOUD_KEY='ops4opsSnaps';
 var ops4opsSnaps=[];
-var ops4opsFromDiscovery=false;
 var _gasOps4opsSaving=false;
 var _gasOps4opsLoading=false;
 var _gasOps4opsError=null;
@@ -3929,28 +3928,55 @@ function runHealthCheck(silent){
 
 function renderHealthBadge(anomalies){
   var el=$id('healthBadge'); if(!el) return;
-  if(!anomalies.length){
+  var receipt=getLatestImportReceipt();
+  var importIssues=getImportReceiptIssueCount(receipt);
+  var totalIssues=anomalies.length+importIssues;
+  if(!totalIssues){
     el.innerHTML='<span class="hb-ok">✓ Dados OK</span>'; return;
   }
-  var high=anomalies.filter(function(a){return a.sev==='high';}).length;
+  var high=anomalies.filter(function(a){return a.sev==='high';}).length+(receipt&&receipt.status==='error'?1:0);
   var cls=high?'hb-err':'hb-warn', ico=high?'⚠':'⚡';
   el.innerHTML='<span class="'+cls+'" onclick="openHealthPanel()" title="Clique para ver detalhes">'+
-    ico+' '+anomalies.length+' inconsistência'+(anomalies.length>1?'s':'')+'</span>';
+    ico+' '+totalIssues+' inconsistência'+(totalIssues>1?'s':'')+'</span>';
 }
 
-function openHealthPanel(){
+function getLatestImportReceipt(){
+  if(_sharedImportAudit) return _sharedImportAudit;
+  try{return JSON.parse(storageGet('sala_last_import_audit_v1')||'null');}catch(e){return null;}
+}
+
+function getImportReceiptIssueCount(receipt){
+  if(!receipt) return 0;
+  var missing=(receipt.verification||[]).reduce(function(total,item){return total+(item.missing?item.missing.length:0);},0);
+  return missing+(receipt.findings||[]).length;
+}
+
+function openHealthPanel(receiptOverride){
   if($id('hpOv')) return; // já aberto
   var anomalies=runHealthCheck(true);
+  var receipt=receiptOverride||getLatestImportReceipt();
   var ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  var rows=anomalies.length
+  var healthRows=anomalies.length
     ? anomalies.map(function(a){
         return '<div class="hp-item '+a.sev+'">'+
           '<div class="hp-item-hd">'+esc(a.id)+' · <span style="color:#7c3aed">'+esc(a.squad)+'</span></div>'+
           '<div class="hp-item-msg">'+esc(a.msg)+'</div></div>';
       }).join('')
-    : '<div class="hp-empty">✅ Nenhuma inconsistência detectada.</div>';
-  var tip=anomalies.length
-    ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> preencha a Data Fim de cada épico "Executado" na aba Épicos. Isso fixa o LT e remove o alerta automaticamente.</div>'
+    : '<div class="hp-empty">✅ Nenhuma inconsistência de lead time detectada.</div>';
+  var importRows='';
+  if(receipt&&Array.isArray(receipt.verification)){
+    importRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Última importação · esperado no CSV × inserido no painel</div>'+receipt.verification.map(function(item){
+      var missing=item.missing||[];
+      return '<div class="hp-item '+(missing.length?'high':'')+'">'+
+        '<div class="hp-item-hd">'+esc(item.label)+' · '+item.inserted+'/'+item.expected+' inserido(s)</div>'+
+        '<div class="hp-item-msg">'+esc(item.fileName)+(missing.length?'<br><strong>Não inseridos ('+missing.length+'):</strong> '+esc(missing.slice(0,40).join(', '))+(missing.length>40?' …':''):' · carga conferida')+'</div></div>';
+    }).join('')+(receipt.findings||[]).map(function(item){
+      return '<div class="hp-item '+(item.severity==='error'?'high':'warn')+'"><div class="hp-item-hd">Qualidade da carga</div><div class="hp-item-msg">'+esc(item.message)+'</div></div>';
+    }).join('');
+  }
+  var rows=healthRows+importRows;
+  var tip=(anomalies.length||getImportReceiptIssueCount(receipt))
+    ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> corrija no Jira as chaves listadas como não inseridas, duplicadas ou sem vínculo; para épicos concluídos, preencha também a Data Fim. Depois repita a importação.</div>'
     : '';
   var ov=document.createElement('div');
   ov.className='hp-ov'; ov.id='hpOv';
@@ -3959,7 +3985,7 @@ function openHealthPanel(){
     '<div class="hp-panel">'+
       '<div class="hp-hd"><span class="hp-t">⚕ Saúde dos Dados</span>'+
         '<button class="mb" onclick="closeHealthPanel()">✕ Fechar</button></div>'+
-      '<div class="hp-ts">Verificado às '+ts+' · robô valida automaticamente a cada 1h</div>'+
+      '<div class="hp-ts">Verificado às '+ts+' · robô valida automaticamente a cada 1h e após cada importação</div>'+
       '<div class="hp-body">'+rows+'</div>'+
       tip+
     '</div>';
@@ -5403,6 +5429,8 @@ function mergeBacklog(incoming){
 
 // JSONP helper — evita bloqueio CORS; GAS responde com callback(data)
 var _gasJsonpSeq=0;
+var _sharedImportAudit=null;
+var _importAuditRevision=null;
 function _gasJsonp(url, cb, timeoutMs, _retriesLeft){
   // O hop script.google.com -> script.googleusercontent.com/macros/echo (que entrega
   // o conteúdo de fato) ocasionalmente chega atrasado ou falha com 404 sozinho, sem
@@ -5417,9 +5445,15 @@ function _gasJsonp(url, cb, timeoutMs, _retriesLeft){
   var name='_gasJP_'+Date.now()+'_'+(++_gasJsonpSeq);
   var script=document.createElement('script');
   var done=false;
+  function retireCallback(){
+    // Uma resposta JSONP pode chegar depois do timeout mesmo após remover a
+    // <script>. Mantém um no-op temporário para ela não interromper outras cargas.
+    window[name]=function(){};
+    setTimeout(function(){ try{ delete window[name]; }catch(e){} }, 120000);
+  }
   var timer=setTimeout(function(){
     if(done) return; done=true;
-    delete window[name];
+    retireCallback();
     if(script.parentNode) script.parentNode.removeChild(script);
     if(retriesLeft>0){ setTimeout(function(){ _gasJsonp(url, cb, timeoutMs, retriesLeft-1); }, 2000); return; }
     cb('timeout');
@@ -5434,7 +5468,7 @@ function _gasJsonp(url, cb, timeoutMs, _retriesLeft){
   script.onerror=function(){
     if(done) return; done=true;
     clearTimeout(timer);
-    delete window[name];
+    retireCallback();
     if(script.parentNode) script.parentNode.removeChild(script);
     if(retriesLeft>0){ setTimeout(function(){ _gasJsonp(url, cb, timeoutMs, retriesLeft-1); }, 2000); return; }
     cb('script error');
@@ -5518,6 +5552,9 @@ function gasCheckBacklogRevision(cb){
     // Emergenciais (que lê allStories) ficava desatualizada em silêncio.
     var stRev=json.revisions.stories;
     if(typeof stRev==='number' && _storiesRevision!==null && stRev!==_storiesRevision){ gasLoadStories(function(){}); }
+    // Abas já abertas recebem a última conferência feita por outro usuário sem F5.
+    var auditRev=json.revisions.vpImportAudit;
+    if(typeof auditRev==='number' && (_importAuditRevision===null || auditRev!==_importAuditRevision)){ gasLoadImportAudit(); }
     if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
     gasLoadBacklog(function(err2){ if(cb) cb(err2,true); });
   }, 28000, 0);
@@ -5588,7 +5625,7 @@ function gasLoadStories(cb, options, _retries){
   var retries = (_retries === undefined) ? 1 : _retries;
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
     if(err==='timeout' && retries>0){
-      // Mesmo motivo do retry em gasLoadBacklog/gasLoadOps4opsFromDiscovery:
+      // Mesmo motivo do retry nas demais leituras do Apps Script:
       // cold-start do Apps Script (ou contenção do lock com as outras cargas
       // simultâneas do boot) pode estourar o timeout sem que haja falha real.
       setTimeout(function(){ gasLoadStories(cb, options, retries-1); }, 3000);
@@ -6076,21 +6113,41 @@ function renderBacklogView(){
 // exibido abaixo do "Backlog por Squad" na aba Backlog/Refinamento.
 // ═══════════════════════════════════════
 function saveOps4opsSnaps(){
-  // O Ops4Ops tem o Discovery como fonte única de verdade. Esta aba nunca salva.
-  return;
-  /* legado mantido abaixo apenas para compatibilidade de leitura do código antigo:
   if(ops4opsSnaps.length>MAX_BACKLOG_SNAPS){
     ops4opsSnaps.sort(compareBacklogSnaps);
     ops4opsSnaps=ops4opsSnaps.slice(ops4opsSnaps.length-MAX_BACKLOG_SNAPS);
   }
   try{ storageSet(OPS4OPS_KEY,JSON.stringify(ops4opsSnaps)); }catch(e){}
   gasSaveOps4ops();
-  */
+}
+
+function gasSaveImportAudit(report){
+  _sharedImportAudit=report;
+  try{storageSet('sala_last_import_audit_v1',JSON.stringify(report));}catch(e){}
+  if(!BK_GAS_URL) return;
+  fetch(BK_GAS_URL,{
+    method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveVpData&key=vpImportAudit&payload='+encodeURIComponent(JSON.stringify(report))
+  }).catch(function(error){console.warn('Falha ao compartilhar auditoria da importação:',error);});
+}
+
+function gasLoadImportAudit(){
+  if(!BK_GAS_URL) return;
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key=vpImportAudit&t='+Date.now(),function(err,json){
+    if(err||!json||!json.ok||!json.data) return;
+    if(typeof json.revision==='number') _importAuditRevision=json.revision;
+    _sharedImportAudit=json.data;
+    try{storageSet('sala_last_import_audit_v1',JSON.stringify(json.data));}catch(e){}
+    renderHealthBadge(getDataAnomalies());
+  },28000,0);
 }
 function loadOps4opsSnaps(){
-  // Ignora snapshots antigos do navegador: evita exibir dados que não vieram do Discovery.
-  ops4opsFromDiscovery=true;
-  ops4opsSnaps=[];
+  try{
+    var raw=storageGet(OPS4OPS_KEY);
+    ops4opsSnaps=raw?JSON.parse(raw):[];
+    if(!Array.isArray(ops4opsSnaps)) ops4opsSnaps=[];
+    ops4opsSnaps.sort(compareBacklogSnaps);
+  }catch(e){ ops4opsSnaps=[]; }
 }
 function getCurrentOps4opsSnapshot(){ if(!ops4opsSnaps.length) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-1]; }
 
@@ -6120,7 +6177,7 @@ function mergeOps4ops(incoming){
 // nunca viam os dados (mode:'no-cors' torna a resposta opaca; ver getVpData
 // no load para confirmar a gravação).
 function gasSaveOps4ops(){
-  if(ops4opsFromDiscovery || !BK_GAS_URL || !ops4opsSnaps.length || _gasOps4opsSaving) return;
+  if(!BK_GAS_URL || !ops4opsSnaps.length || _gasOps4opsSaving) return;
   _gasOps4opsSaving=true;
   fetch(BK_GAS_URL, {
     method:'POST',
@@ -6146,62 +6203,9 @@ function gasLoadOps4ops(cb){
   });
 }
 
-// O Ops4Ops é importado no Discovery PMO Tracker. Esta aba apenas consome
-// as histórias já sincronizadas em discoveryPmo, sem duplicar a importação
-// nem criar uma segunda base. getOps4opsData é uma projeção enxuta (só
-// squad/owner/updatedAt/jiraStories de cada projeto) — evita trazer a base
-// completa do Discovery (attachments, cards, checklist...), que passava de
-// alguns MB e estourava o timeout do JSONP mesmo com dados válidos.
-function gasLoadOps4opsFromDiscovery(cb, _retries){
-  if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
-  var retries = (_retries === undefined) ? 1 : _retries;
-  if(!ops4opsSnaps.length){ _gasOps4opsLoading=true; renderOps4opsView(); }
-  _gasOps4opsError=null;
-  _gasJsonp(BK_GAS_URL+'?action=getOps4opsData&t='+Date.now(), function(err,json){
-    // Cold-start (JSONP nunca respondeu) ou lock global do Apps Script ocupado
-    // por outra ação (o script inteiro usa um único LockService.getScriptLock(),
-    // então qualquer leitura/gravação concorrente pode segurar a vez por alguns
-    // segundos): os dois são transitórios, então tentamos de novo antes de expor erro.
-    var lockBusy = !err && json && json.ok===false && /lock de escrita/i.test(String(json.error||''));
-    if((err==='timeout' || lockBusy) && retries>0){
-      setTimeout(function(){ gasLoadOps4opsFromDiscovery(cb, retries-1); }, 3000);
-      return;
-    }
-    _gasOps4opsLoading=false;
-    if(err || !json || !json.ok || !json.data){ _gasOps4opsError=err||'sem dados'; renderOps4opsView(); if(cb) cb(err||'sem dados',0); return; }
-    var projects=Array.isArray(json.data.projects)?json.data.projects:[];
-    var seen={}, stories=[];
-    projects.forEach(function(project){
-      (Array.isArray(project.jiraStories)?project.jiraStories:[]).forEach(function(story){
-        var id=String(story.key||story.id||'').trim();
-        if(!id || seen[id]) return;
-        if(/epic/i.test(String(story.tipo||story.type||''))) return;
-        seen[id]=true;
-        stories.push({
-          id:id,
-          resumo:String(story.summary||story.resumo||''),
-          status:String(story.status||''),
-          squad:normalizeSquad(String(story.team||project.squad||'')),
-          labels:Array.isArray(story.labels)?story.labels.join(' | '):String(story.labels||''),
-          atualizado:story.updated||project.updatedAt||'',
-          responsavel:String(project.owner||'')
-        });
-      });
-    });
-    if(!stories.length){ renderOps4opsView(); if(cb) cb(null,0); return; }
-    // Snapshot transitório: o Discovery permanece como fonte de verdade.
-    ops4opsFromDiscovery=true;
-    ops4opsSnaps=[{id:'discovery-pmo',seq:1,stories:stories,importedAt:json.data.updatedAt||new Date().toISOString()}];
-    if(cb) cb(null,1,stories.length);
-  }, 45000, 0);
-}
 function getPreviousOps4opsSnapshot(){ if(ops4opsSnaps.length<2) return null; ops4opsSnaps.sort(compareBacklogSnaps); return ops4opsSnaps[ops4opsSnaps.length-2]; }
 
 function loadOps4opsXlsx(file){
-  // Discovery PMO Tracker foi descontinuado — esta aba não aceita mais carga
-  // local nem tem fonte de atualização, mesmo se a função for chamada indiretamente.
-  toast('Ops4Ops indisponível','Discovery PMO Tracker foi descontinuado — sem fonte de atualização disponível.','warn');
-  return;
   if(typeof XLSX==='undefined'){
     loadXlsxLib(function(){loadOps4opsXlsx(file);});
     return;
@@ -6212,7 +6216,7 @@ function loadOps4opsXlsx(file){
       var wb=readWorkbook(e.target.result,file.name);
       var det=detectBacklogFormat(wb);
       if(!det){
-        toast('Formato não reconhecido','Colunas esperadas: "Chave do item" (ID) + "Situação". Export Jira do Ops4Ops.','err');
+        toast('Formato não reconhecido','Colunas esperadas: "Chave do item" (ID) + "Situação". Export Jira de Iniciativas / Refinamento.','err');
         return;
       }
       var rows=det.rows, m=det.map;
@@ -6250,7 +6254,7 @@ function loadOps4opsXlsx(file){
       var opsUpSavedTxt=$id('opsUpSavedTxt'); if(opsUpSavedTxt) opsUpSavedTxt.textContent='Importação #'+nextSeq+' salva localmente';
 
       renderOps4opsView();
-      toast('🔧 Ops4Ops importado','Importação #'+nextSeq+' · '+stories.length+' histórias.');
+      toast('🔧 Iniciativas / Refinamento importado','Importação #'+nextSeq+' · '+stories.length+' histórias.');
       recordImportEvent('ops4ops', file.name, stories.length);
     }catch(err){
       toast('Erro ao ler arquivo','Verifique se é um .xlsx/.csv válido: '+err.message,'err');
@@ -6269,8 +6273,8 @@ function renderOps4opsView(){
       host.innerHTML=
         '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
         '<div style="font-size:28px;margin-bottom:.6rem;animation:spin 1.2s linear infinite;display:inline-block">🔄</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando Ops4Ops do Discovery…</div>'+
-        '<div style="font-size:12px;color:#94a3b8">As histórias importadas no Discovery estão sendo carregadas.</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Sincronizando Iniciativas / Refinamento…</div>'+
+        '<div style="font-size:12px;color:#94a3b8">A última importação Jira está sendo carregada.</div>'+
         '</div>';
       return;
     }
@@ -6278,16 +6282,16 @@ function renderOps4opsView(){
       host.innerHTML=
         '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
         '<div style="font-size:28px;margin-bottom:.6rem">⚠️</div>'+
-        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Não foi possível sincronizar o Ops4Ops</div>'+
-        '<div style="font-size:12px;color:#94a3b8">Tente atualizar novamente. Discovery PMO Tracker foi descontinuado.</div>'+
+        '<div style="font-size:14px;font-weight:600;color:#b45309;margin-bottom:.4rem">Não foi possível sincronizar Iniciativas / Refinamento</div>'+
+        '<div style="font-size:12px;color:#94a3b8">Tente atualizar novamente ou reimporte o CSV de Iniciativas.</div>'+
         '</div>';
       return;
     }
     host.innerHTML=
       '<div class="empty" style="padding:2rem 2rem;text-align:center">'+
       '<div style="font-size:28px;margin-bottom:.6rem">🔧</div>'+
-      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado do Ops4Ops disponível ainda</div>'+
-      '<div style="font-size:12px;color:#94a3b8">Discovery PMO Tracker descontinuado — sem nova sincronização disponível.</div>'+
+      '<div style="font-size:14px;font-weight:600;color:#475569;margin-bottom:.4rem">Nenhum dado de Iniciativas / Refinamento disponível ainda</div>'+
+      '<div style="font-size:12px;color:#94a3b8">Importe o CSV Iniciativas - Refinada x Backlog para atualizar esta visão.</div>'+
       '</div>';
     return;
   }
@@ -6314,10 +6318,10 @@ function renderOps4opsView(){
 
   var squadCardsHtml=buildSquadCards(stories,squads,prev!==null?prevSquadCnt:null,ops4opsSnaps,cur.seq,'ops4ops');
   host.innerHTML=
-    '<div class="sec-lbl" style="margin:0 0 .6rem">🔧 Ops4Ops</div>'+
+    '<div class="sec-lbl" style="margin:0 0 .6rem">🔧 Iniciativas / Refinamento</div>'+
     '<div class="sv-kpi" style="margin-bottom:1rem">'+
-      svKpiItem('#7a0000',totalBacklog,'Total Ops4Ops','importação #'+cur.seq)+
-      svKpiItem('#3b82f6',squads.length,'Squads com Ops4Ops','grupos ativos')+
+      svKpiItem('#7a0000',totalBacklog,'Total de iniciativas','importação #'+cur.seq)+
+      svKpiItem('#3b82f6',squads.length,'Squads com iniciativas','grupos ativos')+
       svKpiItem('#16a34a',totalRefined,'🃏 Refinadas','com rótulo "Refinada" no Jira')+
     '</div>'+
     '<div class="bk-delta-bar">'+
@@ -6326,7 +6330,7 @@ function renderOps4opsView(){
           ' <span class="bk-delta-info">· '+totalBacklog+' histórias agora vs '+prev.stories.length+' antes</span>'
         : '<span style="color:#94a3b8">Importe novamente para ver o delta entre importações (▲▼=)</span>')+
     '</div>'+
-    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Ops4Ops · Backlog por Squad · Importação #'+cur.seq+'</div>'+
+    '<div class="sec-lbl" style="margin:.8rem 0 .5rem">Iniciativas / Refinamento · Backlog por Squad · Importação #'+cur.seq+'</div>'+
     '<div class="bk-squad-list">'+squadCardsHtml+'</div>';
 }
 
@@ -7161,7 +7165,7 @@ function openBkSquadModal(squad,source){
   var snap=isOps?getCurrentOps4opsSnapshot():getCurrentBacklogSnapshot();
   var stories=visibleStoryRows((snap&&Array.isArray(snap.stories))?snap.stories:[]).filter(function(s){return s.squad===squad;});
   var refined=stories.filter(isRefined);
-  var origin=isOps?'Ops4Ops':'Backlog / Refinamento';
+  var origin=isOps?'Iniciativas / Refinamento':'Backlog / Refinamento';
   var list=stories.map(function(s){
     var ref=isRefined(s);
     return '<a class="bk-modal-story" href="'+jiraUrl(s.id)+'" target="_blank" rel="noopener">'+
@@ -7268,9 +7272,9 @@ function detectUnifiedFileType(wb, fileName){
       if(fn.indexOf('sprint')>=0) return 'sprint_visao';
       // 4. Acomp. Geral → Visão de Projetos (botão JIRA)
       if(fn.indexOf('acomp')>=0||fn.indexOf('geral')>=0) return 'general_visao';
-      // 5. Ops4Ops tem a mesma estrutura e pode conter “Backlog” no nome,
-      // mas sua fonte é o Discovery PMO — nunca pode entrar no Backlog geral.
-      if(fn.indexOf('ops4ops')>=0) return 'ops4ops';
+      // 5. Iniciativas/Ops4Ops tem a mesma estrutura e pode conter “Backlog” no nome,
+      // mas alimenta uma visão de refinamento própria — nunca entra no Backlog geral.
+      if(fn.indexOf('ops4ops')>=0||fn.indexOf('iniciativa')>=0) return 'ops4ops';
       // 6. Story no Backlog → Tab Backlog/Refinamento
       if(fn.indexOf('backlog')>=0) return 'backlog';
       // 7. QTD Epicos → Tab Qtd Story/Épicos
@@ -7305,7 +7309,7 @@ function loadMultipleFiles(files, propagate){
   var pending=fileList.length;
   // Fase 1: apenas leitura e validação local. Nada é salvo nem propagado até
   // todos os arquivos passarem por esta fase.
-  var detected={epics:null,stories:null,backlog:[],ops4ops:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[],errors:[]};
+  var detected={epics:null,stories:null,backlog:[],ops4ops:[],sprint_visao:[],general_visao:[],homologation_visao:[],unknown:[],errors:[],warnings:[]};
 
   function addSingleSource(type, entry){
     if(detected[type]){
@@ -7356,6 +7360,22 @@ function loadMultipleFiles(files, propagate){
     else det=detectStoriesFormat(entry.wb);
     if(!hasImportRows(det,type)){
       detected.errors.push('"'+entry.file.name+'" não contém registros válidos para '+type+'.');
+      return;
+    }
+    var linkDet = type==='backlog' ? detectStoriesFormat(entry.wb) : det;
+    if(type!=='epics' && linkDet && linkDet.rows && linkDet.map){
+      var missingLink=0;
+      for(var rowIndex=linkDet.hrow+1;rowIndex<linkDet.rows.length;rowIndex++){
+        var sourceRow=linkDet.rows[rowIndex];
+        if(!sourceRow || !sourceRow.length) continue;
+        var storyKey=extractJiraKey(sourceRow[linkDet.map.id]);
+        if(!storyKey) continue;
+        var parentValue=linkDet.map.epic>=0 ? sourceRow[linkDet.map.epic] : (linkDet.map.parent>=0 ? sourceRow[linkDet.map.parent] : '');
+        if(!extractJiraKey(parentValue)) missingLink++;
+      }
+      if(missingLink){
+        detected.warnings.push('"'+entry.file.name+'": '+missingLink+' item(ns) sem Epic Link; eles podem aparecer sem vínculo ou ficar fora de visões por épico.');
+      }
     }
   }
   function validateLocalImport(){
@@ -7382,6 +7402,122 @@ function loadMultipleFiles(files, propagate){
     releaseImportLock();
   }
 
+  // Robô de conferência: executado em toda importação unificada antes da
+  // gravação. Reconciliamos as mesmas chaves entre relatórios e guardamos o
+  // diagnóstico para suporte, sem confundir diferenças de escopo com conflito.
+  function runUnifiedImportAudit(){
+    function entryFor(type){
+      var value=detected[type];
+      return Array.isArray(value) ? value[0] : value;
+    }
+    function profile(type){
+      var entry=entryFor(type);
+      if(!entry) return null;
+      var det=type==='epics' ? detectImportFormat(entry.wb) : detectStoriesFormat(entry.wb);
+      if(!det || !det.rows || !det.map) return null;
+      var records={}, duplicates=[], missingLinks=[], missingHomologDate=[];
+      for(var i=det.hrow+1;i<det.rows.length;i++){
+        var row=det.rows[i]; if(!row || !row.length) continue;
+        var id=extractJiraKey(row[det.map.id]); if(!id) continue;
+        if(records[id]) duplicates.push(id);
+        var epicRaw=det.map.epic>=0 ? row[det.map.epic] : (det.map.parent>=0 ? row[det.map.parent] : '');
+        var epic=extractJiraKey(epicRaw);
+        if(type!=='epics' && !epic) missingLinks.push(id);
+        var homologDate=det.map.homologacaoData>=0 ? (row[det.map.homologacaoData]||'').toString().trim() : '';
+        if(type==='homologation_visao' && !homologDate) missingHomologDate.push(id);
+        records[id]={
+          epic:epic,
+          status:det.map.status>=0 ? stripAcc((row[det.map.status]||'').toString()).toLowerCase().trim() : '',
+          squad:det.map.squad>=0 ? stripAcc((row[det.map.squad]||'').toString()).toLowerCase().trim() : ''
+        };
+      }
+      var expectedKeys=Object.keys(records).filter(function(id){
+        // A carga principal de QTD Story exige vínculo; os demais relatórios
+        // preservam a linha e deixam o alerta de qualidade explícito.
+        return type!=='stories' || !!records[id].epic;
+      });
+      return {type:type,fileName:entry.file.name,records:records,expectedKeys:expectedKeys,duplicates:duplicates,missingLinks:missingLinks,missingHomologDate:missingHomologDate};
+    }
+    var types=['epics','stories','backlog','general_visao','sprint_visao','homologation_visao','ops4ops'];
+    var profiles={}; types.forEach(function(type){var p=profile(type);if(p) profiles[type]=p;});
+    var findings=[];
+    Object.keys(profiles).forEach(function(type){
+      var p=profiles[type];
+      if(p.duplicates.length) findings.push({severity:'error',message:p.fileName+': '+p.duplicates.length+' chave(s) duplicada(s).'});
+      if(p.missingLinks.length) findings.push({severity:'warning',message:p.fileName+': '+p.missingLinks.length+' item(ns) sem Epic Link.'});
+      if(p.missingHomologDate.length) findings.push({severity:'warning',message:p.fileName+': '+p.missingHomologDate.length+' item(ns) em homologação sem data de entrada.'});
+    });
+    function compare(leftType,rightType){
+      var left=profiles[leftType],right=profiles[rightType]; if(!left||!right) return;
+      var conflicts=[];
+      Object.keys(left.records).forEach(function(id){
+        if(!right.records[id]) return;
+        ['epic','status','squad'].forEach(function(field){
+          if(left.records[id][field]!==right.records[id][field]) conflicts.push(id+' ('+field+')');
+        });
+      });
+      if(conflicts.length) findings.push({severity:'error',message:left.fileName+' × '+right.fileName+': '+conflicts.length+' divergência(s) para chaves iguais.'});
+    }
+    compare('stories','general_visao'); compare('stories','sprint_visao');
+    compare('general_visao','sprint_visao'); compare('sprint_visao','homologation_visao');
+    compare('general_visao','ops4ops');
+    if(profiles.epics && profiles.stories){
+      var epicKeys=profiles.epics.records;
+      var unknownParents={};
+      Object.keys(profiles.stories.records).forEach(function(id){
+        var parent=profiles.stories.records[id].epic;
+        if(parent && !epicKeys[parent]) unknownParents[parent]=true;
+      });
+      var unknownCount=Object.keys(unknownParents).length;
+      if(unknownCount) findings.push({severity:'error',message:'Qtd Story/Épicos referencia '+unknownCount+' épico(s) ausente(s) do arquivo de Épicos.'});
+    }
+    if(profiles.ops4ops && profiles.general_visao){
+      var absentOps=Object.keys(profiles.ops4ops.records).filter(function(id){return !profiles.general_visao.records[id];});
+      if(absentOps.length) findings.push({severity:'warning',message:absentOps.length+' item(ns) de Iniciativas não aparecem no Acompanhamento Geral.'});
+    }
+    var summary={
+      auditedAt:new Date().toISOString(),
+      files:types.filter(function(type){return profiles[type];}).map(function(type){return {type:type,fileName:profiles[type].fileName,rows:Object.keys(profiles[type].records).length,expectedKeys:profiles[type].expectedKeys};}),
+      findings:findings,
+      status:findings.some(function(item){return item.severity==='error';})?'error':(findings.length?'warning':'ok')
+    };
+    try{ storageSet('sala_last_import_audit_v1',JSON.stringify(summary)); }catch(e){}
+    return summary;
+  }
+
+  function showUnifiedImportReceipt(report){
+    closeHealthPanel();
+    renderHealthBadge(getDataAnomalies());
+    openHealthPanel(report);
+  }
+
+  function verifyUnifiedImportResult(robotAudit, attempt){
+    attempt=attempt||0;
+    function ids(items){var out={};(items||[]).forEach(function(item){var id=String(item&&item.id||item&&item.chave||'').toUpperCase();if(id)out[id]=true;});return out;}
+    function crossSaved(type,fileName){
+      var keys={general_visao:'sala_cross_import_general_v1',sprint_visao:'sala_cross_import_sprint_v1',homologation_visao:'sala_cross_import_homologation_v1'};
+      try{var payload=JSON.parse(storageGet(keys[type])||'{}');return !!(payload&&payload.fileName===fileName&&Array.isArray(payload.matrix));}catch(e){return false;}
+    }
+    var verification=robotAudit.files.map(function(file){
+      var inserted={};
+      if(file.type==='epics') inserted=ids(allData);
+      else if(file.type==='stories') inserted=ids(allStories);
+      else if(file.type==='backlog'){var backlog=getCurrentBacklogSnapshot();inserted=ids(backlog&&backlog.stories);}
+      else if(file.type==='ops4ops'){var initiatives=getCurrentOps4opsSnapshot();inserted=ids(initiatives&&initiatives.stories);}
+      else if(crossSaved(file.type,file.fileName)) file.expectedKeys.forEach(function(id){inserted[id]=true;});
+      var missing=file.expectedKeys.filter(function(id){return !inserted[id];});
+      var labels={epics:'Épicos',stories:'Histórias',backlog:'Backlog refinado',ops4ops:'Iniciativas / Refinamento',general_visao:'Acompanhamento Geral',sprint_visao:'Sprint Ativa',homologation_visao:'Homologação'};
+      return {type:file.type,label:labels[file.type]||file.type,fileName:file.fileName,expected:file.expectedKeys.length,inserted:file.expectedKeys.length-missing.length,missing:missing};
+    });
+    var corePending=verification.some(function(item){return ['epics','stories','backlog','ops4ops'].indexOf(item.type)>=0&&item.missing.length;});
+    if(corePending && attempt<20){setTimeout(function(){verifyUnifiedImportResult(robotAudit,attempt+1);},300);return;}
+    robotAudit.verification=verification;
+    if(verification.some(function(item){return item.missing.length;})) robotAudit.status='error';
+    robotAudit.auditedAt=new Date().toISOString();
+    gasSaveImportAudit(robotAudit);
+    showUnifiedImportReceipt(robotAudit);
+  }
+
   // Salva a base como matrix bruta no localStorage para a Visão de Projetos ler
   function _saveCrossImport(key, wb, fileName){
     try{
@@ -7400,6 +7536,22 @@ function loadMultipleFiles(files, propagate){
       return;
     }
     var lines=[];
+    var expectedSources=[
+      ['epics','Épicos'],['stories','Qtd Story/Épicos'],['backlog','Backlog refinado'],
+      ['general_visao','Acompanhamento Geral'],['sprint_visao','Sprint Ativa'],
+      ['homologation_visao','Homologação']
+    ];
+    var missingSources=expectedSources.filter(function(item){
+      var value=detected[item[0]];
+      return Array.isArray(value) ? !value.length : !value;
+    }).map(function(item){return item[1];});
+    var robotAudit=runUnifiedImportAudit();
+    var robotErrors=robotAudit.findings.filter(function(item){return item.severity==='error';}).length;
+    var robotWarnings=robotAudit.findings.filter(function(item){return item.severity==='warning';}).length;
+    lines.push(robotAudit.status==='ok'
+      ? '🤖 Conferência automática: aprovada, sem divergências estruturais'
+      : '🤖 Conferência automática: '+robotErrors+' erro(s) e '+robotWarnings+' alerta(s). '+robotAudit.findings.map(function(item){return item.message;}).join(' '));
+    if(detected.warnings.length) lines.push('⚠️ Qualidade dos dados: '+detected.warnings.join(' '));
     if(detected.epics){
       loadXlsx(detected.epics.file);
       lines.push('📊 Épicos → Tab Épicos');
@@ -7413,7 +7565,8 @@ function loadMultipleFiles(files, propagate){
       lines.push('📥 Backlog → Tab Backlog/Refinamento');
     });
     if(detected.ops4ops.length){
-      lines.push('🔧 Ops4Ops → Discovery PMO Tracker descontinuado, arquivo ignorado');
+      loadOps4opsXlsx(detected.ops4ops[0].file);
+      lines.push('🔧 Iniciativas / Refinamento → visão própria atualizada e salva');
     }
     if(detected.sprint_visao.length){
       if(propagate){
@@ -7451,7 +7604,13 @@ function loadMultipleFiles(files, propagate){
     if(!detected.epics&&!detected.stories&&!detected.backlog.length&&!detected.ops4ops.length&&!detected.sprint_visao.length&&!detected.general_visao.length&&!detected.homologation_visao.length){
       toast('Nenhum arquivo reconhecido','Verifique se os arquivos são exports do Jira (.xlsx ou .csv).','err');
     } else {
-      toast('📦 Importação Tudo',lines.join(' · '));
+      if(missingSources.length){
+        lines.unshift('⚠️ Carga parcial: ausentes '+missingSources.join(', ')+'. As áreas ausentes mantiveram a carga anterior e NÃO foram marcadas como atualizadas');
+        toast('⚠️ Importação parcial',lines.join(' · '),'warn');
+      }else{
+        toast('📦 Importação completa',lines.join(' · '));
+      }
+      setTimeout(function(){verifyUnifiedImportResult(robotAudit,0);},300);
     }
     // Cada arquivo roteado (loadXlsx/loadStoriesXlsx/loadBacklogXlsx) libera a
     // trava ao concluir sua própria leitura; isto é uma rede de segurança caso
@@ -7494,7 +7653,7 @@ var IMPORT_DATASETS=[
   {id:'stories',      label:'QTD Story/Épicos',      required:true,  cadence:'daily'},
   {id:'backlog',      label:'Backlog/Refinamento',   required:true,  cadence:'daily'},
   {id:'homologation', label:'Homologação',           required:true,  cadence:'daily'},
-  {id:'ops4ops',      label:'Ops4Ops',               required:false, cadence:'on-demand'}
+  {id:'ops4ops',      label:'Iniciativas / Refinamento', required:false, cadence:'on-demand'}
 ];
 function _readImportStatusLog(){ try{ return JSON.parse(storageGet(IMPORT_STATUS_KEY)||'{}'); }catch(e){ return {}; } }
 function _writeImportStatusLog(log){ try{ storageSet(IMPORT_STATUS_KEY,JSON.stringify(log)); }catch(e){} }
@@ -7599,7 +7758,7 @@ ub.addEventListener('drop',function(e){
   if(!guardImportStart()) return;
   // Vários arquivos soltos aqui também propagam: "Importar Tudo" é o único
   // ponto de importação em massa, então qualquer carga múltipla já atualiza
-  // Visão de Projetos e Discovery PMO automaticamente.
+  // Visão de Projetos e a visão própria de refinamento Ops4Ops automaticamente.
   if(fs.length>1) loadMultipleFiles(fs, true);
   else loadXlsx(fs[0]);
 });
@@ -7627,7 +7786,7 @@ $id('fiBk').onchange=function(e){
 };
 $id('fiBkJson').onchange=function(e){if(e.target.files[0]){ importBacklogJson(e.target.files[0]); this.value=''; }};
 
-// Ops4Ops é carregado do Discovery PMO; não há importação local nesta aba.
+// Ops4Ops usa fonte própria do Jira e permanece separado do Backlog geral.
 var bkUb=$id('bkUpbar');
 if(bkUb){
   bkUb.addEventListener('dragover',function(e){e.preventDefault();bkUb.style.background='var(--accent-soft)';});
@@ -8754,6 +8913,7 @@ var SEED=[
     // em aba anônima não há cache e uma espera por cold-start deixava Backlog e
     // Ops4Ops em "Sincronizando" antes mesmo de suas cargas começarem.
     function loadSharedPanels(){
+      gasLoadImportAudit();
       emLoadCloud();
       gasLoadBacklog(function(err, count){
         if(!err && count>0){
@@ -8765,22 +8925,25 @@ var SEED=[
           toast('⚠️ Backlog: falha ao carregar servidor','Erro: '+err,'warn');
         }
       });
-      gasLoadOps4opsFromDiscovery(function(err, count, added){
+      gasLoadOps4ops(function(err, count, added){
         if(!err && count>0){
-          var opsN=$id('opsUpName'); if(opsN) opsN.textContent='Ops4Ops carregado do Discovery';
-          var opsS=$id('opsUpSub'); if(opsS) opsS.textContent=added+' histórias importadas no Discovery';
+          var opsN=$id('opsUpName'); if(opsN) opsN.textContent='Iniciativas / Refinamento sincronizado';
+          var opsS=$id('opsUpSub'); if(opsS) opsS.textContent=count+' snapshot(s) carregado(s) do servidor';
           var opsSv=$id('opsUpSaved'); if(opsSv) opsSv.classList.remove('hidden');
           renderOps4opsView();
-          if(added) toast('☁️ Ops4Ops carregado','Histórias sincronizadas a partir do Discovery PMO.');
+          if(added) toast('☁️ Iniciativas carregadas','Refinamento sincronizado a partir da última importação Jira.');
         } else if(err){
-          toast('⚠️ Ops4Ops: falha ao carregar servidor','Erro: '+err,'warn');
+          toast('⚠️ Iniciativas: falha ao carregar servidor','Erro: '+err,'warn');
         }
       });
       gasLoadStories(function(err, count){
         if(!err && count>0){
           toast('☁️ Estórias carregadas',count+' estórias sincronizadas do servidor.');
         } else if(err){
-          toast('⚠️ Estórias: falha ao carregar servidor','Erro: '+err,'warn');
+          var cachedCount=(allStories||[]).length;
+          toast('⚠️ Servidor de Estórias indisponível',cachedCount
+            ? 'Exibindo '+cachedCount+' estórias do último cache confirmado. Elas podem estar desatualizadas. Erro: '+err
+            : 'Nenhum cache confirmado disponível. Erro: '+err,'warn');
         }
       });
     }
@@ -9674,9 +9837,9 @@ function calSeedExample(){
       <div class="adm-pane" id="adm-boletim">
         <div class="adm-sec">Boletim Diário DS</div>
         <p style="font-size:11px;color:#64748b;line-height:1.5;margin:-4px 0 14px">
-          Página isolada, somente leitura, com os pontos críticos do dia, discoveries em refinamento e
-          homologação fora do prazo — gerada a partir dos mesmos dados já usados neste dashboard e no
-          Discovery PMO. Este painel não edita nem substitui nenhum dado.
+          Página isolada, somente leitura, com os pontos críticos do dia, itens em refinamento e
+          homologação fora do prazo — gerada a partir dos mesmos dados deste dashboard.
+          Este painel não edita nem substitui nenhum dado.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
           <a class="adm-btn primary" href="./boletim-ds/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">📰 Abrir Boletim Diário DS</a>

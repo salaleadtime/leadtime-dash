@@ -293,10 +293,15 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-09-17-v25-weekly-summary-notes');
+  t('versão correta', h.version, '2026-09-18-v26-shared-import-audit');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
+  const auditPayload = {auditedAt:'2026-09-18T18:00:00Z',status:'error',verification:[{label:'Épicos',missing:['SLOPC-1']}]};
+  t('comprovante do robô é aceito na base compartilhada',
+    parse(ctx.doPost(post({ action:'saveVpData', key:'vpImportAudit', payload:JSON.stringify(auditPayload) }))).ok, true);
+  t('outro navegador pode ler o mesmo comprovante',
+    parse(ctx.doGet(post({ action:'getVpData', key:'vpImportAudit' }))).data.verification[0].missing[0], 'SLOPC-1');
   t('JSONP: callback malicioso é neutralizado',
     /^\{/.test(ctx.doGet({parameter:{action:'health', callback:'alert(1)'}}).getContent()), true);
   t('JSONP: callback válido é usado',

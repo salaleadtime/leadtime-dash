@@ -112,7 +112,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-09-17-v25-weekly-summary-notes';
+var BACKLOG_SCRIPT_VERSION = '2026-09-18-v26-shared-import-audit';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -135,6 +135,9 @@ var VP_SHEET_MAP = {
   vpOpUpdates:  '_vp_opupdates',
   vpQuickNotes: '_vp_quicknotes',
   vpEpicMeta:   '_vp_epic_meta',
+  // Comprovante compartilhado do robô pós-importação. Snapshot único: todos os
+  // navegadores veem a mesma última conferência e as mesmas chaves rejeitadas.
+  vpImportAudit: '_vp_import_audit',
   // Foto oficial da última carga Jira de épicos. É separada dos metadados para
   // que qualquer navegador aplique a mesma carteira antes de ler o Sheets legado.
   jiraEpicSnapshot: '_jira_epic_snapshot',

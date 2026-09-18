@@ -5712,9 +5712,9 @@
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Atualizar
         </button>
-        <button class="btn btn-white" type="button" onclick="openOperationalReport()" title="Abrir relatório semanal operacional da squad selecionada">
+        <button class="btn btn-white" type="button" onclick="openOperationalReport()" title="Relatório semanal pausado enquanto a nova versão é preparada">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-          Relatório
+          Relatório · em atualização
         </button>
         <a class="btn btn-white" href="../" style="text-decoration:none;" title="Voltar para SALA">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
@@ -5999,7 +5999,7 @@
       <section class="section sprint-panel sprint-redesign" id="sprintPanel">
         <div class="sprint-hero">
           <div>
-            <span class="sprint-eyebrow">Sprint atual</span>
+            <span class="sprint-eyebrow" id="sprintEyebrow">Sprint atual</span>
             <h2>Visão da sprint em andamento</h2>
             <p>
               Recorte automático das histórias da sprint ativa. Período considerado:
@@ -6453,16 +6453,22 @@
       var name='_vpGP_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
       var script=document.createElement('script');
       var done=false;
+      function retireCallback(){
+        // O Apps Script pode responder depois do timeout. Um callback no-op
+        // temporário absorve essa resposta tardia sem gerar ReferenceError.
+        window[name]=function(){};
+        setTimeout(function(){ try{ delete window[name]; }catch(e){} }, 120000);
+      }
       var timer=setTimeout(function(){
         if(done) return; done=true;
-        delete window[name]; if(script.parentNode) script.parentNode.removeChild(script);
+        retireCallback(); if(script.parentNode) script.parentNode.removeChild(script);
         if(retriesLeft>0){ setTimeout(function(){ _vpGasJsonp(url, cb, retriesLeft-1); }, 2000); return; }
         cb('timeout');
       }, 28000);
       window[name]=function(data){ if(done) return; done=true; clearTimeout(timer); delete window[name]; if(script.parentNode) script.parentNode.removeChild(script); cb(null,data); };
       script.onerror=function(){
         if(done) return; done=true; clearTimeout(timer);
-        delete window[name]; if(script.parentNode) script.parentNode.removeChild(script);
+        retireCallback(); if(script.parentNode) script.parentNode.removeChild(script);
         if(retriesLeft>0){ setTimeout(function(){ _vpGasJsonp(url, cb, retriesLeft-1); }, 2000); return; }
         cb('script error');
       };
@@ -6511,8 +6517,7 @@
     }
 
     function openOperationalReport(){
-      var squad = typeof getSelectedSquad === 'function' ? getSelectedSquad() : 'Todas as squads';
-      window.open('./report-semanal-operacional.html#squad=' + encodeURIComponent(squad || 'Todas as squads'), '_blank', 'noopener');
+      window.open('./report-semanal-operacional.html', '_blank', 'noopener');
     }
 
     let vpInitialSyncPending = true;
@@ -6547,8 +6552,14 @@
     // e salvo via gasSaveVpData) — usamos o mais recente entre os três pra manter o
     // badge igual pra todo mundo, em qualquer navegador, sem chamada extra ao Apps Script.
     function syncImportBadgeFromServer(all){
-      var candidates = [all.vpGeral, all.vpSprint, all.vpHomologation]
-        .map(function(d){ return d && d.importedAt ? Date.parse(d.importedAt) : NaN; })
+      var sourceMap={general:all.vpGeral,sprint:all.vpSprint,homologation:all.vpHomologation};
+      Object.keys(sourceMap).forEach(function(type){
+        var stamp=sourceMap[type] && sourceMap[type].importedAt;
+        var parsed=stamp ? new Date(stamp) : null;
+        if(parsed && !Number.isNaN(parsed.getTime())) lastImportAt[type]=parsed;
+      });
+      var candidates = Object.keys(sourceMap)
+        .map(function(type){ return lastImportAt[type] ? lastImportAt[type].getTime() : NaN; })
         .filter(function(t){ return !Number.isNaN(t) && t > 0; });
       if(!candidates.length) return;
       var maxT = Math.max.apply(null, candidates);
@@ -6595,6 +6606,7 @@
         if(isNewerThanApplied(serverGeralRev, localGeral, serverGeralTime, localGeralTime)){
           rows = vpGeral.rows.map(applyRefinementRule);
           if(vpGeral.sourceName) sourceName = vpGeral.sourceName;
+          if(serverGeralTime) lastImportAt.general = new Date(serverGeralTime);
           storageSet('vpBaseGeralImportada', JSON.stringify(Object.assign({}, vpGeral, {appliedRevision: serverGeralRev})));
           needsRender = true;
         }
@@ -6609,6 +6621,7 @@
         if(isNewerThanApplied(serverSprintRev, localSprint, serverSprintTime, localSprintTime)){
           sprintRows = vpSprint.rows.map(function(row){ return applyRefinementRule(Object.assign({}, row, {sprintAtual:true})); });
           if(vpSprint.sourceName) sprintSourceName = vpSprint.sourceName;
+          if(serverSprintTime) lastImportAt.sprint = new Date(serverSprintTime);
           storageSet('vpBaseSprintImportada', JSON.stringify(Object.assign({}, vpSprint, {appliedRevision: serverSprintRev})));
           needsRender = true;
         }
@@ -6625,6 +6638,7 @@
         if(isNewerThanApplied(serverHomologRev, localHomolog, serverHomologTime, localHomologTime, serverHomologTime > localHomologTime || !hasLocalHomolog)){
           homologationRows = vpHomologation.rows.map(applyRefinementRule).filter(isHomologation);
           homologationSourceName = vpHomologation.sourceName || 'Homologação compartilhada';
+          if(serverHomologTime) lastImportAt.homologation = new Date(serverHomologTime);
           storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(Object.assign({}, vpHomologation, {appliedRevision: serverHomologRev})));
           needsRender = true;
         }
@@ -6784,8 +6798,9 @@
 
     function _refreshImportPill(){ /* import pill removido — header badge atualizado por updateLastUpdatedBadge() */ }
 
-    function registrarImportacaoBase(){
-      importDateTime = new Date();
+    function registrarImportacaoBase(value){
+      const parsed = value ? new Date(value) : new Date();
+      importDateTime = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
       storageSet(IMPORT_BASE_KEY, importDateTime.toISOString());
       _refreshImportPill();
     }
@@ -6951,15 +6966,22 @@
       storageSet(IMPORTED_HOMOLOGATION_KEY, JSON.stringify(data));
       gasSaveVpData('vpHomologation', data, {officialSnapshot:true, sourceFile:homologationSourceName});
     }
-    function persistImportedBases(){
+    function persistImportedBases(changedTypes, importedAtByType){
       try{
-        const importedAt = new Date().toISOString();
-        const geralData  = {rows, sourceName, importedAt};
-        const sprintData = {rows: sprintRows, sourceName: sprintSourceName, importedAt};
-        storageSet(IMPORTED_GENERAL_KEY, JSON.stringify(geralData));
-        storageSet(IMPORTED_SPRINT_KEY,  JSON.stringify(sprintData));
-        gasSaveVpData('vpGeral',  geralData,  {officialSnapshot:true, sourceFile:sourceName});
-        gasSaveVpData('vpSprint', sprintData, {officialSnapshot:true, sourceFile:sprintSourceName});
+        const types = Array.isArray(changedTypes) ? changedTypes : [];
+        const stamps = importedAtByType || {};
+        if(types.includes('general')){
+          const importedAt = stamps.general || (lastImportAt.general && lastImportAt.general.toISOString()) || new Date().toISOString();
+          const geralData = {rows, sourceName, importedAt};
+          storageSet(IMPORTED_GENERAL_KEY, JSON.stringify(geralData));
+          gasSaveVpData('vpGeral', geralData, {officialSnapshot:true, sourceFile:sourceName});
+        }
+        if(types.includes('sprint')){
+          const importedAt = stamps.sprint || (lastImportAt.sprint && lastImportAt.sprint.toISOString()) || new Date().toISOString();
+          const sprintData = {rows: sprintRows, sourceName: sprintSourceName, importedAt};
+          storageSet(IMPORTED_SPRINT_KEY, JSON.stringify(sprintData));
+          gasSaveVpData('vpSprint', sprintData, {officialSnapshot:true, sourceFile:sprintSourceName});
+        }
       }catch(err){
         console.warn('Não foi possível salvar a base importada no navegador.', err);
       }
@@ -6969,16 +6991,19 @@
       if(geral && Array.isArray(geral.rows) && geral.rows.length){
         rows = geral.rows.map(applyRefinementRule);
         if(geral.sourceName) sourceName = geral.sourceName;
+        if(geral.importedAt && !Number.isNaN(Date.parse(geral.importedAt))) lastImportAt.general = new Date(geral.importedAt);
       }
       const sprint = readStoredJSON(IMPORTED_SPRINT_KEY, null);
       if(sprint && Array.isArray(sprint.rows) && sprint.rows.length){
         sprintRows = sprint.rows.map(row => applyRefinementRule({...row, sprintAtual:true}));
         if(sprint.sourceName) sprintSourceName = sprint.sourceName;
+        if(sprint.importedAt && !Number.isNaN(Date.parse(sprint.importedAt))) lastImportAt.sprint = new Date(sprint.importedAt);
       }
       const homologation = readStoredJSON(IMPORTED_HOMOLOGATION_KEY, null);
       if(homologation && Array.isArray(homologation.rows)){
         homologationRows = homologation.rows.map(applyRefinementRule).filter(isHomologation);
         homologationSourceName = homologation.sourceName || '';
+        if(homologation.importedAt && !Number.isNaN(Date.parse(homologation.importedAt))) lastImportAt.homologation = new Date(homologation.importedAt);
       }
     })();
 
@@ -8818,6 +8843,22 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       if(!alert) return;
       const sprint = detectActiveSprint();
       const squad = getSelectedSquad();
+      const eyebrow = $('sprintEyebrow');
+      if(eyebrow) eyebrow.textContent = 'Sprint atual';
+
+      // Não apresentar uma fotografia anterior ao início da sprint como se
+      // representasse o ciclo atual. Este bloqueio vem antes dos demais avisos.
+      if(sprint && sprint.startDate){
+        const importedAt = lastImportAt.sprint;
+        if(!importedAt || importedAt < sprint.startDate){
+          const importedText = importedAt ? importedAt.toLocaleString('pt-BR') : 'não informada';
+          if(eyebrow) eyebrow.textContent = 'Base desatualizada';
+          alert.className = 'sprint-calendar-alert is-danger';
+          alert.innerHTML = `<span><strong>Indicadores históricos — não representam a sprint atual.</strong> A base "${escapeHtml(sprintSourceName)}" foi importada em ${escapeHtml(importedText)}, antes do início do ciclo em ${formatIsoDateBr(sprint.start)}. Importe o arquivo Sprint Ativa mais recente.</span>`;
+          alert.style.display = 'flex';
+          return;
+        }
+      }
 
       // Sprint Ativa é fotografia oficial (substitui a base inteira a cada
       // importação): se a squad selecionada some da base recém-carregada, o
@@ -8900,7 +8941,8 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const frenteLabel = isExpressoSelected() && !sameText(sprintFrenteFilter, 'Todas') ? ` • ${sprintFrenteFilter}` : '';
 
       $('sprintSquadBadge').textContent = sameSquad(squad, 'Todas') ? 'Squad: Todas' : `Squad: ${squad}${frenteLabel}`;
-      $('sprintSourceText').textContent = `Base sprint: ${sprintSourceName}`;
+      const sprintImportedText = lastImportAt.sprint ? ` · importada em ${lastImportAt.sprint.toLocaleString('pt-BR')}` : ' · data da carga não informada';
+      $('sprintSourceText').textContent = `Base sprint: ${sprintSourceName}${sprintImportedText}`;
       $('sprintTotal').textContent = data.length;
       $('sprintTotalText').textContent = `${data.length} ${data.length === 1 ? 'história' : 'histórias'} no recorte da sprint.`;
       $('sprintBacklog').textContent = groups.backlog.items.length;
@@ -9698,7 +9740,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
               if(!parsed || !parsed.length) continue;
               const type = detectVisaoFileType(file, parsed);
               if(type === 'sprint' || files.length === 1){
-                sprintRows = mergeRowsByChave(sprintRows, parsed.map(row => ({...row, sprintAtual:true})), true);
+                sprintRows = parsed.map(row => ({...row, sprintAtual:true}));
                 sprintSourceName = file.name;
                 importedSprint = true;
               }
@@ -9707,7 +9749,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
           if(importedSprint){
             importDateTime = new Date();
             lastImportAt.sprint = new Date();
-            persistImportedBases();
+            persistImportedBases(['sprint']);
             setupFilters(); renderAll(); registrarImportacaoBase();
             alert('Sprint importada: ' + sprintSourceName);
           } else {
@@ -9729,7 +9771,7 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
         try{
           const parsed = await readJiraFileToRows(file);
           if(!parsed) return;
-          homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation), true);
+          homologationRows = parsed.filter(isHomologation);
           homologationSourceName = file.name;
           lastImportAt.homologation = new Date();
           persistHomologationBase();
@@ -9801,13 +9843,22 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
             }
           }catch(err){ skipped.push(file.name + ' (erro: ' + err.message + ')'); }
         }
-        importDateTime = new Date();
-        persistImportedBases();
+        const changedTypes = [];
+        if(importedGeneral) changedTypes.push('general');
+        if(importedSprint) changedTypes.push('sprint');
+        const changedDates = changedTypes.map(type => lastImportAt[type]).filter(Boolean);
+        if(changedDates.length) importDateTime = new Date(Math.max(...changedDates.map(date => date.getTime())));
+        persistImportedBases(changedTypes);
         setupFilters(); renderAll(); registrarImportacaoBase(); updateLastUpdatedBadge();
         let msg = '🌐 ' + files.length + ' arquivo(s) importado(s) e propagado(s).\n';
         if(importedGeneral) msg += '✅ Acomp. Geral: ' + sourceName + ' (outras abas atualizadas automaticamente)\n';
         if(importedSprint) msg += '✅ Sprint Ativa: ' + sprintSourceName + ' (outras abas atualizadas automaticamente)\n';
         if(importedHomolog) msg += '✅ Homologação: ' + homologationSourceName + ' (outras abas atualizadas automaticamente)\n';
+        const missing = [];
+        if(!importedGeneral) missing.push('Acompanhamento Geral');
+        if(!importedSprint) missing.push('Sprint Ativa');
+        if(!importedHomolog) missing.push('Homologação');
+        if(missing.length) msg += '⚠️ Carga parcial — ausentes: ' + missing.join(', ') + '. Essas bases mantiveram a carga anterior e não foram marcadas como atualizadas.\n';
         if(skipped.length) msg += '⚠️ Ignorados: ' + skipped.join(', ');
         alert(msg.trim());
       }catch(err){
@@ -9876,17 +9927,23 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
             : null;
         if (!parsed || !parsed.length) return false;
         if (type === 'sprint') {
-          sprintRows = mergeRowsByChave(sprintRows, parsed.map(r => ({...r, sprintAtual: true})), true);
+          sprintRows = parsed.map(r => ({...r, sprintAtual: true}));
           sprintSourceName = stored.fileName || 'Sprint (via SALA)';
         } else if (type === 'homologation') {
-          homologationRows = mergeRowsByChave(homologationRows, parsed.filter(isHomologation), true);
+          homologationRows = parsed.filter(isHomologation);
           homologationSourceName = stored.fileName || 'Homologação (via SALA)';
-          try { persistHomologationBase(); } catch(e){}
         } else {
-          rows = mergeRowsByChave(rows, parsed, true);
+          rows = parsed;
           sourceName = stored.fileName || 'Acomp. Geral (via SALA)';
         }
-        lastImportAt[type] = new Date();
+        const appliedAt = stored.savedAt ? new Date(stored.savedAt) : new Date();
+        lastImportAt[type] = Number.isNaN(appliedAt.getTime()) ? new Date() : appliedAt;
+        if(type === 'homologation'){
+          try { persistHomologationBase(lastImportAt[type].toISOString()); } catch(e){}
+        }else{
+          const stamp={}; stamp[type]=lastImportAt[type].toISOString();
+          persistImportedBases([type],stamp);
+        }
         if (stored.savedAt) lastCrossApplied[type] = stored.savedAt;
         return true;
       } catch(e) {
@@ -10176,12 +10233,17 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const badge = $('lastUpdatedBadge');
       const text = $('lastUpdatedText');
       if(badge && text){
-        if(importDateTime){
-          const now = new Date();
-          const same = now.toDateString() === importDateTime.toDateString();
-          const timeStr = importDateTime.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-          const dateStr = same ? `hoje às ${timeStr}` : `${importDateTime.toLocaleDateString('pt-BR')} às ${timeStr}`;
-          text.textContent = `Última importação: ${dateStr}`;
+        const sourceDates = [lastImportAt.general,lastImportAt.sprint,lastImportAt.homologation].filter(Boolean);
+        if(sourceDates.length || importDateTime){
+          function compact(date){
+            return date ? `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` : 'sem carga';
+          }
+          text.textContent = `Fontes · Geral ${compact(lastImportAt.general)} · Sprint ${compact(lastImportAt.sprint)} · Homologação ${compact(lastImportAt.homologation)}`;
+          const dot=badge.querySelector('.dot');
+          if(dot){
+            const complete=[lastImportAt.general,lastImportAt.sprint,lastImportAt.homologation].every(Boolean);
+            dot.style.background=complete?'#5CE65C':'#FFD166';
+          }
           badge.style.display = '';
         } else {
           badge.style.display = 'none';
@@ -10286,17 +10348,13 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
     // ── Propagação cruzada: carrega dados salvos pelo "Importar Tudo" do SALA ──
     // Roda após o render inicial: se houver dados mais recentes da SALA aplica e re-renderiza
     (function checkCrossImportOnLoad(){
-      let applied = false;
-      applied = applyCrossImportFromSala('general') || applied;
-      applied = applyCrossImportFromSala('sprint') || applied;
-      applied = applyCrossImportFromSala('homologation') || applied;
-      if (!applied) return;
+      const appliedTypes = ['general','sprint','homologation'].filter(type => applyCrossImportFromSala(type));
+      if (!appliedTypes.length) return;
       const allCrossKeys = [CROSS_IMPORT_SPRINT_KEY, CROSS_IMPORT_GENERAL_KEY, CROSS_IMPORT_HOMOLOGATION_KEY];
       const dates = allCrossKeys
         .map(k => { try { return new Date(readStoredJSON(k,{}).savedAt||'').getTime(); } catch(e){ return 0; } })
         .filter(t => t > 0);
       importDateTime = dates.length ? new Date(Math.max(...dates)) : new Date();
-      persistImportedBases();
       setupFilters(); renderAll(); updateLastUpdatedBadge(); _refreshImportPill();
     })();
 
@@ -10310,9 +10368,8 @@ Responda APENAS com este JSON (sem markdown, sem código fence):
       const type = crossKeyMap[e.key];
       if (!type) return;
       if(!applyCrossImportFromSala(type)) return;
-      importDateTime = new Date();
-      persistImportedBases();
-      setupFilters(); renderAll(); registrarImportacaoBase(); updateLastUpdatedBadge(); _refreshImportPill();
+      importDateTime = lastImportAt[type] || new Date();
+      setupFilters(); renderAll(); registrarImportacaoBase(importDateTime); updateLastUpdatedBadge(); _refreshImportPill();
       const fname = type === 'sprint' ? sprintSourceName : type === 'homologation' ? homologationSourceName : sourceName;
       const txt = $('lastUpdatedText');
       if(txt) txt.textContent = '🔄 Atualizado automaticamente via SALA: ' + fname;
