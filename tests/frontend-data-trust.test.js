@@ -125,6 +125,18 @@ test('comprovante do robô é compartilhado e usa Saúde dos Dados', () => {
   assert(main.includes('esperado no CSV × inserido no painel'));
 });
 
+test('robô registra a prova de Data Início ausente desde a importação', () => {
+  assert(main.includes("field:'Data Início'"));
+  assert(main.includes('sourceHasStartDateColumn'));
+  assert(main.includes('importedWithoutValue'));
+  assert(main.includes('currentlyMissing'));
+  assert(main.includes('function fmtAuditDateTime(value)'));
+  assert(main.includes('Data Início · trilha da última importação'));
+  assert(main.includes('A data Criado do Jira não é usada como substituta do início do lead time.'));
+  assert(main.includes('continua sem data na confirmação de'));
+  assert(main.includes('Antes da importação, o painel registrava'));
+});
+
 test('datas são exibidas por fonte e sprint histórica é bloqueada', () => {
   assert(projects.includes('Fontes · Geral ${compact(lastImportAt.general)}'));
   assert(projects.includes('Indicadores históricos — não representam a sprint atual.'));

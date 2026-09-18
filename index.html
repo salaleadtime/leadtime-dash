@@ -4006,7 +4006,16 @@ function getLatestImportReceipt(){
 function getImportReceiptIssueCount(receipt){
   if(!receipt) return 0;
   var missing=(receipt.verification||[]).reduce(function(total,item){return total+(item.missing?item.missing.length:0);},0);
-  return missing+(receipt.findings||[]).length;
+  var missingStart=receipt.dateEvidence&&Array.isArray(receipt.dateEvidence.currentlyMissing)
+    ? receipt.dateEvidence.currentlyMissing.length : 0;
+  return missing+(receipt.findings||[]).length+missingStart;
+}
+
+function fmtAuditDateTime(value){
+  if(!value) return 'horário indisponível';
+  var date=new Date(value);
+  if(isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
 function openHealthPanel(receiptOverride){
@@ -4036,9 +4045,27 @@ function openHealthPanel(receiptOverride){
       return '<div class="hp-item '+(item.severity==='error'?'high':'warn')+'"><div class="hp-item-hd">Qualidade da carga</div><div class="hp-item-msg">'+esc(item.message)+'</div></div>';
     }).join('');
   }
-  var rows=sourceRowsHtml+healthRows+importRows;
+  var dateEvidenceRows='';
+  if(receipt&&receipt.dateEvidence){
+    var evidence=receipt.dateEvidence;
+    var stillMissing=Array.isArray(evidence.currentlyMissing)?evidence.currentlyMissing:[];
+    var sourceMessage=evidence.sourceHasStartDateColumn
+      ? 'O arquivo tinha a coluna Data Início, mas ela estava vazia para os épicos listados.'
+      : 'O arquivo não trouxe coluna Data Início. A data Criado do Jira não é usada como substituta do início do lead time.';
+    var verifiedAt=fmtAuditDateTime(evidence.verifiedAt||receipt.auditedAt);
+    dateEvidenceRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Data Início · trilha da última importação</div>'+
+      '<div class="hp-item '+(stillMissing.length?'warn':'')+'"><div class="hp-item-hd">'+(stillMissing.length?'⚠ ':'✅ ')+stillMissing.length+' épico(s) ainda sem Data Início</div><div class="hp-item-msg">'+
+      esc(evidence.fileName||'Arquivo de Épicos')+' · importado em '+esc(fmtAuditDateTime(evidence.importedAt))+'<br>'+esc(sourceMessage)+'<br>Última confirmação da fonte oficial: '+esc(verifiedAt)+'.</div></div>'+
+      stillMissing.map(function(item){
+        var before=item.previousValue
+          ? ' Antes da importação, o painel registrava '+item.previousValue+'; esse caso fica marcado para investigação.'
+          : ' Antes da importação, o painel também não tinha Data Início registrada.';
+        return '<div class="hp-item '+(item.previousValue?'high':'warn')+'"><div class="hp-item-hd">'+esc(item.id)+'</div><div class="hp-item-msg">Importado em '+esc(fmtAuditDateTime(item.importedAt||evidence.importedAt))+' sem Data Início; continua sem data na confirmação de '+esc(fmtAuditDateTime(item.verifiedAt||evidence.verifiedAt||receipt.auditedAt))+'. '+esc(item.reason||'')+esc(before)+'</div></div>';
+      }).join('');
+  }
+  var rows=sourceRowsHtml+healthRows+importRows+dateEvidenceRows;
   var tip=(anomalies.length||getImportReceiptIssueCount(receipt))
-    ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> corrija no Jira as chaves listadas como não inseridas, duplicadas ou sem vínculo; para épicos concluídos, preencha também a Data Fim. Depois repita a importação.</div>'
+    ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> corrija no Jira as chaves listadas como não inseridas, duplicadas ou sem vínculo; para cada épico sem Data Início, confirme a data com a squad e preencha o campo oficial. Para épicos concluídos, preencha também a Data Fim. Depois repita a importação.</div>'
     : '';
   var ov=document.createElement('div');
   ov.className='hp-ov'; ov.id='hpOv';
@@ -7491,7 +7518,12 @@ function loadMultipleFiles(files, propagate){
       if(!entry) return null;
       var det=type==='epics' ? detectImportFormat(entry.wb) : detectStoriesFormat(entry.wb);
       if(!det || !det.rows || !det.map) return null;
-      var records={}, duplicates=[], missingLinks=[], missingHomologDate=[];
+      var records={}, duplicates=[], missingLinks=[], missingHomologDate=[], missingStartDates=[];
+      var sourceHasStartDateColumn=type==='epics'&&det.map.ini>=0;
+      var localBeforeImport={};
+      if(type==='epics') allData.forEach(function(item){
+        if(item&&item.id) localBeforeImport[String(item.id).toUpperCase()]=item.ini||'';
+      });
       for(var i=det.hrow+1;i<det.rows.length;i++){
         var row=det.rows[i]; if(!row || !row.length) continue;
         var id=extractJiraKey(row[det.map.id]); if(!id) continue;
@@ -7501,10 +7533,19 @@ function loadMultipleFiles(files, propagate){
         if(type!=='epics' && !epic) missingLinks.push(id);
         var homologDate=det.map.homologacaoData>=0 ? (row[det.map.homologacaoData]||'').toString().trim() : '';
         if(type==='homologation_visao' && !homologDate) missingHomologDate.push(id);
+        var importedStart=type==='epics'&&sourceHasStartDateColumn ? parseD(row[det.map.ini]) : null;
+        if(type==='epics'&&!importedStart){
+          missingStartDates.push({
+            id:id,
+            reason:sourceHasStartDateColumn?'Data Início vazia no arquivo de origem.':'O arquivo de origem não possui coluna Data Início.',
+            previousValue:localBeforeImport[id]||''
+          });
+        }
         records[id]={
           epic:epic,
           status:det.map.status>=0 ? stripAcc((row[det.map.status]||'').toString()).toLowerCase().trim() : '',
-          squad:det.map.squad>=0 ? stripAcc((row[det.map.squad]||'').toString()).toLowerCase().trim() : ''
+          squad:det.map.squad>=0 ? stripAcc((row[det.map.squad]||'').toString()).toLowerCase().trim() : '',
+          ini:importedStart
         };
       }
       var expectedKeys=Object.keys(records).filter(function(id){
@@ -7512,7 +7553,7 @@ function loadMultipleFiles(files, propagate){
         // preservam a linha e deixam o alerta de qualidade explícito.
         return type!=='stories' || !!records[id].epic;
       });
-      return {type:type,fileName:entry.file.name,records:records,expectedKeys:expectedKeys,duplicates:duplicates,missingLinks:missingLinks,missingHomologDate:missingHomologDate};
+      return {type:type,fileName:entry.file.name,records:records,expectedKeys:expectedKeys,duplicates:duplicates,missingLinks:missingLinks,missingHomologDate:missingHomologDate,sourceHasStartDateColumn:sourceHasStartDateColumn,missingStartDates:missingStartDates};
     }
     var types=['epics','stories','backlog','general_visao','sprint_visao','homologation_visao','ops4ops'];
     var profiles={}; types.forEach(function(type){var p=profile(type);if(p) profiles[type]=p;});
@@ -7551,11 +7592,24 @@ function loadMultipleFiles(files, propagate){
       var absentOps=Object.keys(profiles.ops4ops.records).filter(function(id){return !profiles.general_visao.records[id];});
       if(absentOps.length) findings.push({severity:'warning',message:absentOps.length+' item(ns) de Iniciativas não aparecem no Acompanhamento Geral.'});
     }
+    var importedAt=new Date().toISOString();
+    var dateEvidence=profiles.epics ? {
+      field:'Data Início',
+      fileName:profiles.epics.fileName,
+      importedAt:importedAt,
+      sourceHasStartDateColumn:profiles.epics.sourceHasStartDateColumn,
+      importedWithoutValue:profiles.epics.missingStartDates,
+      currentlyMissing:[],
+      nowPresent:[],
+      notInserted:[]
+    } : null;
     var summary={
-      auditedAt:new Date().toISOString(),
+      importedAt:importedAt,
+      auditedAt:importedAt,
       files:types.filter(function(type){return profiles[type];}).map(function(type){return {type:type,fileName:profiles[type].fileName,rows:Object.keys(profiles[type].records).length,expectedKeys:profiles[type].expectedKeys};}),
       findings:findings,
-      status:findings.some(function(item){return item.severity==='error';})?'error':(findings.length?'warning':'ok')
+      dateEvidence:dateEvidence,
+      status:findings.some(function(item){return item.severity==='error';})?'error':(findings.length||(dateEvidence&&dateEvidence.importedWithoutValue.length)?'warning':'ok')
     };
     try{ storageSet('sala_last_import_audit_v1',JSON.stringify(summary)); }catch(e){}
     return summary;
@@ -7588,7 +7642,29 @@ function loadMultipleFiles(files, propagate){
     var corePending=verification.some(function(item){return ['epics','stories','backlog','ops4ops'].indexOf(item.type)>=0&&item.missing.length;});
     if(corePending && attempt<20){setTimeout(function(){verifyUnifiedImportResult(robotAudit,attempt+1);},300);return;}
     robotAudit.verification=verification;
+    if(robotAudit.dateEvidence){
+      var evidence=robotAudit.dateEvidence;
+      var importedWithoutValue=Array.isArray(evidence.importedWithoutValue)?evidence.importedWithoutValue:[];
+      var currentById={};
+      allData.forEach(function(item){if(item&&item.id) currentById[String(item.id).toUpperCase()]=item;});
+      var verifiedAt=new Date().toISOString();
+      evidence.verifiedAt=verifiedAt;
+      evidence.currentlyMissing=[];
+      evidence.nowPresent=[];
+      evidence.notInserted=[];
+      importedWithoutValue.forEach(function(item){
+        var current=currentById[item.id];
+        if(!current){
+          evidence.notInserted.push({id:item.id,reason:item.reason,importedAt:evidence.importedAt,verifiedAt:verifiedAt});
+        } else if(isValidDate(current.ini)){
+          evidence.nowPresent.push({id:item.id,currentValue:current.ini,previousValue:item.previousValue||'',importedAt:evidence.importedAt,verifiedAt:verifiedAt});
+        } else {
+          evidence.currentlyMissing.push({id:item.id,reason:item.reason,previousValue:item.previousValue||'',importedAt:evidence.importedAt,verifiedAt:verifiedAt});
+        }
+      });
+    }
     if(verification.some(function(item){return item.missing.length;})) robotAudit.status='error';
+    else if(robotAudit.dateEvidence&&robotAudit.dateEvidence.currentlyMissing.length) robotAudit.status='warning';
     robotAudit.auditedAt=new Date().toISOString();
     gasSaveImportAudit(robotAudit);
     showUnifiedImportReceipt(robotAudit);
@@ -7627,6 +7703,9 @@ function loadMultipleFiles(files, propagate){
     lines.push(robotAudit.status==='ok'
       ? '🤖 Conferência automática: aprovada, sem divergências estruturais'
       : '🤖 Conferência automática: '+robotErrors+' erro(s) e '+robotWarnings+' alerta(s). '+robotAudit.findings.map(function(item){return item.message;}).join(' '));
+    if(robotAudit.dateEvidence&&robotAudit.dateEvidence.importedWithoutValue.length){
+      lines.push('📅 Data Início: '+robotAudit.dateEvidence.importedWithoutValue.length+' épico(s) sem data no arquivo; o robô registrará importação e confirmação oficial');
+    }
     if(detected.warnings.length) lines.push('⚠️ Qualidade dos dados: '+detected.warnings.join(' '));
     if(detected.epics){
       loadXlsx(detected.epics.file);
@@ -7983,6 +8062,7 @@ function detectImportFormat(wb){
           else if(map.squad<0 && (c.indexOf('team')>=0||c.indexOf('squad')>=0)) map.squad=j;
           else if(map.resumo<0 && (c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
           // Jira pode ou não ter estes; se tiver, aproveitamos
+          else if(map.ini<0 && c.indexOf('inicio')>=0 && c.indexOf('homolog')<0) map.ini=j;
           else if(map.ini<0 && c.indexOf('priorizado')>=0) map.ini=j;
           else if(map.fim<0 && (c.indexOf('resolv')>=0||c.indexOf('fechado')>=0||c.indexOf('data fim')>=0)) map.fim=j;
           else if(map.prev<0 && (c.indexOf('prevista')>=0||c.indexOf('due')>=0||c.indexOf('vencimento')>=0)) map.prev=j;
