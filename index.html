@@ -516,8 +516,8 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .risk-notif-panel::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(220,38,38,.04) 60px,rgba(220,38,38,.04) 61px);pointer-events:none}
 .rnp-badge{flex-shrink:0;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:6px 14px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(220,38,38,.4);animation:rnp-glow 2s ease-in-out infinite alternate}
 @keyframes rnp-glow{from{box-shadow:0 2px 8px rgba(220,38,38,.4)}to{box-shadow:0 2px 16px rgba(220,38,38,.7)}}
-.rnp-ticker-wrap{flex:1;overflow:hidden;position:relative;height:32px}
-.rnp-ticker{display:flex;align-items:center;gap:0;white-space:nowrap;animation:rnp-scroll 32s linear infinite;will-change:transform}
+.rnp-ticker-wrap{flex:1;overflow:hidden;position:relative;height:32px;display:flex;align-items:center}
+.rnp-ticker{display:inline-flex;align-items:center;gap:0;white-space:nowrap;animation:rnp-scroll 32s linear infinite;will-change:transform}
 .rnp-ticker:hover{animation-play-state:paused}
 @keyframes rnp-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .rnp-item{display:inline-flex;align-items:center;gap:6px;padding:0 28px;font-size:15px;color:rgba(255,255,255,.9);font-weight:600;border-right:1px solid rgba(255,255,255,.1);white-space:nowrap}
