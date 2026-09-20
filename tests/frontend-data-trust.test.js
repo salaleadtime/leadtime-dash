@@ -135,6 +135,8 @@ test('robô registra a prova de Data Início ausente desde a importação', () =
   assert(main.includes('A data Criado do Jira não é usada como substituta do início do lead time.'));
   assert(main.includes('continua sem data na confirmação de'));
   assert(main.includes('Antes da importação, o painel registrava'));
+  assert(main.includes('Sem comprovante de importação registrado'));
+  assert(main.includes('Não é possível afirmar se a data nunca foi informada ou se foi removida antes desta auditoria existir.'));
 });
 
 test('qualquer carga por seletor passa pelo comprovante compartilhado', () => {

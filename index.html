@@ -4062,6 +4062,12 @@ function openHealthPanel(receiptOverride){
           : ' Antes da importação, o painel também não tinha Data Início registrada.';
         return '<div class="hp-item '+(item.previousValue?'high':'warn')+'"><div class="hp-item-hd">'+esc(item.id)+'</div><div class="hp-item-msg">Importado em '+esc(fmtAuditDateTime(item.importedAt||evidence.importedAt))+' sem Data Início; continua sem data na confirmação de '+esc(fmtAuditDateTime(item.verifiedAt||evidence.verifiedAt||receipt.auditedAt))+'. '+esc(item.reason||'')+esc(before)+'</div></div>';
       }).join('');
+  } else {
+    var observedWithoutStart=allData.filter(function(item){return item&&!isValidDate(item.ini);});
+    dateEvidenceRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Data Início · trilha da importação</div>'+
+      '<div class="hp-item warn"><div class="hp-item-hd">⚠ Sem comprovante de importação registrado</div><div class="hp-item-msg">'+
+      observedWithoutStart.length+' épico(s) estão sem Data Início na fonte oficial às '+esc(fmtAuditDateTime(new Date().toISOString()))+'. Não é possível afirmar se a data nunca foi informada ou se foi removida antes desta auditoria existir. A próxima importação de qualquer processo registrará arquivo, horário e confirmação oficial.</div></div>'+
+      (observedWithoutStart.length?'<div class="hp-item warn"><div class="hp-item-hd">Épicos observados sem Data Início</div><div class="hp-item-msg">'+esc(observedWithoutStart.slice(0,40).map(function(item){return item.id;}).join(', '))+(observedWithoutStart.length>40?' …':'')+'</div></div>':'');
   }
   var rows=sourceRowsHtml+healthRows+importRows+dateEvidenceRows;
   var tip=(anomalies.length||getImportReceiptIssueCount(receipt))
