@@ -5085,6 +5085,12 @@ function renderAll(tabToRestore){
 // ═══════════════════════════════════════
 var BANNER_AVISOS_CLOUD_SLOT='dashboardBannerAvisos';
 var _bannerAvisos=null; // null = ainda não carregado da nuvem
+// Mostrado só na PRIMEIRA vez que a nuvem responde sem nada salvo ainda (ninguém
+// clicou em Salvar em Admin ▸ Avisos nenhuma vez) — prova que o banner funciona
+// em vez de nascer escondido sem explicação. Uma vez que alguém salve qualquer
+// coisa (mesmo lista vazia, de propósito, pra esconder o banner), esse texto
+// não volta mais — json.data deixa de vir null e o vazio salvo passa a valer.
+var BANNER_AVISOS_DEFAULT=[{text:'📢 Este é o banner de avisos — edite ou remova este texto em Admin ▸ Avisos (botão Admin no topo da página).'}];
 
 function renderRiskNotifPanel(){
   var panel=$id('riskNotifPanel');
@@ -5110,7 +5116,9 @@ function loadBannerAvisosFromCloud(cb){
     if(!err && json && json.ok && json.data && Array.isArray(json.data.items)){
       _bannerAvisos=json.data.items;
     } else if(_bannerAvisos===null){
-      _bannerAvisos=[];
+      // json.data null/ausente = ninguém nunca salvou nada nessa key — mostra o
+      // placeholder padrão em vez de nascer escondido sem explicação nenhuma.
+      _bannerAvisos=(!err && json && json.ok) ? BANNER_AVISOS_DEFAULT.slice() : [];
     }
     renderRiskNotifPanel();
     if(cb) cb();
