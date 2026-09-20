@@ -510,31 +510,17 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .mb{border-radius:var(--rads);padding:6px 13px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--card);color:var(--tx2);font-family:inherit}
 .mb.p{background:var(--tx);border-color:var(--tx);color:#fff}
 
-/* ── RISK NOTIFICATION PANEL ── */
-.risk-notif-panel{margin:0;padding:.65rem 1.6rem;background:linear-gradient(110deg,#12161f 0%,#1c1115 56%,#141725 100%);border-bottom:1px solid rgba(220,38,38,.3);display:flex;align-items:center;gap:14px;min-height:44px;position:relative;overflow:hidden}
+/* ── BANNER DE AVISOS (texto livre, editado em Admin ▸ Avisos) ── */
+.risk-notif-panel{margin:0;padding:1rem 1.8rem;background:linear-gradient(110deg,#12161f 0%,#1c1115 56%,#141725 100%);border-bottom:1px solid rgba(220,38,38,.3);display:flex;align-items:center;gap:16px;min-height:64px;position:relative;overflow:hidden}
 .risk-notif-panel.empty{display:none}
 .risk-notif-panel::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(220,38,38,.04) 60px,rgba(220,38,38,.04) 61px);pointer-events:none}
-.rnp-badge{flex-shrink:0;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:4px 10px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(220,38,38,.4);animation:rnp-glow 2s ease-in-out infinite alternate}
+.rnp-badge{flex-shrink:0;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:6px 14px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(220,38,38,.4);animation:rnp-glow 2s ease-in-out infinite alternate}
 @keyframes rnp-glow{from{box-shadow:0 2px 8px rgba(220,38,38,.4)}to{box-shadow:0 2px 16px rgba(220,38,38,.7)}}
-.rnp-ticker-wrap{flex:1;overflow:hidden;position:relative;height:22px}
-.rnp-ticker{display:flex;align-items:center;gap:0;white-space:nowrap;animation:rnp-scroll 28s linear infinite;will-change:transform}
+.rnp-ticker-wrap{flex:1;overflow:hidden;position:relative;height:32px}
+.rnp-ticker{display:flex;align-items:center;gap:0;white-space:nowrap;animation:rnp-scroll 32s linear infinite;will-change:transform}
 .rnp-ticker:hover{animation-play-state:paused}
 @keyframes rnp-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.rnp-item{display:inline-flex;align-items:center;gap:6px;padding:0 20px;font-size:11px;color:rgba(255,255,255,.75);border-right:1px solid rgba(255,255,255,.1)}
-.rnp-item-id{font-family:ui-monospace,monospace;font-size:10px;color:#fca5a5;font-weight:700}
-.rnp-item-squad{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;color:#cbd5e1;background:rgba(148,163,184,.13);border:1px solid rgba(148,163,184,.24);padding:2px 7px;border-radius:20px;white-space:nowrap}
-.rnp-item-title{color:rgba(255,255,255,.84);font-size:10.5px;font-weight:600;white-space:nowrap}
-.rnp-item-meta{font-size:10px;color:rgba(255,255,255,.52);white-space:nowrap}
-.rnp-item-lt{font-weight:800;padding:1px 6px;border-radius:4px;font-size:10px}
-.rnp-item-lt.crit{background:rgba(220,38,38,.25);color:#fca5a5;border:1px solid rgba(220,38,38,.35)}
-.rnp-item-lt.warn{background:rgba(217,119,6,.2);color:#fcd34d;border:1px solid rgba(217,119,6,.3)}
-.rnp-sep{color:rgba(255,255,255,.2);padding:0 4px}
-.rnp-stats{flex-shrink:0;display:flex;align-items:center;gap:8px}
-.rnp-stat{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
-.rnp-stat.crit{background:rgba(220,38,38,.2);color:#fca5a5;border:1px solid rgba(220,38,38,.3)}
-.rnp-stat.warn{background:rgba(217,119,6,.15);color:#fcd34d;border:1px solid rgba(217,119,6,.25)}
-.rnp-stat.ok{background:rgba(22,163,74,.15);color:#86efac;border:1px solid rgba(22,163,74,.25)}
-.rnp-pct{font-size:9px;font-weight:600;color:rgba(255,255,255,.45);margin-left:2px}
+.rnp-item{display:inline-flex;align-items:center;gap:6px;padding:0 28px;font-size:15px;color:rgba(255,255,255,.9);font-weight:600;border-right:1px solid rgba(255,255,255,.1);white-space:nowrap}
 
 /* ── ROADMAP PANE ── */
 .rd-wrap{padding:1.4rem 1.6rem 3rem;max-width:1500px;margin:0 auto}
@@ -1478,13 +1464,12 @@ body{min-height:100vh}
   <button onclick="location.reload()">Tentar novamente</button>
 </div>
 
-<!-- ══ RISK NOTIFICATION PANEL (tela inicial) ══ -->
+<!-- ══ BANNER DE AVISOS (tela inicial) — texto livre, editado em Admin ▸ Avisos ══ -->
 <div class="risk-notif-panel empty" id="riskNotifPanel">
-  <span class="rnp-badge">⚠ Prazos em Risco</span>
+  <span class="rnp-badge">📢 Aviso</span>
   <div class="rnp-ticker-wrap">
     <div class="rnp-ticker" id="rnpTicker"></div>
   </div>
-  <div class="rnp-stats" id="rnpStats"></div>
 </div>
 
 <!-- ══ ÉPICOS PANE ══ -->
@@ -5085,47 +5070,56 @@ function renderAll(tabToRestore){
 
 
 // ═══════════════════════════════════════
-// RISK NOTIFICATION PANEL
+// BANNER DE AVISOS — texto livre, cadastrado em Admin ▸ Avisos
+// (antes: ticker calculado automaticamente a partir de épicos em risco de
+// Lead Time — substituído a pedido da pessoa responsável por uma lista de
+// mensagens digitadas manualmente, sem limite de caracteres. Sincroniza via
+// saveVpData/getVpData — key BANNER_AVISOS_CLOUD_SLOT — para valer igual em
+// qualquer navegador, seguindo a diretriz permanente deste repositório.)
 // ═══════════════════════════════════════
+var BANNER_AVISOS_CLOUD_SLOT='dashboardBannerAvisos';
+var _bannerAvisos=null; // null = ainda não carregado da nuvem
+
 function renderRiskNotifPanel(){
   var panel=$id('riskNotifPanel');
   var ticker=$id('rnpTicker');
-  var stats=$id('rnpStats');
-  if(!panel||!ticker||!stats) return;
-  var act=activeEpics();
-  var META_V=window.META||62;
-  if(!act.length){ panel.classList.add('empty'); return; }
-  var crit=act.filter(function(r){ return r.lt>=META_V; });
-  var warn=act.filter(function(r){ return r.lt>=40 && r.lt<META_V; });
-  var ok=act.filter(function(r){ return r.lt<40; });
-  var hasRisk=crit.length>0||warn.length>0;
-  if(!hasRisk){ panel.classList.add('empty'); return; }
+  if(!panel||!ticker) return;
+  var avisos=(_bannerAvisos||[]).filter(function(a){ return a && a.text; });
+  if(!avisos.length){ panel.classList.add('empty'); ticker.innerHTML=''; return; }
   panel.classList.remove('empty');
-  // Build ticker items (críticos primeiro, depois atenção, duplicados para loop contínuo)
-  var sorted=crit.concat(warn).slice().sort(function(a,b){return b.lt-a.lt;});
-  var items=sorted.map(function(r){
-    var isCrit=r.lt>=META_V;
-    var rem=META_V-r.lt;
-    var remTxt=rem>=0?('faltam '+rem+'d p/ meta'):(Math.abs(rem)+'d acima da meta');
-    return '<span class="rnp-item">'+
-      '<span class="rnp-item-squad">'+esc(r.squad||'Squad não informada')+'</span>'+
-      '<span class="rnp-item-id">'+esc(r.id.replace('SLOPC-','#'))+'</span>'+
-      '<span class="rnp-item-title">'+esc(r.resumo?r.resumo.slice(0,38):'Sem resumo')+'</span>'+
-      '<span class="rnp-item-lt '+(isCrit?'crit':'warn')+'">'+r.lt+'d</span>'+
-      '<span class="rnp-sep">—</span>'+
-      '<span class="rnp-item-meta">'+remTxt+'</span>'+
-    '</span>';
+  var items=avisos.map(function(a){
+    return '<span class="rnp-item">'+esc(a.text)+'</span>';
   }).join('');
-  // Duplicate for seamless loop
+  // Duplica para o loop de rolagem ficar contínuo
   ticker.innerHTML=items+items;
-  // Adjust animation speed based on item count
-  var dur=Math.max(16, sorted.length*5);
+  // Ajusta a velocidade da rolagem pela quantidade de texto total
+  var totalLen=avisos.reduce(function(n,a){ return n+(a.text?a.text.length:0); },0);
+  var dur=Math.max(18, Math.round(totalLen/4));
   ticker.style.animationDuration=dur+'s';
-  // Stats chips
-  stats.innerHTML=
-    (crit.length?'<span class="rnp-stat crit">🔴 '+crit.length+' Crítico'+(crit.length!==1?'s':'')+'</span>':'')+
-    (warn.length?'<span class="rnp-stat warn">⚠️ '+warn.length+' Atenção</span>':'')+
-    (ok.length?'<span class="rnp-stat ok">✅ '+ok.length+' OK</span>':'');
+}
+
+function loadBannerAvisosFromCloud(cb){
+  if(!BK_GAS_URL){ if(cb) cb(); return; }
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key='+encodeURIComponent(BANNER_AVISOS_CLOUD_SLOT)+'&t='+Date.now(), function(err,json){
+    if(!err && json && json.ok && json.data && Array.isArray(json.data.items)){
+      _bannerAvisos=json.data.items;
+    } else if(_bannerAvisos===null){
+      _bannerAvisos=[];
+    }
+    renderRiskNotifPanel();
+    if(cb) cb();
+  });
+}
+
+function saveBannerAvisosToCloud(items){
+  _bannerAvisos=items||[];
+  renderRiskNotifPanel();
+  if(!BK_GAS_URL) return;
+  fetch(BK_GAS_URL, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'action=saveVpData&key='+encodeURIComponent(BANNER_AVISOS_CLOUD_SLOT)+'&payload='+encodeURIComponent(JSON.stringify({items:_bannerAvisos}))
+  }).catch(function(){});
 }
 
 // ═══════════════════════════════════════
@@ -9072,6 +9066,7 @@ var SEED=[
     // Ops4Ops em "Sincronizando" antes mesmo de suas cargas começarem.
     function loadSharedPanels(){
       gasLoadImportAudit();
+      loadBannerAvisosFromCloud();
       emLoadCloud();
       gasLoadBacklog(function(err, count){
         if(!err && count>0){
@@ -9130,6 +9125,9 @@ var SEED=[
     runHealthCheck(false);
     console.log('[HealthCheck] Verificação automática às',new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
   }, 3600000);
+
+  // Banner de avisos: independe de SHEETS_WEBAPP/JSONBin, só depende do backend de backlog.
+  loadBannerAvisosFromCloud();
 
   // Nuvem JSONBin: sempre carrega quando configurado (épicos como fallback + backlog snapshots compartilhados).
   if(jbIsConfigured()){
@@ -9909,6 +9907,7 @@ function calSeedExample(){
         <button class="adm-tab" onclick="admTab('dados',this)">📊 Dados</button>
         <button class="adm-tab" onclick="admTab('epicos',this)">📋 Épicos</button>
         <button class="adm-tab" onclick="admTab('cargas',this)">📦 Cargas</button>
+        <button class="adm-tab" onclick="admTab('avisos',this)">📢 Avisos</button>
         <button class="adm-tab" onclick="admTab('boletim',this)">📰 Boletim DS</button>
       </div>
 
@@ -9998,6 +9997,24 @@ function calSeedExample(){
         <div id="importStatusPanel" style="overflow-x:auto;"></div>
       </div>
 
+      <!-- ABA: Avisos (banner corrido da tela inicial) -->
+      <div class="adm-pane" id="adm-avisos">
+        <div class="adm-sec">Banner de Avisos — tela inicial</div>
+        <p style="font-size:11px;color:#64748b;line-height:1.5;margin:-4px 0 14px">
+          Texto livre, sem limite de caracteres, exibido em faixa rolante no topo do dashboard
+          para todo mundo que acessa (sincroniza via nuvem — não é só no seu navegador). Deixe a
+          lista vazia para esconder o banner. Não há mais cálculo automático de épicos em risco
+          aqui — se quiser avisar sobre um prazo, escreva o texto manualmente.
+        </p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="admAvisoNovo" placeholder="Digite um aviso e clique em Adicionar…" style="flex:1;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:12px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter'){event.preventDefault();admAvisoAdicionar();}">
+          <button class="adm-btn primary" onclick="admAvisoAdicionar()">➕ Adicionar</button>
+        </div>
+        <div id="admAvisosLista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+        <button class="adm-btn primary" onclick="admAvisosSalvar()">💾 Salvar e Sincronizar</button>
+        <div class="adm-msg" id="admAvisosMsg"></div>
+      </div>
+
       <!-- ABA: Boletim Diário DS -->
       <div class="adm-pane" id="adm-boletim">
         <div class="adm-sec">Boletim Diário DS</div>
@@ -10075,6 +10092,53 @@ function calSeedExample(){
     if(id==='dados') admCarregarDados();
     if(id==='epicos') admCarregarEpicos();
     if(id==='cargas'){ try{ renderImportStatusPanel(); }catch(e){} }
+    if(id==='avisos') admAvisosCarregar();
+  };
+
+  // ── Aba Avisos (banner corrido) ──────────────────────────────────────
+  var _admAvisos=[]; // lista de trabalho local, salva na nuvem só ao clicar em Salvar
+
+  function admAvisosRenderLista(){
+    var wrap = document.getElementById('admAvisosLista');
+    if(!_admAvisos.length){
+      wrap.innerHTML = '<div style="font-size:11px;color:#94a3b8;padding:6px 0">Nenhum aviso cadastrado — banner fica escondido.</div>';
+      return;
+    }
+    wrap.innerHTML = _admAvisos.map(function(a, i){
+      return '<div style="display:flex;align-items:center;gap:8px;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px">' +
+        '<span style="flex:1;font-size:12px;color:#1e293b">' + esc(a.text) + '</span>' +
+        '<button class="adm-btn ghost" style="padding:4px 10px" onclick="admAvisoRemover(' + i + ')">🗑️ Remover</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function admAvisosCarregar(){
+    // Busca a versão mais recente da nuvem (outro navegador pode ter editado) antes de exibir a lista de trabalho.
+    admMsg('admAvisosMsg','🔄 Carregando avisos…');
+    loadBannerAvisosFromCloud(function(){
+      _admAvisos = (window._bannerAvisos||[]).map(function(a){ return {text:a.text}; });
+      admAvisosRenderLista();
+      var el=document.getElementById('admAvisosMsg'); if(el) el.style.display='none';
+    });
+  }
+
+  window.admAvisoAdicionar = function(){
+    var inp = document.getElementById('admAvisoNovo');
+    var txt = (inp.value||'').trim();
+    if(!txt){ admMsg('admAvisosMsg','Digite um texto antes de adicionar','err'); return; }
+    _admAvisos.push({text:txt, ts:Date.now()});
+    inp.value='';
+    admAvisosRenderLista();
+  };
+
+  window.admAvisoRemover = function(i){
+    _admAvisos.splice(i,1);
+    admAvisosRenderLista();
+  };
+
+  window.admAvisosSalvar = function(){
+    saveBannerAvisosToCloud(_admAvisos);
+    admMsg('admAvisosMsg','✅ Avisos salvos e sincronizados para todo mundo!');
   };
 
   function admMsg(id, txt, tipo){
