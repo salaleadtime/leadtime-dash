@@ -112,7 +112,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-09-18-v27-lean-backlog-sync';
+var BACKLOG_SCRIPT_VERSION = '2026-09-20-v28-dashboard-banner-avisos';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -170,7 +170,16 @@ var VP_SHEET_MAP = {
   // Decisões pendentes da gestão do Resumo Executivo Semanal
   // (report-semanal/index.html) — {decisions:[...], deletedIds:[...]},
   // mesmo padrão de push/pull compartilhado dos complementos acima.
-  vpWeeklySummaryNotes: '_vp_weekly_summary_notes'
+  vpWeeklySummaryNotes: '_vp_weekly_summary_notes',
+  // Banner de avisos de texto livre da tela inicial de index.html (Admin ▸
+  // Avisos) — {items:[{text}]}. MESMO BUG DE CLASSE do v13 acima: a chave
+  // foi usada pelo cliente (saveBannerAvisosToCloud/loadBannerAvisosFromCloud
+  // em index.html) antes de existir aqui. Sintoma idêntico ao já documentado:
+  // funcionava pra quem salvou (atualização otimista no próprio navegador,
+  // sem checar a resposta do POST) e ficava invisível pra qualquer outro
+  // navegador/usuário, porque getVpData respondia {ok:false,'chave inválida'}
+  // e o cliente tratava como "nada configurado ainda".
+  dashboardBannerAvisos: '_dashboard_banner_avisos'
 };
 
 // v19 — cache da projeção enxuta do getOps4opsData (CacheService, nativo do
