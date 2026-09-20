@@ -610,6 +610,7 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .remote-trust-gate strong{display:block;font-size:14px;color:#7c2d12;margin-bottom:3px}
 .remote-trust-gate button{border:0;border-radius:8px;background:#c2410c;color:#fff;font:600 12px inherit;padding:9px 14px;cursor:pointer;white-space:nowrap}
 body.remote-unconfirmed .remote-trust-gate{display:flex}
+body.remote-trust-notice .remote-trust-gate{display:flex}
 body.remote-unconfirmed .risk-notif-panel,body.remote-unconfirmed .pane{display:none!important}
 body.remote-unconfirmed .tab-ct{visibility:hidden}
 
@@ -1469,8 +1470,8 @@ body{min-height:100vh}
 </div>
 
 <div class="remote-trust-gate" id="remoteTrustGate" role="alert">
-  <div><strong>Atualizando dados oficiais…</strong><span id="remoteTrustGateText">Aguarde alguns segundos. Épicos, Backlog e histórias estão sendo conferidos com o servidor.</span></div>
-  <button onclick="location.reload()">Tentar novamente</button>
+  <div><strong id="remoteTrustGateTitle">Atualizando dados oficiais…</strong><span id="remoteTrustGateText">Aguarde alguns segundos. Épicos, Backlog e histórias estão sendo conferidos com o servidor.</span></div>
+  <button id="remoteTrustGateButton" onclick="handleRemoteTrustGateAction()">Tentar novamente</button>
 </div>
 
 <!-- ══ BANNER DE AVISOS (tela inicial) — texto livre, editado em Admin ▸ Avisos ══ -->
@@ -2479,6 +2480,8 @@ var IMPORT_SALA_KEY = 'data_ultima_importacao_sala';
 var _sheetsOfflineWarned = false;
 var _sheetsLastWritePayload = '';
 var SHEETS_POLL_MS = 120000;
+var SHEETS_READ_ATTEMPTS = 2;
+var SHEETS_RETRY_DELAY_MS = 2000;
 // ── Motor de sincronização: fila de escritas pendentes ──────────────────────
 // Toda edição local (qualquer campo) é registrada nesta fila persistida até o
 // Sheets confirmar EXATAMENTE o valor enviado. Enquanto não confirma:
@@ -3243,22 +3246,31 @@ function loadFromSheets(callback, silent){
   _sheetsLastReadAt = Date.now();
   if(!silent) setSyncLabel('🔄 Sincronizando com Google Sheets…');
 
-  fetch(SHEETS_WEBAPP+'?t='+Date.now())
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
-    })
-    .then(function(json){
-      if(json.ok && Array.isArray(json.data) && json.data.length){
-        callback(null, json.data);
-      } else {
-        var msg='Sheets: resposta vazia ou inválida';
+  var done=false;
+  function finish(err, data){
+    if(done) return;
+    done=true;
+    _sheetsSyncing=false;
+    callback(err, data);
+  }
+  function attempt(number){
+    fetch(SHEETS_WEBAPP+'?t='+Date.now())
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(json){
+        if(!json || !json.ok || !Array.isArray(json.data) || !json.data.length){ throw new Error('Sheets: resposta vazia ou inválida'); }
+        finish(null, json.data);
+      })
+      .catch(function(err){
+        if(number<SHEETS_READ_ATTEMPTS){ setTimeout(function(){ attempt(number+1); }, SHEETS_RETRY_DELAY_MS*number); return; }
+        var msg=err.message||'falha ao conectar';
         setSourceTrust('epics',false,msg);
-        callback(msg);
-      }
-    })
-    .catch(function(err){ var msg=err.message||'falha ao conectar'; setSourceTrust('epics',false,msg); callback(msg); })
-    .finally(function(){ _sheetsSyncing = false; });
+        finish(msg);
+      });
+  }
+  attempt(1);
 }
 
 // Envia apenas os campos editáveis ao Web App (CHG, Impedimento, datas).
@@ -3934,24 +3946,59 @@ var _sourceTrust={
   backlog:{label:'Backlog/Refinamento',ok:false,error:'aguardando servidor',checkedAt:null},
   stories:{label:'Qtd Story/Épicos',ok:false,error:'aguardando servidor',checkedAt:null}
 };
+var _remoteTrustWasReady=false;
+var _remoteTrustNotice=null;
+var _remoteTrustNoticeDismissed=false;
 function sourceTrustRows(){return Object.keys(_sourceTrust).map(function(k){return _sourceTrust[k];});}
 function sourceTrustReady(){return sourceTrustRows().every(function(s){return s.ok;});}
+function sourceTrustCanRender(){return !!_sourceTrust.epics.ok;}
 function fmtTrustTime(value){
   if(!value) return 'ainda não verificado';
   return new Date(value).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
+function renderRemoteTrustGate(){
+  var ready=sourceTrustReady();
+  if(ready) _remoteTrustWasReady=true;
+  // A fonte de Épicos/Datas sustenta a tela principal. Uma falha em Stories ou
+  // Backlog não pode esconder épicos já confirmados; cada aba preserva seu aviso.
+  var blocking=!sourceTrustCanRender();
+  var showNotice=!!_remoteTrustNotice&&!_remoteTrustNoticeDismissed;
+  document.body.classList.toggle('remote-unconfirmed',blocking);
+  document.body.classList.toggle('remote-trust-notice',!blocking&&showNotice);
+  var title=$id('remoteTrustGateTitle'), text=$id('remoteTrustGateText'), button=$id('remoteTrustGateButton');
+  if(!title||!text||!button) return;
+  if(blocking){
+    var failed=sourceTrustRows().filter(function(s){return !s.ok;});
+    title.textContent='Atualizando dados oficiais…';
+    text.textContent=failed.map(function(s){return s.label+': '+s.error+' · '+fmtTrustTime(s.checkedAt);}).join(' | ');
+    button.textContent='Tentar novamente';
+    return;
+  }
+  if(showNotice){
+    title.textContent=_remoteTrustNotice.recoveredAt?'Conexão restabelecida':'Fonte oficial temporariamente indisponível';
+    text.textContent=(_remoteTrustNotice.recoveredAt?'A última falha foi':'Aguardando nova confirmação')+': '+_remoteTrustNotice.label+': '+_remoteTrustNotice.error+' · '+fmtTrustTime(_remoteTrustNotice.checkedAt)+'. Este aviso permanecerá visível até você dispensá-lo.';
+    button.textContent='Dispensar aviso';
+  }
+}
+function handleRemoteTrustGateAction(){
+  if(!sourceTrustCanRender()){
+    _trySheets(false);
+    if(BK_GAS_URL){ try{ gasLoadBacklog(function(){}); gasLoadStories(function(){}); }catch(e){} }
+    return;
+  }
+  _remoteTrustNoticeDismissed=true;
+  renderRemoteTrustGate();
+}
 function setSourceTrust(name, ok, error){
   var source=_sourceTrust[name]; if(!source) return;
   source.ok=!!ok; source.error=ok?'':String(error||'resposta inválida'); source.checkedAt=new Date().toISOString();
-  var ready=sourceTrustReady();
-  document.body.classList.toggle('remote-unconfirmed',!ready);
-  var gate=$id('remoteTrustGateText');
-  if(gate){
-    var failed=sourceTrustRows().filter(function(s){return !s.ok;});
-    gate.textContent=ready
-      ? 'Todas as fontes foram confirmadas às '+fmtTrustTime(source.checkedAt)+'.'
-      : failed.map(function(s){return s.label+': '+s.error+' · '+fmtTrustTime(s.checkedAt);}).join(' | ');
+  if(!ok){
+    _remoteTrustNotice={label:source.label,error:source.error,checkedAt:source.checkedAt,recoveredAt:null};
+    _remoteTrustNoticeDismissed=false;
+  }else if(_remoteTrustNotice&&_remoteTrustNotice.label===source.label){
+    _remoteTrustNotice.recoveredAt=source.checkedAt;
   }
+  renderRemoteTrustGate();
   renderHealthBadge(allData.length?getDataAnomalies():[]);
 }
 
@@ -9234,7 +9281,7 @@ function _trySheets(silent){
 // para a fonte oficial restaurada. A cópia fica recuperável no cache local.
 quarantinePendingWritesAfterEndpointCorrection();
 setInterval(function(){
-  if(!SHEETS_WEBAPP || _sheetsSyncing || _sheetsWriteSyncing) return;
+  if(document.hidden || !SHEETS_WEBAPP || _sheetsSyncing || _sheetsWriteSyncing) return;
   flushPendingWrites();   // rede de segurança: reenvia edições que não foram confirmadas
   if(Date.now() - _sheetsLastReadAt < SHEETS_POLL_MS - 1000) return;
   _trySheets(true);

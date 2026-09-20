@@ -100,8 +100,20 @@ test('sincronização explica o cache temporário em linguagem simples', () => {
   assert(main.includes('body.remote-unconfirmed .tab-ct{visibility:hidden}'));
 });
 
+test('leitura de Épicos tolera 404 transitório e o aviso depende do usuário', () => {
+  assert(main.includes('var SHEETS_READ_ATTEMPTS = 2;'));
+  assert(main.includes('var SHEETS_RETRY_DELAY_MS = 2000;'));
+  assert(main.includes('setTimeout(function(){ attempt(number+1); }, SHEETS_RETRY_DELAY_MS*number);'));
+  assert(main.includes('function handleRemoteTrustGateAction()'));
+  assert(main.includes("button.textContent='Dispensar aviso';"));
+  assert(main.includes('Este aviso permanecerá visível até você dispensá-lo.'));
+  assert(main.includes("function sourceTrustCanRender(){return !!_sourceTrust.epics.ok;}"));
+  assert(main.includes('var blocking=!sourceTrustCanRender();'));
+  assert(main.includes('if(document.hidden || !SHEETS_WEBAPP || _sheetsSyncing || _sheetsWriteSyncing) return;'));
+});
+
 test('backend limita o Backlog entregue sem apagar histórico', () => {
-  assert(backend.includes("v27-lean-backlog-sync"));
+  assert(backend.includes("v28-dashboard-banner-avisos"));
   assert(backend.includes('var BACKLOG_CLIENT_MAX_SNAPS = 20;'));
   assert(backend.includes('var clientBacklog = backlogForClient_(backlog);'));
   assert(backend.includes('totalSnapshots: backlog.length'));
