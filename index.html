@@ -516,11 +516,20 @@ tr:nth-child(even):hover td{background:#fdf4f6!important}
 .risk-notif-panel::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(220,38,38,.04) 60px,rgba(220,38,38,.04) 61px);pointer-events:none}
 .rnp-badge{flex-shrink:0;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:6px 14px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(220,38,38,.4);animation:rnp-glow 2s ease-in-out infinite alternate}
 @keyframes rnp-glow{from{box-shadow:0 2px 8px rgba(220,38,38,.4)}to{box-shadow:0 2px 16px rgba(220,38,38,.7)}}
-.rnp-ticker-wrap{flex:1;overflow:hidden;position:relative;height:32px;display:flex;align-items:center}
-.rnp-ticker{display:inline-flex;align-items:center;gap:0;white-space:nowrap;animation:rnp-scroll 32s linear infinite;will-change:transform}
+.rnp-ticker-wrap{flex:1;overflow:hidden;position:relative;height:32px}
+/* Letreiro de verdade: entra pela borda direita da faixa e sai pela esquerda.
+   O ponto de partida/chegada é calculado em PIXELS reais via JS (medindo a
+   largura da faixa e do texto) — um valor em % aqui seria relativo à largura
+   do próprio elemento (pequeno, pouco texto), não à faixa inteira, e foi
+   exatamente esse o bug anterior (o texto "nascia" no meio). */
+.rnp-ticker{position:absolute;top:50%;left:0;white-space:nowrap;will-change:transform;animation-name:rnp-scroll;animation-timing-function:linear;animation-iteration-count:infinite;transform:translateY(-50%) translateX(var(--rnp-start,100%))}
 .rnp-ticker:hover{animation-play-state:paused}
-@keyframes rnp-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes rnp-scroll{
+  0%{transform:translateY(-50%) translateX(var(--rnp-start,100%))}
+  100%{transform:translateY(-50%) translateX(var(--rnp-end,-100%))}
+}
 .rnp-item{display:inline-flex;align-items:center;gap:6px;padding:0 28px;font-size:15px;color:rgba(255,255,255,.9);font-weight:600;border-right:1px solid rgba(255,255,255,.1);white-space:nowrap}
+.rnp-item:last-child{border-right:none}
 
 /* ── ROADMAP PANE ── */
 .rd-wrap{padding:1.4rem 1.6rem 3rem;max-width:1500px;margin:0 auto}
@@ -1467,7 +1476,7 @@ body{min-height:100vh}
 <!-- ══ BANNER DE AVISOS (tela inicial) — texto livre, editado em Admin ▸ Avisos ══ -->
 <div class="risk-notif-panel empty" id="riskNotifPanel">
   <span class="rnp-badge">📢 Aviso</span>
-  <div class="rnp-ticker-wrap">
+  <div class="rnp-ticker-wrap" id="rnpTickerWrap">
     <div class="rnp-ticker" id="rnpTicker"></div>
   </div>
 </div>
@@ -5092,23 +5101,52 @@ var _bannerAvisos=null; // null = ainda não carregado da nuvem
 // não volta mais — json.data deixa de vir null e o vazio salvo passa a valer.
 var BANNER_AVISOS_DEFAULT=[{text:'📢 Este é o banner de avisos — edite ou remova este texto em Admin ▸ Avisos (botão Admin no topo da página).'}];
 
+var RNP_SPEED_PX_S=220; // pixels por segundo — letreiro rápido, a pedido da pessoa responsável
+
 function renderRiskNotifPanel(){
   var panel=$id('riskNotifPanel');
+  var wrap=$id('rnpTickerWrap');
   var ticker=$id('rnpTicker');
-  if(!panel||!ticker) return;
+  if(!panel||!wrap||!ticker) return;
   var avisos=(_bannerAvisos||[]).filter(function(a){ return a && a.text; });
   if(!avisos.length){ panel.classList.add('empty'); ticker.innerHTML=''; return; }
   panel.classList.remove('empty');
-  var items=avisos.map(function(a){
+  // Uma única cópia — o letreiro atravessa a faixa inteira, entra pela direita
+  // e some pela esquerda (não é o loop "encaixado" de antes).
+  ticker.innerHTML=avisos.map(function(a){
     return '<span class="rnp-item">'+esc(a.text)+'</span>';
   }).join('');
-  // Duplica para o loop de rolagem ficar contínuo
-  ticker.innerHTML=items+items;
-  // Ajusta a velocidade da rolagem pela quantidade de texto total
-  var totalLen=avisos.reduce(function(n,a){ return n+(a.text?a.text.length:0); },0);
-  var dur=Math.max(18, Math.round(totalLen/4));
+  // Só dá pra medir a largura real depois do innerHTML aplicado — por isso o
+  // requestAnimationFrame, garantindo que o layout já rodou.
+  requestAnimationFrame(function(){ rnpPositionTicker(wrap, ticker); });
+}
+
+function rnpPositionTicker(wrap, ticker){
+  var wrapW=wrap.getBoundingClientRect().width;
+  var contentW=ticker.scrollWidth;
+  if(!wrapW || !contentW) return;
+  // Percentual seria relativo à largura do próprio elemento (pequeno, pouco
+  // texto) — não à faixa inteira. Foi exatamente esse o bug anterior (o texto
+  // "nascia" no meio). Aqui os dois pontos usam pixels reais medidos agora.
+  ticker.style.setProperty('--rnp-start', wrapW+'px');
+  ticker.style.setProperty('--rnp-end', (-contentW)+'px');
+  var totalDist=wrapW+contentW;
+  var dur=Math.max(4, totalDist/RNP_SPEED_PX_S);
   ticker.style.animationDuration=dur+'s';
 }
+
+// Refaz a medição quando a janela muda de tamanho — senão o letreiro fica com
+// o ponto de partida/chegada calculado pra uma largura de faixa que não existe mais.
+(function(){
+  var resizeTimer=null;
+  window.addEventListener('resize', function(){
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(function(){
+      var wrap=$id('rnpTickerWrap'), ticker=$id('rnpTicker');
+      if(wrap && ticker && ticker.innerHTML) rnpPositionTicker(wrap, ticker);
+    }, 200);
+  });
+})();
 
 function loadBannerAvisosFromCloud(cb){
   if(!BK_GAS_URL){ if(cb) cb(); return; }

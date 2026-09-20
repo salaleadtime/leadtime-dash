@@ -311,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-09-18-v27-lean-backlog-sync');
+  t('versão correta', h.version, '2026-09-20-v28-dashboard-banner-avisos');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -320,6 +320,15 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
     parse(ctx.doPost(post({ action:'saveVpData', key:'vpImportAudit', payload:JSON.stringify(auditPayload) }))).ok, true);
   t('outro navegador pode ler o mesmo comprovante',
     parse(ctx.doGet(post({ action:'getVpData', key:'vpImportAudit' }))).data.verification[0].missing[0], 'SLOPC-1');
+  // Regressão: dashboardBannerAvisos foi usada por index.html (Admin ▸ Avisos)
+  // antes de ser cadastrada em VP_SHEET_MAP — mesmo bug de classe do v13
+  // (comentário acima em VP_SHEET_MAP): salvava "com sucesso" do ponto de vista
+  // do navegador que clicou (atualização otimista, sem checar a resposta), mas
+  // o servidor respondia ok:false e nenhum outro navegador via o banner.
+  t('banner de avisos: chave aceita pelo backend (antes respondia chave inválida)',
+    parse(ctx.doPost(post({ action:'saveVpData', key:'dashboardBannerAvisos', payload:JSON.stringify({items:[{text:'Aviso de teste'}]}) }))).ok, true);
+  t('banner de avisos: outro navegador lê o mesmo aviso salvo',
+    parse(ctx.doGet(post({ action:'getVpData', key:'dashboardBannerAvisos' }))).data.items[0].text, 'Aviso de teste');
   t('JSONP: callback malicioso é neutralizado',
     /^\{/.test(ctx.doGet({parameter:{action:'health', callback:'alert(1)'}}).getContent()), true);
   t('JSONP: callback válido é usado',
