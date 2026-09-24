@@ -143,12 +143,32 @@ test('robô registra a prova de Data Início ausente desde a importação', () =
   assert(main.includes('importedWithoutValue'));
   assert(main.includes('currentlyMissing'));
   assert(main.includes('function fmtAuditDateTime(value)'));
-  assert(main.includes('Data Início · trilha da última importação'));
-  assert(main.includes('A data Criado do Jira não é usada como substituta do início do lead time.'));
+  assert(main.includes('Data Início · confirmação do campo manual'));
+  assert(main.includes('function reconcileManualStartDateEvidence(evidence)'));
+  assert(main.includes('Data Início é um campo manual do painel'));
+  assert(main.includes('Data Início · confirmação do campo manual'));
+  assert(main.includes('preencha o campo manual no painel'));
   assert(main.includes('continua sem data na confirmação de'));
   assert(main.includes('Antes da importação, o painel registrava'));
   assert(main.includes('Sem comprovante de importação registrado'));
-  assert(main.includes('Não é possível afirmar se a data nunca foi informada ou se foi removida antes desta auditoria existir.'));
+  assert(main.includes('não é esperada no arquivo Jira'));
+});
+
+test('datas salvas em aliases do Web App e cabeçalhos usuais de início são reconhecidas', () => {
+  assert(main.includes("['ini','dataInicio','data_inicio','dataInicial','data_inicial','Data Início','Data Inicio']"));
+  assert(main.includes('function coerceDateField(row, names)'));
+  assert(main.includes('function isStartDateHeader(header)'));
+  assert(main.includes("c==='data inicial'"));
+  assert(main.includes("c==='start date'"));
+  assert(main.includes('utc.getUTCDate()===day'));
+});
+
+test('datas manuais não expiram antes de confirmação explícita do Sheets', () => {
+  assert(main.includes("var PENDING_DATE_FIELDS = ['ini','fim','dataPrevista'];"));
+  assert(main.includes('function hasPendingDateWrite(fields)'));
+  assert(main.includes('!hasPendingDateWrite(ent.fields)'));
+  assert(main.includes('pendingIsFresh||hasPendingDateWrite(pend.fields)'));
+  assert(main.includes('uma resposta vazia nunca passa a valer por simples expiração'));
 });
 
 test('qualquer carga por seletor passa pelo comprovante compartilhado', () => {

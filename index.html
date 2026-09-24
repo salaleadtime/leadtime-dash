@@ -2494,8 +2494,17 @@ var PENDING_KEY = 'leadtime_sala_v8_pending';
 // entrada no histórico a cada poll (o registro local é preservado no merge,
 // então sem esta marca o mesmo épico dispararia o alerta a cada 2 minutos).
 var DELETED_WARN_KEY = 'leadtime_sala_v8_deleted_warned';
-var PENDING_EDIT_TTL = 86400000; // 24h: preserva edição manual durante indisponibilidade temporária do Sheets
+var PENDING_EDIT_TTL = 86400000; // 24h para campos comuns; datas exigem confirmação explícita
 var EDITABLE_FIELDS = ['status','statusAntes','chg','impedimento','ini','fim','fimAntes','dataPrevista'];
+var PENDING_DATE_FIELDS = ['ini','fim','dataPrevista'];
+// Uma data preenchida manualmente não pode ser descartada apenas porque passou
+// tempo demais sem resposta do Sheets. Ela permanece pendente até a fonte
+// confirmar exatamente o valor — ou até o próprio usuário alterá-la/apagá-la.
+function hasPendingDateWrite(fields){
+  return !!fields && PENDING_DATE_FIELDS.some(function(field){
+    return Object.prototype.hasOwnProperty.call(fields,field);
+  });
+}
 // Cancelamentos precisam sobreviver mesmo quando o Sheets/Jira devolve uma
 // linha incompleta ou com o status operacional anterior. Este registro local é
 // removido somente quando o Admin reabre explicitamente o épico.
@@ -2739,7 +2748,10 @@ function _jbMergeAndRender(msg){
 // ═══════════════════════════════════════
 // Valida se uma string é uma data válida no formato YYYY-MM-DD
 function isValidDate(d){
-  return d && typeof d==='string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(new Date(d).getTime());
+  if(!d || typeof d!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  var parts=d.split('-'), year=Number(parts[0]), month=Number(parts[1]), day=Number(parts[2]);
+  var utc=new Date(Date.UTC(year,month-1,day));
+  return utc.getUTCFullYear()===year && utc.getUTCMonth()===month-1 && utc.getUTCDate()===day;
 }
 // O Sheets (SHEETS_WEBAPP, um Apps Script separado deste repositório) pode devolver
 // uma data já gravada num formato que isValidDate rejeita de cara (ex.: um objeto
@@ -2756,7 +2768,27 @@ function coerceDateStr(v){
   var s=String(v).trim();
   var m=s.match(/^(\d{4}-\d{2}-\d{2})/);
   if(m && isValidDate(m[1])) return m[1];
+  // Algumas versões do Web App devolvem a data já formatada pela planilha.
+  // Aceita esses formatos de leitura, mas normaliza sempre para o contrato ISO.
+  var br=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s|$)/);
+  if(br){
+    var iso=br[3]+'-'+String(br[2]).padStart(2,'0')+'-'+String(br[1]).padStart(2,'0');
+    if(isValidDate(iso)) return iso;
+  }
   console.warn('[Épicos] Data em formato inesperado veio do Sheets e foi descartada — valor bruto:', v);
+  return null;
+}
+// O contrato atual usa `ini`, mas há versões anteriores do Web App que
+// responderam `dataInicio`/`dataInicial`. Ler os aliases impede que uma data
+// efetivamente gravada seja interpretada como vazia apenas por diferença de nome.
+function coerceDateField(row, names){
+  if(!row) return null;
+  for(var i=0;i<names.length;i++){
+    var key=names[i];
+    if(!Object.prototype.hasOwnProperty.call(row,key)) continue;
+    var value=coerceDateStr(row[key]);
+    if(value) return value;
+  }
   return null;
 }
 function isValidIsoDate(value){
@@ -2829,9 +2861,9 @@ function normalizeWorkflowAll(){
   allData=allData.map(function(r){ return normalizeWorkflowRecord(r); });
 }
 function makeRow(r){
-  var sIni = coerceDateStr(r.ini);
-  var sFim = coerceDateStr(r.fim);
-  var sPrev = coerceDateStr(r.dataPrevista);
+  var sIni = coerceDateField(r,['ini','dataInicio','data_inicio','dataInicial','data_inicial','Data Início','Data Inicio']);
+  var sFim = coerceDateField(r,['fim','dataFim','data_fim','Data Fim']);
+  var sPrev = coerceDateField(r,['dataPrevista','data_prevista','Data Prevista']);
   return normalizeWorkflowRecord({
     id:String(r.id||''),
     squad:String(r.squad||''),
@@ -2919,7 +2951,12 @@ function replaceFromSharedSource(rows){
     // o vazio é mantido até o Sheets confirmar que também ficou vazio.
     var pend=_pend[r.id];
     if(pend){
-      if((_pendNow-(pend.ts||0)) < PENDING_EDIT_TTL && pend.fields){
+      var pendingIsFresh=(_pendNow-(pend.ts||0)) < PENDING_EDIT_TTL;
+      // Ao contrário de texto/status, uma data manual não expira: uma resposta
+      // vazia ou atrasada nunca pode apagar Data Início, Data Fim ou Prevista.
+      // O vazio só prevalece quando foi a própria edição enviada pelo usuário e
+      // o Sheets devolve esse mesmo vazio, removendo o campo da fila abaixo.
+      if((pendingIsFresh||hasPendingDateWrite(pend.fields)) && pend.fields){
         Object.keys(pend.fields).forEach(function(field){
           if((r[field]||'') === (pend.fields[field]||'')){
             delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
@@ -2927,8 +2964,8 @@ function replaceFromSharedSource(rows){
             // Diagnóstico: se isto aparecer repetidamente pro MESMO id/campo em
             // sincronizações sucessivas (em vez de confirmar e sumir), é sinal de
             // que o Sheets nunca está devolvendo o valor gravado — a proteção
-            // abaixo seguirá mostrando o valor local até PENDING_EDIT_TTL (24h)
-            // expirar, quando o valor do Sheets (possivelmente vazio) passa a valer.
+            // abaixo seguirá mostrando a data local até o Sheets confirmá-la;
+            // uma resposta vazia nunca passa a valer por simples expiração.
             if(['ini','fim','dataPrevista'].indexOf(field)!==-1){
               console.warn('[Épicos] Data pendente ainda não confirmada pelo Sheets — id:', r.id,
                 'campo:', field, '| local (mantido na tela):', pend.fields[field],
@@ -3222,7 +3259,7 @@ function flushPendingWrites(){
   var p=loadPending(), now=Date.now(), items=[], changed=false;
   Object.keys(p).forEach(function(id){
     var ent=p[id];
-    if(!ent||!ent.fields||(now-(ent.ts||0))>PENDING_EDIT_TTL){ delete p[id]; changed=true; return; }
+    if(!ent||!ent.fields||((now-(ent.ts||0))>PENDING_EDIT_TTL&&!hasPendingDateWrite(ent.fields))){ delete p[id]; changed=true; return; }
     items.push(_sheetsItem(id, ent.fields));
   });
   if(changed) savePending(p);
@@ -4046,10 +4083,32 @@ function getLatestImportReceipt(){
 
 function getImportReceiptIssueCount(receipt){
   if(!receipt) return 0;
+  if(receipt.dateEvidence) reconcileManualStartDateEvidence(receipt.dateEvidence);
   var missing=(receipt.verification||[]).reduce(function(total,item){return total+(item.missing?item.missing.length:0);},0);
   var missingStart=receipt.dateEvidence&&Array.isArray(receipt.dateEvidence.currentlyMissing)
     ? receipt.dateEvidence.currentlyMissing.length : 0;
   return missing+(receipt.findings||[]).length+missingStart;
+}
+
+// Data Início é preenchida no painel, não no arquivo Jira. O comprovante de
+// importação mantém as chaves como referência, mas a situação precisa ser
+// recalculada contra o estado atual do painel: alguém pode ter incluído a data
+// depois da importação que originou o alerta.
+function reconcileManualStartDateEvidence(evidence){
+  if(!evidence) return evidence;
+  var candidates=Array.isArray(evidence.importedWithoutValue)?evidence.importedWithoutValue:[];
+  var currentById={};
+  allData.forEach(function(item){ if(item&&item.id) currentById[String(item.id).toUpperCase()]=item; });
+  evidence.currentlyMissing=[];
+  evidence.nowPresent=[];
+  evidence.notInserted=[];
+  candidates.forEach(function(item){
+    var current=currentById[item.id];
+    if(!current){ evidence.notInserted.push(Object.assign({},item)); }
+    else if(isValidDate(current.ini)){ evidence.nowPresent.push(Object.assign({},item,{currentValue:current.ini})); }
+    else { evidence.currentlyMissing.push(Object.assign({},item)); }
+  });
+  return evidence;
 }
 
 function fmtAuditDateTime(value){
@@ -4089,12 +4148,11 @@ function openHealthPanel(receiptOverride){
   var dateEvidenceRows='';
   if(receipt&&receipt.dateEvidence){
     var evidence=receipt.dateEvidence;
+    reconcileManualStartDateEvidence(evidence);
     var stillMissing=Array.isArray(evidence.currentlyMissing)?evidence.currentlyMissing:[];
-    var sourceMessage=evidence.sourceHasStartDateColumn
-      ? 'O arquivo tinha a coluna Data Início, mas ela estava vazia para os épicos listados.'
-      : 'O arquivo não trouxe coluna Data Início. A data Criado do Jira não é usada como substituta do início do lead time.';
+    var sourceMessage='Data Início é um campo manual do painel e não é esperada no arquivo Jira. A lista abaixo é recalculada com o valor atualmente aplicado no painel.';
     var verifiedAt=fmtAuditDateTime(evidence.verifiedAt||receipt.auditedAt);
-    dateEvidenceRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Data Início · trilha da última importação</div>'+
+    dateEvidenceRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Data Início · confirmação do campo manual</div>'+
       '<div class="hp-item '+(stillMissing.length?'warn':'')+'"><div class="hp-item-hd">'+(stillMissing.length?'⚠ ':'✅ ')+stillMissing.length+' épico(s) ainda sem Data Início</div><div class="hp-item-msg">'+
       esc(evidence.fileName||'Arquivo de Épicos')+' · importado em '+esc(fmtAuditDateTime(evidence.importedAt))+'<br>'+esc(sourceMessage)+'<br>Última confirmação da fonte oficial: '+esc(verifiedAt)+'.</div></div>'+
       stillMissing.map(function(item){
@@ -4105,14 +4163,14 @@ function openHealthPanel(receiptOverride){
       }).join('');
   } else {
     var observedWithoutStart=allData.filter(function(item){return item&&!isValidDate(item.ini);});
-    dateEvidenceRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Data Início · trilha da importação</div>'+
+    dateEvidenceRows='<div class="hp-ts" style="margin:12px -16px 8px;border-top:1px solid #e5e7eb">Data Início · confirmação do campo manual</div>'+
       '<div class="hp-item warn"><div class="hp-item-hd">⚠ Sem comprovante de importação registrado</div><div class="hp-item-msg">'+
-      observedWithoutStart.length+' épico(s) estão sem Data Início na fonte oficial às '+esc(fmtAuditDateTime(new Date().toISOString()))+'. Não é possível afirmar se a data nunca foi informada ou se foi removida antes desta auditoria existir. A próxima importação de qualquer processo registrará arquivo, horário e confirmação oficial.</div></div>'+
+      observedWithoutStart.length+' épico(s) estão sem Data Início no painel às '+esc(fmtAuditDateTime(new Date().toISOString()))+'. Não é possível afirmar se a data nunca foi informada ou se a gravação ainda não foi confirmada. A próxima importação registrará as chaves para conferência do campo manual.</div></div>'+
       (observedWithoutStart.length?'<div class="hp-item warn"><div class="hp-item-hd">Épicos observados sem Data Início</div><div class="hp-item-msg">'+esc(observedWithoutStart.slice(0,40).map(function(item){return item.id;}).join(', '))+(observedWithoutStart.length>40?' …':'')+'</div></div>':'');
   }
   var rows=sourceRowsHtml+healthRows+importRows+dateEvidenceRows;
   var tip=(anomalies.length||getImportReceiptIssueCount(receipt))
-    ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> corrija no Jira as chaves listadas como não inseridas, duplicadas ou sem vínculo; para cada épico sem Data Início, confirme a data com a squad e preencha o campo oficial. Para épicos concluídos, preencha também a Data Fim. Depois repita a importação.</div>'
+    ? '<div class="hp-tip">💡 <strong>Como corrigir:</strong> para cada épico sem Data Início, preencha o campo manual no painel e aguarde a confirmação de sincronização. As chaves não inseridas, duplicadas ou sem vínculo devem ser corrigidas no Jira. Para épicos concluídos, preencha também a Data Fim.</div>'
     : '';
   var ov=document.createElement('div');
   ov.className='hp-ov'; ov.id='hpOv';
@@ -7630,7 +7688,7 @@ function loadMultipleFiles(files, propagate){
         if(type==='epics'&&!importedStart){
           missingStartDates.push({
             id:id,
-            reason:sourceHasStartDateColumn?'Data Início vazia no arquivo de origem.':'O arquivo de origem não possui coluna Data Início.',
+            reason:'Campo manual Data Início ainda sem valor confirmado no painel.',
             previousValue:localBeforeImport[id]||''
           });
         }
@@ -8120,6 +8178,17 @@ function normalizeSquad(raw, fallback){
   return norm;
 }
 
+// Variações observadas em exportações Jira e em planilhas editadas pelo time.
+// Mantemos a detecção restrita a nomes de campo de início para não confundir
+// Data Prevista, Homologação ou qualquer outra data com o início do lead time.
+function isStartDateHeader(header){
+  var c=stripAcc((header||'').toString()).toLowerCase().trim();
+  return c==='inicio'||c==='data inicio'||c==='data de inicio'||c==='data inicial'||
+    c==='inicio do trabalho'||c==='start date'||c==='start date/time'||
+    c.indexOf('data inicio ')===0||c.indexOf('data de inicio ')===0||c.indexOf('data inicial ')===0||
+    c.indexOf('inicio do trabalho ')===0||c.indexOf('start date ')===0||c.indexOf('priorizado')>=0;
+}
+
 // Detecta formato: 'jira' | 'native'
 // Retorna {format, hrow, sheetName, map: {id, status, squad, resumo, ini, fim, prev, chg, imp}}
 function detectImportFormat(wb){
@@ -8157,8 +8226,7 @@ function detectImportFormat(wb){
           else if(map.squad<0 && (c.indexOf('team')>=0||c.indexOf('squad')>=0)) map.squad=j;
           else if(map.resumo<0 && (c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) map.resumo=j;
           // Jira pode ou não ter estes; se tiver, aproveitamos
-          else if(map.ini<0 && c.indexOf('inicio')>=0 && c.indexOf('homolog')<0) map.ini=j;
-          else if(map.ini<0 && c.indexOf('priorizado')>=0) map.ini=j;
+          else if(map.ini<0 && isStartDateHeader(c)) map.ini=j;
           else if(map.fim<0 && (c.indexOf('resolv')>=0||c.indexOf('fechado')>=0||c.indexOf('data fim')>=0)) map.fim=j;
           else if(map.prev<0 && (c.indexOf('prevista')>=0||c.indexOf('due')>=0||c.indexOf('vencimento')>=0)) map.prev=j;
           else if(map.imp<0 && c.indexOf('impedin')>=0) map.imp=j;
@@ -8177,7 +8245,7 @@ function detectImportFormat(wb){
           else if(m.squad<0 && c.indexOf('squad')>=0) m.squad=j;
           else if(m.resumo<0 && c.indexOf('resumo')>=0) m.resumo=j;
           else if(m.status<0 && c.indexOf('status')>=0) m.status=j;
-          else if(m.ini<0 && c.indexOf('ini')>=0) m.ini=j;
+          else if(m.ini<0 && isStartDateHeader(c)) m.ini=j;
           else if(m.fim<0 && c.indexOf('fim')>=0) m.fim=j;
           else if(m.prev<0 && c.indexOf('prevista')>=0) m.prev=j;
           else if(m.chg<0 && c.indexOf('chg')>=0) m.chg=j;
@@ -8208,8 +8276,7 @@ function detectImportFormat(wb){
             else if(mt.status<0&&(c.indexOf('situac')>=0||c==='status')) mt.status=j;
             else if(mt.squad<0&&(c.indexOf('team')>=0||c.indexOf('squad')>=0||c==='time')) mt.squad=j;
             else if(mt.resumo<0&&(c.indexOf('resumo')>=0||c.indexOf('summary')>=0)) mt.resumo=j;
-            else if(mt.ini<0&&c.indexOf('inicio')>=0&&c.indexOf('homolog')<0) mt.ini=j;
-            else if(mt.ini<0&&c.indexOf('priorizado')>=0) mt.ini=j;
+            else if(mt.ini<0&&isStartDateHeader(c)) mt.ini=j;
             else if(mt.fim<0&&(c.indexOf('resolv')>=0||c.indexOf('data fim')>=0||c.indexOf('fechado')>=0)) mt.fim=j;
             else if(mt.prev<0&&(c.indexOf('homolog')>=0||c.indexOf('prevista')>=0||c.indexOf('due')>=0)) mt.prev=j;
             else if(mt.chg<0&&c.indexOf('chg')>=0) mt.chg=j;
