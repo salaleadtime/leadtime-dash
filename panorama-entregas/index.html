@@ -204,7 +204,7 @@ h1{margin:0;font-size:29px;line-height:1.06;font-weight:650;letter-spacing:-.038
   <section class="signal-band" aria-label="Indicadores prioritários">
     <div class="signal"><div class="signal-label">Avanço da Sprint</div><div><span class="signal-value" id="advance">—</span><span hidden class="signal-value" id="production">16</span></div><div class="signal-note" id="advanceNote">Dados não disponíveis</div></div>
     
-    <div class="signal"><div class="signal-label">Lead Time da Squad</div><div class="lead-line"><div><span class="signal-value" id="lead">—</span><span class="signal-unit">dias</span></div></div><div class="signal-note"><strong id="leadDelta">Sem medição no trimestre</strong> vs. período anterior · meta &lt; 62</div></div>
+    <div class="signal"><div class="signal-label">Lead Time da Squad</div><div class="lead-line"><div><span class="signal-value" id="lead">—</span><span class="signal-unit">dias</span></div></div><div class="signal-note"><strong id="leadDelta">Sem medição no trimestre</strong></div></div>
     
   </section>
 
@@ -401,6 +401,7 @@ function renderSquadProgress(){
   document.querySelector('.signal-band').appendChild(component);
  }
  const road=component.querySelector('.race-road'),car=component.querySelector('.race-car');
+ component.hidden=!state.available;
  component.querySelector('.race-counts').textContent=!state.available?'Dados não disponíveis':metrics.total===0?'Sem itens na Sprint':state.remaining+' restantes';
  road.hidden=state.percent===null;component.querySelector('.race-scale').hidden=road.hidden;
  if(state.percent===null){road.removeAttribute('aria-valuenow');car.style.left='0%'}
