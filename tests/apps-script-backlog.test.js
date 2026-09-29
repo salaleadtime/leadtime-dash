@@ -311,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-09-20-v28-dashboard-banner-avisos');
+  t('versão correta', h.version, '2026-09-29-v29-portfolio-iniciativas');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -478,6 +478,32 @@ console.log('\n═══ 17. getRevisions: ping barato para o polling automátic
   const bk = parse(ctx.doGet(post({ action:'getBacklog' })));
   t('getBacklog agora também devolve revision', bk.revision, 1);
   t('revision de getBacklog bate com a de getRevisions', bk.revision, afterVpSave.revisions.backlog);
+}
+
+
+console.log('\n═══ 18. portfolioData: base compartilhada da aba Portfólio (v29) ═══');
+{
+  const { ctx } = novoAmbiente();
+  const mk = (n, extra = {}) => JSON.stringify({ initiatives: Array.from({length:n}, (_,i)=>({id:String(113000+i), name:'Iniciativa '+i})),
+    stories: [], sprints: [], absences: [], settings: {}, metadata: { schemaVersion: 3, writeId: 'w'+n }, ...extra });
+  const w1 = parse(ctx.doPost(post({ action:'saveVpData', key:'portfolioData', payload: mk(12) })));
+  t('chave portfolioData é aceita pelo saveVpData', w1.ok, true);
+  const g1 = parse(ctx.doGet(post({ action:'getVpData', key:'portfolioData' })));
+  t('getVpData devolve a base gravada', g1.data.initiatives.length, 12);
+  t('getVpData devolve a revisão da chave', g1.revision, 1);
+  const rv = parse(ctx.doGet(post({ action:'getRevisions' })));
+  t('getRevisions inclui portfolioData (ping barato cobre a aba sem polling novo)', rv.revisions.portfolioData, 1);
+  const zero = parse(ctx.doPost(post({ action:'saveVpData', key:'portfolioData', payload: mk(0) })));
+  t('guarda recusa gravação que zeraria as iniciativas', zero.ok, false);
+  const shrink = parse(ctx.doPost(post({ action:'saveVpData', key:'portfolioData', payload: mk(6) })));
+  t('guarda recusa redução anômala de iniciativas (12 → 6)', shrink.ok, false);
+  const g2 = parse(ctx.doGet(post({ action:'getVpData', key:'portfolioData' })));
+  t('base original preservada após recusas', g2.data.initiatives.length, 12);
+  const stale = parse(ctx.doPost(post({ action:'saveVpData', key:'portfolioData', payload: mk(13), baseRevision: '0' })));
+  t('baseRevision desatualizada é recusada como conflito', stale.conflict, true);
+  const fresh = parse(ctx.doPost(post({ action:'saveVpData', key:'portfolioData', payload: mk(13), baseRevision: String(g2.revision) })));
+  t('baseRevision atual grava normalmente', fresh.ok, true);
+  t('revisão incrementa após gravação', parse(ctx.doGet(post({ action:'getRevisions' }))).revisions.portfolioData, 2);
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
