@@ -491,6 +491,8 @@ function openToneMenu(anchor, id){
 }
 function positionToneMenu(){
   const t = PF.ui.anchored; if(!t) return;
+  // Tabela redesenhada (filtro, sincronização) com o editor aberto: reancora na célula nova da mesma iniciativa.
+  if(!t.anchor.isConnected && t.kind === 'obs'){ const a = PF.$(`[data-action="obs-edit"][data-id="${CSS.escape(t.id)}"]`); if(a){ t.anchor = a; a.setAttribute('aria-expanded','true'); } }
   const r = t.anchor.getBoundingClientRect();
   const clip = t.anchor.closest('.gantt,.table-wrap'); const cr = clip ? clip.getBoundingClientRect() : null;
   if(!t.anchor.isConnected || r.bottom < 0 || r.top > innerHeight || (cr && (r.right < cr.left || r.left > cr.right || r.bottom < cr.top || r.top > cr.bottom))){ closeToneMenu(); return; }
@@ -501,6 +503,8 @@ function positionToneMenu(){
 function closeToneMenu(returnFocus){
   const t = PF.ui.anchored; if(!t) return;
   t.el.remove(); PF.ui.anchored = null;
+  // Observação: redesenha só a célula (sinaliza rascunho não salvo) sem refazer a tabela.
+  if(t.kind === 'obs' && t.anchor.isConnected){ const init = PF.ctx.initById.get(t.id); if(init){ t.anchor.outerHTML = PF.obsCell(init); if(returnFocus) refocusObs(t.id); return; } }
   if(t.anchor.isConnected){ t.anchor.setAttribute('aria-expanded','false'); if(returnFocus) t.anchor.focus(); }
 }
 function setTone(id, value){
@@ -589,6 +593,59 @@ function undoActualDelivery(id){
   }, {toast:`${id}: registro de entrega desfeito`});
   refocusMilestone(id);
 }
+/* =====================================================================
+   OBSERVAÇÃO — edição rápida pela tabela (popover ancorado à célula)
+   Cada registro é datado e entra em notesLog: a observação anterior vai para o
+   histórico, nunca é sobrescrita. Rascunho preservado se o editor fechar.
+   ===================================================================== */
+const OBS_MAX = 800;
+function openObsPop(anchor, id){
+  const init = PF.ctx.initById.get(id); if(!init) return;
+  closeToneMenu();
+  const cur = PF.lastObservation(init);
+  const log = [...(init.notesLog || [])].sort((a,b) => a.ts < b.ts ? 1 : -1);
+  const prev = log.slice(1);
+  const draft = (PF.ui.obsDraft || {})[id] || '';
+  const el = document.createElement('div');
+  el.className = 'obs-pop anchored-pop'; el.setAttribute('role','dialog'); el.setAttribute('aria-label', `Observação de ${id}`);
+  el.innerHTML = `<div class="dl-pop__head"><span class="mono-id">${PF.esc(init.id)}</span><span class="dl-pop__name">${PF.esc(init.name)}</span></div>
+    ${cur ? `<div class="obs-pop__current"><div class="obs-pop__label">Observação atual<span class="obs-pop__when"> · ${cur.date ? PF.fmtDateFull(cur.date) : 'sem data'}${log.length ? '' : ' · do relatório'}</span></div><p class="obs-pop__text">${PF.esc(cur.text)}</p></div>` : ''}
+    <form data-form="obs" data-id="${PF.esc(id)}" novalidate>
+      <label class="obs-pop__label" for="obsText">${cur ? 'Nova atualização' : 'Observação'}</label>
+      <textarea class="textarea" id="obsText" name="text" rows="4" maxlength="${OBS_MAX}" placeholder="Status, impedimento, decisão pendente ou próximo passo" aria-describedby="obsHint obsCount">${PF.esc(draft)}</textarea>
+      <div class="obs-pop__aux"><span id="obsHint">${cur ? 'A atual vai para o histórico · ' : ''}<kbd>Ctrl</kbd>+<kbd>Enter</kbd> registra</span><span class="obs-pop__count" id="obsCount" aria-live="polite"></span></div>
+      <span class="error-msg" id="obsErr" hidden></span>
+      ${prev.length ? `<details class="obs-pop__hist"><summary>Histórico · ${prev.length} ${prev.length === 1 ? 'registro anterior' : 'registros anteriores'}</summary><ol>${prev.slice(0,3).map(h => `<li><time>${PF.fmtDate(h.ts.slice(0,10))}</time><span>${PF.esc(h.text)}</span></li>`).join('')}</ol>${prev.length > 3 ? `<button type="button" class="btn-link" data-action="obs-history" data-id="${PF.esc(id)}">Ver histórico completo</button>` : ''}</details>` : ''}
+      <div class="dl-foot"><span class="spacer"></span><button type="button" class="btn btn-tertiary btn-sm" data-action="delivery-cancel">Cancelar</button><button type="submit" class="btn btn-primary btn-sm">Registrar observação</button></div>
+    </form>`;
+  PF.DOM.layer.appendChild(el); anchor.setAttribute('aria-expanded','true');
+  PF.ui.anchored = {el, anchor, id, kind:'obs', inDrawer:false};
+  const ta = el.querySelector('#obsText'), count = el.querySelector('#obsCount');
+  const onInput = () => {
+    const n = ta.value.length; count.textContent = `${n}/${OBS_MAX}`; count.classList.toggle('is-near', n > OBS_MAX * 0.9);
+    ta.style.height = 'auto'; ta.style.height = Math.min(240, Math.max(88, ta.scrollHeight + 2)) + 'px';
+    PF.ui.obsDraft = PF.ui.obsDraft || {};
+    if(ta.value.trim()) PF.ui.obsDraft[id] = ta.value; else delete PF.ui.obsDraft[id];
+    const e = el.querySelector('#obsErr'); if(!e.hidden && ta.value.trim()){ e.hidden = true; ta.removeAttribute('aria-invalid'); }
+    positionToneMenu();
+  };
+  ta.addEventListener('input', onInput);
+  ta.addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); el.querySelector('form').requestSubmit(); } });
+  onInput();
+  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+function submitObs(form){
+  const id = form.dataset.id, ta = form.querySelector('[name=text]'), text = PF.toText(ta.value);
+  if(!text){ const e = form.querySelector('#obsErr'); e.hidden = false; e.textContent = 'Escreva a observação antes de registrar.'; ta.setAttribute('aria-invalid','true'); ta.focus(); return; }
+  const init = PF.ctx.initById.get(id); const cur = init && PF.lastObservation(init);
+  closeToneMenu();
+  if(PF.ui.obsDraft) delete PF.ui.obsDraft[id];
+  if(cur && cur.text === text){ PF.renderView(); refocusObs(id); return; }
+  PF.commit(s => { const i = s.initiatives.find(x => x.id === id); if(!i) return; if(!Array.isArray(i.notesLog)) i.notesLog = []; i.notesLog.push({ts:new Date().toISOString(), text}); }, {toast:`${id}: observação registrada`});
+  refocusObs(id);
+}
+function refocusObs(id){ const b = PF.$(`[data-action="obs-edit"][data-id="${CSS.escape(id)}"]`); if(b) b.focus(); }
+
 function refocusMilestone(id){ const b = PF.$(`#view-initiatives [data-action="delivery-edit"][data-id="${CSS.escape(id)}"]`); if(b) b.focus(); }
 
 /* =====================================================================
@@ -615,5 +672,5 @@ function showTip(target){
 function hideTip(){ PF.tipTarget = null; PF.$('#tooltip').classList.remove('is-on'); }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {openOverlay, closeOverlay, trapFocus, modalFrame, openInitiative, markSelectedRow, renderDrawer, focusSelector, trailHtml, deliveryHistoryList, drawerSummary, drawerStories, drawerNotes, opt, fld, inp, sel, openInitiativeForm, logDeliveryDiff, ownerRow, submitInitiative, showFormErrors, nextStoryId, openStoryForm, submitStory, openSprintForm, submitSprint, openCapacityForm, capMemberRow, capAbsenceRow, capFormMembers, syncAbsenceMemberOptions, submitCapacity, hexToRgb, rgbToHex, mix, luminance, contrastOn, resolvedTheme, applyAppearance, openSettings, issueList, openQuality, openToneMenu, positionToneMenu, closeToneMenu, setTone, refocusPill, openDeliveryPop, deliveryPreview, submitDelivery, undoActualDelivery, refocusMilestone, showToast, showTip, hideTip});
+Object.assign(PF, {openObsPop, submitObs, refocusObs, OBS_MAX, openOverlay, closeOverlay, trapFocus, modalFrame, openInitiative, markSelectedRow, renderDrawer, focusSelector, trailHtml, deliveryHistoryList, drawerSummary, drawerStories, drawerNotes, opt, fld, inp, sel, openInitiativeForm, logDeliveryDiff, ownerRow, submitInitiative, showFormErrors, nextStoryId, openStoryForm, submitStory, openSprintForm, submitSprint, openCapacityForm, capMemberRow, capAbsenceRow, capFormMembers, syncAbsenceMemberOptions, submitCapacity, hexToRgb, rgbToHex, mix, luminance, contrastOn, resolvedTheme, applyAppearance, openSettings, issueList, openQuality, openToneMenu, positionToneMenu, closeToneMenu, setTone, refocusPill, openDeliveryPop, deliveryPreview, submitDelivery, undoActualDelivery, refocusMilestone, showToast, showTip, hideTip});
 })();

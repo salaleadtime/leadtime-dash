@@ -370,8 +370,15 @@ const COLUMNS = [
   {id:'inDev', label:'Em dev.', num:true, sort:(i,m) => m.dist.byStatus.Desenvolvimento, render:(i,m) => m.dist.byStatus.Desenvolvimento},
   {id:'inHomolog', label:'Em homol.', num:true, sort:(i,m) => m.dist.byStatus['Homologação'], render:(i,m) => m.dist.byStatus['Homologação']},
   {id:'done', label:'Concluídas', num:true, sort:(i,m) => m.dist.done, render:(i,m) => m.dist.done},
-  {id:'notes', label:'Observação', sort:i => PF.normKey(i.notes), render:i => i.notes ? `<span class="cell-trunc" data-tip="${PF.esc(i.notes)}">${PF.esc(i.notes)}</span>` : '<span class="muted">—</span>'}
+  {id:'notes', label:'Observação', cls:'col-obs', sort:i => { const o = PF.lastObservation(i); return o ? PF.normKey(o.text) : '~'; }, render:i => obsCell(i)}
 ];
+/* Observação atual (mesma regra do drawer e do PowerPoint: último registro datado; na falta,
+   a observação do relatório importado). A célula é o ponto de edição rápida. */
+function obsCell(i){
+  const o = PF.lastObservation(i), n = (i.notesLog || []).length, draft = (PF.ui.obsDraft || {})[i.id];
+  const meta = [o && o.date ? PF.fmtDate(o.date) : '', n > 1 ? `${n} registros` : '', draft ? '<span class="obs-cell__draft">rascunho não salvo</span>' : ''].filter(Boolean).join(' · ');
+  return `<button type="button" class="obs-cell${o ? '' : ' obs-cell--empty'}" data-action="obs-edit" data-id="${PF.esc(i.id)}" aria-haspopup="dialog" aria-expanded="false" aria-label="${o ? 'Atualizar' : 'Adicionar'} observação · ${PF.esc(i.id)}">${o ? `<span class="obs-cell__text">${PF.esc(o.text)}</span>` : `<span class="obs-cell__add">${PF.icon('i-plus','ic ic-xs')}Adicionar observação</span>`}${meta ? `<span class="obs-cell__meta">${meta}</span>` : ''}<span class="obs-cell__edit" aria-hidden="true">${PF.icon('i-edit','ic ic-xs')}</span></button>`;
+}
 const COLUMN_GROUPS = [
   {label:'Status e prazo', cols:['phase','situation','deadline','risk','blocked']},
   {label:'Datas e entregas', cols:['target','discoveryEnd','devPlanned','devActual','deliveryPlanned','deliveryCurrent','deliveryActual','actualVariance']},
@@ -592,5 +599,5 @@ function sprintHistory(stories){
 }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
+Object.assign(PF, {obsCell, statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
 })();

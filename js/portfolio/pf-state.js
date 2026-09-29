@@ -14,7 +14,7 @@ const PF = SP.internal = SP.internal || {};
 PF.appState = null;
 PF.prefs = null;
 PF.ctx = null;
-const ui = { drawer:null, drawerTab:'summary', drawerStoryFilter:'all', attnExpanded:false, expandedSprints:new Set(), expandedGroups:new Set(), sprintItemFilter:'all', overlays:[], popover:null };
+const ui = { drawer:null, drawerTab:'summary', drawerStoryFilter:'all', attnExpanded:false, expandedSprints:new Set(), expandedGroups:new Set(), sprintItemFilter:'all', overlays:[], popover:null, obsDraft:{} };
 
 function loadState(){
   const raw = PF.safeStorageGet(PF.STORE_DATA_SLOT);
@@ -192,6 +192,8 @@ function cloudVerify(writeId, inflight, attempt){
 }
 function onRemoteRevision(rev){
   if(typeof rev !== 'number' || !sync.loaded || sync.loading || sync.pushing || sync.pending.length) return;
+  // Edição em andamento (popover aberto): adia para o próximo ping em vez de redesenhar sob o usuário.
+  if(ui.anchored) return;
   if(sync.revision !== null && rev === sync.revision) return;
   sync.loading = true;
   cloudLoad((err, data, r) => { sync.loading = false; if(!err && !sync.pending.length && !sync.pushing) applyServerState(data, r); });
