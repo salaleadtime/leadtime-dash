@@ -182,6 +182,7 @@ html{scroll-behavior:smooth}body{font-family:'Inter',ui-sans-serif,-apple-system
 
 /* ── PANES ── */
 .pane{display:none}.pane.on{display:block}
+#pane-pf .pf-load{padding:48px 16px;text-align:center;color:#64748b;font-size:13px}#pane-pf .pf-load-box{display:inline-flex;align-items:center;gap:10px}#pane-pf .pf-load-err{color:#b91c1c}#pane-pf .pf-load-err button{font:inherit;color:#1d4ed8;background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}#pane-pf .pf-load-spin{width:16px;height:16px;border:2px solid #cbd5e1;border-top-color:#2f5fb3;border-radius:50%;animation:pfSpin .8s linear infinite}@keyframes pfSpin{to{transform:rotate(360deg)}}
 
 /* ══ CALENDÁRIO (Planejamento Anual — acordeão de trimestres) ══ */
 :root{
@@ -1447,6 +1448,7 @@ body{min-height:100vh}
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
   <button class="tabbt" id="tab-em" onclick="goTab('em',this)">🚨 Demandas Emergenciais <span class="tab-ct" id="tabCtEm"></span></button>
   <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
+  <button class="tabbt" id="tab-pf" onclick="goTab('pf',this)">🗂️ Portfólio</button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -2212,6 +2214,14 @@ tr:nth-child(even):hover td,
   </div>
 </div>
 
+<!-- ══ PORTFÓLIO PANE — Gestão de Iniciativas ══
+     Conteúdo carregado sob demanda (css/portfolio.css + js/portfolio/*.js) na primeira
+     abertura da aba e montado em Shadow DOM: estilos e scripts isolados do restante da página. -->
+<div class="pane" id="pane-pf">
+  <div id="pfMount"></div>
+  <div id="pfLoadState" class="pf-load" role="status" aria-live="polite"></div>
+</div>
+
 <!-- ══ CALENDÁRIO — editor de trimestre ══ -->
 <div class="cal-ov" id="calOv" onclick="if(event.target===this)calCloseEditor()">
   <div class="cal-mdl">
@@ -2430,7 +2440,7 @@ function loadTab(){
   try{ return storageGet(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='em'||id==='cal') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='em'||id==='cal'||id==='pf') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -3680,6 +3690,7 @@ function goTab(id,btn){
   else if(id==='bk') renderBacklogView();
   else if(id==='em'){ renderEmergencyView(); if(BK_GAS_URL && !_gasBacklogSaving) try{ gasLoadBacklog(function(){}); }catch(e){} }
   else if(id==='cal') renderCalendar();
+  else if(id==='pf') pfOpenTab();
   updateTabCounts();
 }
 
@@ -3704,14 +3715,79 @@ function activateTab(id){
   else if(id==='bk') renderBacklogView();
   else if(id==='em'){ renderEmergencyView(); if(BK_GAS_URL && !_gasBacklogSaving) try{ gasLoadBacklog(function(){}); }catch(e){} }
   else if(id==='cal') renderCalendar();
+  else if(id==='pf') pfOpenTab();
   updateTabCounts();
 }
 
 
+// ═══════════════════════════════════════
+// PORTFÓLIO — carregamento sob demanda da aba (Gestão de Iniciativas)
+// ═══════════════════════════════════════
+// Os arquivos da aba só são baixados na primeira abertura; quem nunca abre o
+// Portfólio não paga nada. Cada arquivo tem 1 retry automático (mesmo espírito do
+// padrão de resiliência do repositório). A aba monta em Shadow DOM (#pfMount) e
+// usa a mesma BK_GAS_URL, chave portfolioData (saveVpData/getVpData).
+var PF_ASSET_VER='2026-09-29-v1';
+var PF_SCRIPTS=['pf-core','pf-metrics','pf-state','pf-import','pf-export','pf-views','pf-panels','pf-app'];
+var _pfLoading=false, _pfFailed=false;
+var _pfSharedRevSlot='sala_shared_rev_portfolio_v1';
+function _pfLoadScript(src, cb, retriesLeft){
+  var sc=document.createElement('script'); var done=false;
+  var timer=setTimeout(function(){ finish(false); }, 20000);
+  function finish(ok){
+    if(done) return; done=true; clearTimeout(timer);
+    if(!ok){ try{ sc.parentNode && sc.parentNode.removeChild(sc); }catch(e){}
+      if(retriesLeft>0){ setTimeout(function(){ _pfLoadScript(src, cb, retriesLeft-1); }, 2000); return; } }
+    cb(ok);
+  }
+  sc.onload=function(){ finish(true); }; sc.onerror=function(){ finish(false); };
+  sc.src=src+(src.indexOf('?')<0?'?':'&')+'v='+PF_ASSET_VER;
+  document.head.appendChild(sc);
+}
+function _pfSetLoadState(html){ var el=$id('pfLoadState'); if(el){ el.innerHTML=html||''; el.style.display=html?'':'none'; } }
+function pfOpenTab(){
+  if(window.SalaPortfolio && typeof window.SalaPortfolio.mount==='function'){
+    if(!window.SalaPortfolio._mounted){
+      window.SalaPortfolio.mount($id('pfMount'), {gasUrl:BK_GAS_URL||null, cssHref:'css/portfolio.css?v='+PF_ASSET_VER});
+      window.SalaPortfolio._mounted=true;
+    } else window.SalaPortfolio.show();
+    _pfSetLoadState('');
+    return;
+  }
+  if(_pfLoading) return;
+  _pfLoading=true; _pfFailed=false;
+  _pfSetLoadState('<div class="pf-load-box"><span class="pf-load-spin"></span>Carregando o Portfólio…</div>');
+  var i=0;
+  (function next(){
+    if(i>=PF_SCRIPTS.length){ _pfLoading=false; if(curTab==='pf') pfOpenTab(); return; }
+    _pfLoadScript('js/portfolio/'+PF_SCRIPTS[i]+'.js', function(ok){
+      if(!ok){
+        _pfLoading=false; _pfFailed=true;
+        _pfSetLoadState('<div class="pf-load-box pf-load-err">Não foi possível carregar o Portfólio (arquivo '+PF_SCRIPTS[i]+'.js). Verifique a conexão e <button type="button" onclick="pfOpenTab()">tente novamente</button>.</div>');
+        return;
+      }
+      i++; next();
+    }, 1);
+  })();
+}
+// Revisão da base compartilhada do Portfólio vinda do ping getRevisions (aba líder)
+// ou do evento storage (abas seguidoras) — nunca um polling próprio.
+function pfNotifyRevision(rev, publish){
+  if(typeof rev!=='number') return;
+  if(publish){ try{ localStorage.setItem(_pfSharedRevSlot,String(rev)); }catch(e){} }
+  if(window.SalaPortfolio && window.SalaPortfolio._mounted && typeof window.SalaPortfolio.onRemoteRevision==='function'){
+    try{ window.SalaPortfolio.onRemoteRevision(rev); }catch(e){}
+  }
+}
+window.addEventListener('storage', function(ev){
+  if(ev.key!==_pfSharedRevSlot || ev.newValue==null) return;
+  var rev=Number(ev.newValue); if(!isNaN(rev)) pfNotifyRevision(rev, false);
+});
+
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='em'||id==='cal')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='em'||id==='cal'||id==='pf')?'none':'flex';
 }
 
 
@@ -5809,6 +5885,9 @@ function gasCheckBacklogRevision(cb){
     // Abas já abertas recebem a última conferência feita por outro usuário sem F5.
     var auditRev=json.revisions.vpImportAudit;
     if(typeof auditRev==='number' && (_importAuditRevision===null || auditRev!==_importAuditRevision)){ gasLoadImportAudit(); }
+    // Portfólio (v29): mesma resposta do ping, sem chamada extra. Só age se a aba já
+    // foi aberta nesta janela; também publica a revisão para as abas seguidoras.
+    pfNotifyRevision(json.revisions.portfolioData, true);
     if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
     gasLoadBacklog(function(err2){ if(cb) cb(err2,true); });
   }, 28000, 0);

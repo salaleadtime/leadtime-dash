@@ -96,6 +96,12 @@ arquivo:
   exclusão — mesmo padrão de `vpQuickNotes`). Sem polling automático (mesma
   regra dos demais relatórios semanais, ver "Padrão de polling" abaixo).
 
+- **Aba 🗂️ Portfólio** (dentro de `index.html`, desde 29/09/2026, v29 do
+  backend) — Gestão de Iniciativas: previsibilidade, prazos, sprints/capacidade,
+  riscos, histórias e exportação executiva em PowerPoint. Código fora do
+  `index.html`, em `css/portfolio.css` + `js/portfolio/pf-*.js`, carregado sob
+  demanda. Ver seção "Aba Portfólio" abaixo antes de mexer.
+
 `apps-script-backlog.gs` é a fonte de verdade do backend, mas **não tem deploy
 automático**. Alterá-lo aqui não basta: alguém precisa colar o arquivo
 atualizado no editor do Apps Script (script.google.com) e reimplantar como
@@ -158,12 +164,83 @@ Arquivos deste repositório que **não fazem parte do espelho** (não precisam
 ser entregues, mesmo que alterados) — confirmado pela pessoa responsável:
 `.github/workflows/*` (automação interna do GitHub, não se aplica),
 `tests/apps-script-backlog.test.js` (só usado em desenvolvimento) e
-`boletim-ds/**` (ferramenta interna separada, com seu próprio README). Se um
+`boletim-ds/**` (ferramenta interna separada, com seu próprio README).
+`tests/portfolio-core.test.js` também é só de desenvolvimento. Já
+`css/portfolio.css`, `js/portfolio/*.js` e `vendor/pptxgen.bundle.js`
+**fazem parte do espelho** (a aba Portfólio não funciona sem eles). Se um
 arquivo novo/desconhecido entrar em um diff, pergunte antes de presumir se
 ele faz parte do espelho ou não — não adivinhe.
 
 `BACKLOG_SCRIPT_VERSION` no topo do arquivo deve ser incrementado a cada
 mudança, e conferido via `?action=health` depois do redeploy.
+
+## Aba Portfólio (Gestão de Iniciativas) — arquitetura (29/09/2026, v29)
+
+Protótipo aprovado pela pessoa responsável e integrado como **uma aba do
+`index.html`**, não um sistema separado. Pontos que não são óbvios lendo o
+código:
+
+- **Carga sob demanda**: `index.html` só tem o botão `#tab-pf`, o painel
+  `#pane-pf` e o carregador `pfOpenTab()` (perto de `syncUpbar`). Os 8
+  scripts de `js/portfolio/` são baixados em sequência na PRIMEIRA abertura
+  da aba (1 retry por arquivo, 2s) com `?v=PF_ASSET_VER` — **incremente
+  `PF_ASSET_VER` sempre que mudar `css/portfolio.css` ou qualquer
+  `js/portfolio/*.js`**, senão o navegador pode servir o cache antigo.
+- **Isolamento**: a aba monta em **Shadow DOM** (`#pfMount`). O CSS global
+  de `index.html` (e os patches do deploy em `.github/scripts/*.py`) não
+  entra na aba, e `css/portfolio.css` não vaza pra fora (tokens em `:host`,
+  tema escuro em `:host([data-theme="dark"])`, preferência individual).
+  Popovers/menus vão para `#pfLayer` dentro do shadow root; qualquer
+  consulta ao DOM da aba usa `PF.$`/`PF.$$` (raiz = shadow root), nunca
+  `document.querySelector`.
+- **Módulos**: scripts clássicos, cada um numa IIFE, ordem fixa
+  `pf-core → pf-metrics → pf-state → pf-import → pf-export → pf-views →
+  pf-panels → pf-app`. Nomes compartilhados entre módulos ficam em
+  `window.SalaPortfolio.internal` (apelidado `PF` dentro dos arquivos);
+  variáveis de estado mutáveis (`PF.appState`, `PF.prefs`, `PF.ctx`…) são
+  sempre acessadas por `PF.`. Único global novo: `window.SalaPortfolio`
+  (API: `mount`, `show`, `onRemoteRevision`, `buildExportModel`…).
+  Ao adicionar uma função usada por outro módulo, inclua-a no
+  `Object.assign(PF, {...})` no fim do arquivo que a declara.
+- **Fonte única**: dados → normalização (`pf-core`) → estado → motor de
+  métricas (`pf-metrics`, único lugar que calcula número) → visões e
+  PowerPoint (`buildExportModel` consome o motor, nunca o DOM). Exportar
+  não altera estado, filtros nem tema.
+- **Sincronização** (`pf-state.js`): chave `portfolioData` do
+  `VP_SHEET_MAP` (v29), via `saveVpData`/`getVpData` — base igual pra todo
+  mundo; `localStorage` (`sala_portfolio_cache_v1`) é só cache/fallback.
+  Leitura com `window._gasJsonp` (retry de transporte) + retry de conteúdo
+  só quando o transporte respondeu (sem empilhar — ver lição 6 do incidente
+  04–05/08). Gravação: POST no-cors com `baseRevision` + leitura de
+  conferência por `metadata.writeId`/`appliedWrites`; em conflito (outra
+  pessoa gravou antes) adota a versão do servidor e **reaplica** as
+  alterações pendentes desta aba (cada `commit(mutator)` guarda o mutator
+  pra isso) — nunca sobrescreve às cegas; se a carga inicial falhou, busca
+  antes de gravar. A guarda de encolhimento do servidor (>30% / zerar com
+  ≥5 iniciativas) vale pra essa chave: a aba avisa "O servidor não aceitou a
+  gravação". **Sem polling próprio**: a revisão chega pelo ping
+  `getRevisions` já existente (`gasCheckBacklogRevision` → `pfNotifyRevision`)
+  e é repassada às abas seguidoras pelo evento `storage`
+  (`sala_shared_rev_portfolio_v1`).
+- **Sem dados embutidos**: o repositório é público — a aba nasce vazia e a
+  carga inicial é feita por "Importar planilha" (abas INICIATIVAS,
+  HISTORIAS, SPRINTS). Nunca commitar planilha/seed com dados reais.
+- **Feriados**: `getNationalHolidays(ano)` em `pf-core.js` é equivalente a
+  `homologNationalHolidayKeys` (SLA de Homologação de `index.html`) de
+  2024 em diante — `tests/portfolio-core.test.js` garante. Se mudar um,
+  mude o outro (candidato a consolidar numa fonte só no futuro).
+- **Bibliotecas**: SheetJS (`vendor/xlsx.full.min.js`, já usada pelo
+  dashboard) e PptxGenJS 3.12.0 (`vendor/pptxgen.bundle.js`, nova), ambas
+  cópia local primeiro e CDN como alternativa, carregadas só quando usadas.
+- **Validar**: `node tests/portfolio-core.test.js` (motor, feriados,
+  isolamento de escopo) além do teste do backend. Mudança de UI/sync: testar
+  no navegador com o Apps Script simulado (harness Playwright usado na
+  integração: servidor local + interceptação de `script.google.com`,
+  cenários de conflito/rebase, falha de transporte, guarda, aba seguidora).
+- **Recomendação futura (não implementada)**: vincular histórias do Jira
+  (`vpGeral`) às iniciativas automaticamente exige um identificador de
+  iniciativa nos rótulos das histórias, que os relatórios atuais não trazem
+  — por isso a aba mantém a própria base de histórias (importação/manual).
 
 ## Checklist de importação completa (Jira → dashboard)
 

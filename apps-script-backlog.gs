@@ -1,6 +1,16 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v29 — nova chave portfolioData (aba Portfólio de index.html): base
+ * compartilhada de iniciativas, histórias, sprints, ausências e regras de
+ * prazo da aba — {initiatives:[...], stories:[...], sprints:[...],
+ * absences:[...], settings:{...}, metadata:{...}}. Sem ela a gravação
+ * respondia {ok:false,'chave inválida'} e cada navegador ficaria com sua
+ * própria versão (mesmo bug de classe do v13). countRecords_ passa a contar
+ * portfolioData por initiatives: sem isso a guarda de redução contava só as
+ * ~6 chaves de primeiro nível do objeto e deixaria passar uma gravação que
+ * zerasse todas as iniciativas.
+ *
  * v23 — OPS4OPS_LEAN_CACHE_TTL_SEC 10min → 25min. O cache já era invalidado
  * NA HORA em qualquer saveVpData de discoveryPmo (ver v19 abaixo) — quem
  * importa continua vendo o dado novo imediatamente, para todo mundo, porque
@@ -112,7 +122,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-09-20-v28-dashboard-banner-avisos';
+var BACKLOG_SCRIPT_VERSION = '2026-09-29-v29-portfolio-iniciativas';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -179,7 +189,11 @@ var VP_SHEET_MAP = {
   // sem checar a resposta do POST) e ficava invisível pra qualquer outro
   // navegador/usuário, porque getVpData respondia {ok:false,'chave inválida'}
   // e o cliente tratava como "nada configurado ainda".
-  dashboardBannerAvisos: '_dashboard_banner_avisos'
+  dashboardBannerAvisos: '_dashboard_banner_avisos',
+  // v29 — base compartilhada da aba Portfólio (index.html). Overwrite puro
+  // com baseRevision: o cliente relê e reaplica a própria alteração quando
+  // outra pessoa gravou antes (ver js/portfolio/pf-sync.js).
+  portfolioData: '_portfolio_data'
 };
 
 // v19 — cache da projeção enxuta do getOps4opsData (CacheService, nativo do
@@ -814,6 +828,7 @@ function countRecords_(data) {
     if (Array.isArray(data.rows)) return data.rows.length;         // vpGeral/vpSprint/vpHomologation
     if (Array.isArray(data.projects)) return data.projects.length; // discoveryPmo
     if (Array.isArray(data.rules)) return data.rules.length;       // emergencyDemand
+    if (Array.isArray(data.initiatives)) return data.initiatives.length; // portfolioData
     return Object.keys(data).length;                               // mapas puros
   }
   return 0;
