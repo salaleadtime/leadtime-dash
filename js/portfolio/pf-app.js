@@ -224,9 +224,11 @@ function mount(host, opts = {}){
     link.addEventListener('load', reveal, {once:true}); link.addEventListener('error', reveal, {once:true}); setTimeout(reveal, 8000);
   }
   PF.DOM.host = host; PF.DOM.root = root; PF.DOM.layer = root.getElementById('pfLayer');
+  PF.DOM.assetBase = opts.assetBase || '';
   PF.sync.url = opts.gasUrl || null;
   PF.appState = PF.loadState();
   PF.prefs = PF.loadPrefs();
+  if(['overview','initiatives','sprints'].includes(opts.view)) PF.prefs.view = opts.view;
   PF.applyAppearance();
   bindEvents(root);
   // Atalho "/" para a busca: escuta no documento, só age com a aba visível e sem foco em campo.

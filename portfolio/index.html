@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfólio de Iniciativas · SALA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Página dedicada do Portfólio: mesma aba de index.html (css/portfolio.css +
+   js/portfolio/*.js, Shadow DOM), mesma base compartilhada (portfolioData no
+   Apps Script), sem as demais abas do dashboard. */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#f3f5f8;color:#111827;min-height:100vh;transition:background .15s}
+body.pf-dark{background:#0f141b;color:#e6eaf0}
+.pf-top{position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px;height:48px;padding:0 24px;background:#141922;color:#f5f7fa;box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.pf-top__mark{width:26px;height:26px;border-radius:6px;background:#cc092f;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;letter-spacing:.02em}
+.pf-top__title{font-size:14px;font-weight:600;white-space:nowrap}
+.pf-top__title small{font-weight:400;opacity:.62;margin-left:6px}
+.pf-top__sp{flex:1}
+.pf-top a{color:#c9d2df;font-size:12px;text-decoration:none;border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:5px 10px;white-space:nowrap}
+.pf-top a:hover{color:#fff;border-color:rgba(255,255,255,.4)}
+.pf-top a:focus-visible{outline:2px solid #7aa2e3;outline-offset:2px}
+.pf-load{padding:64px 16px;text-align:center;color:#64748b;font-size:13px}
+.pf-load-box{display:inline-flex;align-items:center;gap:10px}
+.pf-load-err{color:#b91c1c}
+.pf-load-err button{font:inherit;color:#1d4ed8;background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
+.pf-spin{width:16px;height:16px;border:2px solid #cbd5e1;border-top-color:#2f5fb3;border-radius:50%;animation:pfSpin .8s linear infinite}
+@keyframes pfSpin{to{transform:rotate(360deg)}}
+@media (max-width:640px){.pf-top{padding:0 12px}.pf-top__title small{display:none}}
+@media (prefers-reduced-motion:reduce){.pf-spin{animation:none}}
+</style>
+</head>
+<body>
+<header class="pf-top">
+  <span class="pf-top__mark" aria-hidden="true">LT</span>
+  <span class="pf-top__title">SALA<small>Portfólio de Iniciativas</small></span>
+  <span class="pf-top__sp"></span>
+  <a href="../" title="Abrir o SALA Lead Time completo">Abrir dashboard completo</a>
+</header>
+<main>
+  <div id="pfMount"></div>
+  <div id="pfLoadState" class="pf-load" role="status" aria-live="polite"></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  // Mesmo backend e mesma chave (portfolioData) da aba do dashboard: a base é uma só.
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbx270pqFDXeKvx_6_gYuuBjHp61_GVuRtgqbWWc_Bvin2dJkUzEQb_ztlVYC4RWp9Lvuw/exec';
+  var ASSET_VER = '2026-09-29-v3';          // manter igual a PF_ASSET_VER de index.html
+  var BASE = '../';                          // raiz do site (css/, js/, vendor/)
+  var SCRIPTS = ['pf-core','pf-metrics','pf-state','pf-import','pf-export','pf-views','pf-panels','pf-app'];
+  var VIEWS = {'visao-geral':'overview', overview:'overview', iniciativas:'initiatives', initiatives:'initiatives', sprints:'sprints'};
+
+  function $(id){ return document.getElementById(id); }
+  function setLoad(html){ var el = $('pfLoadState'); el.innerHTML = html || ''; el.style.display = html ? '' : 'none'; }
+
+  // Cliente JSONP com timeout de 28s e 1 retry de transporte (padrão de resiliência do CLAUDE.md).
+  // A aba usa window._gasJsonp quando existe; aqui é a mesma implementação do dashboard.
+  var seq = 0;
+  window._gasJsonp = function(url, cb, timeoutMs, retriesLeft){
+    var left = retriesLeft === undefined ? 1 : retriesLeft;
+    var name = '_gasJP_' + Date.now() + '_' + (++seq), sc = document.createElement('script'), done = false;
+    function retire(){ window[name] = function(){}; setTimeout(function(){ try{ delete window[name]; }catch(e){} }, 120000); }
+    function fail(reason){
+      if(done) return; done = true; clearTimeout(timer); retire(); if(sc.parentNode) sc.parentNode.removeChild(sc);
+      if(left > 0){ setTimeout(function(){ window._gasJsonp(url, cb, timeoutMs, left - 1); }, 2000); return; }
+      cb(reason);
+    }
+    var timer = setTimeout(function(){ fail('timeout'); }, timeoutMs || 28000);
+    window[name] = function(data){ if(done) return; done = true; clearTimeout(timer); delete window[name]; if(sc.parentNode) sc.parentNode.removeChild(sc); cb(null, data); };
+    sc.onerror = function(){ fail('script error'); };
+    sc.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 'callback=' + name;
+    document.head.appendChild(sc);
+  };
+
+  function loadScript(src, cb, retries){
+    var sc = document.createElement('script'), done = false;
+    var timer = setTimeout(function(){ finish(false); }, 20000);
+    function finish(ok){
+      if(done) return; done = true; clearTimeout(timer);
+      if(!ok){ if(sc.parentNode) sc.parentNode.removeChild(sc); if(retries > 0){ setTimeout(function(){ loadScript(src, cb, retries - 1); }, 2000); return; } }
+      cb(ok);
+    }
+    sc.onload = function(){ finish(true); }; sc.onerror = function(){ finish(false); };
+    sc.src = src + '?v=' + ASSET_VER;
+    document.head.appendChild(sc);
+  }
+
+  function start(){
+    setLoad('<div class="pf-load-box"><span class="pf-spin"></span>Carregando o Portfólio…</div>');
+    var i = 0;
+    (function next(){
+      if(i >= SCRIPTS.length){ mount(); return; }
+      loadScript(BASE + 'js/portfolio/' + SCRIPTS[i] + '.js', function(ok){
+        if(!ok){ setLoad('<div class="pf-load-box pf-load-err">Não foi possível carregar o Portfólio. Verifique a conexão e <button type="button" id="pfRetry">tente novamente</button>.</div>'); $('pfRetry').onclick = start; return; }
+        i++; next();
+      }, 1);
+    })();
+  }
+
+  function mount(){
+    var q = new URLSearchParams(location.search), v = (q.get('visao') || q.get('view') || location.hash.replace('#', '')).toLowerCase();
+    var host = $('pfMount');
+    window.SalaPortfolio.mount(host, {gasUrl: GAS_URL, cssHref: BASE + 'css/portfolio.css?v=' + ASSET_VER, assetBase: BASE, view: VIEWS[v]});
+    window.SalaPortfolio._mounted = true;
+    setLoad('');
+    // Fundo da página acompanha o tema individual da aba (claro/escuro).
+    var syncTheme = function(){ document.body.classList.toggle('pf-dark', host.dataset.theme === 'dark'); };
+    syncTheme(); new MutationObserver(syncTheme).observe(host, {attributes: true, attributeFilter: ['data-theme']});
+    startRevisionWatch();
+  }
+
+  // Atualização automática entre usuários: ping barato de revisão (getRevisions, só números),
+  // uma única aba "líder" por navegador, pausa com a aba oculta ou sem uso há 5 min.
+  // As outras abas recebem a revisão pelo evento storage (mesmo slot usado pelo dashboard).
+  var tabId = Date.now() + '_' + Math.random().toString(36).slice(2);
+  var leaderSlot = 'sala_leader_portfolio_page_v1', sharedRevSlot = 'sala_shared_rev_portfolio_v1';
+  var lastInteraction = Date.now(), IDLE_MS = 300000, TICK_MS = 60000;
+  ['mousemove','keydown','scroll','click','touchstart'].forEach(function(ev){ document.addEventListener(ev, function(){ lastInteraction = Date.now(); }, {passive: true}); });
+  function claimOrIsLeader(){
+    try{
+      var now = Date.now(), cur = null;
+      try{ cur = JSON.parse(localStorage.getItem(leaderSlot)); }catch(e){}
+      if(!cur || cur.id === tabId || now - cur.heartbeat > TICK_MS * 2.5){ localStorage.setItem(leaderSlot, JSON.stringify({id: tabId, heartbeat: now})); return true; }
+      return false;
+    }catch(e){ return true; }
+  }
+  function notify(rev){ if(typeof rev === 'number' && window.SalaPortfolio && window.SalaPortfolio.onRemoteRevision) window.SalaPortfolio.onRemoteRevision(rev); }
+  function ping(){
+    window._gasJsonp(GAS_URL + '?action=getRevisions&t=' + Date.now(), function(err, json){
+      if(err || !json || !json.ok || !json.revisions) return;
+      var rev = json.revisions.portfolioData;
+      if(typeof rev === 'number'){ try{ localStorage.setItem(sharedRevSlot, String(rev)); }catch(e){} notify(rev); }
+    }, 28000, 0);
+  }
+  function startRevisionWatch(){
+    setInterval(function(){
+      if(document.hidden || Date.now() - lastInteraction > IDLE_MS || !claimOrIsLeader()) return;
+      ping();
+    }, TICK_MS);
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden){ lastInteraction = Date.now(); if(claimOrIsLeader()) ping(); } });
+    window.addEventListener('storage', function(ev){ if(ev.key === sharedRevSlot && ev.newValue != null){ var r = Number(ev.newValue); if(!isNaN(r)) notify(r); } });
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>
