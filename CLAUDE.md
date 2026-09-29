@@ -101,6 +101,15 @@ arquivo:
   riscos, histórias e exportação executiva em PowerPoint. Código fora do
   `index.html`, em `css/portfolio.css` + `js/portfolio/pf-*.js`, carregado sob
   demanda. Ver seção "Aba Portfólio" abaixo antes de mexer.
+- `portfolio/index.html` — **página dedicada do Portfólio** (link direto para
+  gestores, sem as demais abas). Carrega os mesmos `css/portfolio.css` +
+  `js/portfolio/*.js` e usa a mesma chave `portfolioData` — não é uma segunda
+  base. Tem cliente JSONP próprio (`_gasJsonp`, mesmo padrão com retry) e um
+  ping de revisão com eleição de líder/pausa por inatividade (slot
+  `sala_leader_portfolio_page_v1`; revisão compartilhada em
+  `sala_shared_rev_portfolio_v1`, a mesma que o dashboard usa). Aceita
+  `?visao=iniciativas|sprints|visao-geral`. **`ASSET_VER` dessa página
+  precisa acompanhar `PF_ASSET_VER` de `index.html`.**
 
 `apps-script-backlog.gs` é a fonte de verdade do backend, mas **não tem deploy
 automático**. Alterá-lo aqui não basta: alguém precisa colar o arquivo
@@ -166,8 +175,9 @@ ser entregues, mesmo que alterados) — confirmado pela pessoa responsável:
 `tests/apps-script-backlog.test.js` (só usado em desenvolvimento) e
 `boletim-ds/**` (ferramenta interna separada, com seu próprio README).
 `tests/portfolio-core.test.js` também é só de desenvolvimento. Já
-`css/portfolio.css`, `js/portfolio/*.js` e `vendor/pptxgen.bundle.js`
-**fazem parte do espelho** (a aba Portfólio não funciona sem eles). Se um
+`css/portfolio.css`, `js/portfolio/*.js`, `vendor/pptxgen.bundle.js` e
+`portfolio/index.html` **fazem parte do espelho** (a aba Portfólio e a página
+dedicada não funcionam sem eles). Se um
 arquivo novo/desconhecido entrar em um diff, pergunte antes de presumir se
 ele faz parte do espelho ou não — não adivinhe.
 

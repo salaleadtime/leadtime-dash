@@ -19,7 +19,10 @@ function loadScriptChain(sources, getGlobal){
   return new Promise((resolve, reject) => {
     const tryLoad = (k) => {
       if(k >= sources.length){ reject(new Error('unavailable')); return; }
-      const s = document.createElement('script'); s.src = sources[k]; s.async = true;
+      // Fontes relativas (cópia local em vendor/) resolvem a partir da raiz do site (opts.assetBase),
+      // para funcionar tanto em index.html quanto na página dedicada portfolio/.
+      const src = /^https?:/.test(sources[k]) ? sources[k] : (PF.DOM.assetBase || '') + sources[k];
+      const s = document.createElement('script'); s.src = src; s.async = true;
       let settled = false;
       const fail = () => { if(settled) return; settled = true; clearTimeout(timer); s.remove(); tryLoad(k+1); };
       const timer = setTimeout(fail, 15000);
