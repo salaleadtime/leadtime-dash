@@ -5824,8 +5824,11 @@ function gasLoadBacklog(cb, _retries){
   var retries = (_retries === undefined) ? 1 : _retries;
   if(!backlogSnaps.length){ _gasBacklogLoading=true; renderBacklogView(); }
   _gasJsonp(BK_GAS_URL+'?action=getBacklog&t='+Date.now(), function(err,json){
-    if(err==='timeout' && retries>0){
-      // Cold-start do GAS: retry automático após breve pausa
+    // 1 retry (camada única — o _gasJsonp aqui roda com retriesLeft=0) em QUALQUER falha:
+    // timeout (cold-start/lock), 'script error' (hop instável script.google.com →
+    // googleusercontent, ver "Padrão de resiliência" no CLAUDE.md) ou resposta ok:false/vazia.
+    // Antes só timeout tentava de novo e o 'script error' virava aviso na primeira falha.
+    if((err || !(json && json.ok && Array.isArray(json.backlog))) && retries>0){
       setTimeout(function(){ gasLoadBacklog(cb, retries-1); }, 3000);
       return;
     }
@@ -5959,7 +5962,8 @@ function gasLoadStories(cb, options, _retries){
   if(!BK_GAS_URL){ if(cb) cb('no webapp'); return; }
   var retries = (_retries === undefined) ? 1 : _retries;
   _gasJsonp(BK_GAS_URL+'?action=getStories&t='+Date.now(), function(err,json){
-    if(err==='timeout' && retries>0){
+    // Mesma regra do gasLoadBacklog: 1 retry em qualquer falha de transporte ou conteúdo.
+    if((err || !(json && json.ok && Array.isArray(json.stories))) && retries>0){
       // Mesmo motivo do retry nas demais leituras do Apps Script:
       // cold-start do Apps Script (ou contenção do lock com as outras cargas
       // simultâneas do boot) pode estourar o timeout sem que haja falha real.
