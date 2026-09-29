@@ -25,6 +25,8 @@ const ACTIONS = {
   'delivery-edit': (el) => { if(PF.ui.anchored && PF.ui.anchored.anchor === el){ PF.closeToneMenu(true); return; } PF.openDeliveryPop(el, el.dataset.id); },
   'delivery-mode': (el) => { if(PF.ui.anchored) PF.openDeliveryPop(PF.ui.anchored.anchor, PF.ui.anchored.id, el.dataset.value); },
   'delivery-cancel': () => PF.closeToneMenu(true),
+  'obs-edit': (el) => { if(PF.ui.anchored && PF.ui.anchored.anchor === el){ PF.closeToneMenu(true); return; } PF.openObsPop(el, el.dataset.id); },
+  'obs-history': (el) => { const id = el.dataset.id; PF.closeToneMenu(); PF.openInitiative(id); PF.ui.drawerTab = 'notes'; PF.renderDrawer(); },
   'delivery-undo-actual': () => { if(PF.ui.anchored) PF.undoActualDelivery(PF.ui.anchored.id); },
   'owner-add': () => { const c = PF.$('#ownersEditor'); c.insertAdjacentHTML('beforeend', PF.ownerRow({name:'', area:''}, !c.children.length)); c.lastElementChild.querySelector('input').focus(); },
   'owner-remove': (el) => { const c = PF.$('#ownersEditor'); const row = el.closest('.own-edit-row'); if(c.children.length > 1){ row.remove(); const f = c.querySelector('input'); if(f) f.focus(); } else { row.querySelectorAll('input').forEach(i => i.value = ''); row.querySelector('input').focus(); } },
@@ -82,7 +84,7 @@ root.addEventListener('click', e => {
   const tab = e.target.closest('.subnav__tab[data-view]'); if(tab){ setView(tab.dataset.view); return; }
   const el = e.target.closest('[data-action]');
   if(!e.target.closest('.popover,.menu,.anchored-pop,[data-action="toggle-popover"],[data-action="toggle-menu"]')) closePopovers();
-  if(PF.ui.anchored && !e.target.closest('.anchored-pop,[data-action="tone-menu"],[data-action="delivery-edit"],[data-action="dd-open"]')) PF.closeToneMenu();
+  if(PF.ui.anchored && !e.target.closest('.anchored-pop,[data-action="tone-menu"],[data-action="delivery-edit"],[data-action="obs-edit"],[data-action="dd-open"]')) PF.closeToneMenu();
   if(!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return;
   const fn = ACTIONS[el.dataset.action]; if(!fn) return;
   if(el.closest('.menu')) closePopovers();
@@ -116,6 +118,7 @@ root.addEventListener('submit', e => {
   if(t === 'initiative') PF.submitInitiative(f);
   else if(t === 'capacity') PF.submitCapacity(f);
   else if(t === 'delivery') PF.submitDelivery(f);
+  else if(t === 'obs') PF.submitObs(f);
   else if(t === 'story') PF.submitStory(f);
   else if(t === 'sprint') PF.submitSprint(f);
   else if(t === 'block'){ const reason = PF.toText(new FormData(f).get('reason')); if(!reason){ f.querySelector('textarea').setAttribute('aria-invalid','true'); f.querySelector('textarea').focus(); return; } const id = f.dataset.id; PF.closeOverlay();
@@ -127,7 +130,7 @@ root.addEventListener('keydown', e => {
   if(e.key === 'Escape' && PF.ui.anchored){ PF.closeToneMenu(true); return; }
   if(e.key === 'Tab' && PF.ui.anchored){
     if(PF.ui.anchored.kind === 'menu' || PF.ui.anchored.kind === 'listbox') PF.closeToneMenu();
-    else { const f = PF.$$('button:not([disabled]),input:not([disabled]),select', PF.ui.anchored.el).filter(x => x.offsetParent !== null); const first = f[0], last = f[f.length-1];
+    else { const f = PF.$$('button:not([disabled]),input:not([disabled]),select,textarea,summary', PF.ui.anchored.el).filter(x => x.offsetParent !== null); const first = f[0], last = f[f.length-1];
       if(e.shiftKey && PF.activeEl() === first){ e.preventDefault(); last.focus(); } else if(!e.shiftKey && PF.activeEl() === last){ e.preventDefault(); first.focus(); } else if(!PF.ui.anchored.el.contains(PF.activeEl())){ e.preventDefault(); first.focus(); }
       return; }
   }
