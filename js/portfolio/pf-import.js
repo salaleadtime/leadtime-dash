@@ -45,7 +45,7 @@ const SHEET_SCHEMAS = {
     Discovery_Inicio:'discoveryStart', Discovery_Fim:'discoveryEnd', Dev_Previsto:'devPlanned', Dev_Real:'devActual',
     Entrega_Planejada:'deliveryPlanned', Entrega_Atual:'deliveryCurrent', Entrega_Real:'deliveryActual', Risco:'risk', Responsavel:'owner', Area_Responsavel:'ownerAreas', Observacao:'notes', Causa:'cause', Cor_Prazo_Manual:'deadlineColorOverride'}},
   stories:{names:['historias','historia','stories'], required:['ID_Historia','ID_Iniciativa','Historia','Status'], cols:{
-    ID_Historia:'id', ID_Iniciativa:'initiativeId', Historia:'title', Epico:'epic', Sprint_Planejada:'plannedSprint', Sprint_Conclusao:'sprint',
+    ID_Historia:'id', ID_Iniciativa:'initiativeId', Historia:'title', Epico:'epic', Squad:'squad', Sprint_Planejada:'plannedSprint', Sprint_Conclusao:'sprint',
     Status:'status', Bloqueada:'blocked', Motivo_Bloqueio:'blockedReason', Data_Criacao:'createdAt', Data_Inicio_Dev:'devStartAt', Data_Homologacao:'homologAt', Data_Conclusao:'doneAt', Responsavel:'owner', Observacao:'notes'}},
   sprints:{names:['sprints','sprint'], required:['Sprint','Data_Inicio','Data_Fim'], cols:{Sprint:'id', Nome:'name', Data_Inicio:'start', Data_Fim:'end', Release:'release'}}
 };
@@ -87,7 +87,7 @@ function buildImportCandidate(XLSX, wb, fileName){
     if(PF.normKey(r.situation).startsWith('atrasad')){ add('info','Iniciativa',id,'Situação “Atrasado” convertida para “Em andamento” — atraso é calculado pela regra de prazo'); r.situation = 'Em andamento'; }
     else if(!si.known){ add('warning','Iniciativa',id,`Situação desconhecida “${PF.toText(r.situation)}” — assumida “Em andamento”`); r.situation = 'Em andamento'; }
     const rk = PF.canon(r.risk, PF.RISK_ALIASES, PF.RISKS); if(!rk.known){ add('warning','Iniciativa',id,`Risco desconhecido “${PF.toText(r.risk)}” — deixado como não avaliado`); r.risk = null; }
-    if(r.deadlineColorOverride != null && PF.toText(r.deadlineColorOverride) !== ''){ const t = {verde:'green', amarelo:'yellow', vermelho:'red', neutro:'neutral', cinza:'neutral', green:'green', yellow:'yellow', red:'red', neutral:'neutral'}[PF.normKey(r.deadlineColorOverride)];
+    if(r.deadlineColorOverride != null && PF.toText(r.deadlineColorOverride) !== ''){ const t = {verde:'green', amarelo:'yellow', vermelho:'red', azul:'blue', neutro:'neutral', cinza:'neutral', green:'green', yellow:'yellow', blue:'blue', red:'red', neutral:'neutral'}[PF.normKey(r.deadlineColorOverride)];
       if(!t) add('warning','Iniciativa',id,`Cor manual do prazo inválida “${PF.toText(r.deadlineColorOverride)}” — usada a cor automática`); r.deadlineColorOverride = t || null; } else r.deadlineColorOverride = null;
     const n = PF.normalizeInitiative({...r, id, notesLog:[]});
     if(n.deliveryActual && n.deliveryActual > PF.getReferenceDate()) add('warning','Iniciativa',id,`Entrega real futura (${PF.fmtDate(n.deliveryActual)}) — entrega real deve ser fato ocorrido`);
@@ -185,7 +185,7 @@ async function downloadXlsx(){
     const ini = PF.appState.initiatives.map(i => ({ID_Iniciativa:i.id, Iniciativa:i.name, Squad:i.squads.join(' + '), PO:i.po, Tech_Lead:i.techLead, Fase:i.phase, Situacao:i.situation,
       Discovery_Inicio:d(i.discoveryStart), Discovery_Fim:d(i.discoveryEnd), Dev_Previsto:d(i.devPlanned), Dev_Real:d(i.devActual), Entrega_Planejada:d(i.deliveryPlanned), Entrega_Atual:d(i.deliveryCurrent), Entrega_Real:d(i.deliveryActual),
       Risco:i.risk || '', Responsavel:i.owners.map(o => o.name).join('; '), Area_Responsavel:i.owners.some(o => o.area) ? i.owners.map(o => o.area).join('; ') : '', Observacao:i.notes, Causa:i.cause, Cor_Prazo_Manual:i.deadlineColorOverride ? PF.TONE_LABEL[i.deadlineColorOverride] : ''}));
-    const his = PF.appState.stories.map(s => ({ID_Historia:s.id, ID_Iniciativa:s.initiativeId, Historia:s.title, Epico:s.epic, Sprint_Planejada:s.plannedSprint || '', Sprint_Conclusao:s.sprint || '', Status:s.status,
+    const his = PF.appState.stories.map(s => ({ID_Historia:s.id, ID_Iniciativa:s.initiativeId, Historia:s.title, Epico:s.epic, Squad:s.squad || '', Sprint_Planejada:s.plannedSprint || '', Sprint_Conclusao:s.sprint || '', Status:s.status,
       Bloqueada:s.blocked ? 'Sim' : 'Não', Motivo_Bloqueio:s.blockedReason, Data_Criacao:d(s.createdAt), Data_Inicio_Dev:d(s.devStartAt), Data_Homologacao:d(s.homologAt), Data_Conclusao:d(s.doneAt), Responsavel:s.owner, Observacao:s.notes}));
     const spr = PF.appState.sprints.map(s => ({Sprint:s.id, Nome:s.name, Data_Inicio:d(s.start), Data_Fim:d(s.end), Release:s.release}));
     const headers = k => Object.keys(SHEET_SCHEMAS[k].cols);

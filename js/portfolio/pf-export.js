@@ -37,7 +37,8 @@ function lastObservation(i){
 }
 function buildExportModel({slides = PPT_DEFAULT_SLIDES, scope = 'all', detailIds = []} = {}){
   PF.ctx = PF.computeContext();
-  const inits = scope === 'filtered' ? PF.filterInitiatives() : PF.appState.initiatives;
+  /* PowerPoint é operacional: só iniciativas ATIVAS (suspensa = cancelada fica fora, mencionada à parte). */
+  const inits = scope === 'filtered' ? PF.filterInitiatives('active') : PF.appState.initiatives.filter(i => !PF.isSuspended(i));
   const ordered = PF.sortInitiatives(inits, {col:'deadline', dir:'asc'});
   const pm = PF.getPortfolioMetrics(inits, PF.ctx);
   const md = PF.appState.metadata;
@@ -52,7 +53,7 @@ function buildExportModel({slides = PPT_DEFAULT_SLIDES, scope = 'all', detailIds
     const phases = PF.FILTER_DEFS.phase.options().map(ph => { const arr = inits.filter(i => i.phase === ph); const by = {}; arr.forEach(i => { const m = PF.ctx.initMetrics.get(i.id); by[m.deadline.status] = (by[m.deadline.status] || 0) + 1; }); return {phase:ph, total:arr.length, byStatus:by}; }).filter(p => p.total);
     model.slides.push({
       type:'executive', title:'Onde estamos',
-      kpis:{total:pm.total, active:pm.active, ok:pm.byStatus.ok, attention:pm.byStatus.attention, late:pm.byStatus.late, none:pm.byStatus.none, suspended:pm.byStatus.suspended, done:pm.byStatus.done},
+      kpis:{registered:pm.registered, active:pm.active, suspended:pm.suspendedAll, ok:pm.byStatus.ok, attention:pm.byStatus.attention, replanned:pm.byStatus.replanned, late:pm.byStatus.late, none:pm.byStatus.none, done:pm.byStatus.done},
       headline: PF.buildHeadline(pm, inits, PF.ctx).replace(/<[^>]+>/g,''),
       attention: PF.getAttentionItems(inits, PF.ctx).slice(0,5).map(a => ({id:a.init.id, name:a.init.name, category:a.signals[0].cat, reason:a.signals[0].text, owners:a.init.owners})),
       upcoming: PF.calculateUpcomingDeliveries(inits, 60, PF.ctx).map(u => ({date:u.m.deadline.target, id:u.init.id, name:u.init.name, status:u.m.deadline.status, tone:PF.displayTone(u.init, u.m.deadline.status), risk:u.init.risk})),
@@ -85,8 +86,7 @@ function buildExportModel({slides = PPT_DEFAULT_SLIDES, scope = 'all', detailIds
     if(risks.length || reprog.length || decisions.length) model.slides.push({type:'risks', title:'Riscos, reprogramações e decisões', risks, reprog, decisions});
   }
   if(slides.includes('sprint') && PF.ctx.currentSprint){
-    const initIds = new Set(inits.map(i => i.id));
-    const stories = PF.appState.stories.filter(s => initIds.has(s.initiativeId));
+    const stories = inits.flatMap(i => PF.ctx.initMetrics.get(i.id).stories);
     const sm = PF.getSprintMetrics(PF.ctx.currentSprint, PF.ctx, stories);
     const cap = PF.calculateSprintCapacity(PF.ctx.currentSprint, PF.appState.absences, PF.ctx.today);
     model.slides.push({
@@ -173,9 +173,9 @@ function pptCover(pres, slide, P, model){
 function pptExecutive(pres, slide, P, s){
   const k = s.kpis;
   const cells = [
-    {label:'Iniciativas ativas', value:k.active, hint: k.done ? `+${k.done} entregue${k.done > 1 ? 's' : ''}` : 'no recorte', tone:null},
-    {label:'No prazo', value:k.ok, tone:'green'}, {label:'Atenção', value:k.attention, tone:'yellow'}, {label:'Atrasadas', value:k.late, tone:'red'},
-    {label:'Sem previsão', value:k.none, tone:'neutral'}, {label:'Suspensas', value:k.suspended, tone:'neutral'}
+    {label:'Iniciativas ativas', value:k.active, hint: `${k.registered} cadastradas${k.suspended ? ` · ${k.suspended} suspensa${k.suspended > 1 ? 's' : ''}` : ''}`, tone:null},
+    {label:'No prazo', value:k.ok, tone:'green'}, {label:'Atenção', value:k.attention, tone:'yellow'}, {label:'Replanejadas', value:k.replanned, tone:'blue'},
+    {label:'Atrasadas', value:k.late, tone:'red'}, {label:'Sem previsão', value:k.none, tone:'neutral'}, {label:'Entregues', value:k.done, tone:'green'}
   ];
   const y = 1.95, h = 1.3, W = PX.W - 2*PX.M, first = 2.35, cw = (W - first) / (cells.length - 1);
   pR(pres, slide, {x:PX.M, y, w:W, h, fill:{color:P.band}, line:{color:P.band, width:0}});
@@ -190,7 +190,7 @@ function pptExecutive(pres, slide, P, s){
     pT(slide, c.tone ? `${Math.round(c.value / base * 100)}% das ativas` : c.hint, {x:ix, y:y + 0.98, w:w - 0.4, h:0.22, fontSize:10.5, color:P.muted});
   });
   // barra de composição
-  const order = [['ok','green'],['attention','yellow'],['late','red'],['none','neutral'],['suspended','neutral']];
+  const order = [['ok','green'],['attention','yellow'],['replanned','blue'],['late','red'],['none','neutral'],['done','green']];
   let bx = PX.M; const tot = order.reduce((a,[st]) => a + (k[st] || 0), 0) || 1;
   order.forEach(([st, t]) => { const n = k[st] || 0; if(!n) return; const w = n / tot * W - 0.03;
     const c = st === 'none' ? P.barNone : P.tone[t].fill; pR(pres, slide, {x:bx, y:y + h + 0.16, w, h:0.12, fill:{color:c}, line:{color:c, width:0}}); bx += w + 0.03; });

@@ -70,7 +70,7 @@ function emptyFiltered(){
 function renderSyncStatus(){
   const el = PF.$('#pfSync'); if(!el) return;
   const st = PF.sync.status;
-  const t = st === 'synced' ? `Sincronizado${PF.sync.at ? ' às ' + PF.sync.at.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : ''}` : PF.sync.message;
+  const t = st === 'synced' ? `Sincronizado${PF.sync.at ? ' às ' + PF.fmtTime(PF.sync.at) : ''}` : PF.sync.message;
   el.className = 'sync-state sync-state--' + st;
   el.innerHTML = `${PF.icon(st === 'error' ? 'i-attention' : st === 'synced' ? 'i-ok' : st === 'local' ? 'i-info' : 'i-reset','ic ic-xs')}<span>${PF.esc(t)}</span>${st === 'error' ? ' <button type="button" class="btn-link" data-action="sync-retry">Tentar novamente</button>' : ''}`;
 }
@@ -87,10 +87,20 @@ function renderPageMeta(){
   PF.$('#qualityChip').innerHTML = `<span class="quality-ring" style="background:conic-gradient(${ringColor} ${(q.score||0)*3.6}deg, var(--border-default) 0)" aria-hidden="true"></span>Qualidade dos dados <b>${q.score == null ? '—' : q.score + '%'}</b>${alerts ? `<span class="muted">· ${PF.plural(alerts,'alerta','alertas')}</span>` : ''}`;
   PF.$('#qualityChip').setAttribute('aria-label', `Qualidade dos dados: ${q.score == null ? 'sem base' : q.score + '% válido'}, ${alerts} alertas. Abrir detalhes`);
 }
+/* Navegação: Painel | Iniciativas | Cronograma | Sprints. Iniciativas e Cronograma são duas leituras da MESMA lista
+   (mesmo escopo e filtros); internamente compartilham a seção view-initiatives. */
+function viewKey(){ return PF.prefs.view === 'initiatives' ? (PF.prefs.initView === 'gantt' ? 'timeline' : 'initiatives') : PF.prefs.view; }
 function renderSubnav(){
-  PF.$$('.subnav__tab').forEach(t => { const on = t.dataset.view === PF.prefs.view; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
+  const key = viewKey();
+  PF.$$('.subnav__tab').forEach(t => { const on = t.dataset.view === key; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
   ['overview','initiatives','sprints'].forEach(v => { PF.$(`#view-${v}`).hidden = v !== PF.prefs.view; });
-  PF.$('#countInitiatives').textContent = PF.filterInitiatives().length;
+  PF.$('#countInitiatives').textContent = PF.filterInitiatives(PF.prefs.scope || 'active').length;
+}
+function scopeCounts(){ const c = PF.ctx; return {active:c.activeCount, suspended:c.suspendedCount, all:c.registered}; }
+/* Situação da iniciativa: Todas as Ativas (padrão) · Suspensas · Todas. */
+function scopeSelect(){
+  const sc = PF.prefs.scope || 'active', n = scopeCounts(), txt = `${PF.SCOPES[sc]} (${n[sc]})`;
+  return `<span class="scope-ctl"><span class="scope-ctl__k" id="scopeLbl">Situação da iniciativa</span><button type="button" class="dd-trigger ${sc !== 'active' ? 'is-set' : ''}" data-action="dd-open" data-dd="scope:" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scopeLbl scopeVal"><span class="dd-trigger__v" id="scopeVal">${PF.esc(txt)}</span>${PF.icon('i-chevron','ic ic-xs')}</button></span>`;
 }
 /* Dropdown próprio (listbox) — substitui o <select> nativo nos filtros e na navegação de Sprint */
 function filterSelect(key, {small=true} = {}){
@@ -111,6 +121,10 @@ function ddSource(ref){
       if(key === 'sprint') return m.stories.some(st => st.sprint === v || st.plannedSprint === v); return true; }).length;
     return {label:def.label, value:cur, options:[{value:'', label:'Todos', count:base.length, sep:true}, ...def.options().map(o => ({value:o, label:def.fmt ? def.fmt(o) : o, count:count(o)}))],
       pick:v => PF.setFilter(key, v)};
+  }
+  if(kind === 'scope'){
+    const n = scopeCounts(), cur = PF.prefs.scope || 'active';
+    return {label:'Situação da iniciativa', value:cur, options:Object.keys(PF.SCOPES).map(k => ({value:k, label:PF.SCOPES[k], count:n[k]})), pick:v => PF.setScope(v)};
   }
   if(kind === 'sprintnav'){
     const sp = selectedSprint();
@@ -157,8 +171,8 @@ function renderFilterBar(){
 function renderActiveFilters(){
   const keys = Object.keys(PF.prefs.filters).filter(k => PF.prefs.filters[k] && !(k === 'sprint' && PF.prefs.view === 'sprints'));
   if(!keys.length){ PF.$('#activeFilters').innerHTML = ''; return; }
-  const n = PF.filterInitiatives().length;
-  PF.$('#activeFilters').innerHTML = `<span class="filter-count">${PF.plural(n,'iniciativa','iniciativas')} de ${PF.appState.initiatives.length}</span>` +
+  const n = PF.filterInitiatives().length, scope = PF.prefs.view === 'initiatives' ? (PF.prefs.scope || 'active') : 'active';
+  PF.$('#activeFilters').innerHTML = `<span class="filter-count">${PF.plural(n,'iniciativa','iniciativas')} de ${scopeCounts()[scope]}${scope === 'active' ? ' ativas' : ''}</span>` +
     keys.map(k => { const v = PF.prefs.filters[k]; const label = k === 'q' ? 'Busca' : PF.FILTER_DEFS[k].label; const txt = k === 'q' ? `“${v}”` : (PF.FILTER_DEFS[k].fmt ? PF.FILTER_DEFS[k].fmt(v) : v);
       return `<span class="chip"><b>${PF.esc(label)}:</b> ${PF.esc(txt)}<button type="button" data-action="remove-filter" data-key="${k}" aria-label="Remover filtro ${PF.esc(label)}">${PF.icon('i-close','ic ic-xs')}</button></span>`; }).join('') +
     `<button type="button" class="btn btn-tertiary btn-sm" data-action="clear-filters">Limpar filtros</button>`;
@@ -202,12 +216,14 @@ function renderOverview(){
   </div>`;
 }
 function kpiBand(pm, inits){
-  const hints = {ok:'dentro dos limites', attention:'exigem acompanhamento', late:'vencidas ou replanejadas', none:'sem data de entrega', suspended:'pausadas'};
-  const base = pm.total - pm.byStatus.done;
-  return `<section class="panel col-12 kpis" aria-label="Situação do portfólio">
+  const hints = {ok:'dentro dos limites', attention:'exigem acompanhamento', replanned:'data movida vs. baseline', late:'data vencida, sem entrega', none:'sem data de entrega', done:'já entregues'};
+  const base = pm.active;   /* universo operacional: cadastradas − suspensas. Os 6 cards somam exatamente este número. */
+  const narrowed = pm.active !== pm.activeAll;
+  return `<section class="panel col-12 kpis" aria-label="Situação do portfólio ativo">
     <div class="kpis__hero">
-      <span class="kpi-label">Iniciativas no portfólio</span>
-      <span class="kpi-hero-value">${pm.active}${pm.byStatus.done ? `<small>+${pm.byStatus.done} entregue${pm.byStatus.done>1?'s':''}</small>` : ''}</span>
+      <span class="kpi-label">Iniciativas ativas</span>
+      <span class="kpi-hero-value">${pm.active}</span>
+      <span class="kpi-universe">${narrowed ? `recorte de ${pm.activeAll} ativas · ` : ''}${pm.registered} cadastradas${pm.suspendedAll ? ` · <button type="button" class="kpi-off" data-action="goto-scope" data-value="suspended" data-tip="Suspensa = cancelada. Fica fora da operação e dos percentuais.\nClique para consultar.">${PF.plural(pm.suspendedAll,'suspensa','suspensas')}</button>` : ''}</span>
       <p class="kpis__headline">${PF.buildHeadline(pm, inits, PF.ctx)}</p>
     </div>
     <div class="kpis__right">
@@ -216,7 +232,7 @@ function kpiBand(pm, inits){
           return `<button type="button" class="kpi-cell" data-action="drill-deadline" data-value="${k}" aria-pressed="${on}" data-tip="${PF.esc(PF.DEADLINE_META[k].label)}: ${hints[k]}.\nClique para ver as iniciativas.">
             ${statusBadge(k)}<span class="kpi-cell__value">${n}<span class="kpi-cell__pct">${p}%</span></span><span class="kpi-cell__hint">${hints[k]}</span></button>`; }).join('')}
       </div>
-      <div class="kpis__bar" role="img" aria-label="${PF.esc(PF.DEADLINE_KPI_ORDER.map(k => `${PF.DEADLINE_META[k].label}: ${pm.byStatus[k]}`).join(', '))}">
+      <div class="kpis__bar" role="img" aria-label="${PF.esc(PF.DEADLINE_KPI_ORDER.map(k => `${PF.DEADLINE_META[k].label}: ${pm.byStatus[k]}`).join(', '))} — total ${pm.active} ativas">
         ${PF.DEADLINE_KPI_ORDER.filter(k => pm.byStatus[k]).map(k => `<span class="fill--${k}" style="flex:${pm.byStatus[k]}" data-tip="${PF.DEADLINE_META[k].label}: ${pm.byStatus[k]}"></span>`).join('')}
       </div>
     </div>
@@ -263,7 +279,7 @@ function phasePanel(inits){
   const phases = PF.FILTER_DEFS.phase.options().filter(p => inits.some(i => i.phase === p));
   const rows = phases.map(p => { const arr = inits.filter(i => i.phase === p); const by = {}; arr.forEach(i => { const s = PF.ctx.initMetrics.get(i.id).deadline.status; (by[s] = by[s] || []).push(i); }); return {p, arr, by}; });
   const max = Math.max(1, ...rows.map(r => r.arr.length));
-  const used = PF.DEADLINE_KPI_ORDER.concat('done').filter(k => rows.some(r => r.by[k]));
+  const used = PF.DEADLINE_KPI_ORDER.filter(k => rows.some(r => r.by[k]));
   return `<div class="panel-head"><div><h2 class="panel-title" id="phTitle">Onde as iniciativas estão no ciclo</h2><p class="panel-sub">Iniciativas por fase, segmentadas pelo status de prazo · clique para filtrar</p></div></div>
     <div class="panel-body"><div class="legend" style="margin-bottom:10px">${used.map(k => `<span><span class="swatch fill--${k}"></span>${PF.DEADLINE_META[k].label}</span>`).join('')}</div>
     <div class="hbars">${rows.map(r => `<button type="button" class="hbar" data-action="drill-phase" data-value="${PF.esc(r.p)}" aria-label="${PF.esc(r.p)}: ${r.arr.length} iniciativas">
@@ -295,15 +311,18 @@ function variancePanel(inits){
 }
 function squadPanel(inits){
   const map = new Map();
-  inits.forEach(i => i.squads.forEach(s => { if(!map.has(s)) map.set(s, []); map.get(s).push(i); }));
+  const only = PF.prefs.filters.squad;
+  inits.forEach(i => i.squads.forEach(s => { if(only && s !== only) return; if(!map.has(s)) map.set(s, []); map.get(s).push(i); }));
   const rows = [...map.entries()].map(([sq, arr]) => {
     const ms = arr.map(i => PF.ctx.initMetrics.get(i.id));
-    const inFlow = ms.reduce((a,m) => a + m.dist.inFlow, 0), blocked = ms.reduce((a,m) => a + m.dist.blocked, 0);
+    /* Em flow/bloqueadas = só as histórias DESTA squad (iniciativa Multi-Squad não soma tudo em cada linha) */
+    const own = ms.map(m => (m.bySquad.find(r => r.squad === sq) || {dist:{inFlow:0, blocked:0}}).dist);
+    const inFlow = own.reduce((a,d) => a + d.inFlow, 0), blocked = own.reduce((a,d) => a + d.blocked, 0);
     const nextUp = arr.map(i => ({i, m:PF.ctx.initMetrics.get(i.id)})).filter(x => x.m.deadline.target && x.m.deadline.target >= PF.ctx.today && !['done','suspended'].includes(x.m.deadline.status)).sort((a,b) => a.m.deadline.target < b.m.deadline.target ? -1 : 1)[0];
     const worst = Math.min(...ms.map(m => PF.DEADLINE_META[m.deadline.status].order));
     return {sq, arr, ms, inFlow, blocked, nextUp, worst};
   }).sort((a,b) => a.worst - b.worst || b.arr.length - a.arr.length || a.sq.localeCompare(b.sq));
-  return `<div class="panel-head"><div><h2 class="panel-title" id="sqTitle">Squads</h2><p class="panel-sub">Iniciativas multi-squad aparecem em cada squad envolvida · ordenado pela pior situação</p></div></div>
+  return `<div class="panel-head"><div><h2 class="panel-title" id="sqTitle">Squads</h2><p class="panel-sub">Uma iniciativa Multi-Squad aparece em cada squad envolvida (3 squads ≠ 3 iniciativas) · histórias contadas por squad · ordenado pela pior situação</p></div></div>
   <div class="table-wrap" style="border-top:0"><table class="tbl tbl--compact"><thead><tr><th scope="col">Squad</th><th scope="col">Iniciativas</th><th scope="col" class="num">Em fluxo</th><th scope="col" class="num">Bloqueadas</th><th scope="col">Próxima entrega</th></tr></thead><tbody>
   ${rows.map(r => `<tr><td><button type="button" class="cell-name__title" data-action="drill-squad" data-value="${PF.esc(r.sq)}">${PF.esc(r.sq)}</button></td>
     <td><div style="display:flex;align-items:center;gap:10px"><span class="num" style="min-width:14px">${r.arr.length}</span><span class="sq-dots">${r.arr.map((i,k) => { const s = r.ms[k].deadline.status; return `<span class="st st--${s} tone-${displayTone(i, s)}" style="display:inline-flex" data-tip="${PF.esc(i.id)} · ${PF.esc(i.name)}\n${PF.DEADLINE_META[s].label}">${PF.icon(PF.DEADLINE_META[s].icon)}</span>`; }).join('')}</span></div></td>
@@ -323,7 +342,7 @@ function blockedList(stories){
 function flowPanel(inits, pm){
   const d = pm.dist; const cs = PF.ctx.currentSprint;
   const lastClosed = PF.ctx.sprints.filter(s => s.end < PF.ctx.today).slice(-1)[0];
-  const ids = new Set(inits.map(i => i.id)); const stories = PF.appState.stories.filter(s => ids.has(s.initiativeId));
+  const stories = inits.flatMap(i => PF.ctx.initMetrics.get(i.id).stories);
   const tp = lastClosed ? PF.calculateThroughput(lastClosed, stories, PF.ctx) : null;
   return `<div class="panel-head"><div><h2 class="panel-title" id="flTitle">Onde está o trabalho</h2><p class="panel-sub">${PF.plural(d.total,'história','histórias')} das iniciativas no recorte, por etapa do fluxo</p></div>
     ${cs ? `<button type="button" class="btn btn-tertiary btn-sm" data-action="goto-view" data-value="sprints">${PF.esc(cs.name)} ${PF.icon('i-right','ic ic-sm')}</button>` : ''}</div>
@@ -344,7 +363,7 @@ function flowPanel(inits, pm){
    ===================================================================== */
 const COLUMNS = [
   {id:'id', label:'ID', always:true, sort:i => i.id.padStart(8,'0'), render:i => `<span class="mono-id">${PF.esc(i.id)}</span>`},
-  {id:'name', label:'Iniciativa', always:true, sort:i => PF.normKey(i.name), render:i => `<div class="cell-name"><button type="button" class="cell-name__title" data-action="open-initiative" data-id="${PF.esc(i.id)}">${PF.esc(i.name)}</button><span class="cell-name__sub">${PF.esc(i.squads.join(' + ') || 'Sem squad')}${i.po ? ` · PO ${PF.esc(i.po)}` : ''}</span></div>`},
+  {id:'name', label:'Iniciativa', always:true, sort:i => PF.normKey(i.name), render:(i,m) => nameCell(i, m)},
   {id:'phase', label:'Fase', cls:'col-phase', sort:i => PF.PHASES.indexOf(i.phase), render:i => PF.esc(i.phase)},
   {id:'situation', label:'Situação', sort:i => PF.SITUATIONS.indexOf(i.situation), render:i => PF.esc(i.situation)},
   {id:'deadline', label:'Prazo', sort:(i,m) => PF.DEADLINE_META[m.deadline.status].order * 1e6 + (m.deadline.daysTo ?? 9e5), render:(i,m) => statusPill(i, m)},
@@ -372,6 +391,31 @@ const COLUMNS = [
   {id:'done', label:'Concluídas', num:true, sort:(i,m) => m.dist.done, render:(i,m) => m.dist.done},
   {id:'notes', label:'Observação', cls:'col-obs', sort:i => { const o = PF.lastObservation(i); return o ? PF.normKey(o.text) : '~'; }, render:i => obsCell(i)}
 ];
+/* Squads na própria linha. Multi-Squad é CARACTERÍSTICA da iniciativa (não alerta): tag neutra, sempre visível,
+   com detalhe por squad no tooltip (hover/foco) e em linha expansível (clique). */
+function squadTip(i, m){
+  return ['Squads envolvidas', ...m.bySquad.map(r => `${r.label} — ${PF.plural(r.dist.total,'história','histórias')}`), 'Clique para ver o detalhe por Squad'].join('\n');
+}
+function nameCell(i, m){
+  const sq = i.squads, open = PF.ui.expandedSquads.has(i.id);
+  const first = sq.length ? `<span class="sq-first">${PF.esc(sq[0])}</span>${sq.length > 1 ? ` <span class="sq-more" aria-label="mais ${sq.length - 1} squads">+${sq.length - 1}</span>` : ''}` : 'Sem squad';
+  const tag = m.multiSquad ? `<button type="button" class="tag-ms" data-action="toggle-squads" data-id="${PF.esc(i.id)}" aria-expanded="${open}" aria-controls="sqx-${PF.esc(i.id)}" data-tip="${PF.esc(squadTip(i, m))}">${PF.icon(open ? 'i-chevron' : 'i-right','ic ic-xs')}Multi-Squad · ${sq.length}</button>` : '';
+  return `<div class="cell-name"><button type="button" class="cell-name__title" data-action="open-initiative" data-id="${PF.esc(i.id)}">${PF.esc(i.name)}</button><span class="cell-name__sub">${first}${i.po ? ` · PO ${PF.esc(i.po)}` : ''}</span>${tag}</div>`;
+}
+/* Detalhe por squad: as histórias de cada squad somam exatamente o total da iniciativa. */
+const SQ_COLS = [['Backlog','Backlog'],['Refin.','Refinamento'],['Refinadas','Refinada'],['DEV','Desenvolvimento'],['Homolog.','Homologação'],['Concluídas','Concluída']];
+function squadDetail(i, m){
+  const cell = n => `<td class="num">${n ? n : '<span class="muted">0</span>'}</td>`;
+  const row = r => `<tr${r.squad && r.squad === PF.ctx.squadScope ? ' class="is-current" aria-current="true"' : ''}>
+      <th scope="row">${r.squad ? `<button type="button" class="cell-name__title" data-action="drill-squad" data-value="${PF.esc(r.squad)}" data-tip="Filtrar por ${PF.esc(r.squad)}">${PF.esc(r.squad)}</button>${r.declared ? '' : ' <span class="muted">(fora da lista da iniciativa)</span>'}` : `<span class="muted">${PF.esc(r.label)}</span>`}</th>
+      ${cell(r.dist.total)}${SQ_COLS.map(([,k]) => cell(r.dist.byStatus[k])).join('')}<td>${progressBar(r.progress, r.dist.done, r.dist.total)}</td></tr>`;
+  const tot = m.distAll;
+  return `<div class="sq-detail" id="sqx-${PF.esc(i.id)}" role="region" aria-label="Detalhe por Squad de ${PF.esc(i.id)}">
+    <table class="tbl tbl--compact"><thead><tr><th scope="col">Squad</th><th scope="col" class="num">Histórias</th>${SQ_COLS.map(([l]) => `<th scope="col" class="num">${l}</th>`).join('')}<th scope="col">Avanço</th></tr></thead>
+    <tbody>${m.bySquad.map(row).join('')}</tbody>
+    <tfoot><tr><th scope="row">Total da iniciativa <span class="muted">(conta 1 vez no portfólio)</span></th>${cell(tot.total)}${SQ_COLS.map(([,k]) => cell(tot.byStatus[k])).join('')}<td>${progressBar(PF.calculateProgress(tot.done, tot.total), tot.done, tot.total)}</td></tr></tfoot></table>
+    ${tot.total ? '' : '<p class="sq-detail__note">Nenhuma história cadastrada ainda: os números aparecem aqui quando as histórias forem importadas com a coluna Squad.</p>'}</div>`;
+}
 /* Observação atual (mesma regra do drawer e do PowerPoint: último registro datado; na falta,
    a observação do relatório importado). A célula é o ponto de edição rápida. */
 function obsCell(i){
@@ -401,7 +445,7 @@ function renderInitiatives(){
   const el = PF.$('#view-initiatives');
   const prevG = PF.$('.gantt', el); const keepScroll = prevG && PF.prefs.initView === 'gantt' ? {l:prevG.scrollLeft, t:prevG.scrollTop} : null;
   const inits = sortInitiatives(PF.filterInitiatives(), PF.prefs.sort);
-  const total = PF.appState.initiatives.length;
+  const total = scopeCounts()[PF.prefs.scope || 'active'];
   const preset = activePreset();
   const isGantt = PF.prefs.initView === 'gantt';
   const cols = currentColumns();
@@ -409,7 +453,7 @@ function renderInitiatives(){
   el.innerHTML = `<div class="panel">
     <div class="toolbar">
       <div class="toolbar__left"><span class="toolbar__count">${PF.plural(inits.length,'iniciativa','iniciativas')}${inits.length !== total ? `<small>de ${total}</small>` : ''}</span>
-        <div class="seg" role="radiogroup" aria-label="Modo de visualização"><button type="button" role="radio" aria-checked="${!isGantt}" data-action="set-init-view" data-value="table">Tabela</button><button type="button" role="radio" aria-checked="${isGantt}" data-action="set-init-view" data-value="gantt">Cronograma</button></div></div>
+        ${scopeSelect()}</div>
       <div class="toolbar__right">
         ${isGantt ? '' : `<div class="seg" role="radiogroup" aria-label="Conjunto de colunas">${Object.entries(COLUMN_PRESETS).map(([k,p]) => `<button type="button" role="radio" aria-checked="${preset===k}" data-action="set-preset" data-value="${k}">${p.label}</button>`).join('')}</div>
         <div class="pop-wrap"><button type="button" class="btn btn-secondary btn-sm" data-action="toggle-popover" data-pop="colPop" aria-expanded="false" aria-haspopup="dialog">${PF.icon('i-columns','ic ic-sm')}Colunas${preset ? '' : ' <span class="count-pill">' + (cols.length) + '</span>'}</button>
@@ -421,7 +465,8 @@ function renderInitiatives(){
     </div>
     ${!inits.length ? emptyFiltered() : isGantt ? ganttView(inits) : `<div class="table-wrap inits-table"><table class="tbl" aria-label="Iniciativas"><thead><tr>${cols.map(c => { const on = PF.prefs.sort.col === c.id;
       return `<th scope="col" class="th--sortable ${c.num ? 'num' : ''} ${c.cls || ''}" aria-sort="${on ? (PF.prefs.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}"><button type="button" class="th-sort" data-action="sort" data-col="${c.id}"${on ? ` data-dir="${PF.prefs.sort.dir}"` : ''}${c.full ? ` aria-label="Ordenar por ${PF.esc(c.full)}" data-tip="${PF.esc(c.full)}"` : ''}>${c.label}${PF.icon(on ? (PF.prefs.sort.dir === 'asc' ? 'i-asc' : 'i-desc') : 'i-sort','ic ic-xs')}</button></th>`; }).join('')}</tr></thead>
-      <tbody>${inits.map(i => { const m = PF.ctx.initMetrics.get(i.id); return `<tr class="${PF.ui.drawer === i.id ? 'is-selected' : ''}" data-row="${PF.esc(i.id)}">${cols.map(c => `<td class="${c.num ? 'num' : ''} ${c.cls || ''}">${c.render(i, m)}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>`}
+      <tbody>${inits.map(i => { const m = PF.ctx.initMetrics.get(i.id); const off = m.lifecycle === 'suspended';
+        return `<tr class="${PF.ui.drawer === i.id ? 'is-selected' : ''}${off ? ' is-off' : ''}" data-row="${PF.esc(i.id)}">${cols.map(c => `<td class="${c.num ? 'num' : ''} ${c.cls || ''}">${c.render(i, m)}</td>`).join('')}</tr>${m.multiSquad && PF.ui.expandedSquads.has(i.id) ? `<tr class="sq-expand"><td colspan="${cols.length}">${squadDetail(i, m)}</td></tr>` : ''}`; }).join('')}</tbody></table></div>`}
   </div>`;
   if(!isGantt) alignOwnerLines(el);
   if(isGantt){ const g = PF.$('.gantt', el); const t = PF.$('.gantt__today', el); if(g && keepScroll){ g.scrollLeft = keepScroll.l; g.scrollTop = keepScroll.t; } else if(g && t) g.scrollLeft = Math.max(0, parseFloat(t.style.left) - 240); }
@@ -449,7 +494,7 @@ function ganttView(inits){
       const disc = i.discoveryStart && i.discoveryEnd ? `<span class="g-disc" style="left:${x(i.discoveryStart)}px;width:${Math.max(3, x(i.discoveryEnd) - x(i.discoveryStart))}px" data-tip="Discovery: ${PF.fmtDate(i.discoveryStart)} → ${PF.fmtDate(i.discoveryEnd)}"></span>` : '';
       const devStart = i.devActual || i.devPlanned; const tgt = i.deliveryActual || m.deadline.target;
       const devEnd = tgt || (devStart ? PF.addDays(devStart, 30) : null);
-      const gst = i.deadlineColorOverride ? TONE_FILL[i.deadlineColorOverride] : st; const devCls = gst === 'late' ? 'g-dev--late' : gst === 'attention' ? 'g-dev--attention' : gst === 'none' ? 'g-dev--none' : gst === 'suspended' ? 'g-dev--suspended' : '';
+      const gst = i.deadlineColorOverride ? TONE_FILL[i.deadlineColorOverride] : st; const devCls = 'g-dev--' + gst;
       const dev = devStart && devEnd && devEnd > devStart ? `<span class="g-dev ${devCls}" style="left:${x(devStart)}px;width:${Math.max(3, x(devEnd) - x(devStart))}px" data-tip="DEV ${i.devActual ? 'realizado' : 'previsto'}: ${PF.fmtDate(devStart)}${i.devActual && i.devPlanned ? ` (previsto ${PF.fmtDate(i.devPlanned)})` : ''}\nEntrega: ${tgt ? PF.fmtDate(tgt) : 'sem data'}\n${PF.DEADLINE_META[st].label}"></span>` : '';
       const main = i.deliveryActual || i.deliveryCurrent || i.deliveryPlanned;
       const tip = PF.deliveryTooltip(i);
@@ -461,16 +506,16 @@ function ganttView(inits){
         ? `<button type="button" class="g-ms${i.deliveryActual ? ' g-ms--done' : ''}" style="left:${x(main)}px" data-action="delivery-edit" data-id="${PF.esc(i.id)}" aria-haspopup="dialog" aria-expanded="false" aria-label="${PF.esc(aria)}" data-tip="${PF.esc(tip)}"></button>`
         : devEnd ? `<button type="button" class="g-ms g-ms--ghost" style="left:${x(devEnd)}px" data-action="delivery-edit" data-id="${PF.esc(i.id)}" aria-haspopup="dialog" aria-expanded="false" aria-label="Definir entrega planejada de ${PF.esc(i.id)}" data-tip="Sem data de entrega · clique para definir"></button>` : '';
       const planned = secondary.join('');
-      return `<div class="gantt__row"><div class="gantt__label" style="width:${LABEL_W}px"><div class="cell-name"><button type="button" class="cell-name__title" data-action="open-initiative" data-id="${PF.esc(i.id)}"><span class="mono-id">${PF.esc(i.id)}</span> ${PF.esc(PF.shortName(i.name, 38))}</button><span class="cell-name__sub">${PF.esc(i.squads.join(' + '))} · ${PF.esc(i.phase)}</span></div><span class="st st--${st} tone-${displayTone(i, st)}" data-tip="${PF.DEADLINE_META[st].label}" style="display:inline-flex">${PF.icon(PF.DEADLINE_META[st].icon)}</span></div>
+      return `<div class="gantt__row${m.lifecycle === 'suspended' ? ' is-off' : ''}"><div class="gantt__label" style="width:${LABEL_W}px"><div class="cell-name"><button type="button" class="cell-name__title" data-action="open-initiative" data-id="${PF.esc(i.id)}"><span class="mono-id">${PF.esc(i.id)}</span> ${PF.esc(PF.shortName(i.name, 38))}</button><span class="cell-name__sub">${PF.esc(i.squads.length > 1 ? `${i.squads[0]} +${i.squads.length - 1} · Multi-Squad` : (i.squads[0] || 'Sem squad'))} · ${PF.esc(i.phase)}</span></div><span class="st st--${st} tone-${displayTone(i, st)}" data-tip="${PF.DEADLINE_META[st].label}" style="display:inline-flex">${PF.icon(PF.DEADLINE_META[st].icon)}</span></div>
         <div class="gantt__lane" style="width:${width}px">${lines}<span class="gantt__today" style="left:${todayX}px"></span>${disc}${dev}${planned}${ms}</div></div>`; }).join('')}
   </div></div>
-  <div class="gantt-legend"><span><i class="lg-disc"></i>Discovery</span><span><i class="lg-dev"></i>DEV → entrega (cor = status de prazo)</span><span><i class="lg-ms"></i>Entrega vigente · clique para reprogramar</span><span><i class="lg-ms lg-ms--planned"></i>Planejada original</span><span><i class="lg-ms lg-ms--done"></i>Entregue</span><span><i style="width:2px;height:12px;background:var(--brand-primary)"></i>Hoje</span></div>`;
+  <div class="gantt-legend"><span><i class="lg-disc"></i>Discovery</span><span><i class="lg-dev"></i>DEV → entrega (verde no prazo · amarelo atenção · azul replanejada · vermelho atrasada · cinza sem previsão/suspensa)</span><span><i class="lg-ms"></i>Entrega vigente · clique para reprogramar</span><span><i class="lg-ms lg-ms--planned"></i>Planejada original</span><span><i class="lg-ms lg-ms--done"></i>Entregue</span><span><i style="width:2px;height:12px;background:var(--brand-primary)"></i>Hoje</span></div>`;
 }
 
 /* =====================================================================
    RENDER — SPRINTS
    ===================================================================== */
-function scopedStories(){ const ids = new Set(PF.filterInitiatives().map(i => i.id)); return PF.appState.stories.filter(s => ids.has(s.initiativeId)); }
+function scopedStories(){ return PF.filterInitiatives('active').flatMap(i => PF.ctx.initMetrics.get(i.id).stories); }
 function selectedSprint(){ return PF.ctx.sprintById.get(PF.prefs.sprintId) || PF.ctx.currentSprint; }
 function renderSprints(){
   const el = PF.$('#view-sprints');
@@ -599,5 +644,5 @@ function sprintHistory(stories){
 }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {obsCell, statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
+Object.assign(PF, {viewKey, scopeCounts, scopeSelect, nameCell, squadTip, squadDetail, obsCell, statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
 })();

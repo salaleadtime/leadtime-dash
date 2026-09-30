@@ -77,7 +77,7 @@ function renderDrawer(){
       <div class="drawer__top"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="mono-id">${PF.esc(init.id)}</span>${PF.statusPill(init, m)}${PF.riskBadge(init.risk)}</div>
         <button type="button" class="btn btn-icon btn-sm" data-action="close-overlay" aria-label="Fechar detalhe">${PF.icon('i-close')}</button></div>
       <h2 class="drawer__title">${PF.esc(init.name)}</h2>
-      <div class="drawer__meta"><span>${PF.esc(init.squads.join(' + ') || 'Sem squad')}</span>${init.po ? `<span>PO ${PF.esc(init.po)}</span>` : ''}${init.techLead ? `<span>TL ${PF.esc(init.techLead)}</span>` : ''}</div>
+      <div class="drawer__meta"><span>${PF.esc(init.squads.join(' + ') || 'Sem squad')}</span>${m.multiSquad ? `<span class="tag-ms tag-ms--static">Multi-Squad · ${init.squads.length}</span>` : ''}${init.po ? `<span>PO ${PF.esc(init.po)}</span>` : ''}${init.techLead ? `<span>TL ${PF.esc(init.techLead)}</span>` : ''}</div>
       <div class="drawer__actions">
         <button type="button" class="btn btn-secondary btn-sm" data-action="edit-initiative" data-id="${PF.esc(init.id)}">${PF.icon('i-edit','ic ic-sm')}Editar iniciativa</button>
         <button type="button" class="btn btn-tertiary btn-sm" data-action="new-story" data-id="${PF.esc(init.id)}">${PF.icon('i-plus','ic ic-sm')}Nova história</button>
@@ -85,7 +85,7 @@ function renderDrawer(){
       </div>
       <div class="drawer__tabs" role="tablist" aria-label="Seções da iniciativa">${tabs.map(([k,l]) => `<button type="button" role="tab" class="subnav__tab" aria-selected="${PF.ui.drawerTab===k}" data-action="drawer-tab" data-value="${k}">${l}</button>`).join('')}</div>
     </div>
-    <div class="drawer__body" role="tabpanel">${PF.ui.drawerTab === 'summary' ? drawerSummary(init, m) : PF.ui.drawerTab === 'stories' ? drawerStories(init, m) : drawerNotes(init)}</div>`;
+    <div class="drawer__body${m.lifecycle === 'suspended' ? ' is-off' : ''}" role="tabpanel">${PF.ui.drawerTab !== 'notes' ? squadScopeNote(init, m) : ''}${PF.ui.drawerTab === 'summary' ? drawerSummary(init, m) : PF.ui.drawerTab === 'stories' ? drawerStories(init, m) : drawerNotes(init)}</div>`;
   const nb = el.querySelector('.drawer__body'); if(nb) nb.scrollTop = scroll;
   if(focusSel){ const f = el.querySelector(focusSel); if(f) f.focus(); }
 }
@@ -96,21 +96,31 @@ function focusSelector(node){
   return node.id ? `#${CSS.escape(node.id)}` : null;
 }
 /* Data anterior riscada, vigente em destaque */
+/* Célula/popover mostram SOMENTE o estado vigente (data atual + quantas vezes foi replanejada).
+   A sequência de datas anteriores vive exclusivamente no Histórico de entrega. */
+function replanCount(init){ return init.deliveryHistory.filter(h => h.type === 'forecast').length; }
 function trailHtml(init, fmt = PF.fmtDateFull){
-  const t = PF.deliveryTrail(init);
-  return t.map((d,k) => k < t.length - 1 ? `<s class="dl-old">${fmt(d)}</s>` : `<span class="dl-cur">${fmt(d)}</span>`).join(' ');
+  const n = replanCount(init);
+  return `<span class="dl-cur">${fmt(init.deliveryCurrent || init.deliveryPlanned)}</span>${n ? ` <span class="muted dl-count" data-tip="Ver o histórico de entrega">· replanejada ${n}×</span>` : ''}`;
 }
 function deliveryHistoryList(init){
-  const when = iso => new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  const when = iso => PF.fmtDateTime(iso);
   const src = h => h.source === 'import' ? ' <span class="muted">· via importação</span>' : h.source === 'form' ? ' <span class="muted">· via edição</span>' : '';
   const what = h => {
-    if(h.type === 'forecast'){ const d = h.from && h.to ? PF.daysBetween(h.from, h.to) : null; return `Previsão ${h.from ? `<s class="dl-old">${PF.fmtDateFull(h.from)}</s> → ` : ''}<b style="font-weight:600">${PF.fmtDateFull(h.to)}</b>${d ? ` <span class="muted">(${PF.fmtSigned(d)} d)</span>` : ''}`; }
+    if(h.type === 'forecast'){ const d = h.from && h.to ? PF.daysBetween(h.from, h.to) : null;
+      const why = h.reason ? `<span class="dhist__reason"><b>Motivo:</b> ${PF.esc(h.reason)}</span>` : (h.source === 'import' ? '' : '<span class="dhist__reason muted">Motivo não registrado</span>');
+      return `Previsão ${h.from ? `<s class="dl-old">${PF.fmtDateFull(h.from)}</s> → ` : ''}<b style="font-weight:600">${PF.fmtDateFull(h.to)}</b>${d ? ` <span class="muted">(${PF.fmtSigned(d)} d)</span>` : ''}${why}`; }
     if(h.type === 'baseline') return h.from ? `Entrega planejada alterada: <s class="dl-old">${PF.fmtDateFull(h.from)}</s> → <b style="font-weight:600">${PF.fmtDateFull(h.to)}</b>` : `Entrega planejada definida: <b style="font-weight:600">${PF.fmtDateFull(h.to)}</b>`;
     if(h.type === 'actual') return h.from ? `Entrega real corrigida: <s class="dl-old">${PF.fmtDateFull(h.from)}</s> → <b style="font-weight:600">${PF.fmtDateFull(h.to)}</b>` : `Entrega registrada em <b style="font-weight:600">${PF.fmtDateFull(h.to)}</b>`;
     if(h.type === 'actual-removed') return `Registro de entrega desfeito <span class="muted">(era ${PF.fmtDateFull(h.from)})</span>`;
     return PF.esc(h.type);
   };
   return `<ul class="dhist">${[...init.deliveryHistory].reverse().map(h => `<li><span class="dhist__when">${when(h.changedAt)}${h.changedBy ? ` · ${PF.esc(h.changedBy)}` : ''}</span><span class="dhist__what">${what(h)}${src(h)}</span></li>`).join('')}</ul>`;
+}
+/* Com filtro de Squad ativo, os números do drawer são os da squad — dito explicitamente, com saída em 1 clique. */
+function squadScopeNote(init, m){
+  const sq = PF.ctx.squadScope; if(!sq) return '';
+  return `<div class="scope-note" role="status">${PF.icon('i-filter','ic ic-xs')}<span>Números da Squad <b>${PF.esc(sq)}</b>: ${PF.plural(m.dist.total,'história','histórias')} de ${m.distAll.total} da iniciativa.</span><button type="button" class="btn-link" data-action="remove-filter" data-key="squad">Ver iniciativa inteira</button></div>`;
 }
 function drawerSummary(init, m){
   const d = m.deadline, v = m.variance;
@@ -120,7 +130,7 @@ function drawerSummary(init, m){
   const sw = {'Backlog':'Backlog','Em refinamento':'Refinamento','Refinadas':'Refinada','Em desenvolvimento':'Desenvolvimento','Em homologação':'Homologação','Concluídas':'Concluída'};
   return `<div class="callout callout--${d.status}"><div class="callout__title">Por que “${PF.DEADLINE_META[d.status].label}”</div><ul>${d.reasons.map(r => `<li>${PF.esc(r)}</li>`).join('')}</ul>${init.deadlineColorOverride ? `<p class="muted" style="font-size:11.5px;margin-top:6px">Cor exibida ajustada para ${PF.TONE_LABEL[init.deadlineColorOverride]} · a situação calculada não muda</p>` : ''}</div>
     <div class="d-section"><dl class="facts">${fact('Fase', PF.esc(init.phase))}${fact('Situação', PF.esc(init.situation))}${fact('Responsável · área', init.owners.map(o => `${o.name ? PF.esc(o.name) : '<span class="muted">—</span>'}${o.area ? ` <span class="muted">· ${PF.esc(o.area)}</span>` : ''}`).join('<br>'))}${fact('Risco', PF.riskBadge(init.risk))}${fact('Causa / dependência', PF.esc(init.cause))}${fact('Sprints com itens em aberto', m.sprints.map(PF.esc).join(', '))}</dl></div>
-    <div class="d-section"><div class="d-section__title">Cronograma ${init.deliveryActual ? `<span class="muted" style="font-weight:400">Entregue em ${PF.fmtDateFull(init.deliveryActual)}${v.actual != null ? ` · prazo real ${PF.fmtDeltaDays(v.actual)}` : ''}</span>` : d.target ? `<span class="muted" style="font-weight:400">Data alvo ${PF.fmtDateFull(d.target)}${d.daysTo != null ? ` · ${d.daysTo >= 0 ? `em ${PF.plural(d.daysTo,'dia','dias')}` : `vencida há ${PF.plural(-d.daysTo,'dia','dias')}`}` : ''}</span>` : ''}</div>
+    <div class="d-section"><div class="d-section__title">Cronograma ${m.lifecycle === 'suspended' ? '<span class="muted" style="font-weight:400">Iniciativa suspensa · datas apenas para rastreabilidade</span>' : init.deliveryActual ? `<span class="muted" style="font-weight:400">Entregue em ${PF.fmtDateFull(init.deliveryActual)}${v.actual != null ? ` · prazo real ${PF.fmtDeltaDays(v.actual)}` : ''}</span>` : d.target ? `<span class="muted" style="font-weight:400">Data alvo ${PF.fmtDateFull(d.target)}${d.daysTo != null ? ` · ${d.daysTo >= 0 ? `em ${PF.plural(d.daysTo,'dia','dias')}` : `vencida há ${PF.plural(-d.daysTo,'dia','dias')}`}` : ''}</span>` : ''}</div>
       <div class="milestones">
         <div class="milestone milestone--head"><span>Marco</span><span>Previsto / planejado</span><span>Realizado / atual</span><span class="num">Desvio</span></div>
         <div class="milestone"><b>Discovery</b><span class="cell-date">${PF.fmtDate(init.discoveryStart)} → ${PF.fmtDate(init.discoveryEnd)}</span><span class="muted">—</span><span class="num muted">—</span></div>
@@ -129,6 +139,7 @@ function drawerSummary(init, m){
         <div class="milestone"><b>Entrega real</b><span class="cell-date">${PF.fmtDate(init.deliveryPlanned)}</span><span class="cell-date">${init.deliveryActual ? PF.fmtDate(init.deliveryActual) : '<span class="muted">não entregue</span>'}</span><span class="num">${init.deliveryActual ? PF.actualVarianceCell(init, v.actual) : '<span class="muted">—</span>'}</span></div>
       </div></div>
     ${init.deliveryHistory.length ? `<div class="d-section"><div class="d-section__title">Histórico de entrega</div>${deliveryHistoryList(init)}</div>` : ''}
+    ${m.multiSquad ? `<div class="d-section"><div class="d-section__title">Squads envolvidas <span class="muted" style="font-weight:400">${init.squads.length} squads · a iniciativa conta 1 vez no portfólio</span></div>${PF.squadDetail(init, m)}</div>` : ''}
     <div class="d-section"><div class="d-section__title">Histórias ${PF.progressBar(m.progress, m.dist.done, m.dist.total).replace('class="progress"','class="progress" style="width:200px"')}</div>
       <div class="mgrid">${cells.map(([k,n]) => `<div class="mgrid__cell"><span class="mgrid__label">${sw[k] ? `<span class="swatch wf-${sw[k]}"></span>` : k === 'Bloqueadas' ? PF.icon('i-lock','ic ic-xs') : ''}${k}</span><span class="mgrid__value"${k === 'Bloqueadas' && n ? ' style="color:var(--status-danger)"' : ''}>${n}</span></div>`).join('')}</div>
       <div class="facts" style="margin-top:12px">${fact('Lead time médio (concluídas)', m.leadTimeAvg != null ? `${m.leadTimeAvg} dias` : '<span class="muted">Sem dados suficientes</span>')}${fact('Lead time atual médio (em fluxo)', m.openLeadTimeAvg != null ? `${m.openLeadTimeAvg} dias` : '<span class="muted">Sem dados suficientes</span>')}</div></div>
@@ -146,7 +157,7 @@ function drawerStories(init, m){
     ${!list.length ? `<div class="empty empty--inline"><div class="empty__title" style="font-size:13px">${m.stories.length ? 'Nenhuma história neste filtro' : 'Nenhuma história cadastrada'}</div>${m.stories.length ? '' : `<button type="button" class="btn btn-primary btn-sm" data-action="new-story" data-id="${PF.esc(init.id)}">${PF.icon('i-plus','ic ic-sm')}Cadastrar história</button>`}</div>` :
     `<div class="story-list">${list.map(s => { const lt = PF.leadTimeOf(s, PF.ctx.today); const carry = PF.isCarryOver(s, PF.ctx);
       return `<div class="story-row ${s.blocked ? 'is-blocked' : ''}"><div class="story-main"><span class="story-title" data-tip="${PF.esc(s.title)}">${PF.esc(s.title)}</span>
-        <span class="story-meta"><span class="mono-id">${PF.esc(s.id)}</span>${s.epic ? `<span>${PF.esc(s.epic)}</span>` : ''}<span>${lt.days != null ? `LT ${lt.days} d${lt.kind === 'open' ? ' (em curso)' : ''}` : PF.esc(lt.note)}</span>${carry ? `<span class="tag tag--warn">transbordo de ${PF.esc(s.plannedSprint)}</span>` : ''}</span>
+        <span class="story-meta"><span class="mono-id">${PF.esc(s.id)}</span>${(() => { const q = PF.storySquadOf(s, init); return q ? `<span>${PF.esc(q)}</span>` : (init.squads.length > 1 ? '<span class="tag">Sem Squad definida</span>' : ''); })()}${s.epic ? `<span>${PF.esc(s.epic)}</span>` : ''}<span>${lt.days != null ? `LT ${lt.days} d${lt.kind === 'open' ? ' (em curso)' : ''}` : PF.esc(lt.note)}</span>${carry ? `<span class="tag tag--warn">transbordo de ${PF.esc(s.plannedSprint)}</span>` : ''}</span>
         ${s.blocked ? `<span class="story-block-reason">${PF.icon('i-lock','ic ic-xs')} ${PF.esc(s.blockedReason || 'Sem motivo informado')}</span>` : ''}</div>
         ${PF.statusSelect(s)}${PF.sprintSelect(s)}${PF.blockToggle(s)}
         <button type="button" class="btn btn-icon btn-sm" data-action="edit-story" data-id="${PF.esc(s.id)}" aria-label="Editar ${PF.esc(s.id)}" data-tip="Editar história">${PF.icon('i-edit','ic ic-sm')}</button></div>`; }).join('')}</div>`}`;
@@ -155,7 +166,7 @@ function drawerNotes(init){
   const log = [...init.notesLog].sort((a,b) => a.ts < b.ts ? 1 : -1);
   return `<form data-form="note" class="stack" style="margin-bottom:20px"><div class="field"><label for="noteText">Nova observação</label><textarea class="textarea" id="noteText" name="text" rows="3" maxlength="1200" placeholder="Registre decisão, pendência ou ponto de atenção" required></textarea></div>
     <div style="display:flex;justify-content:flex-end"><button type="submit" class="btn btn-primary btn-sm">Adicionar observação</button></div></form>
-    ${log.length ? `<div class="notes-log">${log.map(n => `<div class="note"><div class="note__meta">${new Date(n.ts).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</div><div class="note__text">${PF.esc(n.text)}</div></div>`).join('')}</div>` : '<p class="muted" style="font-size:12px">Nenhuma observação registrada ainda.</p>'}
+    ${log.length ? `<div class="notes-log">${log.map(n => `<div class="note"><div class="note__meta">${PF.fmtDateTime(n.ts)}</div><div class="note__text">${PF.esc(n.text)}</div></div>`).join('')}</div>` : '<p class="muted" style="font-size:12px">Nenhuma observação registrada ainda.</p>'}
     ${init.notes ? `<div class="d-section"><div class="d-section__title">Observação do relatório</div><p class="note__text" style="color:var(--text-secondary)">${PF.esc(init.notes)}</p></div>` : ''}`;
 }
 
@@ -197,6 +208,7 @@ function openInitiativeForm(id){
       ${fld('discoveryStart','Discovery início', inp('discoveryStart', i.discoveryStart, {type:'date'}))}${fld('discoveryEnd','Discovery fim', inp('discoveryEnd', i.discoveryEnd, {type:'date'}))}<div></div>
       ${fld('devPlanned','DEV previsto', inp('devPlanned', i.devPlanned, {type:'date'}))}${fld('devActual','DEV realizado', inp('devActual', i.devActual, {type:'date'}))}<div></div>
       ${fld('deliveryPlanned','Entrega planejada', inp('deliveryPlanned', i.deliveryPlanned, {type:'date'}), {hint: id && i.deliveryPlanned ? 'Baseline: alterar aqui fica registrado no histórico' : ''})}${fld('deliveryCurrent','Entrega atual (reprevisão)', inp('deliveryCurrent', i.deliveryCurrent, {type:'date'}), {hint:'Preencha só se houver nova previsão'})}${fld('deliveryActual','Entrega real', `<input class="input" id="f-deliveryActual" name="deliveryActual" type="date" value="${PF.esc(i.deliveryActual || '')}" max="${PF.ctx.today}">`, {hint:'Data em que a entrega ocorreu'})}
+      <div class="field span-3" id="replanWrap" hidden><label for="f-replanReason">Motivo do replanejamento <span class="req" aria-hidden="true">*</span></label><textarea class="textarea" id="f-replanReason" name="replanReason" rows="2" maxlength="300" placeholder="Obrigatório ao alterar a Entrega atual: dependência, escopo, capacidade…"></textarea><span class="error-msg" data-err="replanReason" hidden></span></div>
     </div></div>
     <div class="form-section" style="margin-bottom:0"><div class="form-section__title">Contexto</div><div class="form-grid">
       ${fld('cause','Causa / dependência', inp('cause', i.cause, {max:200}), {span:'span-2'})}
@@ -204,12 +216,15 @@ function openInitiativeForm(id){
     </div></div></form>`;
   openOverlay({size:'', label: id ? 'Editar iniciativa' : 'Nova iniciativa', html: modalFrame(id ? 'Editar iniciativa' : 'Nova iniciativa', id ? `${PF.esc(id)} · ${PF.esc(i.name)}` : 'Campos com * são obrigatórios', body,
     `<span class="muted" style="font-size:12px">Status de prazo e métricas são recalculados ao salvar.</span><div class="modal__foot-right"><button type="button" class="btn btn-tertiary" data-action="close-overlay">Cancelar</button><button type="submit" form="initForm" class="btn btn-primary">${id ? 'Salvar alterações' : 'Criar iniciativa'}</button></div>`),
-    init: el => { if(id) el.querySelector('#f-id').readOnly = true; }});
+    init: el => { if(id) el.querySelector('#f-id').readOnly = true;
+      const cur = el.querySelector('#f-deliveryCurrent'), wrap = el.querySelector('#replanWrap'), orig = (init && init.deliveryCurrent) || '';
+      const sync = () => { wrap.hidden = !(cur.value && cur.value !== orig && cur.value !== (el.querySelector('#f-deliveryPlanned').value || '')); };
+      cur.addEventListener('input', sync); el.querySelector('#f-deliveryPlanned').addEventListener('input', sync); sync(); }});
 }
 /* Toda mudança de data de entrega vira registro no histórico — nenhuma baseline é substituída em silêncio. */
-function logDeliveryDiff(old, next, source){
+function logDeliveryDiff(old, next, source, reason){
   if((old.deliveryPlanned || null) !== (next.deliveryPlanned || null) && next.deliveryPlanned) PF.recordDeliveryChange(next, 'baseline', old.deliveryPlanned, next.deliveryPlanned, {source});
-  if((old.deliveryCurrent || null) !== (next.deliveryCurrent || null) && next.deliveryCurrent) PF.recordDeliveryChange(next, 'forecast', old.deliveryCurrent || old.deliveryPlanned, next.deliveryCurrent, {source});
+  if((old.deliveryCurrent || null) !== (next.deliveryCurrent || null) && next.deliveryCurrent) PF.recordDeliveryChange(next, 'forecast', old.deliveryCurrent || old.deliveryPlanned, next.deliveryCurrent, {source, reason: reason || ''});
   if((old.deliveryActual || null) !== (next.deliveryActual || null)) PF.recordDeliveryChange(next, next.deliveryActual ? 'actual' : 'actual-removed', old.deliveryActual, next.deliveryActual, {source, prevSituation:old.situation});
 }
 function ownerRow(o = {name:'', area:''}, labels = false){
@@ -232,13 +247,17 @@ function submitInitiative(form){
   const fdAll = new FormData(form); const oa = fdAll.getAll('ownerArea');
   const owners = fdAll.getAll('ownerName').map((n,k) => ({name:PF.toText(n), area:PF.toText(oa[k])})).filter(o => o.name || o.area);
   if(owners.some(o => !o.name)) errs.owners = 'Informe o nome do responsável para cada área';
+  const oldI = editId ? PF.ctx.initById.get(editId) : null;
+  const replanReason = PF.toText(fd.replanReason);
+  const curChanged = !!fd.deliveryCurrent && fd.deliveryCurrent !== ((oldI && oldI.deliveryCurrent) || '') && fd.deliveryCurrent !== (fd.deliveryPlanned || '');
+  if(curChanged && !replanReason) errs.replanReason = 'Informe o motivo do replanejamento';
   if(!showFormErrors(form, errs)) return;
   const data = PF.normalizeInitiative({...fd, id, squads:fd.squads, risk:fd.risk || null, owners,
     discoveryStart:fd.discoveryStart || null, discoveryEnd:fd.discoveryEnd || null, devPlanned:fd.devPlanned || null, devActual:fd.devActual || null,
     deliveryPlanned:fd.deliveryPlanned || null, deliveryCurrent:fd.deliveryCurrent || null, deliveryActual:fd.deliveryActual || null});
   closeOverlay();
   if(editId){
-    PF.commit(s => { const k = s.initiatives.findIndex(x => x.id === editId); const old = s.initiatives[k]; data.notesLog = old.notesLog; data.deadlineColorOverride = old.deadlineColorOverride; data.deliveryHistory = old.deliveryHistory || []; logDeliveryDiff(old, data, 'form'); s.initiatives[k] = data; }, {toast:`Iniciativa ${editId} atualizada`});
+    PF.commit(s => { const k = s.initiatives.findIndex(x => x.id === editId); const old = s.initiatives[k]; data.notesLog = old.notesLog; data.deadlineColorOverride = old.deadlineColorOverride; data.deliveryHistory = old.deliveryHistory || []; logDeliveryDiff(old, data, 'form', replanReason); s.initiatives[k] = data; }, {toast:`Iniciativa ${editId} atualizada`});
   } else {
     PF.commit(s => { s.initiatives.push(data); }, {toast:`Iniciativa ${id} criada`});
     openInitiative(id);
@@ -257,6 +276,11 @@ function nextStoryId(initId){
   while(ids.has(`${initId}-H${PF.pad(n)}`)) n++;
   return `${initId}-H${PF.pad(n)}`;
 }
+function storySquadOptions(initId, cur){
+  const init = PF.ctx.initById.get(initId); const own = init ? init.squads : [];
+  const all = PF.FILTER_DEFS.squad.options();
+  return [...new Set([...own, ...(cur ? [cur] : []), ...all])];
+}
 function openStoryForm(id, initId){
   const st = id ? PF.findStory(id) : null;
   const iid = st ? st.initiativeId : (initId || (PF.ui.drawer || PF.appState.initiatives[0]?.id));
@@ -268,6 +292,7 @@ function openStoryForm(id, initId){
       ${fld('id','ID da história *', inp('id', s.id, {req:true, max:40}))}
       ${fld('title','Título *', inp('title', s.title, {req:true, max:160}), {span:'span-2'})}
       ${fld('epic','Épico', inp('epic', s.epic, {max:60}))}${fld('owner','Responsável', inp('owner', s.owner, {max:80}))}
+      ${fld('squad','Squad', sel('squad', opt(storySquadOptions(iid, s.squad), s.squad || '', {empty:'Sem Squad definida'})), {hint:'Em iniciativa Multi-Squad, a squad não é presumida: informe qual squad executa a história'})}
     </div></div>
     <div class="form-section"><div class="form-section__title">Fluxo</div><div class="form-grid form-grid--3">
       ${fld('status','Status', sel('status', opt(PF.WORKFLOW, s.status)), {hint:'Datas do fluxo são preenchidas automaticamente se vazias'})}
@@ -298,6 +323,8 @@ function submitStory(form){
   if(!PF.toText(fd.title)) errs.title = 'Informe o título';
   if(fd.doneAt && fd.devStartAt && fd.doneAt < fd.devStartAt) errs.doneAt = 'Conclusão anterior ao início do DEV';
   if(fd.blocked && !PF.toText(fd.blockedReason)) errs.blockedReason = 'Informe o motivo do bloqueio';
+  const ini = PF.ctx.initById.get(fd.initiativeId);
+  if(ini && ini.squads.length > 1 && !PF.toText(fd.squad)) errs.squad = 'Informe a Squad: a iniciativa é Multi-Squad e a squad não é presumida';
   if(!showFormErrors(form, errs)) return;
   const prev = editId ? PF.findStory(editId) : null;
   const st = PF.normalizeStory({...fd, id, blocked:!!fd.blocked, plannedSprint:fd.plannedSprint || null, sprint:fd.sprint || null,
@@ -441,7 +468,7 @@ function openSettings(){
         <button type="button" class="btn btn-secondary btn-sm" data-action="reset-colors" style="margin-top:14px">${PF.icon('i-reset','ic ic-sm')}Restaurar padrão</button></div>
       <div class="settings-group"><div class="settings-group__title">Regras de prazo</div><div class="settings-group__sub">Parâmetros do cálculo central de status. Alterar aqui recalcula todo o portfólio.</div>
         <div class="form-grid">${num('attentionDaysThreshold','Janela de atenção (dias)','Entrega a até N dias → avalia progresso',1,120)}${num('attentionProgressThreshold','Progresso mínimo (%)','Abaixo disso, na janela, vira Atenção',0,100)}
-        ${num('devStartSlipToleranceDays','Tolerância de início do DEV (dias)','Atraso de início acima disso → Atenção',0,60)}${num('lateVarianceToleranceDays','Tolerância de replanejamento (dias)','Entrega atual − planejada acima disso → Atrasada',0,60)}</div>
+        ${num('devStartSlipToleranceDays','Tolerância de início do DEV (dias)','Atraso de início acima disso → Atenção',0,60)}${num('replanToleranceDays','Tolerância de replanejamento (dias)','Entrega atual ≠ planejada acima disso → Replanejada (Atrasada só quando a data vigente vence)',0,60)}</div>
         <div class="field" style="margin-top:12px"><label for="r-ref">Data de referência</label><div style="display:flex;gap:8px"><input class="input" id="r-ref" type="date" value="${PF.esc(PF.appState.settings.referenceDate || '')}" data-change="ref-date" style="max-width:180px"><button type="button" class="btn btn-tertiary btn-sm" data-action="ref-today" style="height:32px">Usar hoje</button></div><span class="hint">Vazio = hoje. Útil para reproduzir um corte (ex.: reunião semanal) ou congelar o snapshot do PowerPoint.</span></div>
         <button type="button" class="btn btn-secondary btn-sm" data-action="reset-rules" style="margin-top:14px">${PF.icon('i-reset','ic ic-sm')}Restaurar regras padrão</button></div>
     </div>`;
@@ -547,6 +574,7 @@ function openDeliveryPop(anchor, id, mode){
       <div class="field"><label for="dlDate">${cfg.label}</label><input class="input" id="dlDate" name="date" type="date" value="${PF.esc(cfg.value)}"${mode === 'actual' ? ` max="${PF.ctx.today}"` : ''} required></div>
       <div class="dl-calc" id="dlCalc" aria-live="polite"></div>
       <span class="error-msg" data-err="date" id="dlErr" hidden></span>
+      ${mode === 'forecast' ? `<div class="field" style="margin-top:8px"><label for="dlReason">Motivo do replanejamento <span class="req" aria-hidden="true">*</span></label><textarea class="textarea" id="dlReason" name="reason" rows="2" maxlength="300" required aria-required="true" aria-describedby="dlReasonErr" placeholder="Ex.: dependência de outra área, mudança de escopo, capacidade da squad"></textarea><span class="error-msg" id="dlReasonErr" hidden></span></div>` : ''}
       <div class="dl-foot">${mode === 'actual' && init.deliveryActual ? '<button type="button" class="btn btn-tertiary btn-sm" data-action="delivery-undo-actual">Desfazer registro</button>' : ''}<span class="spacer"></span>
         <button type="button" class="btn btn-tertiary btn-sm" data-action="delivery-cancel">Cancelar</button><button type="submit" class="btn btn-primary btn-sm">${cfg.submit}</button></div>
     </form>`;
@@ -574,11 +602,17 @@ function submitDelivery(form){
   const init = PF.ctx.initById.get(id);
   if(mode === 'actual' && v > PF.ctx.today) return err(`A entrega real não pode ser futura (referência ${PF.fmtDateFull(PF.ctx.today)}). Para uma data futura, use Alterar previsão.`);
   const same = mode === 'forecast' ? v === (init.deliveryCurrent || init.deliveryPlanned) : mode === 'actual' ? v === init.deliveryActual : false;
+  /* Replanejar exige justificativa: fica no histórico junto da data. */
+  const reason = mode === 'forecast' ? PF.toText((form.querySelector('[name=reason]') || {}).value) : '';
+  if(mode === 'forecast' && !same && !reason){
+    const e = form.querySelector('#dlReasonErr'), t = form.querySelector('#dlReason');
+    if(e){ e.hidden = false; e.textContent = 'Informe o motivo do replanejamento'; } if(t){ t.setAttribute('aria-invalid','true'); t.focus(); } return;
+  }
   const anchorId = id; closeToneMenu();
   if(same){ refocusMilestone(anchorId); return; }
   let toast;
   PF.commit(s => { const i = s.initiatives.find(x => x.id === id);
-    if(mode === 'forecast'){ PF.recordDeliveryChange(i, 'forecast', i.deliveryCurrent || i.deliveryPlanned, v); i.deliveryCurrent = v; }
+    if(mode === 'forecast'){ PF.recordDeliveryChange(i, 'forecast', i.deliveryCurrent || i.deliveryPlanned, v, {reason}); i.deliveryCurrent = v; }
     else if(mode === 'baseline'){ PF.recordDeliveryChange(i, 'baseline', i.deliveryPlanned, v); i.deliveryPlanned = v; }
     else { PF.recordDeliveryChange(i, 'actual', i.deliveryActual, v, {prevSituation:i.situation}); i.deliveryActual = v; i.situation = 'Concluída'; }
   }, {toast: mode === 'forecast' ? `${id}: previsão de entrega ${PF.fmtDateFull(v)} · planejada preservada` : mode === 'baseline' ? `${id}: entrega planejada definida em ${PF.fmtDateFull(v)}` : `${id}: entrega registrada em ${PF.fmtDateFull(v)}`});

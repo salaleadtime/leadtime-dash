@@ -22,37 +22,44 @@ const OPEN_FLOW = ['Desenvolvimento','Homologação'];
 const PHASES = ['Discovery','Desenho da Solução','Definição Técnica','Escrita de Histórias','Refinamento Técnico','Desenvolvimento','Homologação','Implantação','Concluída'];
 const SITUATIONS = ['Em andamento','Aguardando negócio','Suspensa','Concluída'];
 const RISKS = ['Baixo','Médio','Alto','Crítico'];
+/* Situação do prazo — UM vocabulário para todas as visões (painel, tabela, cronograma, Gantt, drawer, PPT).
+   Cor sempre acompanhada de texto e ícone: verde = no prazo · amarelo = atenção · azul = replanejada ·
+   vermelho = atrasada · cinza = sem previsão / suspensa (off). */
 const DEADLINE_META = {
-  ok:        {label:'No prazo',     icon:'i-ok',        order:4},
-  attention: {label:'Atenção',      icon:'i-attention', order:2},
   late:      {label:'Atrasada',     icon:'i-late',      order:1},
-  suspended: {label:'Suspensa',     icon:'i-suspended', order:5},
-  none:      {label:'Sem previsão', icon:'i-none',      order:3},
-  done:      {label:'Entregue',     icon:'i-done',      order:6}
+  attention: {label:'Atenção',      icon:'i-attention', order:2},
+  replanned: {label:'Replanejada',  icon:'i-replan',    order:3},
+  none:      {label:'Sem previsão', icon:'i-none',      order:4},
+  ok:        {label:'No prazo',     icon:'i-ok',        order:5},
+  done:      {label:'Entregue',     icon:'i-done',      order:6},
+  suspended: {label:'Suspensa',     icon:'i-suspended', order:7}
 };
-const DEADLINE_KPI_ORDER = ['ok','attention','late','none','suspended'];
+/* Suspensa = cancelada: fica FORA dos indicadores operacionais (não entra no denominador). */
+const DEADLINE_KPI_ORDER = ['ok','attention','replanned','late','none','done'];
+const SCOPES = {active:'Todas as Ativas', suspended:'Suspensas', all:'Todas as iniciativas'};
+const SQUAD_NONE_LABEL = 'Sem Squad definida';
 const DEFAULT_SETTINGS = {
   rules:{
     attentionDaysThreshold:15,
     attentionProgressThreshold:70,
     devStartSlipToleranceDays:7,
-    lateVarianceToleranceDays:0
+    replanToleranceDays:0
   },
   upcomingWindows:[15,30,60,90],
   referenceDate:null
 };
 const SCHEMA_VERSION = 3;
 /* Tom visual do Prazo: o status real define ícone e rótulo; o tom pode ter ajuste manual (somente visual) */
-const TONES = {green:{label:'Verde'}, yellow:{label:'Amarelo'}, red:{label:'Vermelho'}, neutral:{label:'Neutro'}};
-const AUTO_TONE = {ok:'green', attention:'yellow', late:'red', suspended:'neutral', none:'neutral', done:'blue'};
-const TONE_LABEL = {...Object.fromEntries(Object.entries(TONES).map(([k,v]) => [k, v.label])), blue:'Azul'};
+const TONES = {green:{label:'Verde'}, yellow:{label:'Amarelo'}, blue:{label:'Azul'}, red:{label:'Vermelho'}, neutral:{label:'Neutro'}};
+const AUTO_TONE = {ok:'green', attention:'yellow', replanned:'blue', late:'red', suspended:'neutral', none:'neutral', done:'green'};
+const TONE_LABEL = Object.fromEntries(Object.entries(TONES).map(([k,v]) => [k, v.label]));
 const DEFAULT_TEAM = {hoursPerDay:6};
 const ABSENCE_KINDS = ['Férias','Ausência','Afastamento'];
 const DEFAULT_COLORS = {primary:'#cc092f', secondary:'#1f2733', accent:'#2f5fb3'};
 const DEFAULT_PREFS = {
   theme:'light', colors:{...DEFAULT_COLORS}, view:'overview',
   filters:{q:'',squad:'',phase:'',situation:'',deadline:'',sprint:'',year:'',risk:'',area:''},
-  columns:null, sort:{col:'deadline',dir:'asc'}, initView:'table', upcomingWindow:60, sprintId:null
+  columns:null, sort:{col:'deadline',dir:'asc'}, initView:'table', scope:'active', upcomingWindow:60, sprintId:null
 };
 
 /* =====================================================================
@@ -76,6 +83,10 @@ function isValidISO(iso){ const t=isoToUTC(iso); return t != null && utcToISO(t)
 function localTodayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function addDays(iso,n){ return utcToISO(isoToUTC(iso) + n*DAY); }
 function daysBetween(a,b){ const x=isoToUTC(a), y=isoToUTC(b); return (x==null||y==null) ? null : Math.round((y-x)/DAY); }
+/* Data/hora SEMPRE no formato dd/mm/aaaa, hh:mm — montada à mão, sem toLocale*: o texto não depende do idioma
+   do navegador (pt-BR, en-US…). As datas guardadas são ISO (AAAA-MM-DD) e nunca passam por interpretação regional. */
+function fmtDateTime(iso){ const d = new Date(iso); return isNaN(d) ? '' : `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtTime(d){ d = d instanceof Date ? d : new Date(d); return isNaN(d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y.slice(2)}`; }
 function fmtDateFull(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
 function fmtDayMonth(iso){ if(!iso) return '—'; const [,m,d]=iso.split('-'); return `${d}/${m}`; }
@@ -86,7 +97,7 @@ function pct(n){ return n == null ? '—' : `${n}%`; }
 function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null; }
 function normKey(s){ return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 /* Ícones inline (sem <use href>, que não resolve de forma consistente dentro de Shadow DOM em todos os navegadores). */
-const ICONS = {"i-ok": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M8 12.5l2.6 2.6L16 9.7\"/>"], "i-attention": ["0 0 24 24", "<path d=\"M12 3.5l9.5 16.5h-19z\"/><path d=\"M12 10v4.2\"/><path d=\"M12 17.2v.1\"/>"], "i-late": ["0 0 24 24", "<path d=\"M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z\"/><path d=\"M12 7.8v5\"/><path d=\"M12 16.2v.1\"/>"], "i-suspended": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M10 9v6M14 9v6\"/>"], "i-none": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\" stroke-dasharray=\"3 3\"/><path d=\"M8.5 12h7\"/>"], "i-done": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M7.5 12.3l2.6 2.6L16.5 8.5\"/><path d=\"M12 3v0\"/>"], "i-search": ["0 0 24 24", "<circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M20 20l-4.2-4.2\"/>"], "i-filter": ["0 0 24 24", "<path d=\"M4 6h16M7 12h10M10 18h4\"/>"], "i-plus": ["0 0 24 24", "<path d=\"M12 5v14M5 12h14\"/>"], "i-upload": ["0 0 24 24", "<path d=\"M12 15V4M7.5 8.5L12 4l4.5 4.5\"/><path d=\"M4 15v3.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V15\"/>"], "i-download": ["0 0 24 24", "<path d=\"M12 4v11M7.5 10.5L12 15l4.5-4.5\"/><path d=\"M4 15v3.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V15\"/>"], "i-more": ["0 0 24 24", "<circle cx=\"5.5\" cy=\"12\" r=\"1.2\"/><circle cx=\"12\" cy=\"12\" r=\"1.2\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.2\"/>"], "i-close": ["0 0 24 24", "<path d=\"M6 6l12 12M18 6L6 18\"/>"], "i-edit": ["0 0 24 24", "<path d=\"M4 20h4L19 9l-4-4L4 16z\"/><path d=\"M13.5 6.5l4 4\"/>"], "i-lock": ["0 0 24 24", "<rect x=\"5\" y=\"10.5\" width=\"14\" height=\"9.5\" rx=\"1.5\"/><path d=\"M8 10.5V7.5a4 4 0 018 0v3\"/>"], "i-unlock": ["0 0 24 24", "<rect x=\"5\" y=\"10.5\" width=\"14\" height=\"9.5\" rx=\"1.5\"/><path d=\"M8 10.5V7.5a4 4 0 017.6-1.7\"/>"], "i-chevron": ["0 0 24 24", "<path d=\"M6 9l6 6 6-6\"/>"], "i-left": ["0 0 24 24", "<path d=\"M15 6l-6 6 6 6\"/>"], "i-right": ["0 0 24 24", "<path d=\"M9 6l6 6-6 6\"/>"], "i-sort": ["0 0 24 24", "<path d=\"M8 10l4-4 4 4M8 14l4 4 4-4\"/>"], "i-asc": ["0 0 24 24", "<path d=\"M8 14l4-4 4 4\"/>"], "i-desc": ["0 0 24 24", "<path d=\"M8 10l4 4 4-4\"/>"], "i-settings": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2.8v2.4M12 18.8v2.4M4.2 7.4l2.1 1.2M17.7 15.4l2.1 1.2M4.2 16.6l2.1-1.2M17.7 8.6l2.1-1.2\"/>"], "i-columns": ["0 0 24 24", "<rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"15\" rx=\"1.5\"/><path d=\"M9.5 4.5v15M14.5 4.5v15\"/>"], "i-note": ["0 0 24 24", "<path d=\"M5 4h14v11l-5 5H5z\"/><path d=\"M14 20v-5h5M8.5 9h7M8.5 12.5h4\"/>"], "i-calendar": ["0 0 24 24", "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15\" rx=\"1.5\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/>"], "i-slides": ["0 0 24 24", "<rect x=\"3\" y=\"4.5\" width=\"18\" height=\"12\" rx=\"1.5\"/><path d=\"M12 16.5V20M8.5 20h7\"/>"], "i-reset": ["0 0 24 24", "<path d=\"M4 12a8 8 0 102.6-5.9\"/><path d=\"M4 4.5V9h4.5\"/>"], "i-trash": ["0 0 24 24", "<path d=\"M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13\"/>"], "i-shield": ["0 0 24 24", "<path d=\"M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z\"/>"], "i-info": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v5.5M12 7.8v.1\"/>"], "i-error": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9 9l6 6M15 9l-6 6\"/>"], "i-file": ["0 0 24 24", "<path d=\"M6 3h8l4 4v14H6z\"/><path d=\"M14 3v4h4M9 12h6M9 15.5h6\"/>"], "i-flow": ["0 0 24 24", "<path d=\"M4 12h11M11 7l5 5-5 5\"/><path d=\"M20 5v14\"/>"], "i-copy": ["0 0 24 24", "<rect x=\"8\" y=\"8\" width=\"12\" height=\"12\" rx=\"1.5\"/><path d=\"M16 8V5.5A1.5 1.5 0 0014.5 4h-9A1.5 1.5 0 004 5.5v9A1.5 1.5 0 005.5 16H8\"/>"]};
+const ICONS = {"i-replan": ["0 0 24 24", "<path d=\"M4 12a8 8 0 0113.7-5.6L20 9\"/><path d=\"M20 4v5h-5\"/><path d=\"M20 12a8 8 0 01-13.7 5.6L4 15\"/><path d=\"M4 20v-5h5\"/>"], "i-ok": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M8 12.5l2.6 2.6L16 9.7\"/>"], "i-attention": ["0 0 24 24", "<path d=\"M12 3.5l9.5 16.5h-19z\"/><path d=\"M12 10v4.2\"/><path d=\"M12 17.2v.1\"/>"], "i-late": ["0 0 24 24", "<path d=\"M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z\"/><path d=\"M12 7.8v5\"/><path d=\"M12 16.2v.1\"/>"], "i-suspended": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M10 9v6M14 9v6\"/>"], "i-none": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\" stroke-dasharray=\"3 3\"/><path d=\"M8.5 12h7\"/>"], "i-done": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M7.5 12.3l2.6 2.6L16.5 8.5\"/><path d=\"M12 3v0\"/>"], "i-search": ["0 0 24 24", "<circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M20 20l-4.2-4.2\"/>"], "i-filter": ["0 0 24 24", "<path d=\"M4 6h16M7 12h10M10 18h4\"/>"], "i-plus": ["0 0 24 24", "<path d=\"M12 5v14M5 12h14\"/>"], "i-upload": ["0 0 24 24", "<path d=\"M12 15V4M7.5 8.5L12 4l4.5 4.5\"/><path d=\"M4 15v3.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V15\"/>"], "i-download": ["0 0 24 24", "<path d=\"M12 4v11M7.5 10.5L12 15l4.5-4.5\"/><path d=\"M4 15v3.5A1.5 1.5 0 005.5 20h13a1.5 1.5 0 001.5-1.5V15\"/>"], "i-more": ["0 0 24 24", "<circle cx=\"5.5\" cy=\"12\" r=\"1.2\"/><circle cx=\"12\" cy=\"12\" r=\"1.2\"/><circle cx=\"18.5\" cy=\"12\" r=\"1.2\"/>"], "i-close": ["0 0 24 24", "<path d=\"M6 6l12 12M18 6L6 18\"/>"], "i-edit": ["0 0 24 24", "<path d=\"M4 20h4L19 9l-4-4L4 16z\"/><path d=\"M13.5 6.5l4 4\"/>"], "i-lock": ["0 0 24 24", "<rect x=\"5\" y=\"10.5\" width=\"14\" height=\"9.5\" rx=\"1.5\"/><path d=\"M8 10.5V7.5a4 4 0 018 0v3\"/>"], "i-unlock": ["0 0 24 24", "<rect x=\"5\" y=\"10.5\" width=\"14\" height=\"9.5\" rx=\"1.5\"/><path d=\"M8 10.5V7.5a4 4 0 017.6-1.7\"/>"], "i-chevron": ["0 0 24 24", "<path d=\"M6 9l6 6 6-6\"/>"], "i-left": ["0 0 24 24", "<path d=\"M15 6l-6 6 6 6\"/>"], "i-right": ["0 0 24 24", "<path d=\"M9 6l6 6-6 6\"/>"], "i-sort": ["0 0 24 24", "<path d=\"M8 10l4-4 4 4M8 14l4 4 4-4\"/>"], "i-asc": ["0 0 24 24", "<path d=\"M8 14l4-4 4 4\"/>"], "i-desc": ["0 0 24 24", "<path d=\"M8 10l4 4 4-4\"/>"], "i-settings": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2.8v2.4M12 18.8v2.4M4.2 7.4l2.1 1.2M17.7 15.4l2.1 1.2M4.2 16.6l2.1-1.2M17.7 8.6l2.1-1.2\"/>"], "i-columns": ["0 0 24 24", "<rect x=\"3.5\" y=\"4.5\" width=\"17\" height=\"15\" rx=\"1.5\"/><path d=\"M9.5 4.5v15M14.5 4.5v15\"/>"], "i-note": ["0 0 24 24", "<path d=\"M5 4h14v11l-5 5H5z\"/><path d=\"M14 20v-5h5M8.5 9h7M8.5 12.5h4\"/>"], "i-calendar": ["0 0 24 24", "<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15\" rx=\"1.5\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/>"], "i-slides": ["0 0 24 24", "<rect x=\"3\" y=\"4.5\" width=\"18\" height=\"12\" rx=\"1.5\"/><path d=\"M12 16.5V20M8.5 20h7\"/>"], "i-reset": ["0 0 24 24", "<path d=\"M4 12a8 8 0 102.6-5.9\"/><path d=\"M4 4.5V9h4.5\"/>"], "i-trash": ["0 0 24 24", "<path d=\"M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13\"/>"], "i-shield": ["0 0 24 24", "<path d=\"M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z\"/>"], "i-info": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v5.5M12 7.8v.1\"/>"], "i-error": ["0 0 24 24", "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9 9l6 6M15 9l-6 6\"/>"], "i-file": ["0 0 24 24", "<path d=\"M6 3h8l4 4v14H6z\"/><path d=\"M14 3v4h4M9 12h6M9 15.5h6\"/>"], "i-flow": ["0 0 24 24", "<path d=\"M4 12h11M11 7l5 5-5 5\"/><path d=\"M20 5v14\"/>"], "i-copy": ["0 0 24 24", "<rect x=\"8\" y=\"8\" width=\"12\" height=\"12\" rx=\"1.5\"/><path d=\"M16 8V5.5A1.5 1.5 0 0014.5 4h-9A1.5 1.5 0 004 5.5v9A1.5 1.5 0 005.5 16H8\"/>"]};
 function icon(id, cls='ic'){ const d = ICONS[id] || ICONS['i-info']; return `<svg class="${cls}" viewBox="${d[0]}" aria-hidden="true">${d[1]}</svg>`; }
 function shortName(name, max=46){ const s=String(name||''); return s.length > max ? s.slice(0, max-1).trimEnd() + '…' : s; }
 function debounce(fn, ms){ let t; return (...a) => { clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
@@ -110,7 +121,7 @@ const PHASE_ALIASES = {
 const SITUATION_ALIASES = {
   emandamento:'Em andamento', andamento:'Em andamento', emandamentoentreareas:'Em andamento', acompanhar:'Em andamento', noprazo:'Em andamento',
   aguardandonegocio:'Aguardando negócio', aguardandoareadenegocio:'Aguardando negócio', aguardando:'Aguardando negócio',
-  suspensa:'Suspensa', suspenso:'Suspensa', pausada:'Suspensa', pausado:'Suspensa',
+  suspensa:'Suspensa', suspenso:'Suspensa', pausada:'Suspensa', pausado:'Suspensa', cancelada:'Suspensa', cancelado:'Suspensa',
   concluida:'Concluída', concluido:'Concluída', entregue:'Concluída'
 };
 const RISK_ALIASES = {baixo:'Baixo', low:'Baixo', medio:'Médio', medium:'Médio', atencao:'Médio', alto:'Alto', high:'Alto', critico:'Crítico', critical:'Crítico'};
@@ -186,6 +197,7 @@ function normalizeStory(r){
     plannedSprint: toText(r.plannedSprint) || null, sprint: toText(r.sprint) || toText(r.plannedSprint) || null,
     status: WORKFLOW.includes(r.status) ? r.status : 'Backlog', blocked: !!r.blocked, blockedReason: toText(r.blockedReason), blockedSince: r.blockedSince || null,
     createdAt: r.createdAt || null, devStartAt: r.devStartAt || null, homologAt: r.homologAt || null, doneAt: r.doneAt || null,
+    squad: toText(r.squad) || null,
     owner: toText(r.owner), notes: toText(r.notes), demo: !!r.demo
   };
 }
@@ -263,5 +275,5 @@ function calculateSprintCapacity(sprint, absences, today){
 }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {PORTFOLIO_VERSION, STORE_DATA_SLOT, STORE_PREFS_SLOT, CLOUD_SLOT, WORKFLOW, OPEN_FLOW, PHASES, SITUATIONS, RISKS, DEADLINE_META, DEADLINE_KPI_ORDER, DEFAULT_SETTINGS, SCHEMA_VERSION, TONES, AUTO_TONE, TONE_LABEL, DEFAULT_TEAM, ABSENCE_KINDS, DEFAULT_COLORS, DEFAULT_PREFS, DOM, $, $$, activeEl, ESC, esc, clone, pad, DAY, MONTHS, WEEKDAYS, isoToUTC, utcToISO, isValidISO, localTodayISO, addDays, daysBetween, fmtDate, fmtDateFull, fmtDayMonth, weekday, fmtSigned, plural, pct, avg, normKey, ICONS, icon, shortName, debounce, mulberry32, hashStr, safeStorageGet, safeStorageSet, PHASE_ALIASES, SITUATION_ALIASES, RISK_ALIASES, STATUS_ALIASES, BLOCKED_STATUS_KEYS, canon, toText, parseBool, parseSquads, normalizeDate, normalizeInitiative, parseOwnerText, normalizeOwners, ownerNames, ownerAreas, normalizeStory, easterSunday, _holidayCache, getNationalHolidays, holidayCalendar, isWeekday, eachDay, calculateSprintCalendar, calculateSprintCapacity});
+Object.assign(PF, {SCOPES, SQUAD_NONE_LABEL, fmtDateTime, fmtTime, PORTFOLIO_VERSION, STORE_DATA_SLOT, STORE_PREFS_SLOT, CLOUD_SLOT, WORKFLOW, OPEN_FLOW, PHASES, SITUATIONS, RISKS, DEADLINE_META, DEADLINE_KPI_ORDER, DEFAULT_SETTINGS, SCHEMA_VERSION, TONES, AUTO_TONE, TONE_LABEL, DEFAULT_TEAM, ABSENCE_KINDS, DEFAULT_COLORS, DEFAULT_PREFS, DOM, $, $$, activeEl, ESC, esc, clone, pad, DAY, MONTHS, WEEKDAYS, isoToUTC, utcToISO, isValidISO, localTodayISO, addDays, daysBetween, fmtDate, fmtDateFull, fmtDayMonth, weekday, fmtSigned, plural, pct, avg, normKey, ICONS, icon, shortName, debounce, mulberry32, hashStr, safeStorageGet, safeStorageSet, PHASE_ALIASES, SITUATION_ALIASES, RISK_ALIASES, STATUS_ALIASES, BLOCKED_STATUS_KEYS, canon, toText, parseBool, parseSquads, normalizeDate, normalizeInitiative, parseOwnerText, normalizeOwners, ownerNames, ownerAreas, normalizeStory, easterSunday, _holidayCache, getNationalHolidays, holidayCalendar, isWeekday, eachDay, calculateSprintCalendar, calculateSprintCapacity});
 })();
