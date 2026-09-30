@@ -239,6 +239,24 @@ código:
   `homologNationalHolidayKeys` (SLA de Homologação de `index.html`) de
   2024 em diante — `tests/portfolio-core.test.js` garante. Se mudar um,
   mude o outro (candidato a consolidar numa fonte só no futuro).
+- **Modelo de status e universos (30/09/2026, v4 dos assets)**: duas
+  populações que nunca se misturam — *cadastradas* (todas) e *ativas*
+  (cadastradas − suspensas). KPIs, percentuais, Painel, Sprints e PowerPoint
+  usam as **ativas**; "Iniciativas" e "Cronograma" seguem o filtro
+  "Situação da iniciativa" (Todas as Ativas — padrão / Suspensas / Todas).
+  **Suspensa = cancelada** (`situation==='Suspensa'`): consultável, visual
+  "off" neutro, fora de capacidade, previsão, atenção e de qualquer status de
+  prazo. **Replanejada** = previsão vigente deslocada da linha de base além da
+  tolerância, com a data vigente ainda no futuro; **Atrasada** só quando a
+  data vigente já passou. Prioridade: atrasada > atenção > replanejada > no
+  prazo. O único lugar que decide status é `calculateDeadlineStatus`
+  (`pf-metrics.js`) — tabela, Gantt, drawer, tooltips e PPT só leem dele.
+  Replanejar exige **motivo** (gravado em `deliveryHistory[].reason`); a célula
+  da Entrega mostra só o estado atual, o histórico fica no histórico.
+  Histórias têm coluna **Squad** (importação HISTORIAS); em iniciativa
+  Multi-Squad a Squad nunca é presumida ("Sem Squad definida") e números
+  filtrados por Squad usam só as histórias dela. Não existe campo de "Squad
+  responsável" — não invente. Validar com `node tests/portfolio-core.test.js`.
 - **Bibliotecas**: SheetJS (`vendor/xlsx.full.min.js`, já usada pelo
   dashboard) e PptxGenJS 3.12.0 (`vendor/pptxgen.bundle.js`, nova), ambas
   cópia local primeiro e CDN como alternativa, carregadas só quando usadas.

@@ -14,7 +14,13 @@ const PF = SP.internal = SP.internal || {};
 function closePopovers(except){
   PF.$$('.popover:not([hidden]),.menu:not([hidden])').forEach(p => { if(p !== except){ p.hidden = true; const b = PF.$(`[data-pop="${p.id}"],[data-menu="${p.id}"]`); if(b) b.setAttribute('aria-expanded','false'); } });
 }
-function setView(v){ PF.prefs.view = v; PF.persistPrefs(); PF.renderFilterBar(); PF.renderActiveFilters(); PF.renderView(); const top = PF.DOM.host.getBoundingClientRect().top; if(top < 0) window.scrollBy({top:top - 8}); }
+/* v: overview (Painel) · initiatives (Iniciativas) · timeline (Cronograma) · sprints.
+   Iniciativas e Cronograma são duas leituras da mesma lista (mesmo escopo e filtros). */
+function setView(v){
+  if(v === 'timeline'){ PF.prefs.view = 'initiatives'; PF.prefs.initView = 'gantt'; }
+  else if(v === 'initiatives'){ PF.prefs.view = 'initiatives'; PF.prefs.initView = 'table'; }
+  else PF.prefs.view = v; PF.persistPrefs(); PF.renderFilterBar(); PF.renderActiveFilters(); PF.renderView(); const top = PF.DOM.host.getBoundingClientRect().top; if(top < 0) window.scrollBy({top:top - 8}); }
+function setViewQuiet(v){ if(v === 'timeline'){ PF.prefs.view = 'initiatives'; PF.prefs.initView = 'gantt'; } else if(v === 'initiatives'){ PF.prefs.view = 'initiatives'; PF.prefs.initView = 'table'; } else PF.prefs.view = v; }
 const ACTIONS = {
   'close-overlay': () => PF.closeOverlay(),
   'sync-retry': () => PF.retrySync(),
@@ -49,13 +55,15 @@ const ACTIONS = {
   'drawer-story-filter': (el) => { PF.ui.drawerStoryFilter = el.dataset.value; PF.renderDrawer(); },
   'drill-deadline': (el) => { const v = el.dataset.value; PF.prefs.filters.deadline = PF.prefs.filters.deadline === v ? '' : v; PF.persistPrefs(); if(PF.prefs.filters.deadline) setView('initiatives'); else { PF.renderFilterBar(); PF.renderActiveFilters(); PF.renderView(); } },
   'drill-phase': (el) => { PF.prefs.filters.phase = el.dataset.value; PF.persistPrefs(); setView('initiatives'); },
-  'drill-squad': (el) => { PF.prefs.filters.squad = el.dataset.value; PF.persistPrefs(); setView('initiatives'); },
+  'drill-squad': (el) => { PF.prefs.filters.squad = el.dataset.value; PF.persistPrefs(); PF.ctx = PF.computeContext(); PF.closeToneMenu(); setView('initiatives'); },
   'goto-view': (el) => setView(el.dataset.value),
   'remove-filter': (el) => PF.setFilter(el.dataset.key, ''),
   'clear-filters': () => PF.clearFilters(),
   'toggle-attn': () => { PF.ui.attnExpanded = !PF.ui.attnExpanded; PF.renderView(); },
   'set-window': (el) => { PF.prefs.upcomingWindow = +el.dataset.value; PF.persistPrefs(); PF.renderView(); const b = PF.$(`[data-action="set-window"][data-value="${el.dataset.value}"]`); if(b) b.focus(); },
-  'set-init-view': (el) => { PF.prefs.initView = el.dataset.value; PF.persistPrefs(); PF.renderView(); },
+  'set-init-view': (el) => setView(el.dataset.value === 'gantt' ? 'timeline' : 'initiatives'),
+  'goto-scope': (el) => { PF.prefs.scope = PF.SCOPES[el.dataset.value] ? el.dataset.value : 'active'; PF.persistPrefs(); setView('initiatives'); },
+  'toggle-squads': (el) => { const id = el.dataset.id, set = PF.ui.expandedSquads; set.has(id) ? set.delete(id) : set.add(id); PF.renderView(); const b = PF.$(`[data-action="toggle-squads"][data-id="${CSS.escape(id)}"]`); if(b) b.focus(); },
   'set-preset': (el) => { PF.prefs.columns = [...PF.COLUMN_PRESETS[el.dataset.value].cols]; PF.persistPrefs(); PF.renderView(); },
   'sort': (el) => { const c = el.dataset.col; PF.prefs.sort = PF.prefs.sort.col === c ? {col:c, dir:PF.prefs.sort.dir === 'asc' ? 'desc' : 'asc'} : {col:c, dir:'asc'}; PF.persistPrefs(); PF.renderView(); const b = PF.$(`[data-action="sort"][data-col="${c}"]`); if(b) b.focus(); },
   'sprint-step': (el) => { const i = PF.ctx.sprintIdx.get(PF.selectedSprint().id) + (+el.dataset.value); const sp = PF.ctx.sprints[i]; if(sp){ PF.prefs.sprintId = sp.id; PF.persistPrefs(); PF.renderView(); } },
@@ -193,8 +201,9 @@ function shellHTML(){
   </div>
   <div class="subnav-row">
     <div class="subnav" role="tablist" aria-label="Seções do portfólio">
-      <button type="button" role="tab" class="subnav__tab" id="tab-overview" data-view="overview" aria-controls="view-overview">Visão geral</button>
+      <button type="button" role="tab" class="subnav__tab" id="tab-overview" data-view="overview" aria-controls="view-overview">Painel</button>
       <button type="button" role="tab" class="subnav__tab" id="tab-initiatives" data-view="initiatives" aria-controls="view-initiatives">Iniciativas <span class="subnav__count" id="countInitiatives">0</span></button>
+      <button type="button" role="tab" class="subnav__tab" id="tab-timeline" data-view="timeline" aria-controls="view-initiatives">Cronograma</button>
       <button type="button" role="tab" class="subnav__tab" id="tab-sprints" data-view="sprints" aria-controls="view-sprints">Sprints</button>
     </div>
     <div class="filterbar" id="filterBar" role="search" aria-label="Filtros do portfólio"></div>
@@ -228,7 +237,7 @@ function mount(host, opts = {}){
   PF.sync.url = opts.gasUrl || null;
   PF.appState = PF.loadState();
   PF.prefs = PF.loadPrefs();
-  if(['overview','initiatives','sprints'].includes(opts.view)) PF.prefs.view = opts.view;
+  if(['overview','initiatives','timeline','sprints'].includes(opts.view)) setViewQuiet(opts.view);
   PF.applyAppearance();
   bindEvents(root);
   // Atalho "/" para a busca: escuta no documento, só age com a aba visível e sem foco em campo.

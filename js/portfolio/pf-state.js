@@ -14,7 +14,7 @@ const PF = SP.internal = SP.internal || {};
 PF.appState = null;
 PF.prefs = null;
 PF.ctx = null;
-const ui = { drawer:null, drawerTab:'summary', drawerStoryFilter:'all', attnExpanded:false, expandedSprints:new Set(), expandedGroups:new Set(), sprintItemFilter:'all', overlays:[], popover:null, obsDraft:{} };
+const ui = { drawer:null, drawerTab:'summary', drawerStoryFilter:'all', attnExpanded:false, expandedSprints:new Set(), expandedGroups:new Set(), sprintItemFilter:'all', overlays:[], popover:null, obsDraft:{}, expandedSquads:new Set() };
 
 function loadState(){
   const raw = PF.safeStorageGet(PF.STORE_DATA_SLOT);
@@ -47,6 +47,9 @@ function loadPrefs(){
   const raw = PF.safeStorageGet(PF.STORE_PREFS_SLOT); let p = {};
   if(raw){ try { p = JSON.parse(raw) || {}; } catch(e){} }
   if(Array.isArray(p.columns) && p.columns.includes('owner') && !p.columns.includes('area')) p.columns.splice(p.columns.indexOf('owner')+1, 0, 'area');
+  if(p.filters && p.filters.deadline === 'suspended') p.filters.deadline = '';   // Suspensa deixou de ser "prazo": é a Situação da iniciativa
+  if(p.filters && p.filters.situation === 'Suspensa') p.filters.situation = '';
+  if(!PF.SCOPES[p.scope]) p.scope = 'active';
   return {...PF.clone(PF.DEFAULT_PREFS), ...p, colors:{...PF.DEFAULT_COLORS, ...(p.colors||{})}, filters:{...PF.DEFAULT_PREFS.filters, ...(p.filters||{})}, sort:{...PF.DEFAULT_PREFS.sort, ...(p.sort||{})}};
 }
 function persistState(){ PF.safeStorageSet(PF.STORE_DATA_SLOT, JSON.stringify(PF.appState)); }

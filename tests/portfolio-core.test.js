@@ -65,7 +65,7 @@ const capAbs = PF.calculateSprintCapacity(sprint, [{memberId: 'm1', from: '2026-
 ok(capAbs.totalHours === 270 - 6, 'férias sobre feriado não contam em dobro (só 19/11 desconta)');
 
 console.log('\n═══ 4. Status de prazo ═══');
-const c = {today: '2026-09-29', settings: {rules: {attentionDaysThreshold: 15, attentionProgressThreshold: 70, devStartSlipToleranceDays: 7, lateVarianceToleranceDays: 0}}};
+const c = {today: '2026-09-29', settings: {rules: {attentionDaysThreshold: 15, attentionProgressThreshold: 70, devStartSlipToleranceDays: 7, replanToleranceDays: 0}}};
 const dist = {total: 10, done: 2, pctDone: 20};
 const st = (init) => PF.calculateDeadlineStatus(Object.assign({situation: 'Em andamento', deliveryHistory: []}, init), dist, {forecast: null, actual: null}, c).status;
 ok(st({deliveryPlanned: '2026-09-01'}) === 'late', 'entrega vencida → Atrasada');
@@ -74,6 +74,58 @@ ok(st({deliveryPlanned: '2027-03-01'}) === 'ok', 'entrega distante → No prazo'
 ok(st({}) === 'none', 'sem data → Sem previsão');
 ok(st({deliveryPlanned: '2026-09-01', deliveryActual: '2026-08-30'}) === 'done', 'entrega registrada → Entregue');
 ok(st({deliveryPlanned: '2026-09-01', situation: 'Suspensa'}) === 'suspended', 'situação Suspensa → Suspensa');
+
+
+console.log('\n═══ 5. Modelo único: ciclo de vida, Replanejada, universos e Squads ═══');
+{
+  const mk = (id, o) => Object.assign({id, name:'Iniciativa ' + id, squads:['Alfa'], phase:'Desenvolvimento', situation:'Em andamento', risk:'Baixo', deliveryHistory:[], notesLog:[], owners:[]}, o);
+  const st = (id, initiativeId, status, squad) => ({id, initiativeId, title:id, status, squad:squad || null, plannedSprint:null, sprint:null});
+  const inits = [
+    mk('A', {deliveryPlanned:'2026-11-01', deliveryCurrent:'2026-11-02', deliveryHistory:[{type:'forecast', from:'2026-11-01', to:'2026-11-02', reason:'Dependência'}]}),   // replanejada +1d, vence em 33 dias
+    mk('B', {deliveryPlanned:'2026-09-01'}),                                               // vencida → atrasada
+    mk('C', {deliveryPlanned:'2026-10-01', deliveryCurrent:'2026-09-15'}),                 // replanejada E a data vigente já venceu → atrasada
+    mk('D', {deliveryPlanned:'2026-11-01', situation:'Suspensa', risk:'Crítico'}),         // cancelada
+    mk('E', {deliveryPlanned:'2027-03-01'}),                                               // no prazo
+    mk('M', {squads:['TopGun','Guardiões','Inception'], deliveryPlanned:'2027-01-15'})     // multi-squad
+  ];
+  const stories = [
+    st('M1','M','Backlog','TopGun'), st('M2','M','Desenvolvimento','TopGun'), st('M3','M','Concluída','Guardiões'), st('M4','M','Homologação','Guardiões'), st('M5','M','Backlog', null),
+    st('E1','E','Concluída'), st('D1','D','Desenvolvimento')
+  ];
+  PF.appState = PF.prepareState({initiatives:inits, stories, sprints:[], settings:{referenceDate:'2026-09-30'}});
+  PF.prefs = PF.loadPrefs(); PF.ctx = PF.computeContext();
+  const S = id => PF.ctx.initMetrics.get(id).deadline.status;
+  ok(S('A') === 'replanned', 'desvio de +1 dia com data alvo em 33 dias → Replanejada (não Atrasada)');
+  ok(S('B') === 'late', 'data vigente vencida → Atrasada');
+  ok(S('C') === 'late', 'replanejada cuja nova data também venceu → Atrasada (atraso efetivo)');
+  ok(S('D') === 'suspended' && PF.ctx.initMetrics.get('D').lifecycle === 'suspended', 'Suspensa → lifecycle suspended');
+  ok(S('E') === 'ok', 'sem desvio e longe do prazo → No prazo');
+  const all = PF.appState.initiatives, active = PF.filterInitiatives('active'), susp = PF.filterInitiatives('suspended'), every = PF.filterInitiatives('all');
+  ok(all.length === 6 && active.length === 5 && susp.length === 1 && every.length === 6, 'universos: 6 cadastradas = 5 ativas + 1 suspensa');
+  const pm = PF.getPortfolioMetrics(active, PF.ctx);
+  const sum = PF.DEADLINE_KPI_ORDER.reduce((a,k) => a + pm.byStatus[k], 0);
+  ok(pm.active === 5 && pm.registered === 6 && pm.suspendedAll === 1 && pm.byStatus.suspended === 0, 'KPIs: ativas=5, cadastradas=6, suspensa fora do recorte operacional');
+  ok(sum === pm.active, 'os cards de KPI somam exatamente as ativas (' + sum + ' = ' + pm.active + ')');
+  const pmAll = PF.getPortfolioMetrics(every, PF.ctx);
+  ok(pmAll.active === 5 && pmAll.suspended === 1, 'mesmo incluindo a suspensa na lista, ela não entra no denominador ativo');
+  ok(!PF.getAttentionItems(every, PF.ctx).some(i => i.init.id === 'D'), 'suspensa não é risco ativo nem aparece na atenção executiva (mesmo com risco Crítico)');
+  ok(!PF.calculateUpcomingDeliveries(every, 365, PF.ctx).some(u => u.init.id === 'D'), 'suspensa fora de entregas futuras');
+  ok(!PF.ctx.opStories.some(x => x.initiativeId === 'D') && PF.ctx.opStories.length === 6, 'histórias da suspensa ficam fora de sprints/capacidade');
+  const mM = PF.ctx.initMetrics.get('M');
+  ok(mM.multiSquad && mM.bySquad.length === 4, 'Multi-Squad: 3 squads + "Sem Squad definida" (história sem squad não é presumida)');
+  ok(mM.bySquad.reduce((a,r) => a + r.dist.total, 0) === mM.distAll.total && mM.distAll.total === 5, 'histórias por squad somam o total da iniciativa');
+  ok(mM.bySquad.find(r => r.squad === 'Guardiões').dist.total === 2 && mM.bySquad.find(r => r.squad === 'TopGun').dist.total === 2, 'cada história fica na squad correta');
+  ok(PF.storySquadOf(st('x','E','Backlog'), inits[4]) === 'Alfa', 'iniciativa de 1 squad: história sem squad herda a squad');
+  ok(PF.getPortfolioMetrics([inits[5]], PF.ctx).active === 1, 'iniciativa Multi-Squad conta 1 vez (3 squads ≠ 3 iniciativas)');
+  PF.prefs.filters.squad = 'Guardiões'; PF.ctx = PF.computeContext();
+  const gM = PF.ctx.initMetrics.get('M');
+  ok(gM.dist.total === 2 && gM.distAll.total === 5 && gM.dist.done === 1, 'filtro por Squad: números só das histórias da Guardiões');
+  ok(PF.ctx.initMetrics.get('M').deadline.status === S('M'), 'filtro por Squad não altera o status de prazo da iniciativa');
+  ok(PF.filterInitiatives('active').some(i => i.id === 'M') && !PF.filterInitiatives('active').some(i => i.id === 'A'), 'pesquisar uma Squad encontra a iniciativa Multi-Squad e só ela');
+  PF.prefs.filters.squad = ''; PF.ctx = PF.computeContext();
+  const fmtA = PF.fmtDateTime('2026-09-30T14:05:00'); ok(/^\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}$/.test(fmtA), 'data/hora fixa dd/mm/aaaa, hh:mm sem toLocale (' + fmtA + ')');
+  ok(PF.normalizeDate('01/11/2026').value === '2026-11-01' && PF.normalizeDate('2026-11-01').value === '2026-11-01', 'texto dd/mm/aaaa e ISO normalizam igual');
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

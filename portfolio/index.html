@@ -49,10 +49,10 @@ body.pf-dark{background:#0f141b;color:#e6eaf0}
   'use strict';
   // Mesmo backend e mesma chave (portfolioData) da aba do dashboard: a base é uma só.
   var GAS_URL = 'https://script.google.com/macros/s/AKfycbx270pqFDXeKvx_6_gYuuBjHp61_GVuRtgqbWWc_Bvin2dJkUzEQb_ztlVYC4RWp9Lvuw/exec';
-  var ASSET_VER = '2026-09-29-v3';          // manter igual a PF_ASSET_VER de index.html
+  var ASSET_VER = '2026-09-30-v4';          // manter igual a PF_ASSET_VER de index.html
   var BASE = '../';                          // raiz do site (css/, js/, vendor/)
   var SCRIPTS = ['pf-core','pf-metrics','pf-state','pf-import','pf-export','pf-views','pf-panels','pf-app'];
-  var VIEWS = {'visao-geral':'overview', overview:'overview', iniciativas:'initiatives', initiatives:'initiatives', sprints:'sprints'};
+  var VIEWS = {'visao-geral':'overview', overview:'overview', painel:'overview', iniciativas:'initiatives', initiatives:'initiatives', tabela:'initiatives', cronograma:'timeline', timeline:'timeline', sprints:'sprints'};
 
   function $(id){ return document.getElementById(id); }
   function setLoad(html){ var el = $('pfLoadState'); el.innerHTML = html || ''; el.style.display = html ? '' : 'none'; }
