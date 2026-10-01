@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projeção de Capacidade v2 | SALA Transformação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --navy:#f5f7fb; --navy-card:#ffffff; --navy-border:#e2e8f0;
+  --red:#cc0000; --red-dark:#a00000;
+  --text:#1c2430; --text-muted:#64748b;
+  --green:#1a9c5c; --yellow:#b8790a; --orange:#c2650f; --crimson:#d94545; --blue:#2d6cdf;
+  --input-bg:#f8fafc; --hover-bg:#f1f5f9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--navy);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.45}
+code,.mono{font-family:'IBM Plex Mono',monospace}
+a{color:var(--blue)}
+header.top{background:linear-gradient(135deg,#cc0000 0%,#8b0000 50%,#0f1923 100%);padding:20px 26px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+header.top h1{margin:0;font-size:20px;font-weight:700}
+header.top p{margin:2px 0 0;font-size:12.5px;color:#f0d9d9;opacity:.9}
+.badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.04em}
+.hdr-right{display:flex;align-items:center;gap:10px;font-size:12px;color:#f0d9d9}
+main{max-width:1400px;margin:0 auto;padding:18px 22px 60px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0;border-bottom:1px solid var(--navy-border);padding-bottom:0}
+.tab-btn{background:none;border:none;color:var(--text-muted);padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--red)}
+.tab-btn:hover{color:var(--text)}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.card h2{margin:0 0 4px;font-size:15px}
+.card h3{margin:14px 0 8px;font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.muted{color:var(--text-muted)}
+.grid{display:grid;gap:12px}
+.grid.cols-2{grid-template-columns:1fr 1fr}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.grid.cols-4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:900px){.grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr}}
+label.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-muted)}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+input,select,textarea{background:var(--input-bg);border:1px solid var(--navy-border);color:var(--text);border-radius:6px;padding:7px 9px}
+textarea{resize:vertical;min-height:90px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+input[type=checkbox]{width:16px;height:16px}
+.btn{background:var(--navy-border);border:1px solid var(--navy-border);color:var(--text);padding:8px 14px;border-radius:7px;cursor:pointer;font-weight:600}
+.btn:hover{filter:brightness(1.15)}
+.btn.primary{background:linear-gradient(135deg,var(--red),var(--red-dark));border-color:var(--red-dark)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.kpi{background:var(--input-bg);border:1px solid var(--navy-border);border-radius:10px;padding:12px 14px}
+.kpi .lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
+.kpi .val{font-size:24px;font-weight:700;margin-top:2px}
+.kpi .sub{font-size:11.5px;color:var(--text-muted);margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--navy-border);text-align:left;white-space:nowrap}
+th{color:var(--text-muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.02em;position:sticky;top:0;background:var(--navy-card)}
+tbody tr:hover{background:var(--hover-bg)}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--navy-border);border-radius:8px}
+.badge-pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;text-transform:uppercase}
+.b-green{background:rgba(46,204,113,.15);color:var(--green)}
+.b-yellow{background:rgba(243,156,18,.15);color:var(--yellow)}
+.b-red{background:rgba(231,76,60,.15);color:var(--crimson)}
+.b-blue{background:rgba(52,152,219,.15);color:var(--blue)}
+.b-muted{background:rgba(136,153,170,.15);color:var(--text-muted)}
+.warn-banner{background:#fffbeb;border:1px solid var(--yellow);color:#92400e;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px;font-weight:600}
+.block-card{border:1px solid var(--navy-border);border-left:4px solid var(--crimson);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff5f5}
+.block-card.refino{border-left-color:var(--yellow);background:#fffbeb}
+.block-card h4{margin:0 0 6px;font-size:13.5px}
+.block-card .meta{font-size:12px;color:var(--text-muted)}
+.risk-card{border:1px solid var(--navy-border);border-left:4px solid var(--orange);border-radius:8px;padding:12px 14px;margin-bottom:10px;background:#fff7ed}
+.risk-card h4{margin:0 0 6px;font-size:13px}
+.raid-item{border-left:3px solid var(--blue);padding:6px 10px;margin:6px 0;background:#eff6ff;border-radius:0 6px 6px 0;font-size:12.5px}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.small-input{width:70px}
+.date-input{width:130px}
+.eff-row{display:grid;grid-template-columns:70px 70px 80px auto;gap:6px;align-items:center;margin-bottom:6px}
+.close-x{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px}
+canvas{max-width:100%}
+.help{font-size:11.5px;color:var(--text-muted);margin-top:4px}
+.exec-note{border:1px dashed var(--navy-border);border-radius:8px;padding:14px;color:var(--text-muted);font-size:13px}
+::-webkit-scrollbar{height:8px;width:8px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+.info-ic{cursor:help;color:var(--text-muted);border:1px solid var(--navy-border);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;margin-left:6px;position:relative;vertical-align:middle;font-weight:600}
+.info-ic:hover{color:var(--text);border-color:var(--text-muted)}
+.info-ic::after{content:attr(data-tip);position:absolute;left:0;top:22px;z-index:80;background:#1c2430;border:1px solid #1c2430;color:#f1f5f9;padding:9px 11px;border-radius:8px;font-size:12px;font-weight:400;line-height:1.45;width:min(340px,80vw);white-space:normal;display:none;box-shadow:0 10px 28px rgba(0,0,0,.25)}
+.info-ic:hover::after{display:block}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:40px 16px;overflow-y:auto}
+.modal-overlay.on{display:flex}
+.modal-box{background:var(--navy-card);border:1px solid var(--navy-border);border-radius:12px;max-width:760px;width:100%;padding:20px 22px}
+.modal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.priority-input{width:56px}
+.manual-badge{color:var(--yellow);margin-right:4px;cursor:help}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Projeção de Capacidade v2</h1>
+    <p>Ops4Ops × Discovery — quanto tempo antecipo a entrega com N devs, e o que independe disso</p>
+  </div>
+  <div class="hdr-right">
+    <span class="badge">SALA TRANSFORMAÇÃO</span>
+    <span id="lastUpdate">Sem dados importados</span>
+    <button class="btn ghost" onclick="cpOpenConfig()" title="Parâmetros do motor de cálculo">⚙ Configuração</button>
+  </div>
+</header>
+<main>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="importar">1. Importar dados</button>
+    <button class="tab-btn" data-tab="itens">2. Itens &amp; dados manuais</button>
+    <button class="tab-btn" data-tab="cenarios">3. Cenários (N devs)</button>
+    <button class="tab-btn" data-tab="bloqueios">4. Bloqueios</button>
+    <button class="tab-btn" data-tab="risco">5. Risco cruzado</button>
+    <button class="tab-btn" data-tab="status">6. Histórias × Status</button>
+    <button class="tab-btn" data-tab="alvo">7. Data Alvo</button>
+    <button class="tab-btn" data-tab="executivo">Modo Executivo</button>
+  </div>
+
+  <!-- 1. IMPORTAR -->
+  <section class="panel active" id="p-importar">
+    <div class="card">
+      <h2>Fonte A — Ops4Ops Sprint Board <span class="info-ic" data-tip="Import diário (v2 é alimentado dia a dia, não semanalmente). Aceita .xlsx ou .csv exportado do Jira — mesmas colunas do extrato usado no v1: Chave, Epic Link/Parent, Situação, Squad/Team, Rótulos (Labels), Sprint(s), Criado, Atualizado, Resumo.">ⓘ</span></h2>
+      <div class="grid cols-2">
+        <label class="field">Arquivo (.xlsx / .csv)
+          <input type="file" id="opsFile" accept=".xlsx,.xls,.csv">
+        </label>
+        <label class="field">…ou cole o CSV aqui (fallback sem fricção pro dia a dia)
+          <textarea id="opsPaste" placeholder="Cole aqui o conteúdo exportado do Jira em CSV"></textarea>
+        </label>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" onclick="cpImportOpsFile()">Importar arquivo</button>
+        <button class="btn" onclick="cpImportOpsPaste()">Importar texto colado</button>
+        <button class="btn ghost" onclick="cpAddManualItem()">+ Adicionar item manualmente</button>
+      </div>
+      <p class="help" id="opsImportStatus">Nenhuma importação ainda nesta sessão do navegador.</p>
+    </div>
+
+    <div class="card">
+      <h2>Fonte B — Discovery PMO Tracker <span class="info-ic" data-tip="Endpoint ao vivo ainda não confirmado (pendência aberta) — ponte manual por enquanto: cole abaixo o JSON com as iniciativas e os RAID/riscos ativos de cada uma.">ⓘ</span></h2>
+      <p class="help">Formato esperado (ajustável):</p>
+      <pre class="mono" style="background:var(--input-bg);border:1px solid var(--navy-border);border-radius:6px;padding:10px;font-size:11px;overflow-x:auto;color:var(--text)">[
+  {
+    "initiativeId": "98434",
+    "name": "Nome da iniciativa",
+    "raids": [
+      {"description":"DATI atrasado entregando Solution Design","owner":"DATI","status":"aberto","severity":"alto","since":"2026-07-20"}
+    ]
+  }
+]</pre>
+      <textarea id="discPaste" placeholder="Cole aqui o JSON exportado/copiado do Discovery PMO Tracker"></textarea>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn primary" onclick="cpImportDiscovery()">Importar JSON do Discovery</button>
+        <button class="btn ghost" onclick="cpDownloadDiscoverySample()">Baixar exemplo</button>
+      </div>
+      <p class="help" id="discImportStatus">Nenhuma importação ainda nesta sessão do navegador.</p>
+    </div>
+
+    <div class="card">
+      <h2>Estado local <span class="info-ic" data-tip="Os dados desta ferramenta ficam salvos só neste navegador (localStorage) — é uma ferramenta de simulação pessoal, não um painel compartilhado entre usuários. Snapshots diários também ficam salvos localmente (capproj_v2_snapshot_AAAA-MM-DD) para reconstruir cycle time real quando houver histórico suficiente — ainda não usados no cálculo.">ⓘ</span></h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="cpLoadSampleData()">▶ Carregar dados de exemplo (ver a ferramenta funcionando)</button>
+        <button class="btn ghost" onclick="cpClearAll()">Limpar todos os dados desta ferramenta</button>
+      </div>
+      <p class="help">Dados fictícios — inclui exatamente o exemplo numérico da seção 3.6 do briefing (squad Contact), um bloqueio por refinamento, um bloqueio por impedimento cruzado com um RAID de exemplo do Discovery, e itens com aging alto pra ilustrar o motor de padrões. Substitui os dados atuais desta ferramenta.</p>
+    </div>
+  </section>
+
+  <!-- 2. ITENS -->
+  <section class="panel" id="p-itens">
+    <div class="card">
+      <h2>Itens importados &amp; dados manuais <span class="info-ic" data-tip="Campos que não vêm do extrato do Jira precisam ser preenchidos aqui: estimativa (SP ou horas direto), início real/previsto de desenvolvimento, e impedimento ativo. Sem início e horas, o item não entra na fila de cenários. Prioridade manual: force um item já refinado pra frente da fila do squad dele, pra ver se antecipa o início dele.">ⓘ</span></h2>
+      <div class="tbl-wrap" style="max-height:560px;overflow-y:auto">
+        <table id="itensTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. CENÁRIOS -->
+  <section class="panel" id="p-cenarios">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2>Cenários por número de devs <span class="info-ic" data-tip="Roda só sobre itens elegíveis (refinados, sem impedimento ativo, não concluídos). Fila por squad: itens do mesmo squad disputam a mesma capacidade.">ⓘ</span></h2>
+        <button class="btn primary" onclick="cpExportExcel()">⬇ Exportar Excel</button>
+      </div>
+      <p class="help" style="margin:2px 0 10px">Com 1, 2, 3… devs, quando as histórias que já estão prontas pra desenvolver ficam entregues? (as bloqueadas por refino/impedimento não entram aqui — estão na aba "4. Bloqueios", porque a resposta pra elas não é "quantos devs".)</p>
+      <div id="portfolioNarrative"></div>
+      <div class="grid cols-4" id="cenKpis" style="margin:10px 0"></div>
+      <p class="help" style="margin-bottom:2px">↓ O gráfico mostra quantos dias você antecipa a entrega a cada dev que adiciona — repare que o ganho fica menor conforme aumenta (por isso a curva "acha" um teto).</p>
+      <canvas id="cenChart" height="90"></canvas>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Outras alavancas de antecipação <span class="info-ic" data-tip="Além de simular N devs (tabela abaixo), duas outras formas de antecipar a entrega: horas extras por dia, e priorizar manualmente um item já refinado (aba Itens) pra ver o efeito de furar a fila.">ⓘ</span></h3>
+      <p class="help" style="margin-top:0">Duas perguntas além de "quantos devs": e se trabalhássemos horas extras? e se priorizássemos algo que já está pronto?</p>
+      <div class="grid cols-3" style="align-items:end">
+        <label class="field">Horas extras por dia (todos os squads, mantendo os devs baseline)
+          <input type="number" id="extraHoursInput" min="0" max="8" step="0.5" value="2">
+        </label>
+        <button class="btn" onclick="cpSimulateOvertime()">Simular — quantos dias ganhamos?</button>
+        <span class="help">Compara a data geral com hora extra vs. sem, nos devs baseline configurados por squad.</span>
+      </div>
+      <div id="overtimeResult" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h3>Cenários por iniciativa × squad</h3>
+      <p class="help" style="margin-top:0">Uma linha por iniciativa+squad. Cada coluna (N=1, N=2…) é a data em que aquela iniciativa termina <i>naquele squad</i> se tivesse aquele número de devs.</p>
+      <div class="tbl-wrap"><table id="cenTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>Fila detalhada (item a item, formato largo)</h3>
+      <p class="help" style="margin-top:0">A mesma coisa da tabela acima, mas história por história do Jira em vez de somada por iniciativa — use essa se quiser ver a data de um item específico.</p>
+      <div class="tbl-wrap" style="max-height:480px;overflow-y:auto"><table id="filaTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- 4. BLOQUEIOS -->
+  <section class="panel" id="p-bloqueios">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h2>Bloqueios — independem do número de devs <span class="info-ic" data-tip="Itens aqui nunca entram na simulação de N devs, nem em N=1 nem no teto configurado. São dois problemas com donos e prazos diferentes — não misture os dois blocos.">ⓘ</span></h2>
+        <button class="btn primary" onclick="cpExportExcel()">⬇ Exportar Excel</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🟡 Bloqueado por refinamento — ação é do time/PO</h3>
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap">
+        <label class="field">Próxima sessão de refinamento
+          <input type="date" id="nextRefinementDate" onchange="cpSetNextRefinement(this.value)">
+        </label>
+      </div>
+      <div id="refinoBlocks"></div>
+    </div>
+    <div class="card">
+      <h3>🔴 Bloqueado por impedimento — ação é de terceiro</h3>
+      <div id="impedBlocks"></div>
+    </div>
+  </section>
+
+  <!-- 5. RISCO CRUZADO -->
+  <section class="panel" id="p-risco">
+    <div class="card">
+      <h2>Painel de risco cruzado (Discovery × Ops4Ops) <span class="info-ic" data-tip="Por iniciativa: RAID/riscos ativos do Discovery Tracker ao lado dos itens Ops4Ops daquela iniciativa, mais uma análise automática combinando bloqueios e riscos — contexto que explica atraso que a matemática de capacidade sozinha não captura.">ⓘ</span></h2>
+      <div id="crossPanel"></div>
+    </div>
+    <div class="card">
+      <h2>Padrões de risco detectados (motor squad-agnóstico) <span class="info-ic" data-tip="Roda sobre qualquer squad/iniciativa da base — nenhum nome fixo no código. Só gera risco quando a ocorrência do padrão atinge o limiar configurado (⚙ Configuração).">ⓘ</span></h2>
+      <div id="patternPanel"></div>
+    </div>
+    <div class="card">
+      <h2>Rastreabilidade quebrada <span class="info-ic" data-tip="Itens sem rótulo #ID_iniciativa — não é possível cruzar com o Discovery nem agrupar por iniciativa.">ⓘ</span></h2>
+      <div id="tracePanel"></div>
+    </div>
+  </section>
+
+  <!-- 6. STATUS CHART -->
+  <section class="panel" id="p-status">
+    <div class="card">
+      <h2>Histórias × Refinamento × Status <span class="info-ic" data-tip="Status lidos dinamicamente da base carregada — se amanhã aparecer um status novo, o gráfico absorve sem precisar editar código.">ⓘ</span></h2>
+      <canvas id="statusChart" height="110"></canvas>
+      <div class="tbl-wrap" style="margin-top:12px"><table id="statusTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- CONFIG (modal, não é aba — acessível pelo botão ⚙ no header) -->
+  <div class="modal-overlay" id="configModal">
+    <div class="modal-box">
+      <div class="modal-hd">
+        <h2 style="margin:0">⚙ Configuração — parâmetros do motor de cálculo</h2>
+        <button class="close-x" style="font-size:20px" onclick="cpCloseConfig()" title="Fechar">✕</button>
+      </div>
+      <p class="help">Esses parâmetros afetam todas as abas — cenários, bloqueios, risco cruzado e data alvo são recalculados ao salvar.</p>
+      <div class="grid cols-3">
+        <label class="field">Horas por dia útil
+          <input type="number" id="cfgHoursDay" min="1" max="12" step="0.5">
+        </label>
+        <label class="field">Dias úteis por semana
+          <input type="number" id="cfgDaysWeek" min="1" max="7">
+        </label>
+        <label class="field">Teto de simulação (N máx.)
+          <input type="number" id="cfgDevCeiling" min="1" max="20">
+        </label>
+        <label class="field">Horas por sprint (usado quando SP=22 = "1 Sprint")
+          <input type="number" id="cfgHoursSprint" min="1">
+        </label>
+        <label class="field">Limiar de ocorrências p/ risco de padrão (seção 3.4)
+          <input type="number" id="cfgPatternThreshold" min="1">
+        </label>
+        <label class="field">Aging alto = mais de X dias úteis sem atualização
+          <input type="number" id="cfgAgingDays" min="1">
+        </label>
+        <label class="field">Duração da sprint (dias corridos)
+          <input type="number" id="cfgSprintLen" min="1">
+        </label>
+        <label class="field">Início da sprint atual (âncora p/ numerar sprints)
+          <input type="date" id="cfgSprintAnchor">
+        </label>
+        <label class="field">Janela de prontidão p/ "Gap de refinamento" (nº de sprints)
+          <input type="number" id="cfgReadinessWindow" min="1">
+        </label>
+      </div>
+      <h3>Devs atuais por squad (baseline "hoje" para calcular dias antecipados)</h3>
+      <div id="baselineRows"></div>
+      <h3>Curva de eficiência marginal (retorno decrescente)</h3>
+      <div id="effRows"></div>
+      <button class="btn ghost" onclick="cpAddEffRow()">+ faixa</button>
+      <h3>Status considerados "concluído" (saem do cálculo, mesmo já refinados)</h3>
+      <div id="terminalStatusRows"></div>
+      <div style="margin-top:16px;display:flex;gap:8px">
+        <button class="btn primary" onclick="cpSaveConfigForm()">Salvar configuração</button>
+        <button class="btn ghost" onclick="cpCloseConfig()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. DATA ALVO -->
+  <section class="panel" id="p-alvo">
+    <div class="card">
+      <h2>Data alvo por iniciativa <span class="info-ic" data-tip="Defina quando você quer entregar todas as histórias de uma iniciativa (dev + homologação) e o motor calcula: se a data é viável só com o que já está elegível, se depende de refinar histórias a tempo, se depende de mais devs, e até quando cada história bloqueada precisa estar refinada. 'Probabilidade' aqui é uma heurística de 5 faixas baseada em qual alavanca resolve a data (refino / devs / nenhuma) — não é estatística.">ⓘ</span></h2>
+      <div class="grid cols-2" id="alvoKpis" style="margin:10px 0"></div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table id="alvoTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>Prazo de refinamento por história (detalhe) <span class="info-ic" data-tip="Para cada iniciativa com histórias bloqueadas por refinamento: a data em que aquela história 'entraria na fila' do squad se já estivesse refinada — o prazo pra refinar antes de virar gargalo. Assume que os itens bloqueados vão para o fim da fila atual do squad (elegíveis primeiro), com os devs baseline configurados.">ⓘ</span></h3>
+      <div id="alvoDeadlines"></div>
+    </div>
+  </section>
+
+  <!-- EXECUTIVO -->
+  <section class="panel" id="p-executivo">
+    <div class="card">
+      <h2>Modo Executivo</h2>
+      <div class="exec-note">
+        Ainda não construído nesta rodada — esta sessão priorizou o motor de dados/cálculo e o modo Operacional
+        (tabela de cenários, bloqueios, risco cruzado, exportação Excel). O modo Executivo (card por iniciativa:
+        status em cor + uma data + uma linha de ação, sem jargão) lê o <b>mesmo</b> estado calculado aqui — é a
+        próxima frente, sem precisar redesenhar o motor.
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="vendor/xlsx.full.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';"></script>
+<script src="vendor/chart.umd.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js';"></script>
+<script>
+(function(){
+'use strict';
+
+/* ===================== Storage / State ===================== */
+var LS_STATE='capproj_v2_state';
+var LS_SNAP_PREFIX='capproj_v2_snapshot_';
+
+var SP_HOURS_TABLE_B={1:4,2:6,3:8,4:12,5:16,6:20,8:24,9:32,10:40,11:48,13:60,21:80,22:'sprint'};
+
+function defaultConfig(){
+  return {
+    hoursPerDay:6, daysPerWeek:5, devCeiling:8, hoursPerSprint:80,
+    patternThreshold:3, agingThresholdDays:5,
+    nextRefinementDate:'',
+    baselineDevsBySquad:{}, defaultBaselineDevs:2,
+    efficiencyCurve:[{minDev:1,maxDev:2,pct:100},{minDev:3,maxDev:3,pct:90},{minDev:4,maxDev:4,pct:80},{minDev:5,maxDev:99,pct:70}],
+    terminalStatuses:[],
+    sprintLengthDays:14, sprintAnchorDate:todayISO(), readinessSprintsWindow:2
+  };
+}
+
+var state=loadState();
+
+function loadState(){
+  try{
+    var raw=localStorage.getItem(LS_STATE);
+    if(raw){
+      var p=JSON.parse(raw);
+      p.config=Object.assign(defaultConfig(),p.config||{});
+      p.items=p.items||{}; p.meta=p.meta||{};
+      p.discovery=p.discovery||{initiatives:[]};
+      p.importedAt=p.importedAt||{ops4ops:null,discovery:null};
+      p.targetDates=p.targetDates||{};
+      return p;
+    }
+  }catch(e){}
+  return {items:{},meta:{},discovery:{initiatives:[]},config:defaultConfig(),importedAt:{ops4ops:null,discovery:null},targetDates:{}};
+}
+function saveState(){
+  try{ localStorage.setItem(LS_STATE,JSON.stringify(state)); }
+  catch(e){ toast('Erro ao salvar','Não foi possível salvar localmente: '+e.message,'err'); }
+}
+function saveSnapshotToday(){
+  try{
+    var today=todayISO(), key=LS_SNAP_PREFIX+today, snap={};
+    Object.keys(state.items).forEach(function(id){
+      var it=state.items[id];
+      snap[id]={status:it.status,refinada:isRefinedLabel(it.labels)};
+    });
+    localStorage.setItem(key,JSON.stringify({date:today,items:snap}));
+  }catch(e){}
+}
+
+/* ===================== Small helpers ===================== */
+function $id(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function stripAcc(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'');}
+function normStr(s){return stripAcc(String(s||'')).toLowerCase().trim();}
+function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function parseLocalDate(iso){if(!iso)return null;var p=String(iso).split('-');if(p.length!==3)return null;var d=new Date(+p[0],+p[1]-1,+p[2]);return isNaN(d)?null:d;}
+function isoFromDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function isBusinessDay(d){var n=d.getDay();return n!==0&&n!==6;}
+function addBusinessDaysInclusive(iso,count){
+  var d=parseLocalDate(iso); if(!d) return '';
+  count=Math.max(1,count);
+  var n=0; while(n<count){ if(isBusinessDay(d)) n++; if(n<count) d.setDate(d.getDate()+1); }
+  return isoFromDate(d);
+}
+function fmtDateBR(iso){ if(!iso) return '—'; var p=String(iso).split('-'); if(p.length<3) return iso; return p[2]+'/'+p[1]+'/'+p[0]; }
+function daysBetweenCalendar(isoA,isoB){ var a=parseLocalDate(isoA),b=parseLocalDate(isoB); if(!a||!b) return null; return Math.round((b-a)/86400000); }
+function businessDaysSince(iso){ if(!iso) return null; var from=parseLocalDate(iso),to=parseLocalDate(todayISO()); if(!from||!to) return null; if(from>to) return 0; var n=0; while(from<to){ from.setDate(from.getDate()+1); if(isBusinessDay(from)) n++; } return n; }
+function toast(title,msg,type){
+  var el=document.createElement('div');
+  el.style.cssText='position:fixed;right:18px;bottom:18px;max-width:340px;background:'+(type==='err'?'#3a1414':type==='warn'?'#3a2c10':'#0f2a1c')+';border:1px solid '+(type==='err'?'#cc4444':type==='warn'?'#cc9944':'#2ecc71')+';color:#fff;padding:12px 14px;border-radius:8px;font-size:12.5px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.4)';
+  el.innerHTML='<b>'+esc(title)+'</b><br>'+esc(msg);
+  document.body.appendChild(el);
+  setTimeout(function(){el.remove();},5000);
+}
+
+/* ===================== Ops4Ops import parsing ===================== */
+function isChaveCol(c){return c.indexOf('chave')>=0||c.indexOf('issue key')>=0||c==='key'||c==='id';}
+function isEpicCol(c){return c.indexOf('epic')>=0||c.indexOf('epico')>=0||c.indexOf('parent')>=0||c.indexOf('item pai')>=0;}
+function isStatusCol(c){return c.indexOf('situacao')>=0||c==='status'||c.indexOf('estado')>=0;}
+function isSquadCol(c){return c.indexOf('squad')>=0||c.indexOf('team')>=0||c.indexOf('equipe')>=0||c==='time';}
+function isLabelCol(c){return c.indexOf('rotulo')>=0||c.indexOf('label')>=0;}
+function isSprintCol(c){return c.indexOf('sprint')>=0;}
+function isCriadoCol(c){return c.indexOf('criado')>=0||c.indexOf('created')>=0;}
+function isAtualizadoCol(c){return c.indexOf('atualizado')>=0||c.indexOf('updated')>=0;}
+function isResumoCol(c){return (c.indexOf('resumo')>=0||c.indexOf('summary')>=0)&&c.indexOf('pai')<0&&c.indexOf('epico')<0;}
+function isSpCol(c){return c.indexOf('story point')>=0||c==='sp'||c.indexOf('estimativa')>=0&&c.indexOf('original')<0;}
+
+function detectOpsColumns(matrix){
+  for(var i=0;i<Math.min(8,matrix.length);i++){
+    var row=matrix[i]; if(!row||!row.length) continue;
+    var cells=row.map(function(c){return normStr(c);});
+    var hasChave=cells.some(isChaveCol), hasStatus=cells.some(isStatusCol);
+    if(hasChave&&hasStatus){
+      var map={chave:-1,epic:-1,status:-1,squad:-1,labelsIdx:[],sprint:-1,criado:-1,atualizado:-1,resumo:-1,sp:-1};
+      cells.forEach(function(c,j){
+        if(map.chave<0&&isChaveCol(c)) map.chave=j;
+        else if(map.epic<0&&isEpicCol(c)) map.epic=j;
+        else if(map.status<0&&isStatusCol(c)) map.status=j;
+        else if(map.squad<0&&isSquadCol(c)) map.squad=j;
+        else if(isLabelCol(c)) map.labelsIdx.push(j);
+        else if(map.sprint<0&&isSprintCol(c)) map.sprint=j;
+        else if(map.criado<0&&isCriadoCol(c)) map.criado=j;
+        else if(map.atualizado<0&&isAtualizadoCol(c)) map.atualizado=j;
+        else if(map.resumo<0&&isResumoCol(c)) map.resumo=j;
+        else if(map.sp<0&&isSpCol(c)) map.sp=j;
+      });
+      return {hrow:i,map:map};
+    }
+  }
+  return null;
+}
+function extractJiraKey(v){var s=(v||'').toString().trim(); if(!s) return ''; var m=s.match(/[A-Z][A-Z0-9]*-\d+/); return m?m[0]:s;}
+function extractInitiativeId(labelsStr){ var m=String(labelsStr||'').match(/#(\d+)/); return m?m[1]:''; }
+function isRefinedLabel(labelsStr){
+  if(!labelsStr) return false;
+  return stripAcc(String(labelsStr)).toLowerCase().split(/[\s,;|]+/).some(function(l){ return l==='refinada'||l.indexOf('refinada_')===0||l.indexOf('refinada-')===0; });
+}
+function normDateCell(v){
+  if(v==null||v==='') return '';
+  if(v instanceof Date) return isoFromDate(v);
+  if(typeof v==='number'){ var d=XLSX.SSF&&XLSX.SSF.parse_date_code?XLSX.SSF.parse_date_code(v):null; if(d) return d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0'); }
+  var s=String(v).trim();
+  var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/); if(m) return m[3]+'-'+m[2]+'-'+m[1];
+  return '';
+}
+
+function rowsToItems(matrix,det){
+  var items=[], map=det.map;
+  for(var i=det.hrow+1;i<matrix.length;i++){
+    var row=matrix[i]; if(!row||!row.length) continue;
+    var chave=extractJiraKey(row[map.chave]); if(!chave) continue;
+    var labels=map.labelsIdx.map(function(j){return row[j]!=null?String(row[j]):'';}).filter(Boolean).join(', ');
+    var spRaw=map.sp>=0?row[map.sp]:null, sp=null;
+    if(spRaw!=null&&spRaw!==''){ var n=parseFloat(String(spRaw).replace(',','.')); if(!isNaN(n)) sp=n; }
+    items.push({
+      id:chave,
+      epic:map.epic>=0?String(row[map.epic]||'').trim():'',
+      status:map.status>=0?String(row[map.status]||'').trim():'',
+      squad:map.squad>=0?String(row[map.squad]||'').trim():'Sem squad',
+      labels:labels,
+      initiativeId:extractInitiativeId(labels),
+      sprint:map.sprint>=0?String(row[map.sprint]||'').trim():'',
+      criado:map.criado>=0?normDateCell(row[map.criado]):'',
+      atualizado:map.atualizado>=0?normDateCell(row[map.atualizado]):'',
+      resumo:map.resumo>=0?String(row[map.resumo]||'').trim():'',
+      spFromImport:sp
+    });
+  }
+  return items;
+}
+
+function mergeImportedItems(items){
+  items.forEach(function(it){
+    state.items[it.id]=Object.assign({},state.items[it.id]||{},it);
+    if(!state.meta[it.id]) state.meta[it.id]={sp:'',hoursOverride:'',refinedOverride:null,impedAtivo:false,impedDesde:'',impedDono:'',impedDetalhe:'',dataInicioDev:'',dataPrevistaInicio:'',priority:''};
+  });
+}
+
+function cpImportOpsFile(){
+  var f=$id('opsFile').files[0];
+  if(!f){ toast('Nenhum arquivo','Selecione um .xlsx ou .csv primeiro.','warn'); return; }
+  if(typeof XLSX==='undefined'){ toast('Carregando biblioteca…','Tente novamente em alguns segundos.','warn'); return; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var det=detectOpsColumns(matrix);
+      if(!det){ toast('Formato não reconhecido','Colunas esperadas: Chave + Situação/Status (+ Squad, Epic Link, Rótulos, Sprint, Criado, Atualizado, Resumo).','err'); return; }
+      var items=rowsToItems(matrix,det);
+      if(!items.length){ toast('Nada importado','Nenhuma linha com chave válida foi encontrada.','warn'); return; }
+      mergeImportedItems(items);
+      state.importedAt.ops4ops=new Date().toISOString();
+      saveState(); saveSnapshotToday();
+      $id('opsImportStatus').textContent=items.length+' item(ns) importado(s)/atualizado(s) de "'+f.name+'" em '+new Date().toLocaleString('pt-BR')+'.';
+      cpRecalcAndRender();
+      toast('Importação concluída',items.length+' item(ns) de Ops4Ops carregado(s).');
+    }catch(err){ toast('Erro ao ler arquivo',err.message,'err'); }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function cpImportOpsPaste(){
+  var txt=$id('opsPaste').value.trim();
+  if(!txt){ toast('Nada colado','Cole o conteúdo CSV antes de importar.','warn'); return; }
+  if(typeof XLSX==='undefined'){ toast('Carregando biblioteca…','Tente novamente em alguns segundos.','warn'); return; }
+  try{
+    var wb=XLSX.read(txt,{type:'string'});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    var matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    var det=detectOpsColumns(matrix);
+    if(!det){ toast('Formato não reconhecido','Verifique se colou o CSV com cabeçalho (Chave, Situação, etc.).','err'); return; }
+    var items=rowsToItems(matrix,det);
+    if(!items.length){ toast('Nada importado','Nenhuma linha com chave válida foi encontrada.','warn'); return; }
+    mergeImportedItems(items);
+    state.importedAt.ops4ops=new Date().toISOString();
+    saveState(); saveSnapshotToday();
+    $id('opsImportStatus').textContent=items.length+' item(ns) importado(s)/atualizado(s) via texto colado em '+new Date().toLocaleString('pt-BR')+'.';
+    cpRecalcAndRender();
+    toast('Importação concluída',items.length+' item(ns) de Ops4Ops carregado(s).');
+  }catch(err){ toast('Erro ao interpretar texto',err.message,'err'); }
+}
+
+function cpAddManualItem(){
+  var id=prompt('Chave do item (ex.: SLOPC-12345):'); if(!id) return;
+  id=id.trim(); if(!id) return;
+  var squad=prompt('Squad:','Sem squad')||'Sem squad';
+  var status=prompt('Status:','Product Backlog')||'Product Backlog';
+  state.items[id]=Object.assign({},state.items[id]||{},{id:id,squad:squad,status:status,epic:'',labels:'',initiativeId:'',sprint:'',criado:'',atualizado:'',resumo:'',spFromImport:null});
+  if(!state.meta[id]) state.meta[id]={sp:'',hoursOverride:'',refinedOverride:null,impedAtivo:false,impedDesde:'',impedDono:'',impedDetalhe:'',dataInicioDev:'',dataPrevistaInicio:'',priority:''};
+  saveState(); cpRecalcAndRender();
+  toast('Item adicionado',id+' criado manualmente — preencha os dados na aba "Itens & dados manuais".');
+}
+
+/* ===================== Discovery import ===================== */
+function cpImportDiscovery(){
+  var txt=$id('discPaste').value.trim();
+  if(!txt){ toast('Nada colado','Cole o JSON do Discovery antes de importar.','warn'); return; }
+  try{
+    var parsed=JSON.parse(txt);
+    var list=Array.isArray(parsed)?parsed:(Array.isArray(parsed.initiatives)?parsed.initiatives:null);
+    if(!list) throw new Error('Esperado um array de iniciativas (ou {"initiatives":[...]})');
+    state.discovery.initiatives=list.map(function(it){
+      return {
+        initiativeId:String(it.initiativeId||it.id||'').replace(/^#/,''),
+        name:it.name||it.title||('Iniciativa '+(it.initiativeId||it.id||'')),
+        squad:it.squad||'',
+        raids:(Array.isArray(it.raids)?it.raids:[]).map(function(r){
+          return {description:r.description||r.desc||'',owner:r.owner||r.dono||'',status:r.status||'aberto',severity:r.severity||r.severidade||'',since:r.since||r.desde||''};
+        })
+      };
+    });
+    state.importedAt.discovery=new Date().toISOString();
+    saveState();
+    $id('discImportStatus').textContent=state.discovery.initiatives.length+' iniciativa(s) do Discovery carregada(s) em '+new Date().toLocaleString('pt-BR')+'.';
+    cpRecalcAndRender();
+    toast('Discovery importado',state.discovery.initiatives.length+' iniciativa(s) carregada(s).');
+  }catch(err){ toast('JSON inválido',err.message,'err'); }
+}
+function cpDownloadDiscoverySample(){
+  var sample=[{initiativeId:'98434',name:'Nome da iniciativa',raids:[{description:'DATI atrasado entregando Solution Design',owner:'DATI',status:'aberto',severity:'alto',since:todayISO()}]}];
+  var blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='discovery-exemplo.json'; a.click();
+}
+
+function relDate(offsetDays){ var d=new Date(); d.setDate(d.getDate()+offsetDays); return isoFromDate(d); }
+
+function cpLoadSampleData(){
+  if(Object.keys(state.items).length&&!confirm('Isso substitui os dados atuais desta ferramenta por dados de exemplo. Continuar?')) return;
+
+  state.items={}; state.meta={};
+
+  // Squad Contact — reproduz exatamente o exemplo numérico da seção 3.6 do briefing.
+  var contactItems=[
+    {id:'SLOPC-41232',squad:'Contact',status:'Em Desenvolvimento',resumo:'Ajuste de fluxo de retenção — etapa 1',labels:'Refinada, #98434',sprint:'Sprint 14',hours:16,dataInicioDev:relDate(-6)},
+    {id:'SLOPC-41894',squad:'Contact',status:'Em Desenvolvimento',resumo:'Ajuste de fluxo de retenção — etapa 2',labels:'Refinada, #98434',sprint:'Sprint 14',hours:12,dataInicioDev:relDate(-4)},
+    {id:'SLOPC-41893',squad:'Contact',status:'Em Desenvolvimento',resumo:'Integração de discador — validação',labels:'Refinada, #98434',sprint:'Sprint 14',hours:12,dataInicioDev:relDate(-2)},
+    {id:'SLOPC-41812',squad:'Contact',status:'Product Backlog',resumo:'Relatório de abandono de chamada',labels:'Refinada, #98434',sprint:'Sprint 15',hours:24,dataPrevistaInicio:relDate(7)},
+    {id:'SLOPC-42092',squad:'Contact',status:'Product Backlog',resumo:'Ajuste de SLA de retorno de contato',labels:'Refinada, #98434',sprint:'Sprint 15',hours:8,dataPrevistaInicio:relDate(8)},
+    {id:'SLOPC-41892',squad:'Contact',status:'Desenvolvida',resumo:'Correção de timeout no discador',labels:'Refinada, #98434',sprint:'Sprint 13',hours:8}
+  ];
+
+  // Squad Guardiões — bloqueio por refinamento (ação do time/PO).
+  var guardioesItems=[
+    {id:'SLOPC-40011',squad:'Guardiões',status:'Product Backlog',resumo:'Revisão de política de senha',labels:'#116596',sprint:'Sprint 14'},
+    {id:'SLOPC-40012',squad:'Guardiões',status:'Product Backlog',resumo:'Auditoria de acessos privilegiados',labels:'#116596',sprint:'Sprint 14'},
+    {id:'SLOPC-40013',squad:'Guardiões',status:'Selecionado para Grooming',resumo:'Rotina de expurgo de logs',labels:'#116596',sprint:'Sprint 14'}
+  ];
+
+  // Squad Inter — bloqueio por impedimento externo (DATI), cruzado com RAID do Discovery.
+  var interItems=[
+    {id:'SLOPC-39900',squad:'Inter',status:'Em Homologação',resumo:'Portabilidade de conta — desenho de arquitetura',labels:'Refinada, #100000',sprint:'Sprint 13',impedAtivo:true,impedDesde:relDate(-15),impedDono:'DATI',impedDetalhe:'Aguardando Solution Design da DATI para prosseguir'}
+  ];
+
+  // Squad Expresso-1 — sem impedimento formal, mas aging alto (motor de padrões deve sinalizar).
+  var expressoItems=[
+    {id:'SLOPC-38801',squad:'Expresso-1',status:'Em Desenvolvimento',resumo:'Cadastro de subsídio — regra de elegibilidade',labels:'Refinada, #98434',sprint:'Sprint 12, Sprint 13, Sprint 14',atualizado:relDate(-12)},
+    {id:'SLOPC-38802',squad:'Expresso-1',status:'Em Desenvolvimento',resumo:'Cadastro de subsídio — validação de documentos',labels:'Refinada, #98434',sprint:'Sprint 12, Sprint 13',atualizado:relDate(-10)},
+    {id:'SLOPC-38803',squad:'Expresso-1',status:'Product Backlog',resumo:'Cadastro de subsídio — reprocessamento',labels:'Refinada, #98434',sprint:'Sprint 13, Sprint 14',atualizado:relDate(-9)}
+  ];
+
+  contactItems.concat(guardioesItems,interItems,expressoItems).forEach(function(it){
+    state.items[it.id]={
+      id:it.id, squad:it.squad, status:it.status, resumo:it.resumo||'', labels:it.labels||'',
+      initiativeId:extractInitiativeId(it.labels), epic:'', sprint:it.sprint||'',
+      criado:it.criado||relDate(-40), atualizado:it.atualizado||relDate(-1), spFromImport:null
+    };
+    state.meta[it.id]={
+      sp:'', hoursOverride:it.hours!=null?String(it.hours):'', refinedOverride:null,
+      impedAtivo:!!it.impedAtivo, impedDesde:it.impedDesde||'', impedDono:it.impedDono||'', impedDetalhe:it.impedDetalhe||'',
+      dataInicioDev:it.dataInicioDev||'', dataPrevistaInicio:it.dataPrevistaInicio||''
+    };
+  });
+
+  state.discovery.initiatives=[
+    {initiativeId:'98434',name:'Modernização Atendimento Contact',squad:'Contact',raids:[
+      {description:'Volume de chamados de retenção acima do previsto — pode pressionar prazo de homologação',owner:'PO Contact',status:'monitorando',severity:'medio',since:relDate(-20)}
+    ]},
+    {initiativeId:'116596',name:'Guardiões — Reforço de Segurança de Acessos',squad:'Guardiões',raids:[]},
+    {initiativeId:'100000',name:'Portabilidade de Conta',squad:'Inter',raids:[
+      {description:'DATI atrasado entregando Solution Design',owner:'DATI',status:'aberto',severity:'alto',since:relDate(-15)}
+    ]}
+  ];
+
+  state.config.nextRefinementDate=state.config.nextRefinementDate||relDate(5);
+  state.importedAt.ops4ops=new Date().toISOString();
+  state.importedAt.discovery=new Date().toISOString();
+
+  saveState(); saveSnapshotToday();
+  $id('opsImportStatus').textContent='Dados de exemplo carregados em '+new Date().toLocaleString('pt-BR')+'.';
+  $id('discImportStatus').textContent='Dados de exemplo (Discovery) carregados em '+new Date().toLocaleString('pt-BR')+'.';
+  cpRecalcAndRender();
+  toast('Dados de exemplo carregados','Navegue pelas abas 2 a 6 para ver a ferramenta funcionando com esses dados.');
+}
+
+function cpClearAll(){
+  if(!confirm('Apagar todos os dados salvos localmente desta ferramenta (itens, metadados manuais, config, snapshots)?')) return;
+  Object.keys(localStorage).forEach(function(k){ if(k.indexOf('capproj_v2_')===0) localStorage.removeItem(k); });
+  state={items:{},meta:{},discovery:{initiatives:[]},config:defaultConfig(),importedAt:{ops4ops:null,discovery:null},targetDates:{}};
+  cpRecalcAndRender();
+  toast('Dados apagados','Estado local reiniciado.');
+}
+
+/* ===================== Calc engine ===================== */
+function effFactor(N,curve){
+  for(var i=0;i<curve.length;i++){ var r=curve[i]; if(N>=r.minDev&&N<=r.maxDev) return r.pct/100; }
+  return curve.length?curve[curve.length-1].pct/100:1;
+}
+function capDaily(N,config){ return N*config.hoursPerDay*effFactor(N,config.efficiencyCurve); }
+
+function estimateHoursForItem(item,meta,config){
+  if(meta.hoursOverride!==''&&meta.hoursOverride!=null&&!isNaN(Number(meta.hoursOverride))) return Number(meta.hoursOverride);
+  var sp=meta.sp!==''&&meta.sp!=null?Number(meta.sp):(item.spFromImport!=null?item.spFromImport:null);
+  if(sp==null||isNaN(sp)) return null;
+  var v=SP_HOURS_TABLE_B[sp];
+  if(v===undefined) return null;
+  return v==='sprint'?config.hoursPerSprint:v;
+}
+
+function isTerminalStatus(status,terminalList){
+  var n=normStr(status);
+  if(terminalList&&terminalList.length) return terminalList.some(function(t){return normStr(t)===n;});
+  return n.indexOf('desenvolvid')>=0||n.indexOf('conclu')>=0||n==='done';
+}
+
+function classifyItem(item,meta,config){
+  var refined=meta.refinedOverride!=null?!!meta.refinedOverride:isRefinedLabel(item.labels);
+  if(!refined) return 'bloqueio_refino';
+  if(meta.impedAtivo) return 'bloqueio_impedimento';
+  if(isTerminalStatus(item.status,config.terminalStatuses)) return 'concluido';
+  return 'elegivel';
+}
+
+function allItemsArr(){ return Object.keys(state.items).map(function(id){return state.items[id];}); }
+
+function computeClassification(){
+  var cfg=state.config, out={elegivel:[],bloqueio_refino:[],bloqueio_impedimento:[],concluido:[]};
+  allItemsArr().forEach(function(item){
+    var meta=state.meta[item.id]||{};
+    var cls=classifyItem(item,meta,cfg);
+    var hours=estimateHoursForItem(item,meta,cfg);
+    out[cls].push({item:item,meta:meta,hours:hours});
+  });
+  return out;
+}
+
+// Fila por squad: itens "já em dev" (data_inicio_dev) primeiro, ordenados por essa data;
+// depois itens "previstos" (data_prevista_inicio), ordenados por essa data.
+function buildSquadQueues(elegivelEntries){
+  var bySquad={};
+  elegivelEntries.forEach(function(e){
+    var meta=e.meta;
+    var start=meta.dataInicioDev||meta.dataPrevistaInicio;
+    if(!start||e.hours==null){ e.semDadosSuficientes=true; return; }
+    e.effectiveStart=start; e.emDev=!!meta.dataInicioDev;
+    var sq=e.item.squad||'Sem squad';
+    (bySquad[sq]=bySquad[sq]||[]).push(e);
+  });
+  Object.keys(bySquad).forEach(function(sq){
+    bySquad[sq].sort(function(a,b){
+      // Prioridade manual ("antecipar o início de algo já refinado"): item com prioridade definida
+      // vai pra frente da fila do squad, furando a ordem natural de início. Sem prioridade em nenhum
+      // dos dois, cai na ordem natural (já em dev primeiro, depois por data de início/previsão).
+      var pa=a.meta.priority, pb=b.meta.priority;
+      var hasPa=pa!=null&&pa!==''&&!isNaN(Number(pa)), hasPb=pb!=null&&pb!==''&&!isNaN(Number(pb));
+      if(hasPa&&hasPb) return Number(pa)-Number(pb);
+      if(hasPa&&!hasPb) return -1;
+      if(!hasPa&&hasPb) return 1;
+      if(a.emDev!==b.emDev) return a.emDev?-1:1;
+      return a.effectiveStart<b.effectiveStart?-1:(a.effectiveStart>b.effectiveStart?1:0);
+    });
+    var cum=0;
+    bySquad[sq].forEach(function(e){ cum+=e.hours; e.cumHours=cum; e.manualPriority=e.meta.priority!=null&&e.meta.priority!==''&&!isNaN(Number(e.meta.priority)); });
+  });
+  return bySquad;
+}
+
+function dateForCumHours(cumHours,N,config,fromISO){
+  var daily=capDaily(N,config);
+  if(daily<=0) return '';
+  var days=Math.ceil(cumHours/daily);
+  return addBusinessDaysInclusive(fromISO,days);
+}
+
+function computeScenarios(){
+  var cfg=state.config, cls=computeClassification();
+  var queues=buildSquadQueues(cls.elegivel);
+  var from=todayISO();
+  var ceiling=cfg.devCeiling||8;
+  var Ns=[]; for(var n=1;n<=ceiling;n++) Ns.push(n);
+
+  // per-item dates across N
+  var perItem=[]; // {id,initiativeId,squad,hours,datesByN:{}}
+  Object.keys(queues).forEach(function(sq){
+    queues[sq].forEach(function(e){
+      var datesByN={};
+      Ns.forEach(function(N){ datesByN[N]=dateForCumHours(e.cumHours,N,cfg,from); });
+      perItem.push({id:e.item.id,initiativeId:e.item.initiativeId||'',squad:sq,hours:e.hours,emDev:e.emDev,start:e.effectiveStart,manualPriority:e.manualPriority,datesByN:datesByN});
+    });
+  });
+
+  // group by (initiativeId, squad) -> per N, max date among its items
+  var groups={};
+  perItem.forEach(function(pi){
+    var key=(pi.initiativeId||'sem-iniciativa')+'||'+pi.squad;
+    if(!groups[key]) groups[key]={initiativeId:pi.initiativeId,squad:pi.squad,itemCount:0,datesByN:{}};
+    groups[key].itemCount++;
+    Ns.forEach(function(N){
+      var d=pi.datesByN[N];
+      if(d&&(!groups[key].datesByN[N]||d>groups[key].datesByN[N])) groups[key].datesByN[N]=d;
+    });
+  });
+
+  // overall (todos os squads) per N = max across all groups
+  var overallByN={};
+  Ns.forEach(function(N){
+    var max=null;
+    Object.keys(groups).forEach(function(k){ var d=groups[k].datesByN[N]; if(d&&(!max||d>max)) max=d; });
+    overallByN[N]=max;
+  });
+
+  return {Ns:Ns,cfg:cfg,perItem:perItem,groups:groups,overallByN:overallByN,elegivel:cls.elegivel,bloqueio_refino:cls.bloqueio_refino,bloqueio_impedimento:cls.bloqueio_impedimento,concluido:cls.concluido,semDadosSuficientes:cls.elegivel.filter(function(e){return e.semDadosSuficientes;})};
+}
+
+// Resumo executivo em 6 linhas (Cenário atual / Principal gargalo / Arquitetura / Impacto / Exemplo /
+// Recomendação) — gerado dos dados carregados, nunca hardcoded pra uma squad/iniciativa específica.
+// Duas evidências independentes decidem "vale a pena adicionar dev agora": (1) que fração do backlog
+// ativo está bloqueada por refino/impedimento (não resolve com headcount), e (2) o ganho marginal real
+// de +1 dev sobre o baseline, na própria tabela de cenários — se o ganho já é pequeno, o gargalo não é
+// capacidade, é fila vazia.
+function buildPortfolioNarrative(){
+  var cfg=state.config, cls=computeClassification();
+  var totalElig=cls.elegivel.length, totalRefino=cls.bloqueio_refino.length, totalImped=cls.bloqueio_impedimento.length;
+  var totalActive=totalElig+totalRefino+totalImped;
+  if(!totalActive) return null;
+
+  var blockedRatio=(totalRefino+totalImped)/totalActive;
+  var scn=computeScenarios();
+  var baselineN=cfg.defaultBaselineDevs||2, nextN=Math.min(baselineN+1,cfg.devCeiling||8);
+  var dateBase=scn.overallByN[baselineN], dateNext=scn.overallByN[nextN];
+  var marginalGainDays=(dateBase&&dateNext)?daysBetweenCalendar(dateNext,dateBase):null;
+
+  var poucoGanho=marginalGainDays!=null&&marginalGainDays<=1;
+  var muitoBloqueio=blockedRatio>=0.3;
+  var naoRecomendado=muitoBloqueio||poucoGanho;
+
+  var cenarioAtual=naoRecomendado
+    ? 'Neste momento, não é recomendada a inclusão de novos desenvolvedores'+(muitoBloqueio?' — '+(totalRefino+totalImped)+' de '+totalActive+' história(s) do backlog ativo ('+Math.round(blockedRatio*100)+'%) está fora da fila por refinamento ou impedimento, não por falta de gente':(poucoGanho?' — de '+baselineN+' pra '+nextN+' dev(s), o ganho projetado é de só '+marginalGainDays+' dia(s), sinal de que o backlog elegível já é pequeno pro squad':''))+'.'
+    : 'Capacidade adicional (mais devs) tende a gerar ganho real agora — '+totalElig+' de '+totalActive+' história(s) do backlog ativo já está pronta pra fila de desenvolvimento'+(marginalGainDays!=null?', e o ganho projetado de '+baselineN+' pra '+nextN+' dev(s) é de '+marginalGainDays+' dia(s)':'')+'.';
+
+  var gargaloTipo=totalRefino===0&&totalImped===0?'nenhum':(totalRefino>=totalImped?'refino':'impedimento');
+  var gargalo;
+  if(gargaloTipo==='refino'){
+    gargalo='Alto volume de histórias ainda sem refinamento ('+totalRefino+' de '+totalActive+'), reduzindo a quantidade de itens prontos para desenvolvimento.';
+  }else if(gargaloTipo==='impedimento'){
+    var owners=Array.from(new Set(cls.bloqueio_impedimento.map(function(e){return e.meta.impedDono;}).filter(Boolean)));
+    gargalo=totalImped+' história(s) travada(s) por impedimento externo'+(owners.length?' (dono principal: '+owners.join(', ')+')':'')+', fora do controle direto do time.';
+  }else{
+    gargalo='Nenhum bloqueio relevante identificado no momento — o backlog ativo está majoritariamente pronto para desenvolvimento.';
+  }
+
+  var allRaids=[];
+  (state.discovery.initiatives||[]).forEach(function(ini){
+    (ini.raids||[]).filter(function(r){return normStr(r.status)!=='resolvido'&&normStr(r.status)!=='fechado'&&normStr(r.status)!=='closed';})
+      .forEach(function(r){ allRaids.push(Object.assign({initiativeId:ini.initiativeId,initiativeName:ini.name},r)); });
+  });
+  var archRaids=allRaids.filter(function(r){ var t=normStr(r.description); return t.indexOf('arquitet')>=0||t.indexOf('solution design')>=0||t.indexOf('desenho')>=0||t.indexOf('design')>=0; });
+  var arquitetura;
+  if(archRaids.length){
+    var r0=archRaids[0];
+    arquitetura='Risco ativo de arquitetura/desenho de solução no Discovery ('+initiativeLabel(r0.initiativeId)+'): "'+r0.description+'"'+(r0.owner?' — dono: '+r0.owner:'')+(archRaids.length>1?'; +'+(archRaids.length-1)+' outro(s) risco(s) semelhante(s)':'')+', gerando ciclos de retorno que impactam o fluxo do time.';
+  }else if(allRaids.length){
+    arquitetura=allRaids.length+' risco(s) ativo(s) importado(s) do Discovery, sem menção direta a arquitetura/desenho de solução — ver aba "5. Risco cruzado" para o detalhe por iniciativa.';
+  }else{
+    arquitetura='Nenhum risco de arquitetura/desenho de solução importado do Discovery até agora.';
+  }
+
+  var impacto=gargaloTipo==='refino'
+    ? 'O desenvolvimento fica aguardando o backlog ser refinado, o que reduz a eficiência da capacidade já disponível — adicionar dev nesse cenário não acelera a entrega.'
+    : gargaloTipo==='impedimento'
+    ? 'O desenvolvimento fica aguardando definições/desbloqueios de terceiros, o que reduz a eficiência da capacidade já disponível — adicionar dev não resolve uma dependência externa.'
+    : 'A capacidade disponível está sendo usada com o backlog atual; ganho adicional depende de mais devs ou hora extra (ver tabela de cenários abaixo).';
+
+  var byIni={};
+  cls.bloqueio_refino.concat(cls.bloqueio_impedimento).forEach(function(e){
+    var id=e.item.initiativeId||''; if(!id) return;
+    byIni[id]=(byIni[id]||0)+1;
+  });
+  var iniKeys=Object.keys(byIni).sort(function(a,b){return byIni[b]-byIni[a];});
+  var topIniId=iniKeys[0];
+  var exemplo=topIniId
+    ? 'A '+initiativeLabel(topIniId)+' evidencia esse cenário, com '+byIni[topIniId]+' história(s) bloqueada(s) por refino/impedimento antes da entrada efetiva em desenvolvimento.'
+    : 'Nenhum exemplo concreto disponível ainda — importe itens com rótulo #ID_iniciativa pra essa linha citar um caso real.';
+
+  var recomendacao=gargaloTipo==='refino'
+    ? 'Priorizar o refinamento do backlog (aba "4. Bloqueios") antes de avaliar aumento de capacidade.'
+    : gargaloTipo==='impedimento'
+    ? 'Priorizar a resolução dos impedimentos externos (aba "4. Bloqueios") antes de avaliar aumento de capacidade.'
+    : 'Backlog pronto — avaliar aumento de capacidade ou hora extra é razoável agora (tabela de cenários abaixo).';
+
+  return {cenarioAtual:cenarioAtual,gargalo:gargalo,arquitetura:arquitetura,impacto:impacto,exemplo:exemplo,recomendacao:recomendacao,naoRecomendado:naoRecomendado};
+}
+
+/* ===================== Sprint helpers (parametrizado: sprint de N dias corridos) ===================== */
+function sprintBizDaysPerSprint(cfg){
+  var anchor=parseLocalDate(cfg.sprintAnchorDate||todayISO());
+  var len=cfg.sprintLengthDays||14;
+  if(!anchor) return Math.round(len*5/7)||1;
+  var end=new Date(anchor); end.setDate(end.getDate()+len-1);
+  var n=0,d=new Date(anchor);
+  while(d<=end){ if(isBusinessDay(d)) n++; d.setDate(d.getDate()+1); }
+  return n||1;
+}
+function sprintIndexForDate(iso,cfg){
+  var anchor=parseLocalDate(cfg.sprintAnchorDate||todayISO()), d=parseLocalDate(iso);
+  if(!anchor||!d) return null;
+  var diffDays=Math.floor((d-anchor)/86400000);
+  return Math.floor(diffDays/(cfg.sprintLengthDays||14))+1;
+}
+function sprintWindow(index,cfg){
+  var anchor=parseLocalDate(cfg.sprintAnchorDate||todayISO()), len=cfg.sprintLengthDays||14;
+  var start=new Date(anchor); start.setDate(start.getDate()+(index-1)*len);
+  var end=new Date(start); end.setDate(end.getDate()+len-1);
+  return {start:isoFromDate(start),end:isoFromDate(end)};
+}
+// Risco de transbordo: a data calculada cai nos últimos 2 dias úteis da sprint em que ela aterrissa —
+// pouca folga antes da virada, então uma variação pequena de estimativa já joga pra sprint seguinte.
+function isTransbordoRisk(iso,cfg){
+  var idx=sprintIndexForDate(iso,cfg); if(idx==null) return false;
+  var win=sprintWindow(idx,cfg);
+  var d=parseLocalDate(win.end), count=0, flagFrom=null;
+  while(d&&count<2){ if(isBusinessDay(d)){ flagFrom=isoFromDate(d); count++; } d.setDate(d.getDate()-1); }
+  return flagFrom?iso>=flagFrom:false;
+}
+
+/* ===================== Planejamento por data alvo (seção "3 — data target" do briefing) ===================== */
+function initiativeIds(){ return Array.from(new Set(allItemsArr().map(function(it){return it.initiativeId;}).filter(Boolean))); }
+
+function baselineNForSquad(sq,cfg){ return cfg.baselineDevsBySquad[sq]!=null?cfg.baselineDevsBySquad[sq]:cfg.defaultBaselineDevs; }
+
+function computeTargetPlan(){
+  var cfg=state.config, cls=computeClassification();
+  var queues=buildSquadQueues(cls.elegivel);
+  var from=todayISO();
+  var ceiling=cfg.devCeiling||8;
+  var sprintBiz=sprintBizDaysPerSprint(cfg);
+
+  // ---- Gap de refinamento: quantas histórias faltam refinar pra cobrir os próximos N sprints, por squad ----
+  var squads=Array.from(new Set(allItemsArr().map(function(it){return it.squad||'Sem squad';})));
+  var refinoBySquad={};
+  cls.bloqueio_refino.forEach(function(e){ var sq=e.item.squad||'Sem squad'; (refinoBySquad[sq]=refinoBySquad[sq]||[]).push(e); });
+  Object.keys(refinoBySquad).forEach(function(sq){ refinoBySquad[sq].sort(function(a,b){return a.item.id<b.item.id?-1:1;}); });
+
+  var gapBySquad={}, totalGapStories=0;
+  squads.forEach(function(sq){
+    var N=baselineNForSquad(sq,cfg);
+    var neededHours=capDaily(N,cfg)*sprintBiz*(cfg.readinessSprintsWindow||2);
+    var availableHours=(queues[sq]&&queues[sq].length)?queues[sq][queues[sq].length-1].cumHours:0;
+    var gapHours=Math.max(0,neededHours-availableHours);
+    var list=refinoBySquad[sq]||[];
+    var acc=0,count=0;
+    for(var i=0;i<list.length&&acc<gapHours;i++){ var h=list[i].hours; if(h==null) continue; acc+=h; count++; }
+    gapBySquad[sq]={neededHours:neededHours,availableHours:availableHours,gapHours:gapHours,storiesNeeded:count,insufficient:gapHours>0&&acc<gapHours};
+    totalGapStories+=count;
+  });
+
+  // ---- Plano por iniciativa: viável com o que já está elegível? só refinando? só ampliando? os dois? nada no teto? ----
+  var rows=initiativeIds().map(function(iniId){
+    var iniItems=allItemsArr().filter(function(it){return it.initiativeId===iniId;});
+    var squadsInvolved=Array.from(new Set(iniItems.map(function(it){return it.squad||'Sem squad';})));
+    var concluidas=iniItems.filter(function(it){return isTerminalStatus(it.status,cfg.terminalStatuses);}).length;
+    var elegiveis=cls.elegivel.filter(function(e){return e.item.initiativeId===iniId;}).length;
+    var refinoItems=cls.bloqueio_refino.filter(function(e){return e.item.initiativeId===iniId;});
+    var impedItems=cls.bloqueio_impedimento.filter(function(e){return e.item.initiativeId===iniId;});
+
+    // Data de conclusão da iniciativa assumindo N devs por squad (Nfor pode ser número fixo ou função(sq)->N).
+    // Bloqueados por refino entram no fim da fila (elegíveis do squad inteiro primeiro) quando includeRefino=true.
+    function dateAtN(Nfor,includeRefino){
+      var max=null;
+      squadsInvolved.forEach(function(sq){
+        var refinoHere=refinoItems.filter(function(e){return (e.item.squad||'Sem squad')===sq;});
+        var elegivelHereCount=cls.elegivel.filter(function(e){return e.item.initiativeId===iniId&&(e.item.squad||'Sem squad')===sq;}).length;
+        // Sem item elegível (nem, no passo estendido, bloqueado por refino) desta iniciativa nesse squad:
+        // não existe sinal de conclusão pra projetar aqui — só impedimento resolve, não é data de fila.
+        if(elegivelHereCount===0&&!(includeRefino&&refinoHere.length)) return;
+        var cum=(queues[sq]&&queues[sq].length)?queues[sq][queues[sq].length-1].cumHours:0;
+        if(includeRefino){
+          refinoHere.slice().sort(function(a,b){return a.item.id<b.item.id?-1:1;})
+            .forEach(function(e){ if(e.hours!=null) cum+=e.hours; });
+        }
+        var N=typeof Nfor==='function'?Nfor(sq):Nfor;
+        var d=dateForCumHours(Math.max(cum,0.0001),N,cfg,from);
+        if(d&&(!max||d>max)) max=d;
+      });
+      return max;
+    }
+
+    var baselineFn=function(sq){ return baselineNForSquad(sq,cfg); };
+    var elegivelOnlyBaseline=dateAtN(baselineFn,false);
+    var extendedBaseline=dateAtN(baselineFn,true);
+
+    var target=state.targetDates[iniId]||'';
+    var prob=null, decision='Defina uma data alvo', minNElegivelOnly=null, minNExtended=null;
+
+    if(target){
+      if(elegivelOnlyBaseline&&elegivelOnlyBaseline<=target){ prob=100; decision='Dentro do prazo'; }
+      else if(extendedBaseline&&extendedBaseline<=target){ prob=80; decision='Refinar antes de ampliar'; }
+      else{
+        for(var N=1;N<=ceiling&&minNElegivelOnly==null;N++){ var d=dateAtN(N,false); if(d&&d<=target) minNElegivelOnly=N; }
+        for(var N2=1;N2<=ceiling&&minNExtended==null;N2++){ var d2=dateAtN(N2,true); if(d2&&d2<=target) minNExtended=N2; }
+        if(minNElegivelOnly!=null){ prob=60; decision='Ampliar o time (sem refino extra)'; }
+        else if(minNExtended!=null){ prob=40; decision='Refinar e ampliar'; }
+        else{ prob=0; decision='Meta inviável no teto atual ('+ceiling+' devs)'; }
+      }
+    }
+
+    return {
+      initiativeId:iniId, name:initiativeName(iniId), squads:squadsInvolved,
+      concluidas:concluidas, elegiveis:elegiveis, refinoCount:refinoItems.length, impedCount:impedItems.length,
+      target:target, projected:elegivelOnlyBaseline||extendedBaseline||null, probability:prob, decision:decision,
+      minNElegivelOnly:minNElegivelOnly, minNExtended:minNExtended
+    };
+  });
+
+  return {rows:rows,gapBySquad:gapBySquad,totalGapStories:totalGapStories,sprintBiz:sprintBiz};
+}
+
+// Prazo de refinamento por história: a data em que a fila do squad (só elegíveis, na frente dela) chegaria
+// na vez dela — ou seja, o prazo pra ela estar refinada antes de virar o item que está segurando o squad ocioso.
+function computeRefinementDeadlines(iniId){
+  var cfg=state.config, cls=computeClassification();
+  var queues=buildSquadQueues(cls.elegivel);
+  var from=todayISO();
+  var refinoItems=cls.bloqueio_refino.filter(function(e){return e.item.initiativeId===iniId;});
+  var bySquad={};
+  refinoItems.forEach(function(e){ var sq=e.item.squad||'Sem squad'; (bySquad[sq]=bySquad[sq]||[]).push(e); });
+  var rows=[];
+  Object.keys(bySquad).forEach(function(sq){
+    var list=bySquad[sq].slice().sort(function(a,b){return a.item.id<b.item.id?-1:1;});
+    var N=baselineNForSquad(sq,cfg);
+    var cum=(queues[sq]&&queues[sq].length)?queues[sq][queues[sq].length-1].cumHours:0;
+    list.forEach(function(e){
+      var turnStart=cum;
+      var deadline=e.hours!=null?dateForCumHours(Math.max(turnStart,0.0001),N,cfg,from):null;
+      if(e.hours!=null) cum+=e.hours;
+      rows.push({id:e.item.id,squad:sq,hours:e.hours,deadline:deadline,transbordo:deadline?isTransbordoRisk(deadline,cfg):false,sprintIndex:deadline?sprintIndexForDate(deadline,cfg):null});
+    });
+  });
+  return rows;
+}
+
+function buildIniciativaAnalysis(iniId,planRow,patternsResult){
+  var cls=computeClassification();
+  var refino=cls.bloqueio_refino.filter(function(e){return e.item.initiativeId===iniId;});
+  var imped=cls.bloqueio_impedimento.filter(function(e){return e.item.initiativeId===iniId;});
+  var elegivel=cls.elegivel.filter(function(e){return e.item.initiativeId===iniId;});
+  var parts=[];
+
+  if(refino.length) parts.push(refino.length+' história(s) bloqueada(s) por refinamento — aumentar o número de devs não muda a data de nenhuma delas até serem refinadas.');
+  if(imped.length){
+    var owners=Array.from(new Set(imped.filter(function(e){return e.meta.impedDono;}).map(function(e){return e.meta.impedDono;})));
+    parts.push(imped.length+' história(s) travada(s) por impedimento'+(owners.length?' (depende de '+owners.join(', ')+')':'')+' — independe de headcount.');
+  }
+  if(!refino.length&&!imped.length&&elegivel.length) parts.push('Todas as '+elegivel.length+' história(s) elegível(is) estão livres pra entrar na fila de devs.');
+
+  var disc=(state.discovery.initiatives||[]).find(function(i){return i.initiativeId===iniId;});
+  if(disc){
+    disc.raids.filter(function(r){return normStr(r.status)!=='resolvido'&&normStr(r.status)!=='fechado'&&normStr(r.status)!=='closed';})
+      .forEach(function(r){ parts.push('Risco Discovery: '+r.description+(r.owner?' (dono: '+r.owner+')':'')+'.'); });
+  }
+
+  (patternsResult&&patternsResult.risks||[]).filter(function(r){return r.initiativeId===iniId;})
+    .forEach(function(r){ parts.push('Padrão detectado: '+r.text); });
+
+  if(planRow&&planRow.target){
+    if(planRow.probability===100) parts.push('Meta de '+fmtDateBR(planRow.target)+' batida com a fila atual — projeção em '+fmtDateBR(planRow.projected)+'.');
+    else if(planRow.probability===80) parts.push('Meta de '+fmtDateBR(planRow.target)+' só é batida se as histórias bloqueadas por refinamento forem refinadas a tempo — o número de devs atual já é suficiente.');
+    else if(planRow.probability===60) parts.push('Só refinar não basta pra bater '+fmtDateBR(planRow.target)+' — precisa de pelo menos '+planRow.minNElegivelOnly+' dev(s) no(s) squad(s) envolvido(s).');
+    else if(planRow.probability===40) parts.push('Só bate '+fmtDateBR(planRow.target)+' refinando a tempo E ampliando pra '+planRow.minNExtended+' dev(s).');
+    else if(planRow.probability===0) parts.push('Meta de '+fmtDateBR(planRow.target)+' não é alcançável nem no teto de devs configurado, mesmo com tudo refinado a tempo — revisar escopo ou prazo.');
+  }
+
+  return parts.length?parts.join(' '):'Sem dados suficientes para análise (importe itens e preencha início/horas).';
+}
+
+/* ===================== Risk pattern engine (squad-agnostic) ===================== */
+function detectPatterns(){
+  var cfg=state.config, items=allItemsArr(), threshold=cfg.patternThreshold||3, risks=[];
+  var bySquad={};
+  items.forEach(function(it){ (bySquad[it.squad||'Sem squad']=bySquad[it.squad||'Sem squad']||[]).push(it); });
+
+  Object.keys(bySquad).forEach(function(sq){
+    var list=bySquad[sq];
+
+    var aging=list.filter(function(it){
+      var meta=state.meta[it.id]||{};
+      if(isTerminalStatus(it.status,cfg.terminalStatuses)) return false;
+      if(meta.impedAtivo) return false;
+      var days=businessDaysSince(it.atualizado||it.criado);
+      return days!=null&&days>=cfg.agingThresholdDays;
+    });
+    if(aging.length>=threshold){
+      var iniIds=Array.from(new Set(aging.map(function(it){return it.initiativeId;}).filter(Boolean)));
+      risks.push({squad:sq,initiativeId:iniIds[0]||'',pattern:'aging_alto',
+        text:aging.length+' item(ns) do squad '+sq+' sem atualização há '+cfg.agingThresholdDays+'+ dias úteis, sem impedimento formal registrado.',
+        cond:'Se a demanda para este squad aumentar, esse padrão pode virar gargalo silencioso na projeção — o item não sai da fila sozinho.',
+        items:aging.map(function(x){return x.id;})});
+    }
+
+    var naoRefEmSprint=list.filter(function(it){ return it.sprint&&!isRefinedLabel(it.labels); });
+    if(naoRefEmSprint.length>=threshold){
+      var iniIds2=Array.from(new Set(naoRefEmSprint.map(function(it){return it.initiativeId;}).filter(Boolean)));
+      risks.push({squad:sq,initiativeId:iniIds2[0]||'',pattern:'nao_refinado_em_sprint',
+        text:naoRefEmSprint.length+' item(ns) do squad '+sq+' já em sprint mas ainda não refinado(s).',
+        cond:'Se esses itens não forem refinados antes de precisar de capacidade, a fila de N devs fica menor do que o board sugere.',
+        items:naoRefEmSprint.map(function(x){return x.id;})});
+    }
+
+    var transbordo=list.filter(function(it){ var s=String(it.sprint||'').split(/[,;|]/).map(function(x){return x.trim();}).filter(Boolean); return s.length>1&&!isTerminalStatus(it.status,cfg.terminalStatuses); });
+    if(transbordo.length>=threshold){
+      var iniIds3=Array.from(new Set(transbordo.map(function(it){return it.initiativeId;}).filter(Boolean)));
+      risks.push({squad:sq,initiativeId:iniIds3[0]||'',pattern:'transbordo',
+        text:transbordo.length+' item(ns) do squad '+sq+' já passaram por mais de uma sprint sem concluir.',
+        cond:'Se o padrão se repetir, o squad tende a carregar mais transbordo do que capacidade nova resolve.',
+        items:transbordo.map(function(x){return x.id;})});
+    }
+  });
+
+  var semRastreio=items.filter(function(it){ return !it.initiativeId; });
+  var traceRisk=semRastreio.length?{count:semRastreio.length,items:semRastreio.map(function(x){return x.id;})}:null;
+
+  return {risks:risks,traceRisk:traceRisk};
+}
+
+/* ===================== Rendering ===================== */
+var scenarios=null, patterns=null;
+
+function cpRecalcAndRender(){
+  scenarios=computeScenarios();
+  patterns=detectPatterns();
+  renderHeader();
+  renderItensTab();
+  renderCenariosTab();
+  renderBloqueiosTab();
+  renderRiscoTab();
+  renderStatusTab();
+  renderConfigTab();
+  renderAlvoTab();
+}
+
+function initiativeName(id){
+  if(!id) return '';
+  var found=(state.discovery.initiatives||[]).find(function(i){return i.initiativeId===id;});
+  return found?found.name:('Iniciativa #'+id);
+}
+function initiativeLabel(id){ return id?('#'+id+' — '+initiativeName(id)):'Sem iniciativa'; }
+
+function renderHeader(){
+  var n=Object.keys(state.items).length;
+  var lastOps=state.importedAt.ops4ops?new Date(state.importedAt.ops4ops).toLocaleString('pt-BR'):'—';
+  var lastDisc=state.importedAt.discovery?new Date(state.importedAt.discovery).toLocaleString('pt-BR'):'—';
+  $id('lastUpdate').textContent=n+' itens · Ops4Ops: '+lastOps+' · Discovery: '+lastDisc;
+}
+
+/* ---- Itens tab ---- */
+function renderItensTab(){
+  var items=allItemsArr().sort(function(a,b){return a.id<b.id?-1:1;});
+  var head='<tr><th>Chave</th><th>Iniciativa</th><th>Squad</th><th>Status</th><th>Refinada</th><th>SP</th><th>Horas (override)</th><th>Horas usadas</th><th>Início dev (real)</th><th>Previsto início</th><th>Prioridade manual<span class="info-ic" data-tip="Opcional. Preencha com um número (1, 2, 3…) pra forçar um item já refinado pra frente da fila do squad dele, furando a ordem natural de início — útil pra testar «dá pra antecipar algo que já está pronto?». Menor número = mais prioridade. Deixe em branco pra manter a ordem natural.">ⓘ</span></th><th>Impedimento?</th><th>Desde</th><th>Dono</th><th>Detalhe</th></tr>';
+  var rows=items.map(function(it){
+    var meta=state.meta[it.id]||{};
+    var refined=meta.refinedOverride!=null?meta.refinedOverride:isRefinedLabel(it.labels);
+    var hoursUsed=estimateHoursForItem(it,meta,state.config);
+    return '<tr>'+
+      '<td><b>'+esc(it.id)+'</b><div class="muted" style="max-width:220px;white-space:normal">'+esc(it.resumo||'')+'</div></td>'+
+      '<td>'+esc(initiativeLabel(it.initiativeId))+'</td>'+
+      '<td>'+esc(it.squad)+'</td>'+
+      '<td>'+esc(it.status||'—')+'</td>'+
+      '<td><input type="checkbox" '+(refined?'checked':'')+' onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'refinedOverride\',this.checked)"></td>'+
+      '<td><input class="small-input" value="'+esc(meta.sp||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'sp\',this.value)"></td>'+
+      '<td><input class="small-input" value="'+esc(meta.hoursOverride||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'hoursOverride\',this.value)"></td>'+
+      '<td>'+(hoursUsed==null?'<span class="badge-pill b-yellow">sem estimativa</span>':hoursUsed+'h')+'</td>'+
+      '<td><input type="date" class="date-input" value="'+esc(meta.dataInicioDev||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'dataInicioDev\',this.value)"></td>'+
+      '<td><input type="date" class="date-input" value="'+esc(meta.dataPrevistaInicio||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'dataPrevistaInicio\',this.value)"></td>'+
+      '<td><input class="priority-input" type="number" value="'+esc(meta.priority||'')+'" placeholder="—" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'priority\',this.value)"></td>'+
+      '<td><input type="checkbox" '+(meta.impedAtivo?'checked':'')+' onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'impedAtivo\',this.checked)"></td>'+
+      '<td><input type="date" class="date-input" value="'+esc(meta.impedDesde||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'impedDesde\',this.value)"></td>'+
+      '<td><input class="small-input" style="width:100px" value="'+esc(meta.impedDono||'')+'" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'impedDono\',this.value)"></td>'+
+      '<td><input value="'+esc(meta.impedDetalhe||'')+'" style="width:160px" onchange="cpUpdateMeta(\''+esc(it.id)+'\',\'impedDetalhe\',this.value)"></td>'+
+      '</tr>';
+  }).join('');
+  var tbl=$id('itensTable');
+  tbl.querySelector('thead').innerHTML=head;
+  tbl.querySelector('tbody').innerHTML=rows||'<tr><td colspan="14" class="muted">Nenhum item importado ainda.</td></tr>';
+}
+window.cpUpdateMeta=function(id,field,value){
+  var meta=state.meta[id]=state.meta[id]||{};
+  meta[field]=value;
+  saveState(); cpRecalcAndRender();
+};
+
+/* ---- Cenários tab ---- */
+var cenChartRef=null, statusChartRef=null;
+function renderPortfolioNarrative(){
+  var n=buildPortfolioNarrative();
+  var host=$id('portfolioNarrative');
+  if(!n){ host.innerHTML='<p class="muted">Sem dados suficientes ainda pra gerar o resumo — importe itens primeiro.</p>'; return; }
+  host.innerHTML=
+    (n.naoRecomendado?'<div class="warn-banner" style="margin-bottom:10px">⚠ Recomendação automática: '+esc(n.recomendacao)+'</div>':'')+
+    '<ul style="margin:0 0 10px;padding-left:20px;line-height:1.65;font-size:13.5px">'+
+      '<li><b>Cenário atual:</b> '+esc(n.cenarioAtual)+'</li>'+
+      '<li><b>Principal gargalo:</b> '+esc(n.gargalo)+'</li>'+
+      '<li><b>Arquitetura / riscos externos:</b> '+esc(n.arquitetura)+'</li>'+
+      '<li><b>Impacto:</b> '+esc(n.impacto)+'</li>'+
+      '<li><b>Exemplo:</b> '+esc(n.exemplo)+'</li>'+
+      '<li><b>Recomendação:</b> '+esc(n.recomendacao)+'</li>'+
+    '</ul>'+
+    '<div><button class="btn ghost" onclick="cpCopyPortfolioNarrative()">📋 Copiar resumo</button> '+
+    '<span class="help">Gerado a partir dos dados carregados agora — não é uma resposta pronta tipo "contrate N devs", é o racional exposto pra você levar pra liderança. Reavalie sempre que reimportar dados.</span></div>';
+}
+window.cpCopyPortfolioNarrative=function(){
+  var n=buildPortfolioNarrative(); if(!n){ toast('Sem dados','Importe itens antes de copiar o resumo.','warn'); return; }
+  var lines=['Cenário atual: '+n.cenarioAtual,'Principal gargalo: '+n.gargalo,'Arquitetura / riscos externos: '+n.arquitetura,'Impacto: '+n.impacto,'Exemplo: '+n.exemplo,'Recomendação: '+n.recomendacao];
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(lines.join('\n')).then(function(){ toast('Resumo copiado','Cole no e-mail, Teams ou apresentação.'); });
+  }else{
+    toast('Cópia indisponível','Selecione o texto manualmente.','warn');
+  }
+};
+
+function renderCenariosTab(){
+  var s=scenarios, cfg=s.cfg;
+  var baselineN=cfg.defaultBaselineDevs||2;
+  var baselineDate=s.overallByN[baselineN]||null;
+  var atualN=Object.values(cfg.baselineDevsBySquad||{})[0]||baselineN;
+
+  renderPortfolioNarrative();
+
+  $id('cenKpis').innerHTML=
+    '<div class="kpi"><div class="lbl">Itens elegíveis</div><div class="val">'+s.elegivel.length+'</div><div class="sub">'+s.semDadosSuficientes.length+' sem início/horas — fora da fila até completar</div></div>'+
+    '<div class="kpi"><div class="lbl">Bloqueados (refino+impedimento)</div><div class="val">'+(s.bloqueio_refino.length+s.bloqueio_impedimento.length)+'</div><div class="sub">'+s.bloqueio_refino.length+' refino · '+s.bloqueio_impedimento.length+' impedimento</div></div>'+
+    '<div class="kpi"><div class="lbl">Baseline (N='+baselineN+')</div><div class="val">'+fmtDateBR(baselineDate)+'</div><div class="sub">Data final da fila hoje</div></div>'+
+    '<div class="kpi"><div class="lbl">Teto simulado</div><div class="val">N=1..'+cfg.devCeiling+'</div><div class="sub">'+cfg.hoursPerDay+'h/dia · '+cfg.daysPerWeek+' dias úteis/sem.</div></div>';
+
+  // chart: overall date per N, expressed as calendar days from baseline (decreasing return curve)
+  var labels=s.Ns.map(function(n){return 'N='+n;});
+  var dataDays=s.Ns.map(function(n){ var d=s.overallByN[n]; return (d&&baselineDate)?(daysBetweenCalendar(d,baselineDate)):null; });
+  if(typeof Chart!=='undefined'){
+    if(cenChartRef) cenChartRef.destroy();
+    cenChartRef=new Chart($id('cenChart').getContext('2d'),{
+      type:'line',
+      data:{labels:labels,datasets:[{label:'Dias antecipados vs. baseline (N='+baselineN+')',data:dataDays,borderColor:'#cc0000',backgroundColor:'rgba(204,0,0,.15)',fill:true,tension:.25}]},
+      options:{responsive:true,plugins:{legend:{labels:{color:'#1c2430'}}},scales:{x:{ticks:{color:'#64748b'},grid:{color:'#e2e8f0'}},y:{ticks:{color:'#64748b'},grid:{color:'#e2e8f0'}}}}
+    });
+  }
+
+  var head='<tr><th>Iniciativa</th><th>Squad</th><th>Itens</th>'+s.Ns.map(function(n){return '<th>N='+n+'</th>';}).join('')+'</tr>';
+  var groupKeys=Object.keys(s.groups).sort();
+  var rows=groupKeys.map(function(k){
+    var g=s.groups[k];
+    return '<tr><td>'+esc(initiativeLabel(g.initiativeId))+'</td><td>'+esc(g.squad)+'</td><td>'+g.itemCount+'</td>'+
+      s.Ns.map(function(n){return '<td>'+fmtDateBR(g.datesByN[n])+'</td>';}).join('')+'</tr>';
+  }).join('');
+  var tbl=$id('cenTable');
+  tbl.querySelector('thead').innerHTML=head;
+  tbl.querySelector('tbody').innerHTML=rows||'<tr><td colspan="99" class="muted">Nenhum item elegível com início e horas preenchidos ainda.</td></tr>';
+
+  var fhead='<tr><th>Chave</th><th>Iniciativa</th><th>Squad</th><th>Horas</th><th>Início</th>'+s.Ns.map(function(n){return '<th>N='+n+'</th>';}).join('')+'</tr>';
+  var frows=s.perItem.slice().sort(function(a,b){return a.squad===b.squad?(a.id<b.id?-1:1):(a.squad<b.squad?-1:1);}).map(function(pi){
+    return '<tr><td>'+(pi.manualPriority?'<span class="manual-badge" title="Prioridade manual — furou a fila natural">⚡</span>':'')+esc(pi.id)+'</td><td>'+esc(initiativeLabel(pi.initiativeId))+'</td><td>'+esc(pi.squad)+'</td><td>'+pi.hours+'h</td><td>'+fmtDateBR(pi.start)+(pi.emDev?' (em dev)':' (previsto)')+'</td>'+
+      s.Ns.map(function(n){return '<td>'+fmtDateBR(pi.datesByN[n])+'</td>';}).join('')+'</tr>';
+  }).join('');
+  var ftbl=$id('filaTable');
+  ftbl.querySelector('thead').innerHTML=fhead;
+  ftbl.querySelector('tbody').innerHTML=frows||'<tr><td colspan="99" class="muted">Fila vazia.</td></tr>';
+}
+
+// Alavanca "hora extra": mesma fila/mesmos devs baseline por squad, só troca horas/dia por
+// horas/dia+extra na mesma função dateForCumHours já validada — sem fórmula nova.
+function computeOvertimeScenario(extraHours){
+  var cfg=state.config, cls=computeClassification();
+  var queues=buildSquadQueues(cls.elegivel);
+  var from=todayISO();
+  var cfgExtra=Object.assign({},cfg,{hoursPerDay:(cfg.hoursPerDay||0)+extraHours});
+  var groupsBase={}, groupsExtra={};
+  Object.keys(queues).forEach(function(sq){
+    var N=baselineNForSquad(sq,cfg);
+    queues[sq].forEach(function(e){
+      var key=(e.item.initiativeId||'sem-iniciativa')+'||'+sq;
+      var dBase=dateForCumHours(e.cumHours,N,cfg,from);
+      var dExtra=dateForCumHours(e.cumHours,N,cfgExtra,from);
+      if(dBase&&(!groupsBase[key]||dBase>groupsBase[key])) groupsBase[key]=dBase;
+      if(dExtra&&(!groupsExtra[key]||dExtra>groupsExtra[key])) groupsExtra[key]=dExtra;
+    });
+  });
+  var rows=Object.keys(groupsBase).map(function(k){
+    var parts=k.split('||'), iniId=parts[0]==='sem-iniciativa'?'':parts[0], sq=parts[1];
+    var dBase=groupsBase[k], dExtra=groupsExtra[k];
+    return {initiativeId:iniId,squad:sq,base:dBase,extra:dExtra,daysGained:(dBase&&dExtra)?daysBetweenCalendar(dExtra,dBase):null};
+  });
+  var overallBase=null,overallExtra=null;
+  rows.forEach(function(r){ if(r.base&&(!overallBase||r.base>overallBase)) overallBase=r.base; if(r.extra&&(!overallExtra||r.extra>overallExtra)) overallExtra=r.extra; });
+  return {rows:rows,overallBase:overallBase,overallExtra:overallExtra,overallDaysGained:(overallBase&&overallExtra)?daysBetweenCalendar(overallExtra,overallBase):null,extraHours:extraHours};
+}
+window.cpSimulateOvertime=function(){
+  var extra=Number($id('extraHoursInput').value)||0;
+  if(extra<=0){ $id('overtimeResult').innerHTML='<p class="muted">Informe um valor de hora extra maior que zero.</p>'; return; }
+  var r=computeOvertimeScenario(extra);
+  if(!r.rows.length){ $id('overtimeResult').innerHTML='<p class="muted">Nenhum item elegível na fila ainda.</p>'; return; }
+  var head='<tr><th>Iniciativa</th><th>Squad</th><th>Sem hora extra</th><th>Com +'+extra+'h/dia</th><th>Dias ganhos</th></tr>';
+  var rows=r.rows.map(function(row){
+    return '<tr><td>'+esc(initiativeLabel(row.initiativeId))+'</td><td>'+esc(row.squad)+'</td><td>'+fmtDateBR(row.base)+'</td><td>'+fmtDateBR(row.extra)+'</td><td>'+(row.daysGained!=null?row.daysGained+' dia(s)':'—')+'</td></tr>';
+  }).join('');
+  var summary='<div class="kpi" style="margin-bottom:10px"><div class="lbl">Geral (todos os squads/iniciativas)</div><div class="val">'+(r.overallDaysGained!=null?r.overallDaysGained+' dia(s) ganho(s)':'—')+'</div><div class="sub">'+fmtDateBR(r.overallBase)+' → '+fmtDateBR(r.overallExtra)+' com +'+extra+'h/dia, mantendo os devs baseline de cada squad</div></div>';
+  $id('overtimeResult').innerHTML=summary+'<div class="tbl-wrap"><table><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>';
+};
+
+/* ---- Bloqueios tab ---- */
+function renderBloqueiosTab(){
+  $id('nextRefinementDate').value=state.config.nextRefinementDate||'';
+  var total=allItemsArr().length;
+
+  function groupByIniciativa(list){
+    var g={};
+    list.forEach(function(e){ var k=e.item.initiativeId||'sem-iniciativa'; (g[k]=g[k]||[]).push(e); });
+    return g;
+  }
+
+  var refGroups=groupByIniciativa(scenarios.bloqueio_refino);
+  var refHtml=Object.keys(refGroups).map(function(k){
+    var list=refGroups[k], iniId=list[0].item.initiativeId;
+    var msg='<div class="warn-banner">'+list.length+' de '+total+' história(s) desta base não mudam de data em nenhum cenário — bloqueadas por refinamento. <b>Independe do número de devs.</b>'+
+      (state.config.nextRefinementDate?' Próxima sessão de refinamento: '+fmtDateBR(state.config.nextRefinementDate)+'.':' Defina a próxima sessão de refinamento acima — sem isso vira só um número que ninguém age em cima.')+'</div>';
+    return '<div class="block-card refino"><h4>'+esc(initiativeLabel(iniId))+' · '+list.length+' item(ns)</h4>'+msg+
+      list.map(function(e){return '<div class="meta">'+esc(e.item.id)+' — '+esc(e.item.squad)+' — '+esc(e.item.status||'—')+'</div>';}).join('')+
+      '</div>';
+  }).join('')||'<p class="muted">Nenhum item bloqueado por refinamento.</p>';
+  $id('refinoBlocks').innerHTML=refHtml;
+
+  var impGroups=groupByIniciativa(scenarios.bloqueio_impedimento);
+  var impHtml=Object.keys(impGroups).map(function(k){
+    var list=impGroups[k], iniId=list[0].item.initiativeId;
+    return '<div class="block-card"><h4>'+esc(initiativeLabel(iniId))+' · '+list.length+' item(ns) — <span class="badge-pill b-red">independe do nº de devs</span></h4>'+
+      list.map(function(e){
+        var meta=e.meta, since=meta.impedDesde?businessDaysSince(meta.impedDesde):null;
+        return '<div class="meta">'+esc(e.item.id)+' — '+esc(e.item.squad)+' — '+esc(meta.impedDetalhe||'sem detalhe registrado')+
+          ' · desde: '+(meta.impedDesde?fmtDateBR(meta.impedDesde)+(since!=null?' ('+since+' dias úteis)':''):'não informado')+
+          ' · dono do destravamento: '+esc(meta.impedDono||'não informado')+'</div>';
+      }).join('')+'</div>';
+  }).join('')||'<p class="muted">Nenhum item bloqueado por impedimento.</p>';
+  $id('impedBlocks').innerHTML=impHtml;
+}
+window.cpSetNextRefinement=function(v){ state.config.nextRefinementDate=v; saveState(); renderBloqueiosTab(); };
+
+/* ---- Risco cruzado tab ---- */
+function renderRiscoTab(){
+  var byIniciativa={};
+  allItemsArr().forEach(function(it){ if(it.initiativeId){ (byIniciativa[it.initiativeId]=byIniciativa[it.initiativeId]||[]).push(it); } });
+  var iniIds=Array.from(new Set((state.discovery.initiatives||[]).map(function(i){return i.initiativeId;}).concat(Object.keys(byIniciativa))));
+  var plan=computeTargetPlan();
+  var planById={}; plan.rows.forEach(function(r){planById[r.initiativeId]=r;});
+
+  var cross=iniIds.map(function(id){
+    var disc=(state.discovery.initiatives||[]).find(function(i){return i.initiativeId===id;});
+    var opsItems=byIniciativa[id]||[];
+    if(!disc&&!opsItems.length) return '';
+    var raidsActive=disc?disc.raids.filter(function(r){return normStr(r.status)!=='resolvido'&&normStr(r.status)!=='fechado'&&normStr(r.status)!=='closed';}):[];
+    var cls=opsItems.reduce(function(acc,it){
+      var meta=state.meta[it.id]||{}; var c=classifyItem(it,meta,state.config); acc[c]=(acc[c]||0)+1; return acc;
+    },{});
+    var analysis=buildIniciativaAnalysis(id,planById[id],patterns);
+    return '<div class="risk-card">'+
+      '<h4>'+esc(initiativeLabel(id))+'</h4>'+
+      '<div class="pill-row">'+
+        '<span class="badge-pill b-green">'+(cls.elegivel||0)+' elegíveis</span>'+
+        '<span class="badge-pill b-yellow">'+(cls.bloqueio_refino||0)+' bloq. refino</span>'+
+        '<span class="badge-pill b-red">'+(cls.bloqueio_impedimento||0)+' bloq. impedimento</span>'+
+        '<span class="badge-pill b-muted">'+(cls.concluido||0)+' concluídos</span>'+
+      '</div>'+
+      '<div class="muted" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--navy-border)"><b>Análise:</b> '+esc(analysis)+'</div>'+
+      (raidsActive.length?raidsActive.map(function(r){return '<div class="raid-item"><b>'+esc(r.description)+'</b><br>Dono: '+esc(r.owner||'—')+' · Status: '+esc(r.status)+(r.since?' · desde '+fmtDateBR(r.since):'')+'</div>';}).join('')
+        :'<p class="muted" style="margin:6px 0 0">Nenhum RAID ativo importado do Discovery para esta iniciativa.</p>')+
+      '</div>';
+  }).join('');
+  $id('crossPanel').innerHTML=cross||'<p class="muted">Sem iniciativas cruzáveis ainda — importe Ops4Ops e Discovery.</p>';
+
+  var risksHtml=patterns.risks.map(function(r){
+    return '<div class="risk-card"><h4>'+esc(initiativeLabel(r.initiativeId))+' · Squad '+esc(r.squad)+'</h4>'+
+      '<div>Padrão observado: '+esc(r.text)+'</div>'+
+      '<div class="muted" style="margin-top:4px">'+esc(r.cond)+'</div>'+
+      '<div class="pill-row">'+r.items.map(function(id){return '<span class="badge-pill b-muted">'+esc(id)+'</span>';}).join('')+'</div>'+
+      '</div>';
+  }).join('');
+  $id('patternPanel').innerHTML=risksHtml||'<p class="muted">Nenhum padrão atingiu o limiar configurado ('+state.config.patternThreshold+' ocorrências).</p>';
+
+  $id('tracePanel').innerHTML=patterns.traceRisk
+    ? '<div class="risk-card"><h4>Rastreabilidade quebrada</h4><div>'+patterns.traceRisk.count+' item(ns) sem rótulo <code>#ID_iniciativa</code>: '+patterns.traceRisk.items.map(esc).join(', ')+'</div></div>'
+    : '<p class="muted">Todos os itens têm rótulo de iniciativa identificável.</p>';
+}
+
+/* ---- Status chart tab ---- */
+function renderStatusTab(){
+  var items=allItemsArr();
+  var statuses=Array.from(new Set(items.map(function(it){return it.status||'Sem status';})));
+  var refined=statuses.map(function(st){return items.filter(function(it){return (it.status||'Sem status')===st&&isRefinedLabel(it.labels);}).length;});
+  var notRefined=statuses.map(function(st){return items.filter(function(it){return (it.status||'Sem status')===st&&!isRefinedLabel(it.labels);}).length;});
+
+  if(typeof Chart!=='undefined'){
+    if(statusChartRef) statusChartRef.destroy();
+    statusChartRef=new Chart($id('statusChart').getContext('2d'),{
+      type:'bar',
+      data:{labels:statuses,datasets:[
+        {label:'Refinada',data:refined,backgroundColor:'#2ecc71'},
+        {label:'Não refinada',data:notRefined,backgroundColor:'#f39c12'}
+      ]},
+      options:{responsive:true,scales:{x:{stacked:true,ticks:{color:'#64748b'},grid:{color:'#e2e8f0'}},y:{stacked:true,ticks:{color:'#64748b'},grid:{color:'#e2e8f0'}}},plugins:{legend:{labels:{color:'#1c2430'}}}}
+    });
+  }
+  var head='<tr><th>Status</th><th>Refinada</th><th>Não refinada</th><th>Total</th></tr>';
+  var rows=statuses.map(function(st,i){return '<tr><td>'+esc(st)+'</td><td>'+refined[i]+'</td><td>'+notRefined[i]+'</td><td>'+(refined[i]+notRefined[i])+'</td></tr>';}).join('');
+  var tbl=$id('statusTable');
+  tbl.querySelector('thead').innerHTML=head;
+  tbl.querySelector('tbody').innerHTML=rows||'<tr><td colspan="4" class="muted">Sem dados.</td></tr>';
+}
+
+/* ---- Config tab ---- */
+function renderConfigTab(){
+  var cfg=state.config;
+  $id('cfgHoursDay').value=cfg.hoursPerDay;
+  $id('cfgDaysWeek').value=cfg.daysPerWeek;
+  $id('cfgDevCeiling').value=cfg.devCeiling;
+  $id('cfgHoursSprint').value=cfg.hoursPerSprint;
+  $id('cfgPatternThreshold').value=cfg.patternThreshold;
+  $id('cfgAgingDays').value=cfg.agingThresholdDays;
+  $id('cfgSprintLen').value=cfg.sprintLengthDays;
+  $id('cfgSprintAnchor').value=cfg.sprintAnchorDate;
+  $id('cfgReadinessWindow').value=cfg.readinessSprintsWindow;
+
+  var squads=Array.from(new Set(allItemsArr().map(function(it){return it.squad||'Sem squad';})));
+  $id('baselineRows').innerHTML=squads.length?squads.map(function(sq){
+    var v=cfg.baselineDevsBySquad[sq]!=null?cfg.baselineDevsBySquad[sq]:cfg.defaultBaselineDevs;
+    return '<div class="eff-row"><label class="field" style="grid-column:1/3">'+esc(sq)+'</label><input class="small-input" type="number" min="1" data-squad="'+esc(sq)+'" value="'+v+'"><span></span></div>';
+  }).join(''):'<p class="muted">Importe itens para configurar baseline por squad.</p>';
+
+  $id('effRows').innerHTML=cfg.efficiencyCurve.map(function(r,i){
+    return '<div class="eff-row"><input type="number" min="1" value="'+r.minDev+'" data-eff="minDev" data-idx="'+i+'" placeholder="de N"><input type="number" min="1" value="'+r.maxDev+'" data-eff="maxDev" data-idx="'+i+'" placeholder="até N"><input type="number" min="0" max="100" value="'+r.pct+'" data-eff="pct" data-idx="'+i+'" placeholder="%">'+
+      '<button class="close-x" onclick="cpRemoveEffRow('+i+')">✕ remover</button></div>';
+  }).join('');
+
+  var statuses=Array.from(new Set(allItemsArr().map(function(it){return it.status||'';}))).filter(Boolean);
+  $id('terminalStatusRows').innerHTML=statuses.length?statuses.map(function(st){
+    var checked=cfg.terminalStatuses.length?cfg.terminalStatuses.some(function(t){return normStr(t)===normStr(st);}):isTerminalStatus(st,[]);
+    return '<label style="display:inline-flex;align-items:center;gap:6px;margin:4px 12px 4px 0"><input type="checkbox" data-term-status="'+esc(st)+'" '+(checked?'checked':'')+'> '+esc(st)+'</label>';
+  }).join(''):'<p class="muted">Importe itens para listar os status existentes.</p>';
+}
+window.cpOpenConfig=function(){ renderConfigTab(); $id('configModal').classList.add('on'); };
+window.cpCloseConfig=function(){ $id('configModal').classList.remove('on'); };
+window.cpAddEffRow=function(){ state.config.efficiencyCurve.push({minDev:1,maxDev:1,pct:100}); renderConfigTab(); };
+window.cpRemoveEffRow=function(i){ state.config.efficiencyCurve.splice(i,1); renderConfigTab(); };
+
+function cpSaveConfigForm(){
+  var cfg=state.config;
+  cfg.hoursPerDay=Number($id('cfgHoursDay').value)||6;
+  cfg.daysPerWeek=Number($id('cfgDaysWeek').value)||5;
+  cfg.devCeiling=Math.max(1,Number($id('cfgDevCeiling').value)||8);
+  cfg.hoursPerSprint=Number($id('cfgHoursSprint').value)||80;
+  cfg.patternThreshold=Math.max(1,Number($id('cfgPatternThreshold').value)||3);
+  cfg.agingThresholdDays=Math.max(1,Number($id('cfgAgingDays').value)||5);
+  cfg.sprintLengthDays=Math.max(1,Number($id('cfgSprintLen').value)||14);
+  cfg.sprintAnchorDate=$id('cfgSprintAnchor').value||todayISO();
+  cfg.readinessSprintsWindow=Math.max(1,Number($id('cfgReadinessWindow').value)||2);
+
+  cfg.baselineDevsBySquad={};
+  document.querySelectorAll('#baselineRows [data-squad]').forEach(function(inp){
+    cfg.baselineDevsBySquad[inp.getAttribute('data-squad')]=Math.max(1,Number(inp.value)||cfg.defaultBaselineDevs);
+  });
+
+  var curve=[];
+  var idxs=Array.from(new Set(Array.from(document.querySelectorAll('#effRows [data-idx]')).map(function(e){return e.getAttribute('data-idx');})));
+  idxs.forEach(function(i){
+    var minEl=document.querySelector('#effRows [data-idx="'+i+'"][data-eff="minDev"]');
+    var maxEl=document.querySelector('#effRows [data-idx="'+i+'"][data-eff="maxDev"]');
+    var pctEl=document.querySelector('#effRows [data-idx="'+i+'"][data-eff="pct"]');
+    if(minEl&&maxEl&&pctEl) curve.push({minDev:Number(minEl.value)||1,maxDev:Number(maxEl.value)||1,pct:Number(pctEl.value)||100});
+  });
+  if(curve.length) cfg.efficiencyCurve=curve;
+
+  cfg.terminalStatuses=Array.from(document.querySelectorAll('#terminalStatusRows [data-term-status]:checked')).map(function(el){return el.getAttribute('data-term-status');});
+
+  saveState();
+  cpRecalcAndRender();
+  toast('Configuração salva','O motor de cálculo foi recalculado com os novos parâmetros.');
+}
+
+/* ---- Data Alvo tab ---- */
+function renderAlvoTab(){
+  var plan=computeTargetPlan();
+  var viavelCount=plan.rows.filter(function(r){return r.probability!=null&&r.probability>=80;}).length;
+
+  $id('alvoKpis').innerHTML=
+    '<div class="kpi"><div class="lbl">Plano viável</div><div class="val">'+viavelCount+'</div><div class="sub">iniciativa(s) com data alvo definida e probabilidade ≥ 80% de cumprir</div></div>'+
+    '<div class="kpi"><div class="lbl">Gap de refinamento</div><div class="val">'+plan.totalGapStories+'</div><div class="sub">história(s) a refinar pra cobrir os próximos '+state.config.readinessSprintsWindow+' sprint(s) de capacidade, somando todos os squads</div></div>';
+
+  var head='<tr><th>Iniciativa</th><th>Squad(s)</th><th>Concluídas</th><th>Elegíveis</th><th>Bloq. refino</th><th>Bloq. impedimento</th><th>Target manual</th><th>Conclusão projetada</th><th>Probabilidade</th><th>Decisão</th></tr>';
+  var rows=plan.rows.map(function(r){
+    var probBadge=r.probability==null?'<span class="badge-pill b-muted">—</span>':
+      '<span class="badge-pill '+(r.probability>=80?'b-green':r.probability>=40?'b-yellow':'b-red')+'">'+r.probability+'%</span>';
+    return '<tr><td>'+esc(initiativeLabel(r.initiativeId))+'</td><td>'+esc(r.squads.join(', '))+'</td><td>'+r.concluidas+'</td><td>'+r.elegiveis+'</td><td>'+r.refinoCount+'</td><td>'+r.impedCount+'</td>'+
+      '<td><input type="date" class="date-input" value="'+esc(r.target)+'" onchange="cpSetTargetDate(\''+esc(r.initiativeId)+'\',this.value)"></td>'+
+      '<td>'+fmtDateBR(r.projected)+'</td><td>'+probBadge+'</td><td><b>'+esc(r.decision)+'</b></td></tr>';
+  }).join('');
+  var tbl=$id('alvoTable');
+  tbl.querySelector('thead').innerHTML=head;
+  tbl.querySelector('tbody').innerHTML=rows||'<tr><td colspan="10" class="muted">Nenhuma iniciativa identificada ainda — importe itens com rótulo #ID_iniciativa.</td></tr>';
+
+  var gapPart=Object.keys(plan.gapBySquad).map(function(sq){
+    var g=plan.gapBySquad[sq];
+    if(g.gapHours<=0) return '';
+    return '<div class="risk-card"><h4>Squad '+esc(sq)+'</h4><div>Precisa de '+Math.round(g.neededHours)+'h pros próximos '+state.config.readinessSprintsWindow+' sprint(s) (com o baseline de devs configurado), tem '+Math.round(g.availableHours)+'h já elegíveis — gap de '+Math.round(g.gapHours)+'h ≈ '+g.storiesNeeded+' história(s) a refinar'+(g.insufficient?' <span class="badge-pill b-red">backlog de refino insuficiente pra cobrir o gap</span>':'')+'.</div></div>';
+  }).filter(Boolean).join('');
+  if(gapPart) gapPart='<h3>Gap de refinamento por squad</h3>'+gapPart;
+
+  var deadlinesPart=plan.rows.filter(function(r){return r.refinoCount>0;}).map(function(r){
+    var deadlines=computeRefinementDeadlines(r.initiativeId);
+    var dRows=deadlines.map(function(d){
+      return '<tr><td>'+esc(d.id)+'</td><td>'+esc(d.squad)+'</td><td>'+(d.hours!=null?d.hours+'h':'<span class="badge-pill b-yellow">sem estimativa</span>')+'</td>'+
+        '<td>'+(d.deadline?fmtDateBR(d.deadline):'—')+'</td><td>'+(d.sprintIndex!=null?'Sprint '+d.sprintIndex:'—')+'</td>'+
+        '<td>'+(d.transbordo?'<span class="badge-pill b-yellow">risco de transbordo</span>':'')+'</td></tr>';
+    }).join('');
+    return '<div class="block-card refino"><h4>'+esc(initiativeLabel(r.initiativeId))+'</h4>'+
+      '<div class="tbl-wrap"><table><thead><tr><th>Chave</th><th>Squad</th><th>Horas</th><th>Refinar até</th><th>Sprint</th><th>Risco</th></tr></thead><tbody>'+dRows+'</tbody></table></div></div>';
+  }).join('');
+
+  $id('alvoDeadlines').innerHTML=(gapPart+deadlinesPart)||'<p class="muted">Nenhuma história bloqueada por refinamento no momento.</p>';
+}
+window.cpSetTargetDate=function(id,val){ state.targetDates[id]=val; saveState(); renderAlvoTab(); renderRiscoTab(); };
+
+/* ===================== Excel export (SheetJS, 3 abas) ===================== */
+function cpExportExcel(){
+  if(typeof XLSX==='undefined'){ toast('Carregando biblioteca…','Tente novamente em alguns segundos.','warn'); return; }
+  var s=scenarios||computeScenarios();
+  var wb=XLSX.utils.book_new();
+
+  // Aba 1 — Cenários
+  var aba1=[['Iniciativa','Squad','Nº devs','Capacidade/dia (h)','Data prevista de entrega','Dias vs. baseline']];
+  var baselineN=s.cfg.defaultBaselineDevs||2;
+  Object.keys(s.groups).forEach(function(k){
+    var g=s.groups[k];
+    var baselineDate=g.datesByN[baselineN];
+    s.Ns.forEach(function(N){
+      var d=g.datesByN[N];
+      var diff=(d&&baselineDate)?daysBetweenCalendar(d,baselineDate):'';
+      aba1.push([initiativeLabel(g.initiativeId),g.squad,N,capDaily(N,s.cfg),d?fmtDateBR(d):'',diff]);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aba1),'Cenarios');
+
+  // Aba 2 — Itens bloqueados
+  var aba2=[['Chave Jira','Iniciativa','Squad','Tipo de bloqueio','Detalhe','Bloqueado desde','Dono do destravamento']];
+  s.bloqueio_refino.forEach(function(e){
+    aba2.push([e.item.id,initiativeLabel(e.item.initiativeId),e.item.squad,'Refinamento','Item não refinado — ação do time/PO','','']);
+  });
+  s.bloqueio_impedimento.forEach(function(e){
+    aba2.push([e.item.id,initiativeLabel(e.item.initiativeId),e.item.squad,'Impedimento',e.meta.impedDetalhe||'',e.meta.impedDesde?fmtDateBR(e.meta.impedDesde):'',e.meta.impedDono||'']);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aba2),'Bloqueados');
+
+  // Aba 3 — Fila detalhada (formato largo)
+  var aba3Head=['Chave Jira','Iniciativa','Squad','Horas','Prioridade manual'].concat(s.Ns.map(function(n){return 'Data entrega (N='+n+')';}));
+  var aba3=[aba3Head];
+  s.perItem.forEach(function(pi){
+    aba3.push([pi.id,initiativeLabel(pi.initiativeId),pi.squad,pi.hours,pi.manualPriority?'Sim':''].concat(s.Ns.map(function(n){return pi.datesByN[n]?fmtDateBR(pi.datesByN[n]):'';})));
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aba3),'Fila detalhada');
+
+  XLSX.writeFile(wb,'projecao-capacidade-'+todayISO()+'.xlsx');
+  toast('Excel exportado','3 abas geradas: Cenários, Bloqueados, Fila detalhada.');
+}
+
+/* ===================== Tabs ===================== */
+document.getElementById('tabs').addEventListener('click',function(e){
+  var btn=e.target.closest('.tab-btn'); if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  btn.classList.add('active');
+  $id('p-'+btn.getAttribute('data-tab')).classList.add('active');
+});
+
+/* expose functions used inline */
+window.cpImportOpsFile=cpImportOpsFile;
+window.cpImportOpsPaste=cpImportOpsPaste;
+window.cpAddManualItem=cpAddManualItem;
+window.cpLoadSampleData=cpLoadSampleData;
+window.cpImportDiscovery=cpImportDiscovery;
+window.cpDownloadDiscoverySample=cpDownloadDiscoverySample;
+window.cpClearAll=cpClearAll;
+window.cpExportExcel=cpExportExcel;
+window.cpSaveConfigForm=cpSaveConfigForm;
+
+cpRecalcAndRender();
+
+// Debug/test hook — read-only introspection for the calc engine, no UI impact.
+window.__cpDebug={getState:function(){return state;},computeScenarios:computeScenarios,estimateHoursForItem:estimateHoursForItem,classifyItem:classifyItem,buildSquadQueues:buildSquadQueues,dateForCumHours:dateForCumHours,addBusinessDaysInclusive:addBusinessDaysInclusive,capDaily:capDaily,effFactor:effFactor,computeTargetPlan:computeTargetPlan,computeRefinementDeadlines:computeRefinementDeadlines,buildIniciativaAnalysis:buildIniciativaAnalysis,sprintIndexForDate:sprintIndexForDate,sprintWindow:sprintWindow,isTransbordoRisk:isTransbordoRisk,sprintBizDaysPerSprint:sprintBizDaysPerSprint,detectPatterns:detectPatterns,computeOvertimeScenario:computeOvertimeScenario,buildPortfolioNarrative:buildPortfolioNarrative};
+})();
+</script>
+</body>
+</html>
