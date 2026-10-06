@@ -443,7 +443,7 @@ function sortInitiatives(list, sort){
 }
 function renderInitiatives(){
   const el = PF.$('#view-initiatives');
-  const prevG = PF.$('.gantt', el); const keepScroll = prevG && PF.prefs.initView === 'gantt' ? {l:prevG.scrollLeft, t:prevG.scrollTop} : null;
+  const prevG = PF.$('.gantt', el); const keepScroll = prevG && PF.prefs.initView === 'gantt' && prevG.dataset.zoom === (PF.prefs.ganttZoom || 'semester') ? {l:prevG.scrollLeft, t:prevG.scrollTop} : null;
   const inits = sortInitiatives(PF.filterInitiatives(), PF.prefs.sort);
   const total = scopeCounts()[PF.prefs.scope || 'active'];
   const preset = activePreset();
@@ -455,7 +455,7 @@ function renderInitiatives(){
       <div class="toolbar__left"><span class="toolbar__count">${PF.plural(inits.length,'iniciativa','iniciativas')}${inits.length !== total ? `<small>de ${total}</small>` : ''}</span>
         ${scopeSelect()}</div>
       <div class="toolbar__right">
-        ${isGantt ? '' : `<div class="seg" role="radiogroup" aria-label="Conjunto de colunas">${Object.entries(COLUMN_PRESETS).map(([k,p]) => `<button type="button" role="radio" aria-checked="${preset===k}" data-action="set-preset" data-value="${k}">${p.label}</button>`).join('')}</div>
+        ${isGantt ? ganttControls() : `<div class="seg" role="radiogroup" aria-label="Conjunto de colunas">${Object.entries(COLUMN_PRESETS).map(([k,p]) => `<button type="button" role="radio" aria-checked="${preset===k}" data-action="set-preset" data-value="${k}">${p.label}</button>`).join('')}</div>
         <div class="pop-wrap"><button type="button" class="btn btn-secondary btn-sm" data-action="toggle-popover" data-pop="colPop" aria-expanded="false" aria-haspopup="dialog">${PF.icon('i-columns','ic ic-sm')}Colunas${preset ? '' : ' <span class="count-pill">' + (cols.length) + '</span>'}</button>
           <div class="popover col-pop" id="colPop" role="dialog" aria-label="Colunas visíveis" hidden><div class="pop-title">Colunas visíveis</div><div class="pop-sub">ID e Iniciativa ficam sempre visíveis</div>
             <div class="col-chooser">${COLUMN_GROUPS.map(g => `<div class="col-group" role="group" aria-label="${PF.esc(g.label)}"><div class="col-group__title">${PF.esc(g.label)}</div><div class="col-group__items">${g.cols.map(id => COLUMNS.find(c => c.id === id)).filter(Boolean).map(c => `<label class="checkbox col-opt"${c.full ? ` data-tip="${PF.esc(c.full)}"` : ''}><input type="checkbox" data-change="toggle-col" value="${c.id}"${colIds.has(c.id) ? ' checked' : ''}>${c.label}</label>`).join('')}</div></div>`).join('')}</div>
@@ -469,11 +469,22 @@ function renderInitiatives(){
         return `<tr class="${PF.ui.drawer === i.id ? 'is-selected' : ''}${off ? ' is-off' : ''}" data-row="${PF.esc(i.id)}">${cols.map(c => `<td class="${c.num ? 'num' : ''} ${c.cls || ''}">${c.render(i, m)}</td>`).join('')}</tr>${m.multiSquad && PF.ui.expandedSquads.has(i.id) ? `<tr class="sq-expand"><td colspan="${cols.length}">${squadDetail(i, m)}</td></tr>` : ''}`; }).join('')}</tbody></table></div>`}
   </div>`;
   if(!isGantt) alignOwnerLines(el);
-  if(isGantt){ const g = PF.$('.gantt', el); const t = PF.$('.gantt__today', el); if(g && keepScroll){ g.scrollLeft = keepScroll.l; g.scrollTop = keepScroll.t; } else if(g && t) g.scrollLeft = Math.max(0, parseFloat(t.style.left) - 240); }
+  if(isGantt){ const g = PF.$('.gantt', el); const t = PF.$('.gantt__today', el); if(g && keepScroll){ g.scrollLeft = keepScroll.l; g.scrollTop = keepScroll.t; } else if(g && t) g.scrollLeft = Math.max(0, parseFloat(g.dataset.x0) || 0); }
+}
+const GANTT_ZOOM = {quarter:{label:'Trimestre', months:3}, semester:{label:'Semestre', months:6}, year:{label:'Ano', months:12}};
+function ganttControls(){
+  const z = GANTT_ZOOM[PF.prefs.ganttZoom] ? PF.prefs.ganttZoom : 'semester', g = PF.prefs.ganttGroup === 'squad' ? 'squad' : 'none';
+  return `<div class="seg" role="radiogroup" aria-label="Agrupamento do cronograma">${[['none','Iniciativas'],['squad','Por Squad']].map(([k,l]) => `<button type="button" role="radio" aria-checked="${g===k}" data-action="gantt-group" data-value="${k}">${l}</button>`).join('')}</div>
+    <div class="seg" role="radiogroup" aria-label="Zoom do cronograma">${Object.entries(GANTT_ZOOM).map(([k,v]) => `<button type="button" role="radio" aria-checked="${z===k}" data-action="gantt-zoom" data-value="${k}">${v.label}</button>`).join('')}</div>`;
 }
 function ganttView(inits){
-  const PX_MONTH = 84, LABEL_W = PF.DOM.host.getBoundingClientRect().width <= 900 ? 200 : 300;
-  const dates = inits.flatMap(i => [i.discoveryStart, i.discoveryEnd, i.devPlanned, i.devActual, i.deliveryPlanned, i.deliveryCurrent, i.deliveryActual]).filter(Boolean).concat(PF.ctx.today);
+  const hostW = PF.DOM.host.getBoundingClientRect().width || 1200;
+  const LABEL_W = hostW <= 900 ? 200 : 300;
+  const zoom = GANTT_ZOOM[PF.prefs.ganttZoom] ? PF.prefs.ganttZoom : 'semester';
+  /* Zoom = quantos meses cabem na área visível; o eixo continua cobrindo todas as datas (rolagem horizontal). */
+  const PX_MONTH = Math.max(56, Math.floor(Math.max(320, hostW - LABEL_W - 40) / GANTT_ZOOM[zoom].months));
+  const today = PF.ctx.today;
+  const dates = inits.flatMap(i => [i.discoveryStart, i.discoveryEnd, i.devPlanned, i.devActual, i.deliveryPlanned, i.deliveryCurrent, i.deliveryActual]).filter(Boolean).concat(today);
   const min = dates.reduce((a,b) => a < b ? a : b), max = dates.reduce((a,b) => a > b ? a : b);
   const start = `${min.slice(0,7)}-01`;
   const endM = new Date(PF.isoToUTC(max)); endM.setUTCMonth(endM.getUTCMonth()+2, 1);
@@ -482,34 +493,79 @@ function ganttView(inits){
   while(PF.utcToISO(cur.getTime()) < end){ months.push(PF.utcToISO(cur.getTime())); cur.setUTCMonth(cur.getUTCMonth()+1); }
   const width = months.length * PX_MONTH;
   const x = iso => { const d = new Date(PF.isoToUTC(iso)); const mi = (d.getUTCFullYear() - +start.slice(0,4))*12 + d.getUTCMonth() - (+start.slice(5,7)-1); const dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth()+1, 0)).getUTCDate(); return (mi + (d.getUTCDate()-1)/dim) * PX_MONTH; };
+  const monthEnd = m => { const d = new Date(PF.isoToUTC(m)); d.setUTCMonth(d.getUTCMonth()+1, 0); return PF.utcToISO(d.getTime()); };
   const years = []; months.forEach((m,k) => { if(k===0 || m.slice(5,7)==='01') years.push({y:m.slice(0,4), k}); });
-  const todayX = x(PF.ctx.today);
-  const lines = months.map((m,k) => `<span class="gantt__monthline" style="left:${k*PX_MONTH}px"></span>`).join('');
-  return `<div class="gantt"><div class="gantt__grid" style="width:${LABEL_W + width}px">
-    <div class="gantt__head"><div class="gantt__corner" style="width:${LABEL_W}px">Iniciativa</div><div class="gantt__months" style="width:${width}px">
+  const todayX = x(today);
+  /* Abre alinhado ao início do mês anterior a Hoje — nenhum rótulo de mês fica cortado. */
+  const prevMonth = (() => { const d = new Date(PF.isoToUTC(`${today.slice(0,7)}-01`)); d.setUTCMonth(d.getUTCMonth()-1); const iso = PF.utcToISO(d.getTime()); return iso < start ? start : iso; })();
+  const sprints = PF.ctx.sprints.filter(sp => sp.end >= start && sp.start < end);
+  const cs = PF.ctx.currentSprint;
+  const lines = months.map((m,k) => `<span class="gantt__monthline" style="left:${k*PX_MONTH}px"></span>`).join('')
+    + sprints.map((sp,k) => k % 2 ? `<span class="gantt__spband" style="left:${x(sp.start)}px;width:${Math.max(1, x(sp.end) - x(sp.start) + PX_MONTH/30)}px"></span>` : '').join('');
+  const spHead = sprints.map(sp => { const w = Math.max(1, x(sp.end) - x(sp.start) + PX_MONTH/30);
+    return `<span class="gantt__sp${cs && sp.id === cs.id ? ' is-current' : ''}" style="left:${x(sp.start)}px;width:${w}px" data-tip="${PF.esc(sp.name)}\n${PF.fmtDateFull(sp.start)} – ${PF.fmtDateFull(sp.end)}${cs && sp.id === cs.id ? '\nSprint atual' : ''}">${PF.esc(sp.id || sp.name)}</span>`; }).join('');
+
+  const row = i => { const m = PF.ctx.initMetrics.get(i.id); const st = m.deadline.status;
+    const disc = i.discoveryStart && i.discoveryEnd ? `<span class="g-disc" style="left:${x(i.discoveryStart)}px;width:${Math.max(3, x(i.discoveryEnd) - x(i.discoveryStart))}px" data-tip="Discovery: ${PF.fmtDate(i.discoveryStart)} → ${PF.fmtDate(i.discoveryEnd)}"></span>` : '';
+    const devStart = i.devActual || i.devPlanned; const tgt = i.deliveryActual || m.deadline.target;
+    const gst = i.deadlineColorOverride ? TONE_FILL[i.deadlineColorOverride] : st;
+    let dev = '', open = '', tail = '', ghostAt = null;
+    if(devStart && tgt && tgt > devStart){
+      dev = `<span class="g-dev g-dev--${gst}" style="left:${x(devStart)}px;width:${Math.max(3, x(tgt) - x(devStart))}px" data-tip="DEV ${i.devActual ? 'realizado' : 'previsto'}: ${PF.fmtDate(devStart)}${i.devActual && i.devPlanned ? ` (previsto ${PF.fmtDate(i.devPlanned)})` : ''}\nEntrega: ${PF.fmtDate(tgt)}\n${PF.DEADLINE_META[st].label}"></span>`;
+    } else if(devStart && !tgt){
+      /* Sem data de entrega: a barra vai só até Hoje (ou é um marco, se o DEV ainda não começou). Nenhum fim é inventado. */
+      const oe = today > devStart ? today : devStart; ghostAt = oe;
+      open = `<span class="g-open" style="left:${x(devStart)}px;width:${Math.max(6, x(oe) - x(devStart))}px" data-tip="DEV ${i.devActual ? 'iniciado' : 'previsto'} em ${PF.fmtDate(devStart)}\nSem data de entrega definida"></span><span class="g-open__q" style="left:${x(oe) + 10}px" aria-hidden="true">?</span>`;
+    }
+    if(st === 'late' && !i.deliveryActual && tgt && tgt < today){
+      /* Atraso visível: a "cauda" vai da data vencida até Hoje. */
+      const n = PF.daysBetween(tgt, today);
+      tail = `<span class="g-tail" style="left:${x(tgt)}px;width:${Math.max(2, todayX - x(tgt))}px" data-tip="Atrasada há ${PF.plural(n,'dia','dias')}\nEntrega vigente: ${PF.fmtDateFull(tgt)}"></span><span class="g-tail__lbl" style="left:${todayX + 6}px">+${n} d</span>`;
+    }
+    const main = i.deliveryActual || i.deliveryCurrent || i.deliveryPlanned;
+    const sp = main ? PF.getSprintForDate(PF.ctx, main) : null;
+    const tip = PF.deliveryTooltip(i) + (sp ? `\nSprint: ${sp.name}` : '');
+    const aria = `Entrega de ${i.id}. ${tip.replace(/\n/g, '. ')}. Editar entrega`;
+    const P = i.deliveryPlanned, secondary = [];
+    if(P && main && P !== main) secondary.push(`<span class="g-link" style="left:${Math.min(x(P), x(main))}px;width:${Math.abs(x(main) - x(P))}px;border-top-color:${main > P ? 'var(--div-late)' : 'var(--div-early)'}"></span><span class="g-ms g-ms--planned" style="left:${x(P)}px" data-tip="Entrega planejada (original): ${PF.fmtDateFull(P)}"></span>`);
+    if(i.deliveryActual && PF.isReprogrammed(i) && i.deliveryCurrent !== i.deliveryActual) secondary.push(`<span class="g-ms g-ms--forecast" style="left:${x(i.deliveryCurrent)}px" data-tip="Última previsão: ${PF.fmtDateFull(i.deliveryCurrent)}"></span>`);
+    const ms = main
+      ? `<button type="button" class="g-ms${i.deliveryActual ? ' g-ms--done' : ''}" style="left:${x(main)}px" data-action="delivery-edit" data-id="${PF.esc(i.id)}" aria-haspopup="dialog" aria-expanded="false" aria-label="${PF.esc(aria)}" data-tip="${PF.esc(tip)}"></button>`
+      : ghostAt ? `<button type="button" class="g-ms g-ms--ghost" style="left:${x(ghostAt)}px" data-action="delivery-edit" data-id="${PF.esc(i.id)}" aria-haspopup="dialog" aria-expanded="false" aria-label="Definir entrega planejada de ${PF.esc(i.id)}" data-tip="Sem data de entrega · clique para definir"></button>` : '';
+    const inc = PF.scheduleInconsistencies(i);
+    const incTag = inc.length ? `<span class="g-inc" tabindex="0" role="note" aria-label="Datas incoerentes: ${PF.esc(inc.join('; '))}" data-tip="${PF.esc('Datas incoerentes\n' + inc.map(t => '• ' + t).join('\n'))}">datas incoerentes</span> · ` : '';
+    return `<div class="gantt__row${m.lifecycle === 'suspended' ? ' is-off' : ''}" data-row="${PF.esc(i.id)}"><div class="gantt__label" style="width:${LABEL_W}px"><div class="cell-name"><button type="button" class="cell-name__title" data-action="open-initiative" data-id="${PF.esc(i.id)}"><span class="mono-id">${PF.esc(i.id)}</span> ${PF.esc(PF.shortName(i.name, 38))}</button><span class="cell-name__sub">${incTag}${PF.esc(i.squads.length > 1 ? `${i.squads[0]} +${i.squads.length - 1} · Multi-Squad` : (i.squads[0] || 'Sem squad'))} · ${PF.esc(i.phase)}</span></div><span class="st st--${st} tone-${displayTone(i, st)}" data-tip="${PF.DEADLINE_META[st].label}" style="display:inline-flex">${PF.icon(PF.DEADLINE_META[st].icon)}</span></div>
+      <div class="gantt__lane" style="width:${width}px">${lines}<span class="gantt__today" style="left:${todayX}px"></span>${disc}${dev}${open}${tail}${secondary.join('')}${ms}</div></div>`; };
+
+  let body;
+  if(PF.prefs.ganttGroup === 'squad'){
+    /* Uma faixa por Squad. Multi-Squad aparece em cada squad envolvida (3 squads ≠ 3 iniciativas). */
+    const only = PF.prefs.filters.squad, map = new Map();
+    inits.forEach(i => (i.squads.length ? i.squads : ['Sem squad']).forEach(s => { if(only && s !== only) return; if(!map.has(s)) map.set(s, []); map.get(s).push(i); }));
+    const groups = [...map].map(([sq, arr]) => ({sq, arr, worst:Math.min(...arr.map(i => PF.DEADLINE_META[PF.ctx.initMetrics.get(i.id).deadline.status].order))}))
+      .sort((a,b) => a.worst - b.worst || b.arr.length - a.arr.length || a.sq.localeCompare(b.sq));
+    body = groups.map(g => {
+      /* Carga: iniciativas com DEV em andamento em cada mês (janela DEV → entrega; atrasada ou sem entrega, DEV → Hoje). Entregues e suspensas ficam fora. */
+      const wins = g.arr.map(i => { const m = PF.ctx.initMetrics.get(i.id); if(i.deliveryActual || m.lifecycle === 'suspended') return null;
+        const s = i.devActual || i.devPlanned; if(!s) return null; const t = m.deadline.target; const e = t && t >= today && t > s ? t : (today > s ? today : s); return {i, s, e}; }).filter(Boolean);
+      const load = months.map((mo,k) => { const me = monthEnd(mo); const on = wins.filter(w => w.s <= me && w.e >= mo); return {k, mo, on}; });
+      const peak = load.reduce((a,b) => b.on.length > a.on.length ? b : a, {on:[]});
+      const cells = load.filter(l => l.on.length).map(l => `<span class="g-load g-load--${Math.min(3, l.on.length)}" style="left:${l.k*PX_MONTH}px;width:${PX_MONTH}px" data-tip="${PF.esc(`${PF.MONTHS[+l.mo.slice(5,7)-1]}/${l.mo.slice(0,4)}: ${PF.plural(l.on.length,'iniciativa','iniciativas')} com DEV no mês (previsto ou em andamento)\n${l.on.map(w => `${w.i.id} ${PF.shortName(w.i.name, 36)}`).join('\n')}`)}">${l.on.length}</span>`).join('');
+      const peakTxt = peak.on.length ? `pico de ${peak.on.length} com DEV no mesmo mês (${PF.MONTHS[+peak.mo.slice(5,7)-1]}/${peak.mo.slice(2,4)})` : 'nenhuma com DEV no período';
+      return `<div class="gantt__group" role="group" aria-label="Squad ${PF.esc(g.sq)}: ${PF.plural(g.arr.length,'iniciativa','iniciativas')}, ${peakTxt}">
+        <div class="gantt__label gantt__glabel" style="width:${LABEL_W}px"><span class="gantt__gname">${PF.esc(g.sq)}</span><span class="gantt__gmeta">${PF.plural(g.arr.length,'iniciativa','iniciativas')} · ${peakTxt}</span></div>
+        <div class="gantt__lane gantt__glane" style="width:${width}px" aria-hidden="true">${lines}<span class="gantt__today" style="left:${todayX}px"></span>${cells}</div></div>${g.arr.map(row).join('')}`; }).join('');
+  } else body = inits.map(row).join('');
+
+  return `<div class="gantt" data-x0="${x(prevMonth)}" data-zoom="${zoom}"><div class="gantt__grid" style="width:${LABEL_W + width}px">
+    <div class="gantt__head"><div class="gantt__corner" style="width:${LABEL_W}px">${PF.prefs.ganttGroup === 'squad' ? 'Squad / iniciativa' : 'Iniciativa'}</div><div class="gantt__months${sprints.length ? ' has-sprints' : ''}" style="width:${width}px">
       ${years.map(y => `<span class="gantt__year" style="left:${y.k*PX_MONTH}px">${y.y}</span>`).join('')}
       ${months.map((m,k) => `<span class="gantt__month" style="left:${k*PX_MONTH}px;width:${PX_MONTH}px">${PF.MONTHS[+m.slice(5,7)-1]}</span>`).join('')}
-      <span class="gantt__today-label" style="left:${todayX}px;top:4px">Hoje ${PF.fmtDayMonth(PF.ctx.today)}</span></div></div>
-    ${inits.map(i => { const m = PF.ctx.initMetrics.get(i.id); const st = m.deadline.status;
-      const disc = i.discoveryStart && i.discoveryEnd ? `<span class="g-disc" style="left:${x(i.discoveryStart)}px;width:${Math.max(3, x(i.discoveryEnd) - x(i.discoveryStart))}px" data-tip="Discovery: ${PF.fmtDate(i.discoveryStart)} → ${PF.fmtDate(i.discoveryEnd)}"></span>` : '';
-      const devStart = i.devActual || i.devPlanned; const tgt = i.deliveryActual || m.deadline.target;
-      const devEnd = tgt || (devStart ? PF.addDays(devStart, 30) : null);
-      const gst = i.deadlineColorOverride ? TONE_FILL[i.deadlineColorOverride] : st; const devCls = 'g-dev--' + gst;
-      const dev = devStart && devEnd && devEnd > devStart ? `<span class="g-dev ${devCls}" style="left:${x(devStart)}px;width:${Math.max(3, x(devEnd) - x(devStart))}px" data-tip="DEV ${i.devActual ? 'realizado' : 'previsto'}: ${PF.fmtDate(devStart)}${i.devActual && i.devPlanned ? ` (previsto ${PF.fmtDate(i.devPlanned)})` : ''}\nEntrega: ${tgt ? PF.fmtDate(tgt) : 'sem data'}\n${PF.DEADLINE_META[st].label}"></span>` : '';
-      const main = i.deliveryActual || i.deliveryCurrent || i.deliveryPlanned;
-      const tip = PF.deliveryTooltip(i);
-      const aria = `Entrega de ${i.id}. ${tip.replace(/\n/g, '. ')}. Editar entrega`;
-      const P = i.deliveryPlanned, secondary = [];
-      if(P && main && P !== main) secondary.push(`<span class="g-link" style="left:${Math.min(x(P), x(main))}px;width:${Math.abs(x(main) - x(P))}px;border-top-color:${main > P ? 'var(--div-late)' : 'var(--div-early)'}"></span><span class="g-ms g-ms--planned" style="left:${x(P)}px" data-tip="Entrega planejada (original): ${PF.fmtDateFull(P)}"></span>`);
-      if(i.deliveryActual && PF.isReprogrammed(i) && i.deliveryCurrent !== i.deliveryActual) secondary.push(`<span class="g-ms g-ms--forecast" style="left:${x(i.deliveryCurrent)}px" data-tip="Última previsão: ${PF.fmtDateFull(i.deliveryCurrent)}"></span>`);
-      const ms = main
-        ? `<button type="button" class="g-ms${i.deliveryActual ? ' g-ms--done' : ''}" style="left:${x(main)}px" data-action="delivery-edit" data-id="${PF.esc(i.id)}" aria-haspopup="dialog" aria-expanded="false" aria-label="${PF.esc(aria)}" data-tip="${PF.esc(tip)}"></button>`
-        : devEnd ? `<button type="button" class="g-ms g-ms--ghost" style="left:${x(devEnd)}px" data-action="delivery-edit" data-id="${PF.esc(i.id)}" aria-haspopup="dialog" aria-expanded="false" aria-label="Definir entrega planejada de ${PF.esc(i.id)}" data-tip="Sem data de entrega · clique para definir"></button>` : '';
-      const planned = secondary.join('');
-      return `<div class="gantt__row${m.lifecycle === 'suspended' ? ' is-off' : ''}"><div class="gantt__label" style="width:${LABEL_W}px"><div class="cell-name"><button type="button" class="cell-name__title" data-action="open-initiative" data-id="${PF.esc(i.id)}"><span class="mono-id">${PF.esc(i.id)}</span> ${PF.esc(PF.shortName(i.name, 38))}</button><span class="cell-name__sub">${PF.esc(i.squads.length > 1 ? `${i.squads[0]} +${i.squads.length - 1} · Multi-Squad` : (i.squads[0] || 'Sem squad'))} · ${PF.esc(i.phase)}</span></div><span class="st st--${st} tone-${displayTone(i, st)}" data-tip="${PF.DEADLINE_META[st].label}" style="display:inline-flex">${PF.icon(PF.DEADLINE_META[st].icon)}</span></div>
-        <div class="gantt__lane" style="width:${width}px">${lines}<span class="gantt__today" style="left:${todayX}px"></span>${disc}${dev}${planned}${ms}</div></div>`; }).join('')}
+      ${spHead}
+      <span class="gantt__today-label" style="left:${todayX}px;top:4px">Hoje ${PF.fmtDayMonth(today)}</span></div></div>
+    ${body}
   </div></div>
-  <div class="gantt-legend"><span><i class="lg-disc"></i>Discovery</span><span><i class="lg-dev"></i>DEV → entrega (verde no prazo · amarelo atenção · azul replanejada · vermelho atrasada · cinza sem previsão/suspensa)</span><span><i class="lg-ms"></i>Entrega vigente · clique para reprogramar</span><span><i class="lg-ms lg-ms--planned"></i>Planejada original</span><span><i class="lg-ms lg-ms--done"></i>Entregue</span><span><i style="width:2px;height:12px;background:var(--brand-primary)"></i>Hoje</span></div>`;
+  <div class="gantt-legend"><span><i class="lg-disc"></i>Discovery</span><span><i class="lg-dev"></i>DEV → entrega (verde no prazo · âmbar atenção · azul replanejada · vermelho atrasada)</span><span><i class="lg-tail"></i>Atraso até hoje</span><span><i class="lg-open"></i>DEV sem data de entrega</span><span><i class="lg-ms"></i>Entrega vigente · clique para reprogramar</span><span><i class="lg-ms lg-ms--planned"></i>Planejada original</span><span><i class="lg-ms lg-ms--done"></i>Entregue</span>${sprints.length ? '<span><i class="lg-sp"></i>Sprints</span>' : ''}${PF.prefs.ganttGroup === 'squad' ? '<span><i class="lg-load"></i>Iniciativas com DEV no mês (previsto ou em andamento)</span>' : ''}<span><i style="width:2px;height:12px;background:var(--brand-primary)"></i>Hoje</span></div>`;
 }
 
 /* =====================================================================
@@ -644,5 +700,5 @@ function sprintHistory(stories){
 }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {viewKey, scopeCounts, scopeSelect, nameCell, squadTip, squadDetail, obsCell, statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
+Object.assign(PF, {GANTT_ZOOM, ganttControls, viewKey, scopeCounts, scopeSelect, nameCell, squadTip, squadDetail, obsCell, statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
 })();

@@ -293,6 +293,15 @@ function computeContext(){
 /* =====================================================================
    VALIDAÇÃO / QUALIDADE DE DADOS
    ===================================================================== */
+/* Coerência das datas do cronograma de UMA iniciativa — usada pela Qualidade dos dados e pelo Cronograma. */
+function scheduleInconsistencies(i){
+  const out = [];
+  if(i.discoveryStart && i.discoveryEnd && i.discoveryEnd < i.discoveryStart) out.push('Fim do Discovery anterior ao início');
+  if(i.deliveryPlanned && i.discoveryEnd && i.deliveryPlanned < i.discoveryEnd) out.push(`Entrega planejada (${PF.fmtDate(i.deliveryPlanned)}) anterior ao fim do Discovery (${PF.fmtDate(i.discoveryEnd)})`);
+  const devRef = i.devActual || i.devPlanned; const tgt = i.deliveryCurrent || i.deliveryPlanned;
+  if(tgt && devRef && tgt < devRef) out.push(`Entrega (${PF.fmtDate(tgt)}) anterior ao início do DEV (${PF.fmtDate(devRef)})`);
+  return out;
+}
 function validateData(s, c){
   const issues = [];
   const add = (level, entity, id, message) => issues.push({level, entity, id, message});
@@ -304,10 +313,7 @@ function validateData(s, c){
     if(!i.id) add('error','Iniciativa','(sem ID)','Iniciativa sem ID');
     if(!i.name) add('error','Iniciativa',i.id,'Iniciativa sem nome');
     if(!i.squads.length) add('warning','Iniciativa',i.id,'Sem squad associada');
-    if(i.discoveryStart && i.discoveryEnd && i.discoveryEnd < i.discoveryStart) add('warning','Iniciativa',i.id,'Fim do Discovery anterior ao início');
-    if(i.deliveryPlanned && i.discoveryEnd && i.deliveryPlanned < i.discoveryEnd) add('warning','Iniciativa',i.id,`Entrega planejada (${PF.fmtDate(i.deliveryPlanned)}) anterior ao fim do Discovery (${PF.fmtDate(i.discoveryEnd)})`);
-    const devRef = i.devActual || i.devPlanned; const tgt = i.deliveryCurrent || i.deliveryPlanned;
-    if(tgt && devRef && tgt < devRef) add('warning','Iniciativa',i.id,`Entrega (${PF.fmtDate(tgt)}) anterior ao início do DEV (${PF.fmtDate(devRef)})`);
+    scheduleInconsistencies(i).forEach(msg => add('warning','Iniciativa',i.id,msg));
     if(!i.deliveryPlanned && !i.deliveryCurrent && !i.deliveryActual && i.situation !== 'Suspensa') add('info','Iniciativa',i.id,'Sem data de entrega (status "Sem previsão")');
     if(!i.risk) add('info','Iniciativa',i.id,'Risco não avaliado');
     if(i.deliveryActual && c && c.today && i.deliveryActual > c.today) add('warning','Iniciativa',i.id,`Entrega real (${PF.fmtDate(i.deliveryActual)}) posterior à data de referência — entrega real deve ser fato ocorrido`);
@@ -427,5 +433,5 @@ function toggleBlock(id){
 }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {lifecycleOf, isSuspended, storySquadOf, squadBreakdown, setScope, getReferenceDate, getSprintForDate, getCurrentSprint, completionSprintId, calculateLeadTime, calculateCurrentLeadTime, leadTimeOf, calculateProgress, calculateStoryDistribution, calculateForecastVariance, calculateActualVariance, isReprogrammed, fmtDeltaDays, deltaKind, deliveryTrail, deliveryTooltip, recordDeliveryChange, calculateScheduleVariance, calculateDeadlineStatus, getInitiativeMetrics, isCarryOver, calculateCarryOver, calculateThroughput, getSprintMetrics, calculateUpcomingDeliveries, getAttentionItems, getPortfolioMetrics, buildHeadline, computeContext, validateData, qualityScore, FILTER_DEFS, PRIMARY_FILTERS, MORE_FILTERS, filterInitiatives, activeFilterCount, setFilter, clearFilters, applyStatusTransition, findStory, changeStoryStatus, changeStorySprint, toggleBlock});
+Object.assign(PF, {scheduleInconsistencies, lifecycleOf, isSuspended, storySquadOf, squadBreakdown, setScope, getReferenceDate, getSprintForDate, getCurrentSprint, completionSprintId, calculateLeadTime, calculateCurrentLeadTime, leadTimeOf, calculateProgress, calculateStoryDistribution, calculateForecastVariance, calculateActualVariance, isReprogrammed, fmtDeltaDays, deltaKind, deliveryTrail, deliveryTooltip, recordDeliveryChange, calculateScheduleVariance, calculateDeadlineStatus, getInitiativeMetrics, isCarryOver, calculateCarryOver, calculateThroughput, getSprintMetrics, calculateUpcomingDeliveries, getAttentionItems, getPortfolioMetrics, buildHeadline, computeContext, validateData, qualityScore, FILTER_DEFS, PRIMARY_FILTERS, MORE_FILTERS, filterInitiatives, activeFilterCount, setFilter, clearFilters, applyStatusTransition, findStory, changeStoryStatus, changeStorySprint, toggleBlock});
 })();

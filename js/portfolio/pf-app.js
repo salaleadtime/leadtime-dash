@@ -61,6 +61,8 @@ const ACTIONS = {
   'clear-filters': () => PF.clearFilters(),
   'toggle-attn': () => { PF.ui.attnExpanded = !PF.ui.attnExpanded; PF.renderView(); },
   'set-window': (el) => { PF.prefs.upcomingWindow = +el.dataset.value; PF.persistPrefs(); PF.renderView(); const b = PF.$(`[data-action="set-window"][data-value="${el.dataset.value}"]`); if(b) b.focus(); },
+  'gantt-zoom': (el) => { PF.prefs.ganttZoom = el.dataset.value; PF.persistPrefs(); PF.renderView(); const b = PF.$(`[data-action="gantt-zoom"][data-value="${el.dataset.value}"]`); if(b) b.focus(); },
+  'gantt-group': (el) => { PF.prefs.ganttGroup = el.dataset.value; PF.persistPrefs(); PF.renderView(); const b = PF.$(`[data-action="gantt-group"][data-value="${el.dataset.value}"]`); if(b) b.focus(); },
   'set-init-view': (el) => setView(el.dataset.value === 'gantt' ? 'timeline' : 'initiatives'),
   'goto-scope': (el) => { PF.prefs.scope = PF.SCOPES[el.dataset.value] ? el.dataset.value : 'active'; PF.persistPrefs(); setView('initiatives'); },
   'toggle-squads': (el) => { const id = el.dataset.id, set = PF.ui.expandedSquads; set.has(id) ? set.delete(id) : set.add(id); PF.renderView(); const b = PF.$(`[data-action="toggle-squads"][data-id="${CSS.escape(id)}"]`); if(b) b.focus(); },

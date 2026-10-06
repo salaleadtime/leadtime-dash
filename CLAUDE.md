@@ -257,6 +257,14 @@ código:
   Multi-Squad a Squad nunca é presumida ("Sem Squad definida") e números
   filtrados por Squad usam só as histórias dela. Não existe campo de "Squad
   responsável" — não invente. Validar com `node tests/portfolio-core.test.js`.
+- **Cronograma (06/10/2026, v5 dos assets)**: nunca inventa data — DEV sem
+  entrega vira barra aberta até Hoje com "?"; atrasada ganha "cauda" da data
+  vencida até Hoje (+N d); datas incoerentes vêm de `scheduleInconsistencies`
+  (`pf-metrics.js`, a mesma regra da Qualidade dos dados). Zoom
+  Trimestre/Semestre/Ano e "Por Squad" são preferências individuais
+  (`prefs.ganttZoom`/`ganttGroup`). Sprints aparecem no eixo quando
+  cadastradas. A carga por Squad conta iniciativas com DEV no mês (previsto ou
+  em andamento; atrasada ou sem entrega vai até Hoje); entregues e suspensas fora.
 - **Bibliotecas**: SheetJS (`vendor/xlsx.full.min.js`, já usada pelo
   dashboard) e PptxGenJS 3.12.0 (`vendor/pptxgen.bundle.js`, nova), ambas
   cópia local primeiro e CDN como alternativa, carregadas só quando usadas.

@@ -127,5 +127,16 @@ console.log('\n═══ 5. Modelo único: ciclo de vida, Replanejada, universos
   ok(PF.normalizeDate('01/11/2026').value === '2026-11-01' && PF.normalizeDate('2026-11-01').value === '2026-11-01', 'texto dd/mm/aaaa e ISO normalizam igual');
 }
 
+console.log('\n═══ 6. Cronograma: coerência de datas (mesma regra da Qualidade dos dados) ═══');
+{
+  const base = {id:'X', name:'X', squads:['A'], deliveryHistory:[], notesLog:[], owners:[]};
+  ok(PF.scheduleInconsistencies({...base, discoveryStart:'2026-06-12', discoveryEnd:'2026-08-31', devPlanned:'2026-07-20', deliveryPlanned:'2026-08-01'}).length === 1, 'entrega planejada antes do fim do Discovery → 1 alerta');
+  ok(PF.scheduleInconsistencies({...base, devPlanned:'2026-10-01', deliveryPlanned:'2026-09-01'}).some(t => /anterior ao início do DEV/.test(t)), 'entrega antes do início do DEV → alerta');
+  ok(PF.scheduleInconsistencies({...base, discoveryStart:'2026-06-01', discoveryEnd:'2026-07-01', devPlanned:'2026-07-10', deliveryPlanned:'2026-09-01'}).length === 0, 'cronograma coerente → nenhum alerta');
+  PF.appState = PF.prepareState({initiatives:[PF.normalizeInitiative({...base, discoveryStart:'2026-06-12', discoveryEnd:'2026-08-31', deliveryPlanned:'2026-08-01'})], stories:[], sprints:[], settings:{referenceDate:'2026-09-30'}});
+  PF.ctx = PF.computeContext();
+  ok(PF.ctx.issues.some(x => x.id === 'X' && /anterior ao fim do Discovery/.test(x.message)), 'a Qualidade dos dados continua mostrando o mesmo alerta');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

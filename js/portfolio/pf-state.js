@@ -50,6 +50,8 @@ function loadPrefs(){
   if(p.filters && p.filters.deadline === 'suspended') p.filters.deadline = '';   // Suspensa deixou de ser "prazo": é a Situação da iniciativa
   if(p.filters && p.filters.situation === 'Suspensa') p.filters.situation = '';
   if(!PF.SCOPES[p.scope]) p.scope = 'active';
+  if(!['quarter','semester','year'].includes(p.ganttZoom)) delete p.ganttZoom;
+  if(!['none','squad'].includes(p.ganttGroup)) delete p.ganttGroup;
   return {...PF.clone(PF.DEFAULT_PREFS), ...p, colors:{...PF.DEFAULT_COLORS, ...(p.colors||{})}, filters:{...PF.DEFAULT_PREFS.filters, ...(p.filters||{})}, sort:{...PF.DEFAULT_PREFS.sort, ...(p.sort||{})}};
 }
 function persistState(){ PF.safeStorageSet(PF.STORE_DATA_SLOT, JSON.stringify(PF.appState)); }

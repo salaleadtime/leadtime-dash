@@ -59,7 +59,8 @@ const DEFAULT_COLORS = {primary:'#cc092f', secondary:'#1f2733', accent:'#2f5fb3'
 const DEFAULT_PREFS = {
   theme:'light', colors:{...DEFAULT_COLORS}, view:'overview',
   filters:{q:'',squad:'',phase:'',situation:'',deadline:'',sprint:'',year:'',risk:'',area:''},
-  columns:null, sort:{col:'deadline',dir:'asc'}, initView:'table', scope:'active', upcomingWindow:60, sprintId:null
+  columns:null, sort:{col:'deadline',dir:'asc'}, initView:'table', scope:'active', upcomingWindow:60, sprintId:null,
+  ganttZoom:'semester', ganttGroup:'none'
 };
 
 /* =====================================================================
