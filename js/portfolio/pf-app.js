@@ -59,6 +59,8 @@ const ACTIONS = {
   'goto-view': (el) => setView(el.dataset.value),
   'remove-filter': (el) => PF.setFilter(el.dataset.key, ''),
   'clear-filters': () => PF.clearFilters(),
+  'dlv-more': () => { PF.ui.dlvAll = !PF.ui.dlvAll; PF.refreshDelivery(false); const b = PF.$('[data-action="dlv-more"]'); if(b) b.focus(); },
+  'dlv-clear': () => { PF.ui.dlvStatus = ''; PF.ui.dlvQ = ''; PF.ui.dlvAll = false; PF.refreshDelivery(true); },
   'toggle-attn': () => { PF.ui.attnExpanded = !PF.ui.attnExpanded; PF.renderView(); },
   'set-window': (el) => { PF.prefs.upcomingWindow = +el.dataset.value; PF.persistPrefs(); PF.renderView(); const b = PF.$(`[data-action="set-window"][data-value="${el.dataset.value}"]`); if(b) b.focus(); },
   'set-init-view': (el) => setView(el.dataset.value === 'gantt' ? 'timeline' : 'initiatives'),
@@ -116,8 +118,10 @@ root.addEventListener('change', e => {
 });
 root.addEventListener('input', e => {
   if(e.target.id === 'searchInput') onSearch(e.target.value);
+  if(e.target.id === 'dlvSearch') onDlvSearch(e.target.value);
   if(e.target.dataset.change === 'color' ){ const v = e.target.value; PF.prefs.colors[e.target.dataset.key] = v; PF.applyAppearance(); const hex = e.target.parentElement.querySelector('[data-change="color-hex"]'); if(hex) hex.value = v; }
 });
+const onDlvSearch = PF.debounce(v => { PF.ui.dlvQ = v; PF.ui.dlvAll = false; PF.refreshDelivery(false); }, 120);
 const onSearch = PF.debounce(v => { PF.prefs.filters.q = v; PF.persistPrefs(); PF.renderActiveFilters(); PF.renderView(); }, 160);
 root.addEventListener('submit', e => {
   const f = e.target.closest('form[data-form]'); if(!f) return;

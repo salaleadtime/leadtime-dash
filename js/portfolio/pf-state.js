@@ -14,7 +14,7 @@ const PF = SP.internal = SP.internal || {};
 PF.appState = null;
 PF.prefs = null;
 PF.ctx = null;
-const ui = { drawer:null, drawerTab:'summary', drawerStoryFilter:'all', attnExpanded:false, expandedSprints:new Set(), expandedGroups:new Set(), sprintItemFilter:'all', overlays:[], popover:null, obsDraft:{}, expandedSquads:new Set() };
+const ui = { drawer:null, drawerTab:'summary', drawerStoryFilter:'all', attnExpanded:false, expandedSprints:new Set(), expandedGroups:new Set(), sprintItemFilter:'all', overlays:[], popover:null, obsDraft:{}, expandedSquads:new Set(), dlvStatus:'', dlvQ:'', dlvAll:false };
 
 function loadState(){
   const raw = PF.safeStorageGet(PF.STORE_DATA_SLOT);

@@ -1054,3 +1054,31 @@ tr.is-off .st .ic,.gantt__row.is-off .st .ic{color:var(--status-neutral)}
 .dl-count{font-size:var(--fs-meta);white-space:nowrap}
 .field .req{color:var(--status-danger)}
 .milestone .dl-cur{font-weight:600}
+
+/* ===== 14. Painel · Entrega por iniciativa (lista compacta, % por iniciativa) ===== */
+.dlv-ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.dlv-search .input{width:210px}
+.dlv-list{display:flex;flex-direction:column;list-style:none;margin:0;padding:0}
+.dlv-row{
+  width:100%;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(120px,1fr) 112px minmax(150px,auto);gap:16px;align-items:center;
+  border:0;border-top:1px solid var(--border-subtle);background:none;text-align:left;cursor:pointer;padding:10px 16px;transition:background var(--dur)
+}
+.dlv-row:hover{background:var(--bg-hover)}
+.dlv-row:focus-visible{outline:2px solid var(--brand-accent);outline-offset:-2px}
+.dlv-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.dlv-name{font-weight:500;font-size:var(--fs-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary)}
+.dlv-name .mono-id{margin-right:6px}
+.dlv-sub{font-size:var(--fs-secondary);color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dlv-bar{height:6px;border-radius:3px;background:var(--border-subtle);overflow:hidden;display:block}
+.dlv-bar>span{display:block;height:100%;background:var(--wf-6);border-radius:3px}
+.dlv-bar--none{background:repeating-linear-gradient(90deg,var(--border-subtle) 0 6px,transparent 6px 10px)}
+.dlv-pct{font-size:20px;font-weight:600;line-height:1;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-primary);letter-spacing:-.01em}
+.dlv-pct--none{font-size:var(--fs-secondary);font-weight:500;line-height:1.25;color:var(--text-muted);letter-spacing:0}
+.dlv-end{display:flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap}
+.dlv-dot{color:var(--text-disabled)}
+@media (max-width:900px){
+  .dlv-row{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+  .dlv-main{grid-column:1/2}.dlv-pct{grid-column:2/3;grid-row:1}
+  .dlv-bar{grid-column:1/3}.dlv-end{grid-column:1/3;justify-content:flex-start}
+  .dlv-search .input{width:100%}.dlv-ctl{justify-content:flex-start}
+}

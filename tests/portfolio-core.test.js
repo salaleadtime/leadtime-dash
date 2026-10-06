@@ -127,5 +127,36 @@ console.log('\n═══ 5. Modelo único: ciclo de vida, Replanejada, universos
   ok(PF.normalizeDate('01/11/2026').value === '2026-11-01' && PF.normalizeDate('2026-11-01').value === '2026-11-01', 'texto dd/mm/aaaa e ISO normalizam igual');
 }
 
+console.log('\n═══ 6. Entrega por iniciativa (Painel): histórias entregues ÷ total, por iniciativa ═══');
+{
+  const mk = (id, o) => Object.assign({id, name:'Iniciativa ' + id, squads:['Alfa'], phase:'Desenvolvimento', situation:'Em andamento', risk:'Baixo', deliveryHistory:[], notesLog:[], owners:[], deliveryPlanned:'2027-03-01'}, o);
+  const many = (initId, spec) => { const out = []; let n = 0; Object.entries(spec).forEach(([status, q]) => { for(let k = 0; k < q; k++) out.push({id:`${initId}-${++n}`, initiativeId:initId, title:'h', status, plannedSprint:null, sprint:null}); }); return out; };
+  const inits = [mk('P1'), mk('P2'), mk('P3'), mk('P4'), mk('P5'), mk('P6'), mk('P7', {situation:'Suspensa'})];
+  const stories = [
+    ...many('P1', {'Concluída':10, 'Backlog':30}),                                                    // 10/40 = 25%
+    ...many('P2', {'Concluída':30, 'Desenvolvimento':10}),                                            // 30/40 = 75%
+    ...many('P3', {'Concluída':7, 'Refinada':17}),                                                    // 7/24 = 29,2%
+    ...many('P4', {'Concluída':3, 'Homologação':2, 'Desenvolvimento':2, 'Refinamento':2, 'Backlog':1}),// 3/10 = 30%
+    ...many('P6', {'Concluída':40}),                                                                  // 40/40 = 100%
+    ...many('P7', {'Concluída':2})
+  ];
+  stories.push({...stories[0]});                                                                      // duplicata do mesmo id em P1
+  PF.appState = PF.prepareState({initiatives:inits, stories, sprints:[], settings:{referenceDate:'2026-09-30'}});
+  PF.prefs = PF.loadPrefs(); PF.ctx = PF.computeContext();
+  const D = PF.selectInitiativeDeliveryMetrics(PF.ctx);
+  ok(D.get('P1').totalStories === 40 && D.get('P1').deliveredStories === 10 && D.get('P1').percentLabel === '25%', 'T1: 10 de 40 → 25%');
+  ok(D.get('P2').deliveredStories === 30 && D.get('P2').percentLabel === '75%', 'T2: 30 de 40 → 75%');
+  ok(D.get('P3').percentLabel === '29,2%', 'T3: 7 de 24 → 29,2% (uma casa, vírgula)');
+  ok(D.get('P4').totalStories === 10 && D.get('P4').deliveredStories === 3 && D.get('P4').percentLabel === '30%', 'T4: só Concluída entra no numerador (homologação/DEV/refinamento/backlog não)');
+  ok(D.get('P5').hasStories === false && D.get('P5').percentLabel === null && D.get('P5').deliveryPercent === null, 'T5: sem histórias → sem percentual (nem 0%, sem divisão por zero)');
+  ok(D.get('P6').percentLabel === '100%' && D.get('P6').deliveryPercent === 100, 'T6: 40 de 40 → 100%');
+  ok(D.get('P1').totalStories === 40, 'história duplicada (mesmo id) não é contada duas vezes');
+  ok(!D.has('P7'), 'suspensa não entra na visão (Todas as ativas)');
+  ok([...D.values()].every(d => d.deliveredStories <= d.totalStories && (d.deliveryPercent == null || d.deliveryPercent <= 100)), 'entregues ≤ total e % ≤ 100 em todas');
+  ok(PF.formatDeliveryPercent(1, 3) === '33,3%' && PF.formatDeliveryPercent(2, 3) === '66,7%', 'arredondamento a 1 casa (1/3 → 33,3% · 2/3 → 66,7%)');
+  ok(PF.formatDeliveryPercent(1999, 2000) === '99,9%' && PF.formatDeliveryPercent(1, 2000) === '0,1%', 'nunca mostra 100% com pendência nem 0% com entrega');
+  ok(!('portfolioPercent' in PF.getPortfolioMetrics(PF.filterInitiatives('active'), PF.ctx)) , 'não existe percentual consolidado do portfólio no motor');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

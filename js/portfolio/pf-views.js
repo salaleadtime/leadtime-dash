@@ -126,6 +126,11 @@ function ddSource(ref){
     const n = scopeCounts(), cur = PF.prefs.scope || 'active';
     return {label:'Situação da iniciativa', value:cur, options:Object.keys(PF.SCOPES).map(k => ({value:k, label:PF.SCOPES[k], count:n[k]})), pick:v => PF.setScope(v)};
   }
+  if(kind === 'dlv'){
+    const items = dlvItems(PF.filterInitiatives()), cur = PF.ui.dlvStatus;
+    return {label:'Situação', value:cur, options:[{value:'', label:'Todas as ativas', count:items.length, sep:true}, ...DLV_STATUS.map(k => ({value:k, label:PF.DEADLINE_META[k].label, count:items.filter(x => x.d.status === k).length}))],
+      pick:v => { PF.ui.dlvStatus = v; PF.ui.dlvAll = false; refreshDelivery(true); }};
+  }
   if(kind === 'sprintnav'){
     const sp = selectedSprint();
     return {label:'Sprint', value:sp.id, options:PF.ctx.sprints.map(x => ({value:x.id, label:`${x.name} · ${PF.fmtDayMonth(x.start)} – ${PF.fmtDayMonth(x.end)}`, hint: PF.ctx.currentSprint && x.id === PF.ctx.currentSprint.id ? 'atual' : ''})),
@@ -207,6 +212,7 @@ function renderOverview(){
   const pm = PF.getPortfolioMetrics(inits, PF.ctx);
   el.innerHTML = `<div class="ov-grid">
     ${kpiBand(pm, inits)}
+    <section class="panel col-12 dlv" id="dlvSec" aria-labelledby="dlvTitle">${deliverySection(inits)}</section>
     <section class="panel col-7" aria-labelledby="attnTitle">${attentionPanel(inits)}</section>
     <section class="panel col-5" aria-labelledby="upTitle">${upcomingPanel(inits)}</section>
     <section class="panel col-6" aria-labelledby="phTitle">${phasePanel(inits)}</section>
@@ -237,6 +243,49 @@ function kpiBand(pm, inits){
       </div>
     </div>
   </section>`;
+}
+/* ---- Entrega por iniciativa: lista compacta, 5 itens, filtro de situação + busca locais ---- */
+const DLV_LIMIT = 5, DLV_STATUS = ['ok','attention','late','replanned','none'];
+function dlvItems(inits){
+  const by = PF.selectInitiativeDeliveryMetrics(PF.ctx);
+  return PF.sortInitiatives(inits, PF.prefs.sort).map(i => ({i, d:by.get(i.id)})).filter(x => x.d);
+}
+function dlvFiltered(items){
+  const q = PF.normKey(PF.ui.dlvQ || ''), st = PF.ui.dlvStatus;
+  return items.filter(x => (!st || x.d.status === st) && (!q || PF.normKey(x.i.id + ' ' + x.i.name).includes(q)));
+}
+function dlvRow({i, d}){
+  const tgt = d.targetDate ? (d.targetDate.slice(0,4) === PF.ctx.today.slice(0,4) ? PF.fmtDayMonth(d.targetDate) : PF.fmtDate(d.targetDate)) : 'sem data';
+  const tone = displayTone(i, d.status), meta = PF.DEADLINE_META[d.status];
+  const sub = d.hasStories ? `${d.deliveredStories} de ${d.totalStories} histórias entregues` : 'Nenhuma história cadastrada para esta iniciativa';
+  return `<li><button type="button" class="dlv-row" data-action="open-initiative" data-id="${PF.esc(i.id)}" aria-label="${PF.esc(i.id + ' ' + i.name)}: ${d.hasStories ? `${d.percentLabel} entregue, ${sub}` : 'sem histórias vinculadas'}; ${PF.esc(meta.label)}${d.targetDate ? ', entrega ' + PF.fmtDateFull(d.targetDate) : ''}">
+    <span class="dlv-main"><span class="dlv-name"><span class="mono-id">${PF.esc(i.id)}</span>${PF.esc(i.name)}</span><span class="dlv-sub">${PF.esc(sub)}</span></span>
+    ${d.hasStories
+      ? `<span class="dlv-bar" aria-hidden="true"><span style="width:${d.deliveryPercent}%"></span></span><span class="dlv-pct" data-tip="Entregues ÷ total de histórias desta iniciativa. Entregue = história concluída.">${PF.esc(d.percentLabel)}</span>`
+      : `<span class="dlv-bar dlv-bar--none" aria-hidden="true"></span><span class="dlv-pct dlv-pct--none">Sem histórias vinculadas</span>`}
+    <span class="dlv-end"><span class="cell-date">${tgt}</span><span class="dlv-dot">·</span>${statusBadge(d.status, null, tone)}</span>
+  </button></li>`;
+}
+function deliveryBody(){
+  const items = dlvItems(PF.filterInitiatives()), list = dlvFiltered(items), more = list.length > DLV_LIMIT;
+  const shown = more && !PF.ui.dlvAll ? list.slice(0, DLV_LIMIT) : list;
+  if(!list.length) return `<div class="empty empty--inline"><div class="empty__title" style="font-size:13px">Nenhuma iniciativa corresponde ao filtro</div>${PF.ui.dlvStatus || PF.ui.dlvQ ? '<button type="button" class="btn btn-secondary btn-sm" data-action="dlv-clear">Limpar filtro da seção</button>' : ''}</div>`;
+  return `<ul class="dlv-list">${shown.map(dlvRow).join('')}</ul>
+    ${more ? `<div class="panel-foot"><span aria-live="polite">Exibindo ${shown.length} de ${list.length}</span><button type="button" class="btn-link" data-action="dlv-more" aria-expanded="${PF.ui.dlvAll}">${PF.ui.dlvAll ? 'Mostrar menos' : `Ver todas as ${list.length} iniciativas`}</button></div>` : ''}`;
+}
+function deliverySection(inits){
+  const items = dlvItems(inits), st = PF.ui.dlvStatus;
+  const n = st ? items.filter(x => x.d.status === st).length : items.length;
+  const txt = st ? `${PF.DEADLINE_META[st].label} (${n})` : `Todas as ativas (${items.length})`;
+  return `<div class="panel-head"><div><h2 class="panel-title" id="dlvTitle">Entrega por iniciativa</h2><p class="panel-sub">Histórias entregues ÷ total de histórias de cada iniciativa · sem percentual consolidado do portfólio</p></div>
+    <div class="dlv-ctl"><button type="button" class="dd-trigger ${st ? 'is-set' : ''}" data-action="dd-open" data-dd="dlv:" aria-haspopup="listbox" aria-expanded="false" aria-label="Situação: ${PF.esc(txt)}"><span class="dd-trigger__v">${PF.esc(txt)}</span>${PF.icon('i-chevron','ic ic-xs')}</button>
+    <label class="search dlv-search"><span class="sr-only">Buscar ID ou iniciativa</span>${PF.icon('i-search','ic ic-sm')}<input type="search" id="dlvSearch" class="input input-sm" placeholder="Buscar ID ou iniciativa" value="${PF.esc(PF.ui.dlvQ || '')}" autocomplete="off"></label></div></div>
+    <div id="dlvBody">${deliveryBody()}</div>`;
+}
+function refreshDelivery(full){
+  const sec = PF.$('#dlvSec'); if(!sec) return;
+  if(full) sec.innerHTML = deliverySection(PF.filterInitiatives());
+  else { const b = PF.$('#dlvBody'); if(b) b.innerHTML = deliveryBody(); }
 }
 function attentionPanel(inits){
   const items = PF.getAttentionItems(inits, PF.ctx);
@@ -347,7 +396,7 @@ function flowPanel(inits, pm){
   return `<div class="panel-head"><div><h2 class="panel-title" id="flTitle">Onde está o trabalho</h2><p class="panel-sub">${PF.plural(d.total,'história','histórias')} das iniciativas no recorte, por etapa do fluxo</p></div>
     ${cs ? `<button type="button" class="btn btn-tertiary btn-sm" data-action="goto-view" data-value="sprints">${PF.esc(cs.name)} ${PF.icon('i-right','ic ic-sm')}</button>` : ''}</div>
   <div class="panel-body">${d.total ? `
-    <div class="flow-bar" role="img" aria-label="${PF.esc(PF.WORKFLOW.map(s => `${s} ${d.byStatus[s]}`).join(', '))}">${PF.WORKFLOW.filter(s => d.byStatus[s]).map(s => `<span class="wf-${s}" style="flex:${d.byStatus[s]}" data-tip="${s}: ${d.byStatus[s]} (${Math.round(d.byStatus[s]/d.total*100)}%)"></span>`).join('')}</div>
+    <div class="flow-bar" role="img" aria-label="${PF.esc(PF.WORKFLOW.map(s => `${s} ${d.byStatus[s]}`).join(', '))}">${PF.WORKFLOW.filter(s => d.byStatus[s]).map(s => `<span class="wf-${s}" style="flex:${d.byStatus[s]}" data-tip="${s}: ${d.byStatus[s]}"></span>`).join('')}</div>
     <div class="flow-legend">${PF.WORKFLOW.map(s => `<span class="flow-legend__item"><span class="swatch wf-${s}"></span>${s}<b>${d.byStatus[s]}</b></span>`).join('')}</div>` : '<div class="muted" style="font-size:12px">Nenhuma história cadastrada.</div>'}
     <div class="metric-strip">
       <div class="metric"><span class="metric__label">Bloqueadas</span><span class="metric__value" ${d.blocked ? 'style="color:var(--status-danger)"' : ''}>${d.blocked}</span></div>
@@ -644,5 +693,5 @@ function sprintHistory(stories){
 }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {viewKey, scopeCounts, scopeSelect, nameCell, squadTip, squadDetail, obsCell, statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
+Object.assign(PF, {deliverySection, deliveryBody, refreshDelivery, viewKey, scopeCounts, scopeSelect, nameCell, squadTip, squadDetail, obsCell, statusBadge, displayTone, TONE_FILL, toneFill, statusPill, ownersCell, alignOwnerLines, riskBadge, varianceTag, actualVarianceCell, progressBar, wfBar, emptyBase, emptyFiltered, renderSyncStatus, renderPageMeta, renderSubnav, filterSelect, ddSource, openDropdown, pickDropdown, renderFilterBar, renderActiveFilters, loadingBase, renderView, refresh, renderOverview, kpiBand, attentionPanel, upcomingPanel, phasePanel, variancePanel, squadPanel, blockedList, flowPanel, COLUMNS, COLUMN_GROUPS, COLUMN_PRESETS, currentColumns, activePreset, sortInitiatives, renderInitiatives, ganttView, scopedStories, selectedSprint, renderSprints, capacityPanel, fmtHours, spKpi, sprintItems, storyTableRow, statusSelect, sprintSelect, blockToggle, sprintHistory});
 })();

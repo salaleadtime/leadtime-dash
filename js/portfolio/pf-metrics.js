@@ -135,6 +135,34 @@ function calculateDeadlineStatus(init, dist, variance, c){
   if(replanned) return {...base, status:'replanned', reasons:[replanNote, `Entrega em ${PF.plural(daysTo,'dia','dias')}, sem sinais de atenção`]};
   return {...base, status:'ok', reasons:[`Entrega em ${PF.plural(daysTo,'dia','dias')}, sem desvios acima dos limites configurados`]};
 }
+/* ENTREGA POR INICIATIVA (Painel): histórias entregues ÷ total de histórias da própria iniciativa.
+   Sem percentual do portfólio (nem média, nem soma). "Entregue" é a regra central de calculateStoryDistribution
+   (status final 'Concluída'); aqui só se deduplica por id e se consolida por iniciativa. Suspensas ficam de fora.
+   Respeita o recorte de Squad (m.stories) e não faz nenhuma chamada externa — só lê o contexto já calculado. */
+function formatDeliveryPercent(done, total){
+  if(!(total > 0)) return null;
+  const raw = done / total * 100;
+  let v = Math.round(raw * 10) / 10;
+  if(done < total && v >= 100) v = 99.9;      /* nunca "100%" com escopo pendente */
+  if(done > 0 && v <= 0) v = 0.1;
+  return (Number.isInteger(v) ? String(v) : v.toFixed(1).replace('.', ',')) + '%';
+}
+function selectInitiativeDeliveryMetrics(c){
+  if(c._deliveryByInit) return c._deliveryByInit;
+  const map = new Map();
+  PF.appState.initiatives.forEach(i => {
+    const m = c.initMetrics.get(i.id); if(!m || m.lifecycle === 'suspended') return;
+    const seen = new Set();
+    const stories = m.stories.filter(st => seen.has(st.id) ? false : (seen.add(st.id), true));
+    const total = stories.length, delivered = calculateStoryDistribution(stories).done;
+    if(delivered > total) console.warn('[Portfólio] entregues > total na iniciativa', i.id, delivered, total);
+    const pct = total > 0 ? Math.min(100, delivered / total * 100) : null;
+    map.set(i.id, {initiativeId:i.id, initiativeName:i.name, totalStories:total, deliveredStories:delivered,
+      deliveryPercent:pct, percentLabel:formatDeliveryPercent(delivered, total), hasStories:total > 0,
+      targetDate:m.deadline.target, status:m.deadline.status});
+  });
+  c._deliveryByInit = map; return map;
+}
 function getInitiativeMetrics(init, c){
   const lifecycle = lifecycleOf(init);
   const allStories = c.storiesByInit.get(init.id) || [];
@@ -427,5 +455,5 @@ function toggleBlock(id){
 }
 
 /* exporta para os demais módulos */
-Object.assign(PF, {lifecycleOf, isSuspended, storySquadOf, squadBreakdown, setScope, getReferenceDate, getSprintForDate, getCurrentSprint, completionSprintId, calculateLeadTime, calculateCurrentLeadTime, leadTimeOf, calculateProgress, calculateStoryDistribution, calculateForecastVariance, calculateActualVariance, isReprogrammed, fmtDeltaDays, deltaKind, deliveryTrail, deliveryTooltip, recordDeliveryChange, calculateScheduleVariance, calculateDeadlineStatus, getInitiativeMetrics, isCarryOver, calculateCarryOver, calculateThroughput, getSprintMetrics, calculateUpcomingDeliveries, getAttentionItems, getPortfolioMetrics, buildHeadline, computeContext, validateData, qualityScore, FILTER_DEFS, PRIMARY_FILTERS, MORE_FILTERS, filterInitiatives, activeFilterCount, setFilter, clearFilters, applyStatusTransition, findStory, changeStoryStatus, changeStorySprint, toggleBlock});
+Object.assign(PF, {formatDeliveryPercent, selectInitiativeDeliveryMetrics, lifecycleOf, isSuspended, storySquadOf, squadBreakdown, setScope, getReferenceDate, getSprintForDate, getCurrentSprint, completionSprintId, calculateLeadTime, calculateCurrentLeadTime, leadTimeOf, calculateProgress, calculateStoryDistribution, calculateForecastVariance, calculateActualVariance, isReprogrammed, fmtDeltaDays, deltaKind, deliveryTrail, deliveryTooltip, recordDeliveryChange, calculateScheduleVariance, calculateDeadlineStatus, getInitiativeMetrics, isCarryOver, calculateCarryOver, calculateThroughput, getSprintMetrics, calculateUpcomingDeliveries, getAttentionItems, getPortfolioMetrics, buildHeadline, computeContext, validateData, qualityScore, FILTER_DEFS, PRIMARY_FILTERS, MORE_FILTERS, filterInitiatives, activeFilterCount, setFilter, clearFilters, applyStatusTransition, findStory, changeStoryStatus, changeStorySprint, toggleBlock});
 })();
