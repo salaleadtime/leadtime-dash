@@ -122,7 +122,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-09-29-v29-portfolio-iniciativas';
+var BACKLOG_SCRIPT_VERSION = '2026-10-30-v30-report-iniciativas-key';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -193,7 +193,16 @@ var VP_SHEET_MAP = {
   // v29 — base compartilhada da aba Portfólio (index.html). Overwrite puro
   // com baseRevision: o cliente relê e reaplica a própria alteração quando
   // outra pessoa gravou antes (ver js/portfolio/pf-sync.js).
-  portfolioData: '_portfolio_data'
+  portfolioData: '_portfolio_data',
+  // v30 — MESMO BUG DE CLASSE do v13/v24 acima: chave usada por um painel
+  // HTML embutido no Jira (fork independente do motor da aba Portfólio,
+  // fora deste repositório) para saveVpData/getVpData antes de existir
+  // aqui. Sintoma idêntico: grava local com sucesso otimista, mas o
+  // servidor respondia {ok:false,'chave inválida'} — nenhum outro
+  // navegador/sessão do Jira recebia o dado. Esse painel também lê
+  // portfolioData (só leitura, para reaproveitar a senha de acesso via
+  // settings.security.gateDigest) — não confundir as duas chaves.
+  reportIniciativasData: '_report_iniciativas_data'
 };
 
 // v19 — cache da projeção enxuta do getOps4opsData (CacheService, nativo do

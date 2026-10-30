@@ -311,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-09-29-v29-portfolio-iniciativas');
+  t('versão correta', h.version, '2026-10-30-v30-report-iniciativas-key');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -504,6 +504,25 @@ console.log('\n═══ 18. portfolioData: base compartilhada da aba Portfólio
   const fresh = parse(ctx.doPost(post({ action:'saveVpData', key:'portfolioData', payload: mk(13), baseRevision: String(g2.revision) })));
   t('baseRevision atual grava normalmente', fresh.ok, true);
   t('revisão incrementa após gravação', parse(ctx.doGet(post({ action:'getRevisions' }))).revisions.portfolioData, 2);
+}
+
+console.log('\n═══ 19. reportIniciativasData: chave do painel Jira (v30) ═══');
+{
+  const { ctx } = novoAmbiente();
+  const mk = (n) => JSON.stringify({ initiatives: Array.from({length:n}, (_,i)=>({id:String(113000+i), name:'Iniciativa '+i})),
+    stories: [], sprints: [], absences: [], settings: {}, metadata: { schemaVersion: 3, writeId: 'w'+n } });
+  t('chave inválida antes desta correção (prova de regressão)',
+    parse(ctx.doPost(post({ action:'saveVpData', key:'reportIniciativasData_typo', payload: mk(1) }))).ok, false);
+  const w1 = parse(ctx.doPost(post({ action:'saveVpData', key:'reportIniciativasData', payload: mk(8) })));
+  t('chave reportIniciativasData é aceita pelo saveVpData', w1.ok, true);
+  const g1 = parse(ctx.doGet(post({ action:'getVpData', key:'reportIniciativasData' })));
+  t('getVpData devolve a base gravada', g1.data.initiatives.length, 8);
+  const rv = parse(ctx.doGet(post({ action:'getRevisions' })));
+  t('getRevisions inclui reportIniciativasData', rv.revisions.reportIniciativasData, 1);
+  const g2 = parse(ctx.doGet(post({ action:'getVpData', key:'portfolioData' })));
+  t('não compartilha dado com portfolioData (chaves continuam separadas)', g2.data, null);
+  const zero = parse(ctx.doPost(post({ action:'saveVpData', key:'reportIniciativasData', payload: mk(0) })));
+  t('mesma guarda de redução anômala se aplica (zerar 8 → 0 é recusado)', zero.ok, false);
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
