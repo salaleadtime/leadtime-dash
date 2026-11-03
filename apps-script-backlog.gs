@@ -1,6 +1,17 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v31 — leadtimeDate_ (board de Épicos) só aceitava AAAA-MM-DD exato e
+ * descartava qualquer outra coisa em silêncio, virando ''. Isso incluía o
+ * formato dd/mm/aaaa — o que normalmente chega de colagem manual, planilha
+ * ou export do Jira — e também ISO com hora/timezone embutida (célula do
+ * Sheets serializada como Date). Resultado relatado: editar/importar uma
+ * data do board de Épicos (Início/Fim/Data Prevista) nesses formatos APAGAVA
+ * o campo em vez de gravar. O cliente (coerceDateStr em index.html) já
+ * tolerava os dois formatos na leitura; leadtimeDate_ passa a tolerar os
+ * mesmos na gravação, para a causa raiz não ficar só mascarada no front.
+ * Nenhuma outra chave, aba ou regra foi alterada nesta versão.
+ *
  * v29 — nova chave portfolioData (aba Portfólio de index.html): base
  * compartilhada de iniciativas, histórias, sprints, ausências e regras de
  * prazo da aba — {initiatives:[...], stories:[...], sprints:[...],
@@ -122,7 +133,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-10-30-v30-report-iniciativas-key';
+var BACKLOG_SCRIPT_VERSION = '2026-11-03-v31-leadtime-date-br-format';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -1085,9 +1096,39 @@ function readBacklogStore_() {
 }
 
 // ── Épicos do painel principal: migração única e atualizações manuais ────
+function leadtimeDateValid_(y, m, d) {
+  var date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
+// v31 — antes só aceitava AAAA-MM-DD exato e descartava qualquer outro formato
+// em silêncio (virava ''), inclusive dd/mm/aaaa — o formato que normalmente
+// chega de colagem manual, planilha ou export do Jira. Isso apagava a data em
+// vez de normalizá-la. O cliente (coerceDateStr em index.html) já tolera os
+// dois formatos do lado da leitura; esta função passa a tolerar os mesmos do
+// lado da gravação, para a causa raiz não ficar só mascarada no front.
 function leadtimeDate_(value) {
   var text = String(value == null ? '' : value).trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '';
+  if (!text) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    var iso = text.split('-');
+    return leadtimeDateValid_(Number(iso[0]), Number(iso[1]), Number(iso[2])) ? text : '';
+  }
+  // ISO com hora/timezone embutida (ex.: célula de planilha serializada como
+  // Date pelo Apps Script, tipo "2026-05-15T00:00:00.000Z").
+  var isoPrefix = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoPrefix && leadtimeDateValid_(Number(isoPrefix[1]), Number(isoPrefix[2]), Number(isoPrefix[3]))) {
+    return isoPrefix[1] + '-' + isoPrefix[2] + '-' + isoPrefix[3];
+  }
+  // Formato brasileiro dd/mm/aaaa (ou d/m/aaaa).
+  var br = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (br) {
+    var dd = Number(br[1]), mm = Number(br[2]), yyyy = Number(br[3]);
+    if (leadtimeDateValid_(yyyy, mm, dd)) {
+      return yyyy + '-' + String(mm).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+    }
+  }
+  return '';
 }
 
 function normalizeLeadtimeEpic_(row) {
