@@ -311,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-10-30-v30-report-iniciativas-key');
+  t('versão correta', h.version, '2026-11-03-v31-leadtime-date-br-format');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -523,6 +523,37 @@ console.log('\n═══ 19. reportIniciativasData: chave do painel Jira (v30) �
   t('não compartilha dado com portfolioData (chaves continuam separadas)', g2.data, null);
   const zero = parse(ctx.doPost(post({ action:'saveVpData', key:'reportIniciativasData', payload: mk(0) })));
   t('mesma guarda de redução anômala se aplica (zerar 8 → 0 é recusado)', zero.ok, false);
+}
+
+console.log('\n═══ 20. leadtimeDate_: datas do board de Épicos (v31) ═══');
+{
+  const { ctx } = novoAmbiente();
+  t('AAAA-MM-DD válida passa direto', ctx.leadtimeDate_('2026-05-15'), '2026-05-15');
+  t('AAAA-MM-DD inválida (32 de um mês) é recusada', ctx.leadtimeDate_('2026-05-32'), '');
+  t('dd/mm/aaaa é normalizada para ISO (prova de regressão do bug)', ctx.leadtimeDate_('15/05/2026'), '2026-05-15');
+  t('d/m/aaaa sem zero à esquerda também normaliza', ctx.leadtimeDate_('5/1/2026'), '2026-01-05');
+  t('dd/mm/aaaa inválida (31/02) é recusada, não normalizada às cegas', ctx.leadtimeDate_('31/02/2026'), '');
+  t('ISO com timestamp embutido (célula do Sheets) extrai o prefixo', ctx.leadtimeDate_('2026-05-15T00:00:00.000Z'), '2026-05-15');
+  t('lixo não reconhecido vira vazio, nunca quebra', ctx.leadtimeDate_('data inválida'), '');
+  t('vazio/null continuam vazio', ctx.leadtimeDate_(''), '');
+  t('null continua vazio', ctx.leadtimeDate_(null), '');
+
+  // Ponta a ponta via action=update: semeia um épico com Data Prevista ISO,
+  // depois edita mandando a mesma data em dd/mm/aaaa (como viria de colagem
+  // manual) e confirma que o servidor grava a data, não a apaga.
+  ctx.writeJsonToSheet_(ctx.LEADTIME_EPICS_SHEET, [
+    { id:'SLOPC-1', squad:'Guardiões', resumo:'Épico teste', status:'Em Execução', statusAntes:'',
+      ini:'2026-01-10', fim:'', fimAntes:'', dataPrevista:'2026-05-10', chg:'', impedimento:'' }
+  ]);
+  // action=update roda sob doGet (chamado via JSONP pelo cliente), não doPost.
+  const upd = parse(ctx.doGet(post({ action:'update', payload: JSON.stringify([
+    { id:'SLOPC-1', dataPrevista:'20/06/2026' }
+  ]) })));
+  t('action=update aceita a edição', upd.ok, true);
+  const after = ctx.getLeadtimeEpics_();
+  const epic = after.find(function(r){ return r.id==='SLOPC-1'; });
+  t('Data Prevista em dd/mm/aaaa foi normalizada e gravada, não apagada', epic.dataPrevista, '2026-06-20');
+  t('Data Início anterior (não enviada nesta edição) foi preservada', epic.ini, '2026-01-10');
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
