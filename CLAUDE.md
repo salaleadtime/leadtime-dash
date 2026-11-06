@@ -1,5 +1,25 @@
 # leadtime-dash — guia para trabalhar neste repositório
 
+## Status atual: Aba Portfólio descontinuada (06/11/2026)
+
+A aba **🗂️ Portfólio** (Gestão de Iniciativas) foi **removida** a pedido
+explícito da pessoa responsável ("não serve mais"). Saíram do repositório:
+`portfolio/` (página dedicada), `css/portfolio.css`, `js/portfolio/*.js`,
+`vendor/pptxgen.bundle.js` e `tests/portfolio-core.test.js`; em `index.html`
+saíram o botão `#tab-pf`, o painel `#pane-pf`, o carregador `pfOpenTab()` e
+o repasse de revisão `pfNotifyRevision` (no ping `gasCheckBacklogRevision`).
+Quem tinha a aba salva como última aberta cai em Épicos (`normalizeTab`).
+
+- **Backend não foi alterado**: a chave `portfolioData` continua no
+  `VP_SHEET_MAP` de `apps-script-backlog.gs` (sem redeploy necessário) e os
+  dados já gravados ficam preservados. Ninguém mais lê nem grava nela.
+- Código completo no histórico do git (`main` até `91098ac`). Reversível,
+  mas **não recrie a aba sem confirmar antes com a pessoa responsável.**
+- No ambiente do cliente, alguém precisa apagar manualmente `portfolio/`,
+  `css/portfolio.css`, `js/portfolio/` e `vendor/pptxgen.bundle.js`, se já
+  tiverem sido copiados para lá.
+- A seção "Aba Portfólio" mais abaixo fica como **registro técnico histórico**.
+
 ## Status atual: Discovery PMO Tracker descontinuado (09/09/2026)
 
 A pasta `discovery-pmo/` (Discovery PMO Tracker, cliente JSONP `_discGasJsonp`,
@@ -96,12 +116,12 @@ arquivo:
   exclusão — mesmo padrão de `vpQuickNotes`). Sem polling automático (mesma
   regra dos demais relatórios semanais, ver "Padrão de polling" abaixo).
 
-- **Aba 🗂️ Portfólio** (dentro de `index.html`, desde 29/09/2026, v29 do
+- ~~**Aba 🗂️ Portfólio**~~ (**removida em 06/11/2026**, ver "Status atual" no topo) (dentro de `index.html`, desde 29/09/2026, v29 do
   backend) — Gestão de Iniciativas: previsibilidade, prazos, sprints/capacidade,
   riscos, histórias e exportação executiva em PowerPoint. Código fora do
   `index.html`, em `css/portfolio.css` + `js/portfolio/pf-*.js`, carregado sob
   demanda. Ver seção "Aba Portfólio" abaixo antes de mexer.
-- `portfolio/index.html` — **página dedicada do Portfólio** (link direto para
+- ~~`portfolio/index.html`~~ (**removida em 06/11/2026**) — **página dedicada do Portfólio** (link direto para
   gestores, sem as demais abas). Carrega os mesmos `css/portfolio.css` +
   `js/portfolio/*.js` e usa a mesma chave `portfolioData` — não é uma segunda
   base. Tem cliente JSONP próprio (`_gasJsonp`, mesmo padrão com retry) e um
@@ -174,17 +194,16 @@ ser entregues, mesmo que alterados) — confirmado pela pessoa responsável:
 `.github/workflows/*` (automação interna do GitHub, não se aplica),
 `tests/apps-script-backlog.test.js` (só usado em desenvolvimento) e
 `boletim-ds/**` (ferramenta interna separada, com seu próprio README).
-`tests/portfolio-core.test.js` também é só de desenvolvimento. Já
 `css/portfolio.css`, `js/portfolio/*.js`, `vendor/pptxgen.bundle.js` e
-`portfolio/index.html` **fazem parte do espelho** (a aba Portfólio e a página
-dedicada não funcionam sem eles). Se um
+`portfolio/index.html` faziam parte do espelho até a remoção da aba Portfólio
+(06/11/2026). Se um
 arquivo novo/desconhecido entrar em um diff, pergunte antes de presumir se
 ele faz parte do espelho ou não — não adivinhe.
 
 `BACKLOG_SCRIPT_VERSION` no topo do arquivo deve ser incrementado a cada
 mudança, e conferido via `?action=health` depois do redeploy.
 
-## Aba Portfólio (Gestão de Iniciativas) — arquitetura (29/09/2026, v29)
+## Aba Portfólio (Gestão de Iniciativas) — arquitetura (29/09/2026, v29) — DESCONTINUADA em 06/11/2026 (registro histórico)
 
 Protótipo aprovado pela pessoa responsável e integrado como **uma aba do
 `index.html`**, não um sistema separado. Pontos que não são óbvios lendo o
