@@ -7390,17 +7390,56 @@
       try { renderDeliveryStoryPicker(); } catch(error) { console.error('Erro ao renderizar histórias da entrega:', error); }
     }
 
+    // Regra do SLA de homologação: conta enquanto o card está "Em homologação";
+    // quando ele PASSA da homologação, para de contar. A lista abaixo vem só do
+    // arquivo de Homologação (arquivo 6) — se só a base geral/Sprint foi
+    // reimportada depois, o card que já passou continuava contando atraso aqui
+    // (e divergia dos KPIs, que leem a base geral). Só tira o card da lista
+    // quando as DUAS condições valem: (1) a outra base é mais nova que a de
+    // Homologação por margem real (não é a mesma rodada do "Importar Tudo") e
+    // (2) o status nela é POSTERIOR à homologação. Status anterior numa base
+    // "mais nova" é mais provável export velho do que retorno — segue contando.
+    const HOMOLOG_NEWER_BASE_MARGIN_MS = 10 * 60 * 1000;
+    function isPastHomologationStatus(status){
+      const s = normalize(status).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if(!s || s === 'em homologacao') return false;
+      return /homologad|pos[- ]?homolog|produc|deploy|implant|release|conclu|done|fechad|finaliz|resolvid|entregue|cancel/.test(s);
+    }
+    function homologationPassedElsewhere(){
+      const passed = new Map();
+      const homologAt = lastImportAt.homologation ? lastImportAt.homologation.getTime() : 0;
+      if(!homologAt) return passed;
+      [[rows, lastImportAt.general, 'base geral'], [sprintRows, lastImportAt.sprint, 'Sprint']].forEach(([list, at, label]) => {
+        const t = at ? at.getTime() : 0;
+        if(!t || t - homologAt <= HOMOLOG_NEWER_BASE_MARGIN_MS || !Array.isArray(list)) return;
+        list.forEach(r => {
+          const k = storyKey(r);
+          if(k && isPastHomologationStatus(r.situacao) && !passed.has(k)) passed.set(k, {status: normalize(r.situacao), label});
+        });
+      });
+      return passed;
+    }
+
     function renderHomologationCards(){
       const container = $('homologationCards');
       const source = $('homologationSource');
       if(!container || !source) return;
       const selectedSquad = getSelectedSquad();
+      const passedElsewhere = homologationPassedElsewhere();
+      const passedRows = homologationRows.filter(row => passedElsewhere.has(storyKey(row)));
+      const activeRows = passedRows.length ? homologationRows.filter(row => !passedElsewhere.has(storyKey(row))) : homologationRows;
       const visibleRows = sameSquad(selectedSquad, 'Todas')
-        ? homologationRows
-        : homologationRows.filter(row => sameSquad(row.squad, selectedSquad));
+        ? activeRows
+        : activeRows.filter(row => sameSquad(row.squad, selectedSquad));
+      const passedNote = passedRows.length
+        ? ` • ${passedRows.length} ${passedRows.length === 1 ? 'já passou' : 'já passaram'} de homologação na base mais recente (SLA encerrado)`
+        : '';
       source.textContent = homologationSourceName
-        ? `${homologationRows.length} itens carregados • ${visibleRows.length} exibidos (${sameSquad(selectedSquad, 'Todas') ? 'todas as squads' : selectedSquad})`
+        ? `${homologationRows.length} itens carregados • ${visibleRows.length} exibidos (${sameSquad(selectedSquad, 'Todas') ? 'todas as squads' : selectedSquad})${passedNote}`
         : 'Carregue a exportação do Jira para exibir a lista.';
+      source.title = passedRows.length
+        ? 'Saíram da lista: ' + passedRows.map(row => { const p = passedElsewhere.get(storyKey(row)); return `${storyKey(row)} (${p.status}, ${p.label})`; }).join('; ')
+        : "Importe pelo botão 'Importar aqui' no topo — arquivos de Homologação são detectados automaticamente";
       if(!homologationRows.length){
         container.innerHTML = '<div class="empty">Nenhum item da carga de Homologação. Use “Carregar Homologação” e selecione a exportação do Jira.</div>';
         return;
