@@ -1390,6 +1390,14 @@ body{min-height:100vh}
 <body class="remote-unconfirmed">
 
 <!-- TOPBAR -->
+<!-- Faixa institucional (layout SALA) — só apresentação; o botão usa o mesmo
+     input #fiAllGlobal do "Importar Tudo" da barra de upload. -->
+<div class="sala-mast">
+  <strong class="sala-mast-brand">SALA</strong>
+  <span class="sala-mast-product">Lead Time</span>
+  <span class="sala-mast-slot" id="salaMastSlot"></span>
+  <button type="button" class="sala-mast-import" onclick="document.getElementById('fiAllGlobal').click()" title="Ponto único de importação: selecione todos os relatórios do Jira de uma vez — cada arquivo vai automaticamente para o destino certo.">🌐 Importar Tudo</button>
+</div>
 <header class="top">
   <div class="top-logo">LT</div>
   <div class="top-brand">
@@ -1439,14 +1447,15 @@ body{min-height:100vh}
 </header>
 
 <!-- TABS -->
-<nav class="tabs">
-  <button class="tabbt on" id="tab-ep" onclick="goTab('ep',this)">Épicos <span class="tab-ct" id="tabCtEp"></span></button>
-  <button class="tabbt" id="tab-me" onclick="goTab('me',this)">📊 Medição <span class="tab-ct" id="tabCtMe"></span></button>
-  <button class="tabbt" id="tab-db" onclick="goTab('db',this)">Dashboard</button>
-  <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)">📋 Qtd Story/Épicos <span class="tab-ct" id="tabCtSv"></span></button>
-  <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)">📥 Backlog/Refinamento <span class="tab-ct" id="tabCtBk"></span></button>
-  <button class="tabbt" id="tab-em" onclick="goTab('em',this)">🚨 Demandas Emergenciais <span class="tab-ct" id="tabCtEm"></span></button>
-  <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)">📅 Calendário</button>
+<nav class="tabs" aria-label="Menu principal">
+  <button type="button" class="sala-nav-collapse" id="salaNavCollapse" onclick="salaToggleNav()" aria-expanded="true" title="Recolher menu"><span aria-hidden="true">‹‹</span> <span class="sala-nav-collapse-label">Recolher menu</span></button>
+  <button class="tabbt on" id="tab-ep" onclick="goTab('ep',this)" title="Épicos"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="sala-tab-label">Épicos</span> <span class="tab-ct" id="tabCtEp"></span></button>
+  <button class="tabbt" id="tab-me" onclick="goTab('me',this)" title="Medição"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="sala-tab-label">Medição</span> <span class="tab-ct" id="tabCtMe"></span></button>
+  <button class="tabbt" id="tab-db" onclick="goTab('db',this)" title="Dashboard"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="sala-tab-label">Dashboard</span></button>
+  <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)" title="Qtd Story/Épicos"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span class="sala-tab-label">Qtd Story/Épicos</span> <span class="tab-ct" id="tabCtSv"></span></button>
+  <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)" title="Backlog/Refinamento"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><span class="sala-tab-label">Backlog/Refinamento</span> <span class="tab-ct" id="tabCtBk"></span></button>
+  <button class="tabbt" id="tab-em" onclick="goTab('em',this)" title="Demandas Emergenciais"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span class="sala-tab-label">Demandas Emergenciais</span> <span class="tab-ct" id="tabCtEm"></span></button>
+  <button class="tabbt" id="tab-cal" onclick="goTab('cal',this)" title="Calendário"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="sala-tab-label">Calendário</span></button>
 </nav>
 
 <!-- META INFO BAR -->
@@ -4451,6 +4460,7 @@ function renderTbl(){
       '<td class="clt '+lc+'">'+(cancelado?'— não medido':ltIco(r.lt)+' '+r.lt+'d')+'</td>'+
       '<td class="cimp">'+
         '<textarea class="eimp" rows="2" data-id="'+esc(r.id)+'" data-f="impedimento" onblur="fc(this)" oninput="ar(this);saveImpedimentoDraft(this)" onfocus="eimpFocus(this)">'+esc(r.impedimento||'')+'</textarea>'+
+        '<div class="imp-log" data-imp-log="'+esc(r.id)+'">'+impLogMetaHtml(r)+'</div>'+
       '</td>'+
     '</tr>';
   });
@@ -4714,6 +4724,11 @@ function fc(el){
     normalizeWorkflowRecord(rec);
     renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab(targetTab);
   }
+  if(f==='impedimento'){
+    var impBefore=(el.dataset.impPrev!==undefined)?el.dataset.impPrev:(oldVal||'');
+    delete el.dataset.impPrev;
+    impLogRecord(rec.id, impBefore, rec.impedimento);
+  }
   if(f==='chg'||f==='impedimento'){
     normalizeWorkflowRecord(rec);
     renderMed(); renderDash(); activateTab(targetTab);
@@ -4741,6 +4756,192 @@ function fc(el){
 
 function ar(el){el.style.height='auto';el.style.height=Math.max(72,el.scrollHeight)+'px';}
 
+// ═══════════════════════════════════════
+// HISTÓRICO DO IMPEDIMENTO (data de registro, edições e exclusões)
+// ═══════════════════════════════════════
+// O TEXTO do impedimento continua onde sempre esteve (SHEETS_WEBAPP, via fc()/
+// saveImpedimentoDraft) — nenhuma regra muda. Isto só registra QUANDO ele foi
+// criado, editado ou excluído e qual era o texto anterior, para todo mundo:
+// chave 'epicImpedimentoLog' do apps-script-backlog.gs (v32), via saveVpData/
+// getVpData. Formato: {<idÉpico>:{entries:[{id,at,action,text,previous}]}}.
+// Eventos são só acrescentados (nunca editados/removidos) e têm id único, então
+// juntar duas listas é sempre a união — nenhum navegador apaga o registro de
+// outro. O servidor faz merge raso por épico (MERGE_MAP_KEYS) e o cliente envia
+// SÓ o épico alterado, depois de puxar a versão mais nova e unir.
+// Sem polling próprio: a revisão chega pelo ping getRevisions já existente.
+var IMP_LOG_VP_NAME='epicImpedimentoLog';
+var IMP_LOG_CACHE_SLOT='sala_imp_log_cache_v1';
+var IMP_LOG_PENDING_SLOT='sala_imp_log_pending_v1';
+var IMP_LOG_MAX_ENTRIES=60;
+var _impLog={}, _impLogRevision=null, _impLogLoading=false, _impLogUnavailable=false, _impLogLoadedOnce=false;
+try{ var _impLogCached=JSON.parse(storageGet(IMP_LOG_CACHE_SLOT)||'null'); if(_impLogCached&&typeof _impLogCached==='object'&&!Array.isArray(_impLogCached)) _impLog=_impLogCached; }catch(e){}
+
+function impLogPendingIds(){ try{ var p=JSON.parse(storageGet(IMP_LOG_PENDING_SLOT)||'[]'); return Array.isArray(p)?p:[]; }catch(e){ return []; } }
+function impLogSetPending(ids){ try{ storageSet(IMP_LOG_PENDING_SLOT, JSON.stringify(ids)); }catch(e){} }
+function impLogEntries(epicId){ var e=_impLog[epicId]; return (e&&Array.isArray(e.entries))?e.entries:[]; }
+function impLogValidEntry(x){ return x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.at==='string'&&!isNaN(Date.parse(x.at)); }
+function impLogUnion(a,b){
+  var seen={}, out=[];
+  [].concat(a||[],b||[]).forEach(function(x){ if(impLogValidEntry(x)&&!seen[x.id]){ seen[x.id]=true; out.push(x); } });
+  out.sort(function(x,y){ return Date.parse(x.at)-Date.parse(y.at); });
+  return out.length>IMP_LOG_MAX_ENTRIES ? out.slice(out.length-IMP_LOG_MAX_ENTRIES) : out;
+}
+function impLogMergeInto(target, incoming){
+  var changed=false;
+  Object.keys(incoming||{}).forEach(function(id){
+    var inc=incoming[id]; if(!inc||!Array.isArray(inc.entries)) return;
+    var before=impLogEntries(id), merged=impLogUnion(before, inc.entries);
+    if(merged.length!==before.length){ target[id]={entries:merged}; changed=true; }
+  });
+  return changed;
+}
+function impLogSaveCache(){ try{ storageSet(IMP_LOG_CACHE_SLOT, JSON.stringify(_impLog)); }catch(e){} }
+
+// Leitura com as duas camadas do padrão de resiliência: retry de transporte já
+// vem do _gasJsonp; aqui só o retry de CONTEÚDO (ok:false/vazio), 1x, 2s — e
+// nunca para "chave inválida" (backend ainda sem a v32: não adianta insistir).
+function gasLoadImpLog(cb, retriesLeft){
+  if(!BK_GAS_URL){ if(cb) cb(new Error('sem backend')); return; }
+  if(retriesLeft===undefined) retriesLeft=1;
+  _impLogLoading=true;
+  _gasJsonp(BK_GAS_URL+'?action=getVpData&key='+IMP_LOG_VP_NAME+'&t='+Date.now(), function(err,json){
+    if(err){ _impLogLoading=false; if(cb) cb(err); return; }
+    if(!json||!json.ok){
+      var msg=String(json&&json.error||'');
+      if(/inv[aá]lid/i.test(msg)){ _impLogLoading=false; _impLogUnavailable=true; impLogRefreshCells(); if(cb) cb(new Error(msg)); return; }
+      if(retriesLeft>0){ setTimeout(function(){ gasLoadImpLog(cb, retriesLeft-1); }, 2000); return; }
+      _impLogLoading=false; if(cb) cb(new Error(msg||'resposta vazia')); return;
+    }
+    _impLogLoading=false; _impLogUnavailable=false; _impLogLoadedOnce=true;
+    if(typeof json.revision==='number') _impLogRevision=json.revision;
+    var server=(json.data&&typeof json.data==='object'&&!Array.isArray(json.data))?json.data:{};
+    impLogMergeInto(_impLog, server);
+    impLogSaveCache();
+    impLogRefreshCells();
+    // Eventos registrados aqui que o servidor ainda não tem (gravação falhou,
+    // backend sem v32 na hora, aba fechada antes de confirmar): reenvia.
+    var pending=impLogPendingIds().filter(function(id){
+      var srv=(server[id]&&Array.isArray(server[id].entries))?server[id].entries:[];
+      var ids={}; srv.forEach(function(x){ if(x&&x.id) ids[x.id]=true; });
+      return impLogEntries(id).some(function(x){ return !ids[x.id]; });
+    });
+    impLogSetPending(pending);
+    pending.forEach(function(id){ impLogPushEpic(id, true); });
+    if(cb) cb(null);
+  }, 28000, 0);
+}
+// retriesLeft=0 no _gasJsonp acima: este fluxo já tem o próprio retry de
+// conteúdo — nunca empilhar duas camadas (lição 6 do incidente 04–05/08).
+
+function impLogPushEpic(epicId, skipPull){
+  var ids=impLogPendingIds(); if(ids.indexOf(epicId)<0){ ids.push(epicId); impLogSetPending(ids); }
+  if(!BK_GAS_URL||_impLogUnavailable) return;
+  function send(){
+    var payload={}; payload[epicId]={entries:impLogEntries(epicId)};
+    fetch(BK_GAS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'action=saveVpData&key='+IMP_LOG_VP_NAME+'&payload='+encodeURIComponent(JSON.stringify(payload))
+    }).catch(function(){});
+    // Conferência: relê depois de um respiro; gasLoadImpLog tira da fila o que
+    // o servidor já tem e reenvia o que ainda falta.
+    setTimeout(function(){ gasLoadImpLog(function(){}); }, 3500);
+  }
+  if(skipPull){ send(); return; }
+  gasLoadImpLog(function(){ send(); });
+}
+
+function impLogRecord(epicId, previous, text){
+  previous=String(previous||''); text=String(text||'');
+  if(previous.trim()===text.trim()) return;
+  var action=!previous.trim()?'create':(!text.trim()?'delete':'edit');
+  var now=new Date();
+  var entry={id:now.getTime().toString(36)+'-'+Math.random().toString(36).slice(2,8), at:now.toISOString(), action:action, text:text, previous:previous};
+  _impLog[epicId]={entries:impLogUnion(impLogEntries(epicId),[entry])};
+  impLogSaveCache();
+  impLogRefreshCells(epicId);
+  impLogPushEpic(epicId);
+}
+
+function impLogFmt(iso){
+  var d=new Date(iso); if(isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+// Ciclo de vida do impedimento ATUAL: começa no último 'create' (depois da
+// última exclusão); "Editado em" é a última edição desse ciclo.
+function impLogCurrentCycle(epicId){
+  var all=impLogEntries(epicId), start=-1;
+  for(var i=all.length-1;i>=0;i--){ if(all[i].action==='create'){ start=i; break; } if(all[i].action==='delete') break; }
+  if(start<0) return {created:null, edited:null};
+  var edited=null; for(var j=start+1;j<all.length;j++){ if(all[j].action==='edit') edited=all[j]; }
+  return {created:all[start], edited:edited};
+}
+function impLogMetaHtml(r){
+  var id=r.id, has=!!String(r.impedimento||'').trim(), all=impLogEntries(id), cyc=impLogCurrentCycle(id);
+  var line;
+  if(!has) line=all.length?'Sem impedimento ativo':'Sem impedimento registrado';
+  else if(cyc.created) line='Registrado em '+impLogFmt(cyc.created.at)+(cyc.edited?' · editado em '+impLogFmt(cyc.edited.at):'');
+  else { var lastEdit=null; for(var k=all.length-1;k>=0;k--){ if(all[k].action==='edit'){ lastEdit=all[k]; break; } }
+    line='Registrado antes do histórico'+(lastEdit?' · editado em '+impLogFmt(lastEdit.at):''); }
+  var btns='';
+  if(all.length) btns+='<button type="button" onclick="impLogOpen(\''+escJs(id)+'\')">Histórico ('+all.length+')</button>';
+  btns+='<button type="button" onclick="impLogEdit(\''+escJs(id)+'\')">'+(has?'Editar':'Registrar')+'</button>';
+  if(has) btns+='<button type="button" class="imp-log-del" onclick="impLogDelete(\''+escJs(id)+'\')">Excluir</button>';
+  return '<span class="imp-log-when">'+esc(line)+'</span><span class="imp-log-actions">'+btns+'</span>';
+}
+function escJs(v){ return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'\\x3c'); }
+function impLogRefreshCells(onlyId){
+  document.querySelectorAll('.imp-log[data-imp-log]').forEach(function(box){
+    var id=box.getAttribute('data-imp-log'); if(onlyId&&id!==onlyId) return;
+    var rec=(allData||[]).find(function(x){ return x&&x.id===id; }); if(!rec) return;
+    box.innerHTML=impLogMetaHtml(rec);
+  });
+  var ov=$id('impHistOv'); if(ov&&ov.classList.contains('show')&&ov.dataset.epic&&(!onlyId||onlyId===ov.dataset.epic)) impLogOpen(ov.dataset.epic, true);
+}
+function impLogField(epicId){
+  var list=document.querySelectorAll('.eimp[data-id]');
+  for(var i=0;i<list.length;i++){ if(list[i].dataset.id===epicId) return list[i]; }
+  return null;
+}
+// Editar = o mesmo campo de sempre, com a mesma trava de senha (eimpFocus).
+function impLogEdit(epicId){
+  var f=impLogField(epicId); if(!f) return;
+  f.scrollIntoView({block:'center',behavior:'smooth'});
+  setTimeout(function(){ f.focus(); }, 120);
+}
+// Excluir = esvaziar o campo pelo MESMO caminho de gravação (fc), depois da
+// mesma trava de senha. O histórico guarda o texto excluído.
+function impLogDelete(epicId){
+  var f=impLogField(epicId); if(!f) return;
+  if(!impSenhaOk){ toast('🔒 Edição bloqueada','Desbloqueie a edição de impedimentos (cadeado no cabeçalho da coluna) para excluir.','warn'); eimpLockClick(); return; }
+  if(!confirm('Excluir o impedimento de '+epicId+'?\n\nO épico continua igual e o texto excluído fica guardado no histórico.')) return;
+  f.dataset.impPrev=f.value;
+  f.value='';
+  fc(f);
+}
+var IMP_LOG_LABEL={create:'Registrado',edit:'Editado',delete:'Excluído'};
+function impLogOpen(epicId, keepFocus){
+  var ov=$id('impHistOv');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='impHistOv'; ov.className='imp-hist-ov';
+    ov.innerHTML='<div class="imp-hist-box" role="dialog" aria-modal="true" aria-labelledby="impHistTitle"><div class="imp-hist-hd"><h3 id="impHistTitle"></h3><button type="button" class="imp-hist-x" onclick="impLogClose()" aria-label="Fechar histórico">✕</button></div><div class="imp-hist-body" id="impHistBody"></div></div>';
+    ov.addEventListener('click',function(e){ if(e.target===ov) impLogClose(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&ov.classList.contains('show')) impLogClose(); });
+    document.body.appendChild(ov);
+  }
+  var all=impLogEntries(epicId).slice().reverse();
+  ov.dataset.epic=epicId;
+  $id('impHistTitle').textContent='Histórico do impedimento · '+epicId;
+  var note=_impLogUnavailable?'<p class="imp-hist-note">⚠ O histórico ainda está salvo só neste navegador: o Apps Script precisa ser atualizado (v32) para compartilhar com o time.</p>'
+    :(impLogPendingIds().indexOf(epicId)>=0?'<p class="imp-hist-note">⏳ Sincronizando este histórico com o time…</p>':'');
+  $id('impHistBody').innerHTML=note+(all.length?all.map(function(x){
+    return '<article class="imp-hist-item imp-hist-'+esc(x.action)+'"><div class="imp-hist-meta"><b>'+esc(IMP_LOG_LABEL[x.action]||x.action)+'</b><span>'+esc(impLogFmt(x.at))+'</span></div>'+
+      (x.action!=='delete'?'<p>'+esc(x.text)+'</p>':'')+
+      (x.previous&&x.action!=='create'?'<p class="imp-hist-prev"><span>Texto anterior:</span> '+esc(x.previous)+'</p>':'')+'</article>';
+  }).join(''):'<p class="imp-hist-empty">Nenhum registro ainda. Impedimentos criados antes desta versão não têm data de registro.</p>');
+  ov.classList.add('show');
+  if(!keepFocus){ var x=ov.querySelector('.imp-hist-x'); if(x) setTimeout(function(){ x.focus(); },30); }
+}
+function impLogClose(){ var ov=$id('impHistOv'); if(ov){ ov.classList.remove('show'); delete ov.dataset.epic; } }
+
 function setImpUnlocked(unlocked){
   impSenhaOk=!!unlocked;
   try{
@@ -4754,7 +4955,7 @@ function setImpUnlocked(unlocked){
   }
 }
 function eimpFocus(el){
-  if(impSenhaOk) return;
+  if(impSenhaOk){ if(el && el.dataset.impPrev===undefined) el.dataset.impPrev=el.value||''; return; }
   el.blur();
   _impFocusTgt=el;
   var m=$id('impLockBox'), o=$id('impLockOv');
@@ -5814,6 +6015,9 @@ function gasCheckBacklogRevision(cb){
     var stRev=json.revisions.stories;
     if(typeof stRev==='number' && _storiesRevision!==null && stRev!==_storiesRevision){ gasLoadStories(function(){}); }
     // Abas já abertas recebem a última conferência feita por outro usuário sem F5.
+    // Histórico do Impedimento (v32): mesma resposta do ping, sem chamada extra.
+    var impLogRev=json.revisions[IMP_LOG_VP_NAME];
+    if(typeof impLogRev==='number' && impLogRev!==_impLogRevision && !_impLogLoading){ gasLoadImpLog(function(){}); }
     var auditRev=json.revisions.vpImportAudit;
     if(typeof auditRev==='number' && (_importAuditRevision===null || auditRev!==_importAuditRevision)){ gasLoadImportAudit(); }
     if(_bkLastKnownRevision!==null && rev===_bkLastKnownRevision){ if(cb) cb(null,false); return; }
@@ -9233,6 +9437,7 @@ var SEED=[
     // Carrega os metadados e a foto Jira antes do sync do Sheets. Assim uma
     // sessão nova não recebe a carteira antiga enquanto a fonte legada migra.
     loadEpicMetaFromCloud();
+    gasLoadImpLog(function(){});
     // Publica o calendário de sprints já salvo neste navegador para a nuvem —
     // garante que vpSprintCalendar exista no backend mesmo sem uma edição nova
     // (ver calSaveToCloud() para o motivo).
@@ -10615,6 +10820,156 @@ function emSetTab(tab){window.emActiveTab=tab;renderEmergencyView();}
 // Evita exibir o layout legado enquanto a sincronização assíncrona é concluída.
 // Este script é carregado após o boot inicial; redesenha a aba já aberta agora.
 if((typeof curTab!=='undefined'&&curTab==='em')||document.querySelector('#pane-em.on')) renderEmergencyView();
+</script>
+
+<!-- ══ LAYOUT SALA (06/11/2026) ══
+     Só apresentação: faixa vermelha, menu lateral recolhível, barra de ações
+     branca e superfícies planas. Nenhuma regra de negócio muda aqui. Fica no fim
+     do <body> de propósito: vem DEPOIS dos patches visuais que o deploy injeta no
+     <head> (.github/scripts/*.py), então vence nos empates de !important. -->
+<style id="sala-shell-layout">
+:root{--sala-side:220px;--sala-red:#ef1033;--sala-ink:#283b49;--sala-nav:#30414e;--sala-nav-on:#4a5e6b;--sala-line:#e3e8ed;--sala-muted:#64717d}
+html,body{background:#fff!important;color:var(--sala-ink);font-family:Inter,Arial,sans-serif!important}
+body{padding-top:98px!important;margin:0!important}
+.sala-mast{height:56px;position:fixed;inset:0 0 auto;z-index:180;background:var(--sala-red);color:#fff;display:flex;align-items:center;padding:0 26px;gap:20px;box-sizing:border-box}
+.sala-mast-brand{font-size:26px;font-weight:800;letter-spacing:-1px}
+.sala-mast-product{font-size:16px;border-left:1px solid #ffffff80;padding-left:20px}
+.sala-mast-slot{margin-left:auto;display:flex;align-items:center}
+.sala-mast-slot #importLockBanner{margin:0}
+.sala-mast-import{background:transparent;color:#fff;border:1px solid #ffffff80;padding:7px 14px;border-radius:6px;cursor:pointer;font:600 12px Inter,Arial,sans-serif;white-space:nowrap}
+.sala-mast-import:hover{background:#ffffff1f}
+.sala-mast-import:focus-visible,.sala-nav-collapse:focus-visible,body .tabs .tabbt:focus-visible{outline:2px solid #fff;outline-offset:2px}
+body .top{position:fixed!important;left:var(--sala-side)!important;right:0!important;top:56px!important;min-height:42px!important;height:42px!important;padding:0 25px!important;display:flex!important;align-items:center!important;flex-wrap:nowrap!important;gap:16px!important;background:#fff!important;background-image:none!important;border:0!important;border-bottom:1px solid #e8edf0!important;box-shadow:none!important;z-index:170!important;overflow-x:auto!important;overflow-y:hidden!important;box-sizing:border-box!important}
+body .top::before,body .top::after{display:none!important}
+body .top .top-logo,body .top .top-brand,body .top .top-sync,body .top .top-gap{display:none!important}
+body .top #healthBadge{order:19;flex:none}
+body .top button.tbtn,body .top a.tbtn{background:transparent!important;border:0!important;border-radius:0!important;color:#52616d!important;box-shadow:none!important;padding:6px 0!important;min-width:max-content!important;height:auto!important;font-size:11px!important;font-weight:500!important;gap:6px!important;white-space:nowrap!important;text-decoration:none!important}
+body .top button.tbtn:hover,body .top a.tbtn:hover{color:var(--sala-red)!important}
+body .top .tbtn span{display:inline!important}body .top .tbtn svg{width:13px;height:13px;flex:none}
+body .top .top-meta{order:20;margin-left:auto!important;background:none!important;color:#64717c!important;border:0!important;font-size:11px!important;font-weight:600!important;white-space:nowrap;padding:0!important;box-shadow:none!important}
+body .tabs{position:fixed!important;left:0!important;top:56px!important;bottom:0!important;width:var(--sala-side)!important;height:auto!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:5px!important;background:var(--sala-nav)!important;border:0!important;box-shadow:none!important;box-sizing:border-box!important;padding:16px 10px!important;margin:0!important;overflow-x:hidden!important;overflow-y:auto!important;z-index:175!important}
+body .tabs .tabbt{position:relative!important;display:flex!important;align-items:center!important;gap:12px!important;min-height:46px!important;height:auto!important;width:100%!important;border:0!important;border-radius:6px!important;padding:12px 13px!important;margin:0!important;background:transparent!important;color:#e4eaf0!important;text-align:left!important;white-space:normal!important;font-size:13px!important;font-weight:500!important;box-shadow:none!important;flex:none!important;line-height:1.3!important}
+body .tabs .tabbt:hover:not(.on){background:#ffffff12!important;color:#fff!important}
+body .tabs .tabbt.on{background:var(--sala-nav-on)!important;color:#fff!important;border:0!important}
+body .tabs .tabbt.on::before{content:'';position:absolute;left:-10px;top:7px;bottom:7px;width:4px;background:var(--sala-red);border-radius:0 4px 4px 0}
+body .tabs .tabbt::after{display:none!important}
+.sala-nav-icon{width:19px;height:19px;flex:none}
+.sala-tab-label{flex:1;min-width:0;overflow-wrap:anywhere}
+body .tabs .tabbt .tab-ct{font-size:10px!important;background:#ffffff1c!important;color:#dde7ee!important;margin:0 0 0 auto!important;flex-shrink:0;min-width:22px;text-align:center;border:0!important}
+body .tabs .tabbt .tab-ct:empty{display:none!important}
+.sala-nav-collapse{color:#dce6ed;background:none;border:0;text-align:left;padding:5px 12px 16px;cursor:pointer;font:500 12px Inter,Arial,sans-serif;white-space:nowrap}
+.sala-nav-collapse:hover{color:#fff}
+body>.pane{margin-left:var(--sala-side)!important;width:auto!important;box-sizing:border-box;min-height:calc(100vh - 98px);background:#fff!important}
+body>.pane:not(#pane-ep):not(#pane-me){padding:22px 26px!important}
+body>.remote-trust-gate,body>.risk-notif-panel{margin-left:var(--sala-side)!important}
+.pane>.ep{padding:26px!important;max-width:none!important;margin:0!important}
+body .metabar,body .upbar{display:none!important}
+.premium-ep-strip{display:none!important}.premium-ep-executive{box-shadow:none!important;border:0!important;padding:0!important;background:#fff!important}
+.premium-title,.med-hero-t{font-size:28px!important;font-weight:700!important;letter-spacing:-.6px!important;color:#172a39!important}
+.premium-subtitle,.med-hero-s{font-size:12px!important;font-weight:400!important;color:var(--sala-muted)!important}
+.premium-kpis{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:14px!important}
+.premium-kpi{padding:16px!important;border:1px solid #e1e7ec!important;border-radius:12px!important;box-shadow:none!important;background:#fff!important;min-height:118px!important;box-sizing:border-box}
+.premium-kpi::before{display:none!important}.premium-kpi:hover{border-color:#9aa9b6!important;background:#fbfcfd!important}
+.premium-kpi-l{font-size:12px!important;letter-spacing:0!important;text-transform:none!important;color:#253746!important;font-weight:600!important}
+.premium-kpi-v{font-size:29px!important;font-weight:700!important;margin:8px 0 4px!important;color:#334957!important}.premium-kpi-s{font-size:11px!important;color:var(--sala-muted)!important}
+.fbar{background:#fff!important;border:0!important;box-shadow:none!important;padding:12px 0!important;margin:16px 0!important;gap:9px!important;border-radius:0!important;flex-wrap:wrap!important}
+.fsel,.fdate,.fsrch{background:#fff!important;border:1px solid #dde5ec!important;border-radius:6px!important;font-size:12px!important;min-height:33px!important;color:#334957!important}
+.fl{color:#52616d!important;font-size:10px!important}.chip{font-size:11px!important;box-shadow:none!important}.chip.on{background:#fbe9ed!important;color:#c71435!important;border-color:#efb6c2!important}
+.tc{background:#fff!important;border:1px solid #e4e9ed!important;border-radius:9px!important;box-shadow:none!important;overflow:hidden}
+.tc-hd{background:#fff!important;border:0!important;padding:16px!important}.tc-hd-t{font-size:18px!important;color:#233846!important}.tc-hint{color:#788690!important;font-size:10px!important}
+#pane-ep table,#pane-me table{font-size:12px!important;border-collapse:collapse!important}
+#pane-ep th,#pane-me th{background:#edf1f4!important;color:#344856!important;font-size:10px!important;letter-spacing:0!important;padding:12px 10px!important;border:0!important}
+#pane-ep td,#pane-me td{padding:13px 10px!important;border-bottom:1px solid #edf0f3!important;background:#fff!important;vertical-align:top!important;font-size:11px!important}
+#pane-ep tr:hover td,#pane-me tr:hover td{background:#fafbfc!important}
+#pane-ep .cres,#pane-me .cres{min-width:200px!important;max-width:330px!important}
+.einp{background:transparent!important;border:1px solid transparent!important;font-size:11px!important;padding:3px!important;min-width:80px!important}
+.einp:hover,.einp:focus{border-color:#cbd5de!important;background:#fff!important}
+.einp.einp-warn{border-color:#fcd99a!important;background:#fffbf5!important}
+.cimp{min-width:230px!important}
+.eimp{font-size:11px!important;line-height:1.5!important;background:transparent!important;border-color:transparent!important;min-height:40px!important}
+.eimp:hover{border-color:#e1e7ec!important}.eimp:focus{border-color:#b9c8d2!important;background:#fff!important}
+#pane-ep .tscr,#pane-me .tscr{width:100%;overflow:auto!important}
+#pane-ep .tc table{min-width:1400px!important;table-layout:auto!important}
+#pane-me .tc table{min-width:1050px!important}
+.med-hero{padding:0!important;margin:0 0 6px!important;background:#fff!important;border:0!important;box-shadow:none!important}.med-hero-icon{display:none!important}.med-hero-s{margin-top:7px!important}
+#medFbar{margin:8px 0 16px!important;padding:8px 0!important}
+#medKpi{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px!important;margin-bottom:18px!important}
+#medKpi .kpi{border:1px solid var(--sala-line)!important;border-radius:11px!important;box-shadow:none!important;padding:16px!important;background:#fff!important}#medKpi .kpi::before{display:none!important}
+#medSquadsLbl{font-size:17px!important;font-weight:650!important;letter-spacing:0!important;text-transform:none!important;color:#253a49!important;margin-top:18px!important;margin-bottom:10px!important}
+#medSquads{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(165px,1fr))!important;gap:12px!important;padding:4px 0 12px!important}
+#medSquads .sc{padding:15px!important;border:1px solid var(--sala-line)!important;border-radius:11px!important;background:#fff!important;box-shadow:none!important}
+#medSquads .sc-acc,#medSquads .sc-ico{display:none!important}#medSquads .sc-nm{font-size:12px!important}#medSquads .sc-lt{font-size:29px!important;font-weight:700!important}#medSquads .sc-stats{font-size:10px!important}#medSquads .sc-nm-wrap{flex-wrap:wrap!important}
+.kpi-l{letter-spacing:0!important}.kpi-v{font-size:29px!important}
+/* Menu recolhido (preferência individual, guardada neste navegador) */
+body.sala-nav-collapsed{--sala-side:68px}
+body.sala-nav-collapsed .sala-tab-label,body.sala-nav-collapsed .tabs .tabbt .tab-ct,body.sala-nav-collapsed .sala-nav-collapse-label{display:none!important}
+body.sala-nav-collapsed .tabs{padding:16px 7px!important}
+body.sala-nav-collapsed .tabs .tabbt{justify-content:center!important;padding:13px 6px!important}
+body.sala-nav-collapsed .sala-nav-collapse{padding:5px 5px 16px;text-align:center}
+@media(max-width:1200px){:root{--sala-side:190px}.premium-kpis{gap:8px!important}.premium-kpi{padding:12px!important}body .top{gap:12px!important}.premium-kpi-l{font-size:11px!important}}
+@media(max-width:760px){
+  :root{--sala-side:60px}
+  .sala-tab-label,body .tabs .tabbt .tab-ct,.sala-nav-collapse{display:none!important}
+  body .tabs{padding:12px 5px!important}body .tabs .tabbt{justify-content:center!important;padding:12px 6px!important}
+  body .top{padding:0 12px!important}
+  .pane>.ep{padding:18px 12px!important}body>.pane:not(#pane-ep):not(#pane-me){padding:16px 12px!important}
+  .premium-kpis,#medKpi{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .sala-mast{padding:0 12px;gap:10px}.sala-mast-brand{font-size:21px}.sala-mast-product{font-size:12px;padding-left:10px}.sala-mast-import{font-size:11px;padding:6px 9px}
+}
+/* Especificidade extra: vence as regras antigas mais específicas do próprio painel */
+body #pane-ep .premium-title{color:#172a39!important}
+body #pane-ep .tc table th,body #pane-me .tc table th{background:#edf1f4!important;color:#344856!important;border:0!important}
+body #pane-ep .tc table td,body #pane-me .tc table td{background:#fff!important}
+body #pane-ep .tc table tr:hover td,body #pane-me .tc table tr:hover td{background:#fafbfc!important}
+body #pane-ep .premium-kpi-v:empty::after{content:'0'}
+/* Histórico do Impedimento (célula + janela) */
+.imp-log{display:flex;flex-direction:column;gap:3px;margin-top:5px;font-size:10px;line-height:1.5;color:#6a7a87}
+.imp-log-when{overflow-wrap:anywhere}
+.imp-log-actions{display:flex;flex-wrap:wrap;gap:12px}
+.imp-log-actions button{background:none;border:0;padding:2px 0;color:#4d5f6c;font:600 10px Inter,Arial,sans-serif;cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-decoration-color:#c5d0d8}
+.imp-log-actions button:hover,.imp-log-actions button:focus-visible{color:#c71435;text-decoration-color:currentColor}
+.imp-log-actions .imp-log-del:hover{color:#b91c1c}
+.imp-hist-ov{position:fixed;inset:0;z-index:9000;background:#14293966;display:none;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+.imp-hist-ov.show{display:flex}
+.imp-hist-box{width:100%;max-width:560px;max-height:min(80vh,680px);background:#fff;border-radius:12px;box-shadow:0 18px 60px #12273840;display:flex;flex-direction:column;overflow:hidden;color:var(--sala-ink)}
+.imp-hist-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #e8edf1}
+.imp-hist-hd h3{margin:0;font-size:16px;font-weight:700}
+.imp-hist-x{border:0;background:none;font-size:16px;color:#50626f;cursor:pointer;padding:4px 8px;border-radius:6px}.imp-hist-x:hover{background:#f1f4f6}
+.imp-hist-body{overflow:auto;padding:8px 20px 18px}
+.imp-hist-item{padding:12px 0 12px 14px;border-bottom:1px solid #eef1f4;border-left:3px solid #c5d0d8;margin-left:2px}
+.imp-hist-item:last-child{border-bottom:0}
+.imp-hist-create{border-left-color:#16a34a}.imp-hist-edit{border-left-color:#2563eb}.imp-hist-delete{border-left-color:#dc2626}
+.imp-hist-meta{display:flex;justify-content:space-between;gap:10px;font-size:11px}.imp-hist-meta span{color:var(--sala-muted)}
+.imp-hist-item p{margin:6px 0 0;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.imp-hist-prev{color:#6a7a87}.imp-hist-prev span{font-weight:600}
+.imp-hist-note{font-size:11px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:8px 10px;margin:10px 0 4px}
+.imp-hist-empty{font-size:12px;color:var(--sala-muted);padding:14px 0}
+@media(prefers-reduced-motion:reduce){body .tabs .tabbt{transition:none!important}}
+</style>
+<script id="sala-shell-nav">
+// Menu lateral recolhível — preferência por pessoa/navegador (localStorage só
+// para conveniência visual; sem dado compartilhado). Nome sem "Key" (GitLeaks).
+var SALA_NAV_PREF_SLOT='sala_nav_collapsed_v1';
+function salaApplyNav(collapsed){
+  document.body.classList.toggle('sala-nav-collapsed', !!collapsed);
+  var b=document.getElementById('salaNavCollapse');
+  if(b){ b.setAttribute('aria-expanded', String(!collapsed)); b.title=collapsed?'Expandir menu':'Recolher menu';
+    var arrow=b.querySelector('[aria-hidden]'); if(arrow) arrow.textContent=collapsed?'››':'‹‹'; }
+}
+function salaToggleNav(){
+  var collapsed=!document.body.classList.contains('sala-nav-collapsed');
+  salaApplyNav(collapsed);
+  try{ localStorage.setItem(SALA_NAV_PREF_SLOT, collapsed?'1':'0'); }catch(e){}
+}
+(function(){
+  var collapsed=false; try{ collapsed=localStorage.getItem(SALA_NAV_PREF_SLOT)==='1'; }catch(e){}
+  salaApplyNav(collapsed);
+  // O aviso "Importação em andamento…" mora na barra de upload (escondida neste
+  // layout) — move o MESMO nó para a faixa vermelha; o código que liga/desliga
+  // pelo id continua igual.
+  var lock=document.getElementById('importLockBanner'), slot=document.getElementById('salaMastSlot');
+  if(lock && slot) slot.appendChild(lock);
+})();
 </script>
 </body>
 </html>
