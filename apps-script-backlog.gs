@@ -1,6 +1,10 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v32 — nova chave epicImpedimentoLog (VP_SHEET_MAP + MERGE_MAP_KEYS): trilha
+ *       de eventos do Impedimento dos Épicos (registrado/editado/excluído, com
+ *       data e texto anterior) para index.html. O texto do impedimento em si
+ *       continua na base oficial dos Épicos — nada muda nela.
  * v31 — leadtimeDate_ (board de Épicos) só aceitava AAAA-MM-DD exato e
  * descartava qualquer outra coisa em silêncio, virando ''. Isso incluía o
  * formato dd/mm/aaaa — o que normalmente chega de colagem manual, planilha
@@ -133,7 +137,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-11-03-v31-leadtime-date-br-format';
+var BACKLOG_SCRIPT_VERSION = '2026-11-06-v32-impedimento-log';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -160,6 +164,10 @@ var VP_SHEET_MAP = {
   vpOpUpdates:  '_vp_opupdates',
   vpQuickNotes: '_vp_quicknotes',
   vpEpicMeta:   '_vp_epic_meta',
+  // v32: histórico do Impedimento dos Épicos (index.html) — data de registro,
+  // edições e exclusões. Mapa {idÉpico:{entries:[...]}}; o TEXTO do impedimento
+  // continua na base oficial dos Épicos, aqui fica só a trilha de eventos.
+  epicImpedimentoLog: '_epic_impedimento_log',
   // Comprovante compartilhado do robô pós-importação. Snapshot único: todos os
   // navegadores veem a mesma última conferência e as mesmas chaves rejeitadas.
   vpImportAudit: '_vp_import_audit',
@@ -277,6 +285,9 @@ var MERGE_MAP_KEYS = {
   vpPlanningSnapshots: true,
   vpSprintObjectives: true,
   vpEpicMeta: true,
+  // v32: o cliente envia SÓ o épico alterado (depois de puxar e unir as listas
+  // de eventos por id) — o merge raso por épico preserva todos os outros.
+  epicImpedimentoLog: true,
   // Mapa plano assinatura→estado (excluído/concluído); nunca uma fotografia
   // completa, então merge por chave está certo aqui também.
   discoveryPmoReportResolved: true,

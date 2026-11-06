@@ -1,5 +1,28 @@
 # leadtime-dash — guia para trabalhar neste repositório
 
+## Layout SALA + histórico do Impedimento (06/11/2026, v32 do backend)
+
+- **Layout** (`index.html`, bloco `<style id="sala-shell-layout">` + `<script
+  id="sala-shell-nav">` no FIM do `<body>`): faixa vermelha "SALA | Lead Time"
+  com "🌐 Importar Tudo" (usa o mesmo `#fiAllGlobal`), menu lateral escuro
+  recolhível (preferência individual em `localStorage`, `sala_nav_collapsed_v1`)
+  e barra de ações branca. Fica no fim do body de propósito: precisa vir DEPOIS
+  dos patches visuais que o deploy injeta no `<head>` (`.github/scripts/*.py`).
+  Só apresentação — avisos de dados (`#healthBadge`, `#remoteTrustGate`,
+  `#riskNotifPanel`, `#semFimAlert`) continuam visíveis de propósito; a barra de
+  upload (`.upbar`) e a `.metabar` ficam escondidas e o aviso "Importação em
+  andamento" (`#importLockBanner`) é movido para a faixa vermelha.
+- **Histórico do Impedimento**: o TEXTO continua na base oficial dos Épicos
+  (`SHEETS_WEBAPP`, Apps Script separado e fora deste repo — por isso o
+  histórico NÃO vai junto do épico). A trilha (registrado/editado/excluído, data,
+  texto anterior) fica na chave `epicImpedimentoLog` do `apps-script-backlog.gs`
+  (VP_SHEET_MAP + MERGE_MAP_KEYS). Eventos só são acrescentados e têm id único
+  → juntar listas é sempre a união; o cliente envia SÓ o épico alterado depois
+  de puxar e unir. Sem polling próprio (ping `getRevisions`). Editar/Excluir
+  passam pela mesma trava de senha do campo. Com backend antigo (sem v32) a
+  tela não quebra: guarda localmente (`sala_imp_log_pending_v1`) e reenvia
+  sozinho quando a v32 estiver no ar.
+
 ## Status atual: Aba Portfólio descontinuada (06/11/2026)
 
 A aba **🗂️ Portfólio** (Gestão de Iniciativas) foi **removida** a pedido

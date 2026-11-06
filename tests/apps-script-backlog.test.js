@@ -311,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-11-03-v31-leadtime-date-br-format');
+  t('versão correta', h.version, '2026-11-06-v32-impedimento-log');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -554,6 +554,30 @@ console.log('\n═══ 20. leadtimeDate_: datas do board de Épicos (v31) ═�
   const epic = after.find(function(r){ return r.id==='SLOPC-1'; });
   t('Data Prevista em dd/mm/aaaa foi normalizada e gravada, não apagada', epic.dataPrevista, '2026-06-20');
   t('Data Início anterior (não enviada nesta edição) foi preservada', epic.ini, '2026-01-10');
+}
+
+console.log('\n═══ 21. epicImpedimentoLog: histórico do Impedimento (v32) ═══');
+{
+  const { ctx } = novoAmbiente();
+  const ev = (id, at, action, text, previous) => ({ id, at, action, text, previous: previous || '' });
+  const w1 = parse(ctx.doPost(post({ action:'saveVpData', key:'epicImpedimentoLog', payload: JSON.stringify({
+    'SLOPC-1': { entries: [ev('a1','2026-11-01T10:00:00.000Z','create','Aguardando ambiente')] },
+    'SLOPC-2': { entries: [ev('b1','2026-11-02T10:00:00.000Z','create','Sem acesso')] }
+  }) })));
+  t('chave epicImpedimentoLog é aceita pelo saveVpData', w1.ok, true);
+  // Outra pessoa envia SÓ o épico que alterou: os demais épicos não podem sumir.
+  const w2 = parse(ctx.doPost(post({ action:'saveVpData', key:'epicImpedimentoLog', payload: JSON.stringify({
+    'SLOPC-1': { entries: [ev('a1','2026-11-01T10:00:00.000Z','create','Aguardando ambiente'), ev('a2','2026-11-03T09:00:00.000Z','edit','Ambiente liberado parcialmente','Aguardando ambiente')] }
+  }) })));
+  t('gravação de um épico só é aceita', w2.ok, true);
+  t('servidor faz merge (não substitui a base inteira)', w2.merged, true);
+  const g = parse(ctx.doGet(post({ action:'getVpData', key:'epicImpedimentoLog' })));
+  t('épico não enviado na 2ª gravação foi preservado', g.data['SLOPC-2'].entries.length, 1);
+  t('épico enviado traz o evento novo', g.data['SLOPC-1'].entries.length, 2);
+  t('texto anterior fica guardado no evento de edição', g.data['SLOPC-1'].entries[1].previous, 'Aguardando ambiente');
+  const rv = parse(ctx.doGet(post({ action:'getRevisions' })));
+  t('getRevisions inclui epicImpedimentoLog (sem polling novo no cliente)', rv.revisions.epicImpedimentoLog, 2);
+  t('versão do script identifica a v32', /v32/.test(ctx.BACKLOG_SCRIPT_VERSION), true);
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
