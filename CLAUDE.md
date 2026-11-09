@@ -47,28 +47,23 @@ recrie a aba sem confirmar com a pessoa responsável.**
   (`medPrepareFocus`/`_medFocusId`).
 - **Épico concluído no Jira "sumia" de tudo** (caso real SLOPC-43723, 06/11):
   o relatório "Épicos Pós-Identificado" só traz épicos em andamento; ao ser
-  concluído no Jira o épico sai do arquivo, e se ninguém preencheu a Data Fim
-  no painel ele era descartado pelo import e escondido pela foto
-  `jiraEpicSnapshot` — de Épicos E da Medição, para todo mundo (o registro
-  continua na base oficial). A regra de esconder foi mantida (evita
-  ressuscitar épicos antigos fora da carteira); os escondidos ficam em
-  `_epicsOutsideJira` e a busca (Épicos e Medição) os encontra com
-  "Informar Data Fim" (`outsideJiraOpen`/`outsideJiraConfirm`), que grava pelo
-  mesmo caminho de sempre (`saveToSheets`/`queuePendingWrite`). Com Data Fim
-  o épico vira histórico e passa a aparecer para todos.
-- **Correção de raiz (mesmo dia)**: a foto `jiraEpicSnapshot` ganhou o mapa
-  compartilhado `left` `{id: 'AAAA-MM-DD'}` — a cada importação,
-  `computeJiraLeft` compara com a foto anterior (`loadJiraEpicSnapshotRaw`,
-  sem o limite de 48h) e registra quem SAIU do relatório sem Data Fim. Esses
-  épicos **continuam em Épicos** (import e sync do Sheets os mantêm) com o selo
-  "⚠ Saiu do Jira em dd/mm · informe a Data Fim" (`epicLeftJiraDate`); saem do
-  mapa quando voltam ao relatório ou ganham Data Fim/cancelamento. Para os que
-  já estavam ocultos antes disso (não dá para saber a data real — ela só
-  existe no Jira), o banner `#ojRecoverBanner` abre a **revisão em lote**
-  (`ojReviewOpen`): Concluir com data (Data Prevista vencida vira sugestão;
-  recusa data futura ou anterior ao início), Voltar para Épicos (entra no
-  `left` via `updateJiraLeft`, para todos) ou Manter oculto. Teste de ponta a
-  ponta (Playwright, 2 navegadores, importação real de CSV): 25/25.
+  concluído no Jira o épico saía do arquivo e, sem Data Fim no painel, era
+  descartado pelo import e escondido pela foto `jiraEpicSnapshot` — de Épicos
+  E da Medição, para todo mundo. **Regra da pessoa responsável: NADA fica
+  oculto.** A foto do Jira não descarta mais épico nenhum (import mantém
+  todos os que não vieram no arquivo; sync do Sheets não filtra) — ela só
+  SINALIZA: `epicLeftJiraDate` devolve a data em que saiu (mapa compartilhado
+  `jiraEpicSnapshot.left`, calculado por `computeJiraLeft` a cada importação
+  comparando com a foto anterior via `loadJiraEpicSnapshotRaw`) ou `'fora'`
+  (fora do relatório, data desconhecida). Esses épicos ficam em Épicos com o
+  selo "⚠ Saiu do Jira em dd/mm / Fora do relatório atual do Jira", e o
+  banner `#ojRecoverBanner` abre **Concluir em lote** (`ojReviewOpen`): por
+  épico, "Continua em andamento" ou "Concluído em" (Data Prevista vencida vira
+  sugestão; recusa data futura ou anterior ao início). Gravação pelo caminho
+  de sempre (`concludeOutsideEpic` → `saveToSheets`/`queuePendingWrite`).
+  Qtd Story/Épicos também mostra as histórias desses épicos
+  (`isStoryEpicVisible`). Teste de ponta a ponta (Playwright, 2 navegadores,
+  importação real de CSV): 32/32.
 
 ## Status atual: Aba Portfólio descontinuada (06/11/2026)
 

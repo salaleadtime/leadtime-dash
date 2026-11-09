@@ -2823,10 +2823,13 @@ function isStoryEpicVisible(epicId, restrictToCurrentEpicSnapshot){
   // demais painéis possuem conjuntos de histórias próprios e não têm, em
   // geral, o campo `epic`; aplicá-la ali zerava o painel em janela anônima.
   var jiraSnapshot=loadJiraEpicSnapshot();
-  if(restrictToCurrentEpicSnapshot && jiraSnapshot && epicId && jiraSnapshot.ids.indexOf(epicId)<0) return false;
   var rec=allData.find(function(r){return r.id===epicId;});
+  var recActive=!!rec && !isCancelled(rec) && !isValidDate(rec.fim);
+  // Nada oculto (09/11/2026): épico que está em Épicos (mesmo fora do
+  // relatório atual do Jira, com selo) mostra as histórias dele também.
+  if(restrictToCurrentEpicSnapshot && jiraSnapshot && epicId && jiraSnapshot.ids.indexOf(epicId)<0 && !recActive) return false;
   if(!rec) return true;
-  return !isCancelled(rec) && !isValidDate(rec.fim);
+  return recActive;
 }
 function visibleStoryRows(stories, restrictToCurrentEpicSnapshot){
   return (stories||[]).filter(function(s){ return isStoryEpicVisible(s&&s.epic,restrictToCurrentEpicSnapshot); });
@@ -2964,29 +2967,24 @@ function outsideJiraConfirm(){
   toast('✓ Épico concluído','<strong>'+esc(rec.id)+'</strong> entrou na Medição com Data Fim '+esc(fmtShortDate(new Date(rec.fim+'T00:00:00')))+'. Lead Time: <strong>'+rec.lt+' dias</strong>.');
 }
 // ── Revisão em lote dos épicos que já estavam ocultos (antes da correção) ──
+// Épicos em Épicos (sem Data Fim) que não estão no relatório atual do Jira.
 function outsideJiraHiddenList(){
-  var inData={}; (allData||[]).forEach(function(r){ if(r&&r.id) inData[r.id]=true; });
-  var cacheR=loadResumoCache(), cacheS=loadSquadCache();
-  return Object.keys(_epicsOutsideJira).filter(function(id){ return !inData[id]; }).map(function(id){
-    var r=_epicsOutsideJira[id], meta=(_epicMetaCloud&&_epicMetaCloud[id])||{};
-    if(!r.resumo) r.resumo=cacheR[id]||meta.resumo||'';
-    if(!r.squad) r.squad=cacheS[id]||meta.squad||'';
-    return r;
-  }).sort(function(a,b){ return String(b.ini||'').localeCompare(String(a.ini||'')); });
+  return listedEpics().filter(function(r){ return !isCancelled(r)&&!!epicLeftJiraDate(r); })
+    .sort(function(a,b){ return String(b.ini||'').localeCompare(String(a.ini||'')); });
 }
 function renderOjRecoverBanner(){
   var box=$id('ojRecoverBanner'); if(!box) return;
   var n=outsideJiraHiddenList().length;
   if(!n){ box.style.display='none'; box.innerHTML=''; return; }
-  box.innerHTML='<span>⚠ <b>'+n+' épico(s) ocultos</b>: não estão no relatório atual de Épicos do Jira e não têm Data Fim — normalmente foram concluídos no Jira. Eles não aparecem em Épicos nem na Medição até alguém revisar.</span><button type="button" onclick="ojReviewOpen()">Revisar agora</button>';
+  box.innerHTML='<span>⚠ <b>'+n+' épico(s) não estão no relatório atual de Épicos do Jira</b> e ainda não têm Data Fim — normalmente porque foram concluídos no Jira. Eles continuam aqui em Épicos (com o selo ⚠); informe a Data Fim dos concluídos para irem para a Medição.</span><button type="button" onclick="ojReviewOpen()">Concluir em lote</button>';
   box.style.display='flex';
 }
 function ojReviewOpen(){
   var ov=$id('ojRvOv');
   if(!ov){
     ov=document.createElement('div'); ov.id='ojRvOv'; ov.className='imp-hist-ov';
-    ov.innerHTML='<div class="imp-hist-box oj-rv-box" role="dialog" aria-modal="true" aria-labelledby="ojRvTitle"><div class="imp-hist-hd"><h3 id="ojRvTitle">Épicos ocultos sem Data Fim</h3><button type="button" class="imp-hist-x" onclick="ojReviewClose()" aria-label="Fechar">✕</button></div>'+
-      '<div class="imp-hist-body"><p class="oj-txt">Para cada épico escolha: <b>Concluir</b> (informe a data em que foi concluído no Jira — vai para a Medição), <b>Voltar para Épicos</b> (ainda está em andamento) ou deixe <b>Manter oculto</b> (fora da carteira). A Data Prevista vencida aparece como sugestão — confira antes de salvar. Vale para todos os usuários.</p>'+
+    ov.innerHTML='<div class="imp-hist-box oj-rv-box" role="dialog" aria-modal="true" aria-labelledby="ojRvTitle"><div class="imp-hist-hd"><h3 id="ojRvTitle">Épicos fora do relatório do Jira</h3><button type="button" class="imp-hist-x" onclick="ojReviewClose()" aria-label="Fechar">✕</button></div>'+
+      '<div class="imp-hist-body"><p class="oj-txt">Épicos que não estão no relatório atual de Épicos do Jira. Para os que já foram <b>concluídos</b>, informe a data de conclusão — eles vão para a Medição. Os que <b>continuam em andamento</b> seguem em Épicos. A Data Prevista vencida aparece como sugestão — confira antes de salvar. Vale para todos os usuários.</p>'+
       '<input type="text" class="oj-rv-q" id="ojRvQ" placeholder="🔍 Filtrar por ID, nome ou squad" oninput="ojReviewRender()" aria-label="Filtrar épicos ocultos">'+
       '<div class="oj-rv-list" id="ojRvList"></div><p class="oj-err" id="ojRvErr" role="alert"></p>'+
       '<div class="oj-actions"><span class="oj-rv-sum" id="ojRvSum"></span><button type="button" class="oj-cancel" onclick="ojReviewClose()">Cancelar</button><button type="button" class="oj-ok" onclick="ojReviewSave()">Salvar</button></div></div></div>';
@@ -3009,8 +3007,8 @@ function ojReviewRender(){
     ov._choices[r.id]=c;
     var sid=esc(jsq(r.id));
     return '<div class="oj-rv-row" data-id="'+esc(r.id)+'"><div class="oj-rv-info"><b>'+esc(r.id)+'</b> <span>'+esc(r.resumo||'(sem resumo)')+'</span><small>'+esc(r.squad||'Sem squad')+' · '+esc(r.status||'sem status')+(r.ini?' · Início '+esc(fmtShortDate(new Date(r.ini+'T00:00:00'))):'')+(r.dataPrevista?' · Prevista '+esc(fmtShortDate(new Date(r.dataPrevista+'T00:00:00'))):'')+'</small></div>'+
-      '<select aria-label="Ação para '+esc(r.id)+'" onchange="ojReviewSet(\''+sid+'\',\'act\',this.value)"><option value="keep"'+(c.act==='keep'?' selected':'')+'>Manter oculto</option><option value="done"'+(c.act==='done'?' selected':'')+'>Concluir em →</option><option value="back"'+(c.act==='back'?' selected':'')+'>Voltar para Épicos</option></select>'+
-      '<input type="date" aria-label="Data Fim de '+esc(r.id)+'" value="'+esc(c.fim||'')+'" onchange="ojReviewSet(\''+sid+'\',\'fim\',this.value)"'+(c.act==='back'?' disabled':'')+'></div>';
+      '<select aria-label="Ação para '+esc(r.id)+'" onchange="ojReviewSet(\''+sid+'\',\'act\',this.value)"><option value="keep"'+(c.act==='keep'?' selected':'')+'>Continua em andamento</option><option value="done"'+(c.act==='done'?' selected':'')+'>Concluído em →</option></select>'+
+      '<input type="date" aria-label="Data Fim de '+esc(r.id)+'" value="'+esc(c.fim||'')+'" onchange="ojReviewSet(\''+sid+'\',\'fim\',this.value)"></div>';
   }).join(''):'<p class="imp-hist-empty">Nenhum épico oculto'+(q?' com esse filtro':'')+'.</p>';
   ojReviewSummary();
 }
@@ -3022,30 +3020,27 @@ function ojReviewSet(id, field, value){
   ojReviewRender();
 }
 function ojReviewSummary(){
-  var ov=$id('ojRvOv'); var d=0,b=0;
-  Object.keys(ov._choices).forEach(function(id){ var c=ov._choices[id]; if(c.act==='done') d++; else if(c.act==='back') b++; });
-  $id('ojRvSum').textContent=(d||b)?(d+' para concluir · '+b+' de volta a Épicos'):'Nenhuma alteração escolhida';
+  var ov=$id('ojRvOv'); var d=0;
+  Object.keys(ov._choices).forEach(function(id){ if(ov._choices[id].act==='done') d++; });
+  $id('ojRvSum').textContent=d?(d+' épico(s) para concluir'):'Nenhum épico marcado como concluído';
 }
 function ojReviewSave(){
   var ov=$id('ojRvOv'); if(!ov) return;
-  var done=[], back=[], errs=[];
+  var done=[], errs=[];
   Object.keys(ov._choices).forEach(function(id){
-    var c=ov._choices[id], r=_epicsOutsideJira[id]; if(!r) return;
-    if(c.act==='done'){ var e=ojDateError(r,c.fim); if(e) errs.push(id+': '+e); else done.push([r,c.fim]); }
-    else if(c.act==='back') back.push(r);
+    var c=ov._choices[id]; if(c.act!=='done') return;
+    var r=(allData||[]).find(function(x){ return x&&x.id===id; }); if(!r) return;
+    var e=ojDateError(r,c.fim); if(e) errs.push(id+': '+e); else done.push([r,c.fim]);
   });
   if(errs.length){ $id('ojRvErr').textContent=errs.slice(0,3).join(' · ')+(errs.length>3?' …':''); return; }
-  if(!done.length&&!back.length){ $id('ojRvErr').textContent='Escolha ao menos uma ação.'; return; }
+  if(!done.length){ $id('ojRvErr').textContent='Marque ao menos um épico como concluído (com a data).'; return; }
   var items=done.map(function(p){ var rec=concludeOutsideEpic(p[0],p[1]); return _sheetsItem(rec.id, rec); });
-  back.forEach(function(r){ delete _epicsOutsideJira[r.id]; if(!(allData||[]).some(function(x){ return x&&x.id===r.id; })) allData.push(r); });
   saveLocal();
   clearTimeout(_jbSaveTimer); jbSave();
-  if(items.length) saveToSheets(items);
-  // "Voltar para Épicos" precisa valer para todos: entra no mapa `left` da foto.
-  if(back.length) updateJiraLeft(back.map(function(r){return r.id;}), [], function(){ renderTbl(); });
+  saveToSheets(items);
   ojReviewClose();
   renderTbl(); renderMed(); renderDash(); updateTabCounts();
-  toast('✓ Revisão salva', (done.length?done.length+' épico(s) concluído(s) e enviados para a Medição. ':'')+(back.length?back.length+' épico(s) de volta para Épicos.':''));
+  toast('✓ Épicos concluídos', done.length+' épico(s) enviados para a Medição com a Data Fim informada.');
 }
 // Aviso na aba Épicos: o termo buscado bate com épico(s) que já estão em Medição.
 function renderEpInMedNotice(){
@@ -3142,13 +3137,10 @@ function replaceFromSharedSource(rows){
   var jiraEpicSnapshot=loadJiraEpicSnapshot();
   if(jiraEpicSnapshot){
     var currentIds={}; jiraEpicSnapshot.ids.forEach(function(id){currentIds[id]=true;});
-    var outsideJira={}, leftNow=(jiraEpicSnapshot.left&&typeof jiraEpicSnapshot.left==='object')?jiraEpicSnapshot.left:{};
-    incoming=incoming.filter(function(r){
-      var keep=currentIds[r.id]||isHistoricEpic(r)||!!leftNow[r.id];
-      if(!keep&&r&&r.id) outsideJira[r.id]=r;
-      return keep;
-    });
-    _epicsOutsideJira=outsideJira;
+    // Decisão da pessoa responsável (09/11/2026): NADA fica oculto. A foto do
+    // Jira só sinaliza quem está fora do relatório (selo em Épicos, ver
+    // epicLeftJiraDate) — nenhum épico é descartado aqui.
+    _epicsOutsideJira={};
   }
 
   // Caches persistidos pelo import do Jira (nunca sobrescritos pelo Sheets)
@@ -3441,12 +3433,14 @@ function computeJiraLeft(prev, newIdSet){
 }
 function jiraLeftMap(){ var snap=loadJiraEpicSnapshotRaw(); return (snap&&snap.left&&typeof snap.left==='object')?snap.left:{}; }
 // Data em que o épico saiu do relatório ('' = não saiu / já resolvido).
+// Retorna 'AAAA-MM-DD' (data em que saiu), 'fora' (não está no relatório atual,
+// data desconhecida) ou '' (está no relatório / já tem Data Fim ou cancelado).
 function epicLeftJiraDate(r){
   if(!r||!r.id||isHistoricEpic(r)) return '';
   var snap=loadJiraEpicSnapshotRaw();
-  if(!snap||!snap.left) return '';
-  if((snap.ids||[]).indexOf(r.id)>=0) return '';
-  return snap.left[r.id]||'';
+  if(!snap||!Array.isArray(snap.ids)||!snap.ids.length) return '';
+  if(snap.ids.indexOf(r.id)>=0) return '';
+  return (snap.left&&snap.left[r.id])||'fora';
 }
 function publishJiraEpicSnapshot(snapshot){
   storageSet(JIRA_EPIC_SNAPSHOT_KEY,JSON.stringify(snapshot));
@@ -4731,7 +4725,7 @@ function renderTbl(){
     return '<tr'+(semFimRow?' style="background:#fff7ed"':'')+'>'+
       '<td class="cid"><div class="cid-wrap"><a class="cid-link" href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener" title="Abrir no Jira">'+esc(r.id)+'</a><button class="cid-copy" onclick="copyId(\''+esc(jsq(r.id))+'\',this)" title="Copiar link do Jira">⎘</button></div>'+
         (isValidDate(r.fimAntes)?'<div class="era-med-badge" title="Estava em Medição com Data Fim '+esc(r.fimAntes)+'">↩ era Medição · '+esc(r.fimAntes.slice(5).replace('-','/'))+'</div>':'')+
-        (function(){ var lj=epicLeftJiraDate(r); return lj?'<div class="left-jira-badge" title="Este épico não veio mais no relatório de Épicos do Jira (normalmente porque foi concluído lá). Preencha a Data Fim para ele ir para a Medição.">⚠ Saiu do Jira em '+esc(lj.slice(8,10)+'/'+lj.slice(5,7))+' · informe a Data Fim</div>':''; })()+
+        (function(){ var lj=epicLeftJiraDate(r); if(!lj) return ''; return '<div class="left-jira-badge" title="Este épico não está no relatório atual de Épicos do Jira (normalmente porque foi concluído lá). Se já foi concluído, preencha a Data Fim para ele ir para a Medição.">⚠ '+(lj==='fora'?'Fora do relatório atual do Jira':'Saiu do Jira em '+esc(lj.slice(8,10)+'/'+lj.slice(5,7)))+' · informe a Data Fim se já concluiu</div>'; })()+
       '</td>'+
       squadBadge(r.squad)+
       '<td class="cres">'+esc(r.resumo)+'</td>'+
@@ -8952,10 +8946,10 @@ function loadXlsx(file){
       // CONTINUA na lista de Épicos, marcado, até receber Data Fim — antes era
       // descartado e sumia de Épicos e da Medição para todos (caso SLOPC-43723).
       var jiraLeft=computeJiraLeft(loadJiraEpicSnapshotRaw(), seenIds);
-      var historical=(allData||[]).filter(function(old){ return old&&old.id&&!seenIds[old.id]&&(isHistoricEpic(old)||jiraLeft[old.id]); });
-      (allData||[]).forEach(function(old){ if(old&&old.id&&!seenIds[old.id]&&!isHistoricEpic(old)&&!jiraLeft[old.id]) _epicsOutsideJira[old.id]=old; });
-      merged.forEach(function(r){ delete _epicsOutsideJira[r.id]; });
-      Object.keys(jiraLeft).forEach(function(id){ delete _epicsOutsideJira[id]; });
+      // Nada fica oculto: todo épico que não veio no arquivo continua (com
+      // Data Fim → Medição; sem Data Fim → Épicos, com selo).
+      var historical=(allData||[]).filter(function(old){ return old&&old.id&&!seenIds[old.id]; });
+      _epicsOutsideJira={};
       allData = merged.concat(historical);
       saveJiraEpicSnapshot(merged, jiraLeft);
       saveResumoCache(merged);
