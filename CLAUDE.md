@@ -56,6 +56,19 @@ recrie a aba sem confirmar com a pessoa responsável.**
   "Informar Data Fim" (`outsideJiraOpen`/`outsideJiraConfirm`), que grava pelo
   mesmo caminho de sempre (`saveToSheets`/`queuePendingWrite`). Com Data Fim
   o épico vira histórico e passa a aparecer para todos.
+- **Correção de raiz (mesmo dia)**: a foto `jiraEpicSnapshot` ganhou o mapa
+  compartilhado `left` `{id: 'AAAA-MM-DD'}` — a cada importação,
+  `computeJiraLeft` compara com a foto anterior (`loadJiraEpicSnapshotRaw`,
+  sem o limite de 48h) e registra quem SAIU do relatório sem Data Fim. Esses
+  épicos **continuam em Épicos** (import e sync do Sheets os mantêm) com o selo
+  "⚠ Saiu do Jira em dd/mm · informe a Data Fim" (`epicLeftJiraDate`); saem do
+  mapa quando voltam ao relatório ou ganham Data Fim/cancelamento. Para os que
+  já estavam ocultos antes disso (não dá para saber a data real — ela só
+  existe no Jira), o banner `#ojRecoverBanner` abre a **revisão em lote**
+  (`ojReviewOpen`): Concluir com data (Data Prevista vencida vira sugestão;
+  recusa data futura ou anterior ao início), Voltar para Épicos (entra no
+  `left` via `updateJiraLeft`, para todos) ou Manter oculto. Teste de ponta a
+  ponta (Playwright, 2 navegadores, importação real de CSV): 25/25.
 
 ## Status atual: Aba Portfólio descontinuada (06/11/2026)
 
