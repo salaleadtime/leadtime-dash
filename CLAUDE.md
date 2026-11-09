@@ -23,6 +23,22 @@
   tela não quebra: guarda localmente (`sala_imp_log_pending_v1`) e reenvia
   sozinho quando a v32 estiver no ar.
 
+## Status atual: menu Demandas Emergenciais removido (09/11/2026)
+
+A aba **Demandas Emergenciais** saiu do menu de `index.html` a pedido da
+pessoa responsável: botão `#tab-em`, painel `#pane-em` e as rotas `'em'` em
+`normalizeTab`/`goTab`/`activateTab`/`syncUpbar` (aba salva como última cai em
+Épicos). As funções `em*`/`renderEmergencyView` ficaram no arquivo como código
+morto (mesmo critério do Ops4Ops) — reversível pelo histórico do git; **não
+recrie a aba sem confirmar com a pessoa responsável.**
+
+- A chave `emergencyDemand` no Apps Script continua intacta. O **Resumo
+  Executivo Semanal** (`report-semanal/index.html`) segue reaplicando as
+  regras já cadastradas — só não há mais tela para editar essas regras.
+- A **Medição** passou a mostrar cada épico só no trimestre da sua Data Fim
+  (cancelado: Data Fim ou `fimAntes`; sem data → só em "Ver todos"), via
+  `medRefDate()` em `renderMed`.
+
 ## Status atual: Aba Portfólio descontinuada (06/11/2026)
 
 A aba **🗂️ Portfólio** (Gestão de Iniciativas) foi **removida** a pedido
