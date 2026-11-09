@@ -2882,19 +2882,90 @@ function medOpenEpic(id){
   medPrepareFocus(rec);
   goTab('me', $id('tab-me'));
 }
+// ── Épicos que saíram do relatório do Jira sem Data Fim (09/11/2026) ──────
+// O relatório "Épicos Pós-Identificado" só traz épicos em andamento. Um épico
+// concluído no Jira sai do relatório; se ninguém tinha preenchido a Data Fim no
+// painel, a foto do Jira (jiraEpicSnapshot) o escondia de Épicos E da Medição
+// — "sumia" para todo mundo, embora o registro continue na base oficial. A
+// regra de esconder continua (evita ressuscitar épicos antigos fora da
+// carteira); o que muda é que a busca o encontra e permite informar a Data Fim.
+var _epicsOutsideJira={};
+function outsideJiraMatches(q){
+  if(!q) return [];
+  var inData={}; (allData||[]).forEach(function(r){ if(r&&r.id) inData[r.id]=true; });
+  var cacheR=loadResumoCache(), cacheS=loadSquadCache();
+  return Object.keys(_epicsOutsideJira).filter(function(id){ return !inData[id]; }).map(function(id){
+    var r=_epicsOutsideJira[id], meta=(_epicMetaCloud&&_epicMetaCloud[id])||{};
+    if(!r.resumo) r.resumo=cacheR[id]||meta.resumo||'';
+    if(!r.squad) r.squad=cacheS[id]||meta.squad||'';
+    return r;
+  }).filter(function(r){ return medMatches(r,q); });
+}
+function outsideJiraListHtml(hits){
+  return '<ul>'+hits.slice(0,5).map(function(r){
+    return '<li><b>'+esc(r.id)+'</b> <span>'+esc(r.resumo||'')+'</span> <em>saiu do relatório do Jira sem Data Fim'+(r.status?' · status no painel: '+esc(r.status):'')+'</em> <button type="button" onclick="outsideJiraOpen(\''+esc(jsq(r.id))+'\')">Informar Data Fim →</button></li>';
+  }).join('')+'</ul>';
+}
+function outsideJiraOpen(id){
+  var r=_epicsOutsideJira[id]; if(!r) return;
+  var ov=$id('ojOv');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='ojOv'; ov.className='imp-hist-ov';
+    ov.innerHTML='<div class="imp-hist-box oj-box" role="dialog" aria-modal="true" aria-labelledby="ojTitle"><div class="imp-hist-hd"><h3 id="ojTitle"></h3><button type="button" class="imp-hist-x" onclick="outsideJiraClose()" aria-label="Fechar">✕</button></div>'+
+      '<div class="imp-hist-body"><p class="oj-txt" id="ojTxt"></p><label class="oj-lbl" for="ojFim">Data Fim (conclusão)</label><input type="date" id="ojFim" class="oj-date"><p class="oj-err" id="ojErr" role="alert"></p>'+
+      '<div class="oj-actions"><button type="button" class="oj-cancel" onclick="outsideJiraClose()">Cancelar</button><button type="button" class="oj-ok" onclick="outsideJiraConfirm()">Salvar e abrir na Medição</button></div></div></div>';
+    ov.addEventListener('click',function(e){ if(e.target===ov) outsideJiraClose(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&ov.classList.contains('show')) outsideJiraClose(); });
+    document.body.appendChild(ov);
+  }
+  ov.dataset.epic=id;
+  $id('ojTitle').textContent='Concluir '+id;
+  $id('ojTxt').textContent=(r.resumo?r.resumo+' — ':'')+'este épico saiu do relatório de Épicos do Jira (normalmente porque foi concluído) e ainda não tem Data Fim no painel. Informe a data de conclusão para ele entrar na Medição para todos.';
+  $id('ojFim').value=r.fim||''; $id('ojErr').textContent='';
+  ov.classList.add('show');
+  setTimeout(function(){ $id('ojFim').focus(); },30);
+}
+function outsideJiraClose(){ var ov=$id('ojOv'); if(ov){ ov.classList.remove('show'); delete ov.dataset.epic; } }
+function outsideJiraConfirm(){
+  var ov=$id('ojOv'); var id=ov&&ov.dataset.epic; var r=id&&_epicsOutsideJira[id]; if(!r) return;
+  var v=($id('ojFim').value||'').trim();
+  if(!isValidIsoDate(v)||!v){ $id('ojErr').textContent='Informe uma data válida.'; return; }
+  if(isValidDate(r.ini)&&v<r.ini){ $id('ojErr').textContent='A Data Fim não pode ser anterior à Data Início ('+fmtShortDate(new Date(r.ini+'T00:00:00'))+').'; return; }
+  var rec=r;
+  rec.fim=v; rec.fimAntes=null;
+  normalizeWorkflowRecord(rec);
+  rec.lt=calcLT(rec.ini,rec.fim);
+  delete _epicsOutsideJira[id];
+  if(!(allData||[]).some(function(x){ return x&&x.id===id; })) allData.push(rec);
+  logFimChange(rec.id,'',rec.fim,'ENTREGUE');
+  saveLocal();
+  clearTimeout(_jbSaveTimer); jbSave();
+  queuePendingWrite(rec);
+  saveToSheets([_sheetsItem(rec.id, rec)]);
+  outsideJiraClose();
+  var s1=$id('srch'); if(s1) s1.value='';
+  var s2=$id('medSrch'); if(s2) s2.value='';
+  medPrepareFocus(rec);
+  renderTbl(); renderDash(); updateTabCounts();
+  goTab('me', $id('tab-me'));
+  toast('✓ Épico concluído','<strong>'+esc(rec.id)+'</strong> entrou na Medição com Data Fim '+esc(fmtShortDate(new Date(rec.fim+'T00:00:00')))+'. Lead Time: <strong>'+rec.lt+' dias</strong>.');
+}
 // Aviso na aba Épicos: o termo buscado bate com épico(s) que já estão em Medição.
 function renderEpInMedNotice(){
   var box=$id('epInMedNotice'); if(!box) return;
   var q=($id('srch')?$id('srch').value:'').trim().toLowerCase();
   var hits=q?measurementRows().filter(function(r){ return medMatches(r,q); }):[];
-  if(!hits.length){ box.style.display='none'; box.innerHTML=''; return; }
+  var outHits=outsideJiraMatches(q);
+  if(!hits.length&&!outHits.length){ box.style.display='none'; box.innerHTML=''; return; }
+  var outHtml=outHits.length?'<strong>⚠ '+outHits.length+' épico(s) com esse termo saíram do relatório de Épicos do Jira sem Data Fim</strong> (provavelmente concluídos no Jira) — informe a Data Fim para entrarem na Medição:'+outsideJiraListHtml(outHits):'';
+  if(!hits.length){ box.innerHTML=outHtml; box.style.display='block'; return; }
   var show=hits.slice(0,5).map(function(r){
     var d=medRefDate(r), qd=medQuarterOf(d);
     var quando=isCancelled(r)?(d?'cancelado · '+fmtShortDate(new Date(d+'T00:00:00')):'cancelado sem data')
       :'Data Fim '+fmtShortDate(new Date(d+'T00:00:00'))+(qd?' · T'+qd.q+(qd.y!==new Date().getFullYear()?'/'+qd.y:''):'');
     return '<li><b>'+esc(r.id)+'</b> <span>'+esc(r.resumo||'')+'</span> <em>'+esc(quando)+'</em> <button type="button" onclick="medOpenEpic(\''+esc(jsq(r.id))+'\')">Abrir na Medição →</button></li>';
   }).join('');
-  box.innerHTML='<strong>🔎 '+hits.length+' épico(s) com esse termo já estão em Medição</strong> (já têm Data Fim ou foram cancelados):<ul>'+show+'</ul>'+(hits.length>5?'<small>e mais '+(hits.length-5)+' — use a busca da aba Medição.</small>':'');
+  box.innerHTML='<strong>🔎 '+hits.length+' épico(s) com esse termo já estão em Medição</strong> (já têm Data Fim ou foram cancelados):<ul>'+show+'</ul>'+(hits.length>5?'<small>e mais '+(hits.length-5)+' — use a busca da aba Medição.</small>':'')+(outHtml?'<div class="oj-sep"></div>'+outHtml:'');
   box.style.display='block';
 }
 function measurementRows(){
@@ -2974,7 +3045,13 @@ function replaceFromSharedSource(rows){
   var jiraEpicSnapshot=loadJiraEpicSnapshot();
   if(jiraEpicSnapshot){
     var currentIds={}; jiraEpicSnapshot.ids.forEach(function(id){currentIds[id]=true;});
-    incoming=incoming.filter(function(r){return currentIds[r.id]||isHistoricEpic(r);});
+    var outsideJira={};
+    incoming=incoming.filter(function(r){
+      var keep=currentIds[r.id]||isHistoricEpic(r);
+      if(!keep&&r&&r.id) outsideJira[r.id]=r;
+      return keep;
+    });
+    _epicsOutsideJira=outsideJira;
   }
 
   // Caches persistidos pelo import do Jira (nunca sobrescritos pelo Sheets)
@@ -5145,8 +5222,11 @@ function renderMed(){
       n=countable.length;
     }
     if(n===0){
+      var medOut=medQ?outsideJiraMatches(medQ):[];
       var emptyMsg=medQ
-        ?'🔍 Nenhum épico medido encontrado para "<b>'+esc(medQ)+'</b>". Se ele ainda não tem Data Fim, procure na aba Épicos.'
+        ?(medOut.length
+          ?'<div class="ep-in-med" style="text-align:left;margin:0"><strong>⚠ Nenhum épico medido com "'+esc(medQ)+'", mas '+medOut.length+' saiu(íram) do relatório do Jira sem Data Fim</strong> — informe a Data Fim para entrar na Medição:'+outsideJiraListHtml(medOut)+'</div>'
+          :'🔍 Nenhum épico medido encontrado para "<b>'+esc(medQ)+'</b>". Se ele ainda não tem Data Fim, procure na aba Épicos.')
         : medTriChip
         ?'📊 Nenhum épico entregue ainda no <b>'+ordTri(medTriChip)+' Trimestre</b> ('+esc(medFilt.dateFrom)+' a '+esc(medFilt.dateTo)+').'
         : (medFilt.squad!=='all'||medFilt.dateFrom||medFilt.dateTo)
@@ -8717,6 +8797,10 @@ function loadXlsx(file){
       // A nova carga representa os épicos em aberto; mantém somente os registros
       // históricos que não reapareceram no arquivo para não zerar Medição/Dashboard.
       var historical=(allData||[]).filter(function(old){ return old&&old.id&&!seenIds[old.id]&&isHistoricEpic(old); });
+      // Saíram do relatório sem Data Fim (ex.: concluídos no Jira): não voltam
+      // para a lista, mas continuam localizáveis pela busca (ver _epicsOutsideJira).
+      (allData||[]).forEach(function(old){ if(old&&old.id&&!seenIds[old.id]&&!isHistoricEpic(old)) _epicsOutsideJira[old.id]=old; });
+      merged.forEach(function(r){ delete _epicsOutsideJira[r.id]; });
       allData = merged.concat(historical);
       saveJiraEpicSnapshot(merged);
       saveResumoCache(merged);
@@ -11014,6 +11098,18 @@ body #pane-ep .premium-kpi-v:empty::after{content:'0'}
 #medSrch{margin-left:0!important;width:210px!important}
 body #pane-me .tc table tr.med-focus td{background:#fef3c7!important;box-shadow:inset 0 1px 0 #f59e0b,inset 0 -1px 0 #f59e0b}
 @media(prefers-reduced-motion:no-preference){body #pane-me .tc table tr.med-focus td{transition:background .6s}}
+.oj-sep{height:1px;background:#bfdbfe;margin:10px 0}
+.oj-box{max-width:460px}
+.oj-txt{font-size:12px;line-height:1.55;color:#475569;margin:6px 0 14px}
+.oj-lbl{display:block;font-size:11px;font-weight:600;color:#334155;margin-bottom:6px}
+.oj-date{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font:13px Inter,Arial,sans-serif}
+.oj-date:focus{outline:2px solid #93c5fd;border-color:#3b82f6}
+.oj-err{min-height:16px;margin:6px 0 0;font-size:11px;color:#b91c1c}
+.oj-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.oj-actions button{border-radius:8px;padding:8px 14px;font:600 12px Inter,Arial,sans-serif;cursor:pointer}
+.oj-cancel{background:#fff;border:1px solid #cbd5e1;color:#334155}
+.oj-ok{background:var(--sala-red);border:1px solid var(--sala-red);color:#fff}
+.oj-ok:hover{filter:brightness(.92)}
 /* Histórico do Impedimento (célula + janela) */
 .imp-log{display:flex;flex-direction:column;gap:3px;margin-top:5px;font-size:10px;line-height:1.5;color:#6a7a87}
 .imp-log-when{overflow-wrap:anywhere}

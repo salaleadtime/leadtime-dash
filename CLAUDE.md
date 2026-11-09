@@ -45,6 +45,17 @@ recrie a aba sem confirmar com a pessoa responsável.**
   já medido, com "Abrir na Medição" (`medOpenEpic`); e ao preencher Data Fim
   (`fc`) a Medição abre no trimestre dessa data com a linha destacada
   (`medPrepareFocus`/`_medFocusId`).
+- **Épico concluído no Jira "sumia" de tudo** (caso real SLOPC-43723, 06/11):
+  o relatório "Épicos Pós-Identificado" só traz épicos em andamento; ao ser
+  concluído no Jira o épico sai do arquivo, e se ninguém preencheu a Data Fim
+  no painel ele era descartado pelo import e escondido pela foto
+  `jiraEpicSnapshot` — de Épicos E da Medição, para todo mundo (o registro
+  continua na base oficial). A regra de esconder foi mantida (evita
+  ressuscitar épicos antigos fora da carteira); os escondidos ficam em
+  `_epicsOutsideJira` e a busca (Épicos e Medição) os encontra com
+  "Informar Data Fim" (`outsideJiraOpen`/`outsideJiraConfirm`), que grava pelo
+  mesmo caminho de sempre (`saveToSheets`/`queuePendingWrite`). Com Data Fim
+  o épico vira histórico e passa a aparecer para todos.
 
 ## Status atual: Aba Portfólio descontinuada (06/11/2026)
 
