@@ -38,6 +38,32 @@ recrie a aba sem confirmar com a pessoa responsável.**
 - A **Medição** passou a mostrar cada épico só no trimestre da sua Data Fim
   (cancelado: Data Fim ou `fimAntes`; sem data → só em "Ver todos"), via
   `medRefDate()` em `renderMed`.
+- **Localizar épico na Medição**: usuários não achavam o épico depois que ele
+  ganhava Data Fim (a busca de Épicos só olha `listedEpics()`, sem Data Fim).
+  Agora: busca `#medSrch` na Medição (ignora o período, respeita nada além do
+  termo); aviso `#epInMedNotice` na aba Épicos quando o termo bate com épico
+  já medido, com "Abrir na Medição" (`medOpenEpic`); e ao preencher Data Fim
+  (`fc`) a Medição abre no trimestre dessa data com a linha destacada
+  (`medPrepareFocus`/`_medFocusId`).
+- **Épico concluído no Jira "sumia" de tudo** (caso real SLOPC-43723, 06/11):
+  o relatório "Épicos Pós-Identificado" só traz épicos em andamento; ao ser
+  concluído no Jira o épico saía do arquivo e, sem Data Fim no painel, era
+  descartado pelo import e escondido pela foto `jiraEpicSnapshot` — de Épicos
+  E da Medição, para todo mundo. **Regra da pessoa responsável: NADA fica
+  oculto.** A foto do Jira não descarta mais épico nenhum (import mantém
+  todos os que não vieram no arquivo; sync do Sheets não filtra) — ela só
+  SINALIZA: `epicLeftJiraDate` devolve a data em que saiu (mapa compartilhado
+  `jiraEpicSnapshot.left`, calculado por `computeJiraLeft` a cada importação
+  comparando com a foto anterior via `loadJiraEpicSnapshotRaw`) ou `'fora'`
+  (fora do relatório, data desconhecida). Esses épicos ficam em Épicos com o
+  selo "⚠ Saiu do Jira em dd/mm / Fora do relatório atual do Jira", e o
+  banner `#ojRecoverBanner` abre **Concluir em lote** (`ojReviewOpen`): por
+  épico, "Continua em andamento" ou "Concluído em" (Data Prevista vencida vira
+  sugestão; recusa data futura ou anterior ao início). Gravação pelo caminho
+  de sempre (`concludeOutsideEpic` → `saveToSheets`/`queuePendingWrite`).
+  Qtd Story/Épicos também mostra as histórias desses épicos
+  (`isStoryEpicVisible`). Teste de ponta a ponta (Playwright, 2 navegadores,
+  importação real de CSV): 32/32.
 
 ## Status atual: Aba Portfólio descontinuada (06/11/2026)
 
