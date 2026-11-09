@@ -38,6 +38,13 @@ recrie a aba sem confirmar com a pessoa responsável.**
 - A **Medição** passou a mostrar cada épico só no trimestre da sua Data Fim
   (cancelado: Data Fim ou `fimAntes`; sem data → só em "Ver todos"), via
   `medRefDate()` em `renderMed`.
+- **Localizar épico na Medição**: usuários não achavam o épico depois que ele
+  ganhava Data Fim (a busca de Épicos só olha `listedEpics()`, sem Data Fim).
+  Agora: busca `#medSrch` na Medição (ignora o período, respeita nada além do
+  termo); aviso `#epInMedNotice` na aba Épicos quando o termo bate com épico
+  já medido, com "Abrir na Medição" (`medOpenEpic`); e ao preencher Data Fim
+  (`fc`) a Medição abre no trimestre dessa data com a linha destacada
+  (`medPrepareFocus`/`_medFocusId`).
 
 ## Status atual: Aba Portfólio descontinuada (06/11/2026)
 
