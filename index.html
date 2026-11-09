@@ -1576,10 +1576,10 @@ body{min-height:100vh}
     <select class="fsel" id="medSqF"><option value="all">Todas</option></select>
     <div class="fsep"></div>
     <span class="fl">Trimestre:</span>
-    <button class="chip" id="medChip1" onclick="applyTriChip(1)">T1</button>
-    <button class="chip" id="medChip2" onclick="applyTriChip(2)">T2</button>
-    <button class="chip" id="medChip3" onclick="applyTriChip(3)">T3</button>
-    <button class="chip" id="medChip4" onclick="applyTriChip(4)">T4</button>
+    <button class="chip" id="medChip1" onclick="applyTriChip(1)">Q1</button>
+    <button class="chip" id="medChip2" onclick="applyTriChip(2)">Q2</button>
+    <button class="chip" id="medChip3" onclick="applyTriChip(3)">Q3</button>
+    <button class="chip" id="medChip4" onclick="applyTriChip(4)">Q4</button>
     <div class="fsep"></div>
     <span class="fl">Período:</span>
     <input type="date" class="fdate" id="medDateFrom" title="Início do período">
@@ -3054,7 +3054,7 @@ function renderEpInMedNotice(){
   var show=hits.slice(0,5).map(function(r){
     var d=medRefDate(r), qd=medQuarterOf(d);
     var quando=isCancelled(r)?(d?'cancelado · '+fmtShortDate(new Date(d+'T00:00:00')):'cancelado sem data')
-      :'Data Fim '+fmtShortDate(new Date(d+'T00:00:00'))+(qd?' · T'+qd.q+(qd.y!==new Date().getFullYear()?'/'+qd.y:''):'');
+      :'Data Fim '+fmtShortDate(new Date(d+'T00:00:00'))+(qd?' · Q'+qd.q+(qd.y!==new Date().getFullYear()?'/'+qd.y:''):'');
     return '<li><b>'+esc(r.id)+'</b> <span>'+esc(r.resumo||'')+'</span> <em>'+esc(quando)+'</em> <button type="button" onclick="medOpenEpic(\''+esc(jsq(r.id))+'\')">Abrir na Medição →</button></li>';
   }).join('');
   box.innerHTML='<strong>🔎 '+hits.length+' épico(s) com esse termo já estão em Medição</strong> (já têm Data Fim ou foram cancelados):<ul>'+show+'</ul>'+(hits.length>5?'<small>e mais '+(hits.length-5)+' — use a busca da aba Medição.</small>':'')+(outHtml?'<div class="oj-sep"></div>'+outHtml:'');
@@ -4229,7 +4229,7 @@ function renderTriBanner(){
   var tri=getCurrentTrimester();
   el.innerHTML=
     '<div class="tri-banner">'+
-      '<span class="tri-q">T'+tri.q+'</span>'+
+      '<span class="tri-q">Q'+tri.q+'</span>'+
       '<div>'+
         '<div class="tri-lbl">'+tri.label+'</div>'+
         '<div class="tri-detail">'+tri.elapsed+'d decorridos · '+tri.remaining+'d restantes</div>'+
