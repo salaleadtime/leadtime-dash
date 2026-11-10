@@ -1408,13 +1408,15 @@ body{min-height:100vh}
   <div id="healthBadge" style="display:flex;align-items:center"></div>
   <div class="top-gap"></div>
   <span class="top-meta">Meta: 62 dias</span>
-  <a class="tbtn" href="visao-projetos/" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.4);text-decoration:none" title="Visão de Projetos · Acompanhamento de Entregas por Squad">
+  <a class="tbtn" href="visao-projetos/" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.4);text-decoration:none" title="Visão de Projetos · Acompanhamento de Entregas por Squad — Relatório em construção até o dia 16/11" data-wip-title="Visão de Projetos · Acompanhamento de Entregas por Squad">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17V7l5 5-5 5z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
     <span>🎯 Visão de Projetos</span>
+    <span class="wip-badge" data-wip-until="2026-11-16">🚧 Em construção até 16/11</span>
   </a>
-  <a class="tbtn" href="panorama-entregas/" title="Abrir Panorama de Entregas" style="text-decoration:none" aria-label="Abrir Panorama de Entregas">
+  <a class="tbtn" href="panorama-entregas/" title="Abrir Panorama de Entregas — Relatório em construção até o dia 16/11" data-wip-title="Abrir Panorama de Entregas" style="text-decoration:none" aria-label="Abrir Panorama de Entregas (relatório em construção até o dia 16/11)">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V7l5 5-5 5z"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
     <span>Panorama de Entregas</span>
+    <span class="wip-badge" data-wip-until="2026-11-16">🚧 Em construção até 16/11</span>
   </a>
   <button class="tbtn" id="jbBtn" onclick="openJB()" title="Conectar ao JSONBin para sincronizar em tempo real com o time">
     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>
@@ -11235,6 +11237,9 @@ body #pane-ep .tc table th,body #pane-me .tc table th{background:#edf1f4!importa
 body #pane-ep .tc table td,body #pane-me .tc table td{background:#fff!important}
 body #pane-ep .tc table tr:hover td,body #pane-me .tc table tr:hover td{background:#fafbfc!important}
 body #pane-ep .premium-kpi-v:empty::after{content:'0'}
+/* Aviso "relatório em construção" nos links da barra de ações */
+body .top .tbtn .wip-badge{display:inline-flex!important;align-items:center;margin-left:2px;padding:2px 7px;border-radius:999px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;font-size:9.5px;font-weight:700;line-height:1.4;white-space:nowrap}
+body .top .tbtn .wip-badge[hidden]{display:none!important}
 /* Localizar épico na Medição */
 .ep-in-med{margin:0 0 14px;padding:12px 14px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;font-size:12px;color:#1e3a5f}
 .ep-in-med ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -11317,6 +11322,17 @@ function salaToggleNav(){
   // O aviso "Importação em andamento…" mora na barra de upload (escondida neste
   // layout) — move o MESMO nó para a faixa vermelha; o código que liga/desliga
   // pelo id continua igual.
+  // Aviso "Relatório em construção até 16/11": some sozinho depois da data
+  // (data-wip-until), sem precisar de outra publicação.
+  try{
+    var hoje=new Date(); var hojeIso=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
+    document.querySelectorAll('.wip-badge[data-wip-until]').forEach(function(b){
+      if(hojeIso>b.getAttribute('data-wip-until')){
+        b.hidden=true;
+        var a=b.closest('a'); if(a){ if(a.getAttribute('data-wip-title')) a.title=a.getAttribute('data-wip-title'); var al=a.getAttribute('aria-label'); if(al) a.setAttribute('aria-label', al.replace(/ \(relatório em construção[^)]*\)/,'')); }
+      }
+    });
+  }catch(e){}
   var lock=document.getElementById('importLockBanner'), slot=document.getElementById('salaMastSlot');
   if(lock && slot) slot.appendChild(lock);
 })();
