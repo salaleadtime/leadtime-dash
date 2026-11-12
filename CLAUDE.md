@@ -1,4 +1,30 @@
-# leadtime-dash — guia para trabalhar neste repositório
+# leadtime-dash, guia para trabalhar neste repositório
+
+## Aba Projeção: previsto x realizado dos épicos (12/11/2026)
+
+Aba nova em `index.html` (`#tab-pj` / `#pane-pj`, rota `'pj'` em
+`normalizeTab`/`goTab`/`activateTab`/`syncUpbar`; código em
+`<style id="sala-projecao">` + `<script id="sala-projecao-js">`, antes do
+`sala-shell-nav`). **Somente leitura, sem chamada nova ao Apps Script e sem
+chave nova**: previsto = `dataPrevista`, realizado = `fim`, ambos editados na
+aba Épicos pelo caminho de sempre; histórias = `allStories` (realizada =
+`isStoryDone`, "Em Produção").
+
+- Visões: Previsto (`activeEpics()` com Data Prevista, agrupado por mês, vencidos
+  primeiro), Realizado (`measuredEpics()` filtrado pelo período da Data Fim,
+  desvio = Data Fim − Data Prevista) e Sem Data Prevista.
+- Situação (Previsto): Vencido · Pronto p/ entregar (0 restantes) · Sem
+  histórias na base · Sem ritmo ainda · Em risco (no ritmo atual = histórias em
+  produção ÷ semanas desde a Data Início, termina depois da Data Prevista) ·
+  Atenção (folga ≤ `PJ_ATTENTION_DAYS`) · No prazo. Regra única em `pjPrevRow`.
+- Atualiza quando a base muda: wrapper de `window.renderTbl` re-renderiza se
+  `curTab==='pj'`; contador do menu em `updatePjCount` (chamado em
+  `updateTabCounts`).
+- "Exportar planilha (.xlsx)" (`pjExportXlsx`, SheetJS já usado no painel):
+  abas Resumo/Previsto/Realizado com FÓRMULAS (`TODAY()`), então a contagem de
+  dias continua certa ao abrir o arquivo em outro dia.
+- Limitação conhecida: a Data Prevista comparada é a atual do épico (não há
+  linha de base gravada); se alguém mudar a previsão, o desvio usa a nova.
 
 ## Layout SALA + histórico do Impedimento (06/11/2026, v32 do backend)
 
