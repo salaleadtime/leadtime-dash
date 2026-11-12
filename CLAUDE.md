@@ -1,9 +1,35 @@
-# leadtime-dash — guia para trabalhar neste repositório
+# leadtime-dash, guia para trabalhar neste repositório
+
+## Aba Projeção: previsto x realizado dos épicos (12/11/2026)
+
+Aba nova em `index.html` (`#tab-pj` / `#pane-pj`, rota `'pj'` em
+`normalizeTab`/`goTab`/`activateTab`/`syncUpbar`; código em
+`<style id="sala-projecao">` + `<script id="sala-projecao-js">`, antes do
+`sala-shell-nav`). **Somente leitura, sem chamada nova ao Apps Script e sem
+chave nova**: previsto = `dataPrevista`, realizado = `fim`, ambos editados na
+aba Épicos pelo caminho de sempre; histórias = `allStories` (realizada =
+`isStoryDone`, "Em Produção").
+
+- Visões: Previsto (`activeEpics()` com Data Prevista, agrupado por mês, vencidos
+  primeiro), Realizado (`measuredEpics()` filtrado pelo período da Data Fim,
+  desvio = Data Fim − Data Prevista) e Sem Data Prevista.
+- Situação (Previsto): Vencido · Pronto p/ entregar (0 restantes) · Sem
+  histórias na base · Sem ritmo ainda · Em risco (no ritmo atual = histórias em
+  produção ÷ semanas desde a Data Início, termina depois da Data Prevista) ·
+  Atenção (folga ≤ `PJ_ATTENTION_DAYS`) · No prazo. Regra única em `pjPrevRow`.
+- Atualiza quando a base muda: wrapper de `window.renderTbl` re-renderiza se
+  `curTab==='pj'`; contador do menu em `updatePjCount` (chamado em
+  `updateTabCounts`).
+- "Exportar planilha (.xlsx)" (`pjExportXlsx`, SheetJS já usado no painel):
+  abas Resumo/Previsto/Realizado com FÓRMULAS (`TODAY()`), então a contagem de
+  dias continua certa ao abrir o arquivo em outro dia.
+- Limitação conhecida: a Data Prevista comparada é a atual do épico (não há
+  linha de base gravada); se alguém mudar a previsão, o desvio usa a nova.
 
 ## Layout SALA + histórico do Impedimento (06/11/2026, v32 do backend)
 
 - **Layout** (`index.html`, bloco `<style id="sala-shell-layout">` + `<script
-  id="sala-shell-nav">` no FIM do `<body>`): faixa vermelha "SALA | Lead Time"
+id="sala-shell-nav">` no FIM do `<body>`): faixa vermelha "SALA | Lead Time"
   com "🌐 Importar Tudo" (usa o mesmo `#fiAllGlobal`), menu lateral escuro
   recolhível (preferência individual em `localStorage`, `sala_nav_collapsed_v1`)
   e barra de ações branca. Fica no fim do body de propósito: precisa vir DEPOIS
@@ -245,11 +271,11 @@ destaque em texto na mesma linha quando aquele arquivo carrega a correção
 de algo crítico (ex.: "este tem a correção do bug de X"). Exemplo real já
 validado:
 
-| # | Arquivo | Onde substituir no ambiente do cliente |
-|---|---|---|
-| 1 | `index.html` | Raiz do projeto |
-| 2 | `apps-script-backlog.gs` | Não é arquivo de pasta — precisa ser colado no editor do Google Apps Script e implantado como Nova versão (não é upload de arquivo) |
-| 3 | `visao-projetos/index.html` | Pasta `visao-projetos/` |
+| #   | Arquivo                     | Onde substituir no ambiente do cliente                                                                                              |
+| --- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `index.html`                | Raiz do projeto                                                                                                                     |
+| 2   | `apps-script-backlog.gs`    | Não é arquivo de pasta — precisa ser colado no editor do Google Apps Script e implantado como Nova versão (não é upload de arquivo) |
+| 3   | `visao-projetos/index.html` | Pasta `visao-projetos/`                                                                                                             |
 
 (exemplo histórico — a linha 4 original citava `discovery-pmo/index.html`,
 descontinuado em 09/09/2026; ver "Status atual" no topo deste arquivo.)
@@ -289,7 +315,7 @@ código:
   `document.querySelector`.
 - **Módulos**: scripts clássicos, cada um numa IIFE, ordem fixa
   `pf-core → pf-metrics → pf-state → pf-import → pf-export → pf-views →
-  pf-panels → pf-app`. Nomes compartilhados entre módulos ficam em
+pf-panels → pf-app`. Nomes compartilhados entre módulos ficam em
   `window.SalaPortfolio.internal` (apelidado `PF` dentro dos arquivos);
   variáveis de estado mutáveis (`PF.appState`, `PF.prefs`, `PF.ctx`…) são
   sempre acessadas por `PF.`. Único global novo: `window.SalaPortfolio`
@@ -324,7 +350,7 @@ código:
   2024 em diante — `tests/portfolio-core.test.js` garante. Se mudar um,
   mude o outro (candidato a consolidar numa fonte só no futuro).
 - **Modelo de status e universos (30/09/2026, v4 dos assets)**: duas
-  populações que nunca se misturam — *cadastradas* (todas) e *ativas*
+  populações que nunca se misturam — _cadastradas_ (todas) e _ativas_
   (cadastradas − suspensas). KPIs, percentuais, Painel, Sprints e PowerPoint
   usam as **ativas**; "Iniciativas" e "Cronograma" seguem o filtro
   "Situação da iniciativa" (Todas as Ativas — padrão / Suspensas / Todas).
@@ -371,15 +397,15 @@ Projetos — o Discovery PMO Tracker foi descontinuado em 09/09/2026, ver
 rotina precisa reunir os relatórios do Jira abaixo antes de clicar em
 "Importar Tudo":
 
-| # | Arquivo (contém no nome) | Tipo detectado | Atualiza |
-|---|---|---|---|
-| 1 | Épicos Pós-Identificado | `epics` | Tab Épicos |
-| 2 | Qtd Épicos atrelados a Story | `stories` | Tab 📋 Qtd Story/Épicos |
-| 3 | Story no Backlog Refinadas | `backlog` | Tab Backlog/Refinamento + **Demandas Emergenciais** |
-| 4 | Acomp. Geral (Todas Squads) | `general_visao` | Visão de Projetos |
-| 5 | Sprint ativa (Story, Melhorias e Bug) | `sprint_visao` | Visão de Projetos |
-| 6 | Story em Homologação com data | `homologation_visao` | Visão de Projetos + SLA |
-| 7 | Ops4Ops Refinada x Backlog | `ops4ops` | Nada (Discovery PMO Tracker descontinuado — arquivo detectado e ignorado) |
+| #   | Arquivo (contém no nome)              | Tipo detectado       | Atualiza                                                                  |
+| --- | ------------------------------------- | -------------------- | ------------------------------------------------------------------------- |
+| 1   | Épicos Pós-Identificado               | `epics`              | Tab Épicos                                                                |
+| 2   | Qtd Épicos atrelados a Story          | `stories`            | Tab 📋 Qtd Story/Épicos                                                   |
+| 3   | Story no Backlog Refinadas            | `backlog`            | Tab Backlog/Refinamento + **Demandas Emergenciais**                       |
+| 4   | Acomp. Geral (Todas Squads)           | `general_visao`      | Visão de Projetos                                                         |
+| 5   | Sprint ativa (Story, Melhorias e Bug) | `sprint_visao`       | Visão de Projetos                                                         |
+| 6   | Story em Homologação com data         | `homologation_visao` | Visão de Projetos + SLA                                                   |
+| 7   | Ops4Ops Refinada x Backlog            | `ops4ops`            | Nada (Discovery PMO Tracker descontinuado — arquivo detectado e ignorado) |
 
 Note que o arquivo 7 tem "Backlog" no nome mas **nunca** vai para a tab
 Backlog do dashboard principal — `detectUnifiedFileType` prioriza a

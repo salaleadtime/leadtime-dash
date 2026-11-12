@@ -1453,6 +1453,7 @@ body{min-height:100vh}
   <button type="button" class="sala-nav-collapse" id="salaNavCollapse" onclick="salaToggleNav()" aria-expanded="true" title="Recolher menu"><span aria-hidden="true">‹‹</span> <span class="sala-nav-collapse-label">Recolher menu</span></button>
   <button class="tabbt on" id="tab-ep" onclick="goTab('ep',this)" title="Épicos"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="m3 13 9 5 9-5"/></svg><span class="sala-tab-label">Épicos</span> <span class="tab-ct" id="tabCtEp"></span></button>
   <button class="tabbt" id="tab-me" onclick="goTab('me',this)" title="Medição"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="sala-tab-label">Medição</span> <span class="tab-ct" id="tabCtMe"></span></button>
+  <button class="tabbt" id="tab-pj" onclick="goTab('pj',this)" title="Projeção de entregas"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span class="sala-tab-label">Projeção</span> <span class="tab-ct" id="tabCtPj"></span></button>
   <button class="tabbt" id="tab-db" onclick="goTab('db',this)" title="Dashboard"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="sala-tab-label">Dashboard</span></button>
   <button class="tabbt" id="tab-sv" onclick="goTab('sv',this)" title="Qtd Story/Épicos"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span class="sala-tab-label">Qtd Story/Épicos</span> <span class="tab-ct" id="tabCtSv"></span></button>
   <button class="tabbt" id="tab-bk" onclick="goTab('bk',this)" title="Backlog/Refinamento"><svg class="sala-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg><span class="sala-tab-label">Backlog/Refinamento</span> <span class="tab-ct" id="tabCtBk"></span></button>
@@ -2083,6 +2084,52 @@ tr:nth-child(even):hover td,
 #emEditorOv .em-editor{border:none;box-shadow:none;padding:0;border-radius:0}
 
 </style>
+<!-- ══ PROJEÇÃO PANE (12/11/2026) ══
+     Previsto x Realizado dos épicos. Somente leitura: as datas são editadas na
+     aba Épicos (Data Prevista = previsto; Data Fim = realizado) e as histórias
+     vêm da base Qtd Story/Épicos. Nada novo é gravado no Apps Script. -->
+<div class="pane" id="pane-pj">
+<div class="pj">
+  <div class="pj-head">
+    <div class="pj-titles">
+      <h1 class="pj-h1">Projeção de entregas</h1>
+      <p class="pj-sub" id="pjSub">Previsto x realizado dos épicos.</p>
+    </div>
+    <div class="pj-actions">
+      <button type="button" class="pj-btn" onclick="pjExportXlsx()" title="Planilha com fórmulas: a contagem de dias continua atualizando sozinha ao abrir o arquivo">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Exportar planilha (.xlsx)
+      </button>
+    </div>
+  </div>
+
+  <div class="pj-kpis" id="pjKpis"></div>
+
+  <div class="pj-bar">
+    <div class="pj-seg" role="tablist" aria-label="Visão da projeção">
+      <button type="button" role="tab" class="pj-seg-b on" id="pjSegPrev" aria-selected="true" onclick="pjSetView('prev')">Previsto <span class="pj-ct" id="pjCtPrev"></span></button>
+      <button type="button" role="tab" class="pj-seg-b" id="pjSegReal" aria-selected="false" onclick="pjSetView('real')">Realizado <span class="pj-ct" id="pjCtReal"></span></button>
+      <button type="button" role="tab" class="pj-seg-b" id="pjSegSem" aria-selected="false" onclick="pjSetView('sem')">Sem Data Prevista <span class="pj-ct" id="pjCtSem"></span></button>
+    </div>
+    <div class="pj-filters">
+      <label class="pj-f"><span>Squad</span><select id="pjSq" onchange="renderProjecao()"><option value="all">Todas</option></select></label>
+      <label class="pj-f" id="pjPerWrap"><span>Período da Data Fim</span>
+        <select id="pjPer" onchange="renderProjecao()">
+          <option value="tri">Trimestre atual</option>
+          <option value="prev">Trimestre anterior</option>
+          <option value="ano">Ano atual</option>
+          <option value="all">Todos</option>
+        </select>
+      </label>
+      <label class="pj-f pj-f-srch"><span>Buscar</span><input type="search" id="pjSrch" placeholder="ID ou nome do épico" oninput="renderProjecao()"></label>
+    </div>
+  </div>
+
+  <div id="pjBody" aria-live="polite"></div>
+  <p class="pj-foot" id="pjFoot"></p>
+</div>
+</div>
+
 <div class="pane" id="pane-db">
 <div class="db" id="dbContent">
 
@@ -2441,7 +2488,7 @@ function loadTab(){
   try{ return storageGet(TAB_KEY)||'ep'; }catch(e){ return 'ep'; }
 }
 function normalizeTab(id){
-  return (id==='ep'||id==='me'||id==='db'||id==='sv'||id==='bk'||id==='cal') ? id : 'ep';
+  return (id==='ep'||id==='me'||id==='pj'||id==='db'||id==='sv'||id==='bk'||id==='cal') ? id : 'ep';
 }
 function getActiveTab(){
   var pane=document.querySelector('.pane.on');
@@ -3963,6 +4010,7 @@ function goTab(id,btn){
   saveTab(id);
   syncUpbar(id);
   if(id==='me') renderMed();
+  else if(id==='pj') renderProjecao();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
@@ -3986,6 +4034,7 @@ function activateTab(id){
   saveTab(id);
   syncUpbar(id);
   if(id==='me') renderMed();
+  else if(id==='pj') renderProjecao();
   else if(id==='ep'){ populateSqF(); renderTbl(); }
   else if(id==='db') renderDash();
   else if(id==='sv') renderStoryView();
@@ -3998,7 +4047,7 @@ function activateTab(id){
 // Mostra o upbar principal apenas nas abas que não têm upload próprio
 function syncUpbar(id){
   var ub=$id('upbar');
-  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='db'||id==='bk'||id==='cal')?'none':'flex';
+  if(ub) ub.style.display=(id==='sv'||id==='me'||id==='pj'||id==='db'||id==='bk'||id==='cal')?'none':'flex';
 }
 
 
@@ -5574,6 +5623,7 @@ function updateTabCounts(){
   var a=activeEpics().length, m=measurementRows().length;
   $id('tabCtEp').textContent=a;
   $id('tabCtMe').textContent=m;
+  if(typeof updatePjCount==='function') updatePjCount();
   var svEl=$id('tabCtSv');
   var visibleStoryCount=visibleStoryRows(allStories,true).length;
   if(svEl) svEl.textContent=visibleStoryCount||'';
@@ -11301,6 +11351,355 @@ body #pane-me .tc table tr.med-focus td{background:#fef3c7!important;box-shadow:
 .imp-hist-empty{font-size:12px;color:var(--sala-muted);padding:14px 0}
 @media(prefers-reduced-motion:reduce){body .tabs .tabbt{transition:none!important}}
 </style>
+<style id="sala-projecao">
+/* Aba Projeção (12/11/2026): previsto x realizado dos épicos */
+.pj{display:flex;flex-direction:column;gap:16px;color:#283b49;font-family:Inter,Arial,sans-serif}
+.pj-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.pj-h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-.6px;color:#172a39}
+.pj-sub{margin:6px 0 0;font-size:12.5px;color:#5d6a76;line-height:1.5;max-width:820px}
+.pj-btn{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px;border:1px solid #c9d3dc;border-radius:7px;background:#fff;color:#233846;font:600 12px Inter,Arial,sans-serif;cursor:pointer}
+.pj-btn:hover{border-color:#8a9aa8;color:#172a39}
+.pj-btn:focus-visible,.pj-seg-b:focus-visible,.pj-link:focus-visible{outline:2px solid #c40d2c;outline-offset:2px}
+.pj-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.pj-kpi{border:1px solid #e1e7ec;border-radius:12px;padding:14px 16px;background:#fff;display:flex;flex-direction:column;gap:4px;min-width:0}
+.pj-kpi-l{font-size:12px;font-weight:600;color:#253746}
+.pj-kpi-v{font-size:28px;font-weight:700;color:#172a39;letter-spacing:-.5px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-kpi-v.sm{font-size:19px}
+.pj-kpi-s{font-size:11px;color:#5d6a76;line-height:1.4}
+.pj-bar{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1px solid #e3e8ed;padding-bottom:12px}
+.pj-seg{display:inline-flex;border:1px solid #c9d3dc;border-radius:8px;overflow:hidden;background:#fff}
+.pj-seg-b{border:0;border-right:1px solid #dde5ec;background:#fff;color:#41525f;font:600 12.5px Inter,Arial,sans-serif;min-height:38px;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.pj-seg-b:last-child{border-right:0}
+.pj-seg-b.on{background:#fbe9ed;color:#b0102c}
+.pj-ct{font-size:11px;background:#eef1f4;color:#41525f;border-radius:999px;padding:1px 7px}
+.pj-seg-b.on .pj-ct{background:#fff;color:#b0102c}
+.pj-filters{display:flex;flex-wrap:wrap;gap:10px}
+.pj-f{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700;color:#52616d;text-transform:uppercase;letter-spacing:.04em}
+.pj-f select,.pj-f input{border:1px solid #c9d3dc;border-radius:6px;background:#fff;font:500 12px Inter,Arial,sans-serif;color:#334957;min-height:36px;padding:0 10px;text-transform:none;letter-spacing:0}
+.pj-f-srch input{min-width:220px}
+.pj-group{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.pj-gh{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding:2px 2px 4px;border-bottom:2px solid #e3e8ed}
+.pj-gh b{font-size:15px;color:#172a39}
+.pj-gh span{font-size:12px;color:#5d6a76}
+.pj-gh.venc{border-bottom-color:#c42b3a}.pj-gh.venc b{color:#9d1f2b}
+.pj-row{display:grid;grid-template-columns:92px 92px minmax(0,1fr) 230px 150px;gap:16px;align-items:center;padding:12px 14px;border:1px solid #e3e8ed;border-radius:10px;background:#fff}
+.pj-row:hover{border-color:#c9d3dc}
+.pj-big{display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid #edf0f3;padding-right:12px;min-height:52px}
+.pj-big b{font-size:28px;font-weight:700;color:#172a39;line-height:1}
+.pj-big b.neg{color:#b3202e}
+.pj-big b.mute{font-size:15px;color:#5d6a76}
+.pj-big small{font-size:11px;color:#5d6a76;margin-top:4px;text-align:center}
+.pj-id{font-family:"IBM Plex Mono",Consolas,monospace;font-size:11.5px;color:#41525f}
+.pj-id a{color:inherit;text-decoration:none}.pj-id a:hover{color:#c40d2c;text-decoration:underline}
+.pj-nm{font-size:14px;font-weight:700;color:#172a39;margin:2px 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-txt{font-size:12px;color:#334957;line-height:1.45}
+.pj-prog-l{font-size:11px;color:#41525f;margin-bottom:5px}
+.pj-prog{height:6px;background:#e7ecf0;border-radius:3px;overflow:hidden}
+.pj-prog div{height:6px;background:#5f7f98;border-radius:3px}
+.pj-dates{font-size:11px;color:#5d6a76;margin-top:6px;line-height:1.5}
+.pj-dates b{color:#172a39}
+.pj-end{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.pj-bd{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+.pj-bd i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.pj-link{background:none;border:0;padding:4px 0;font:600 11.5px Inter,Arial,sans-serif;color:#c40d2c;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.pj-empty{border:1px dashed #c9d3dc;border-radius:10px;padding:28px;text-align:center;color:#5d6a76;font-size:13px}
+.pj-foot{margin:0;font-size:11px;color:#5d6a76;line-height:1.6}
+.pj-tbl-wrap{border:1px solid #e4e9ed;border-radius:10px;overflow-x:auto}
+.pj-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:980px}
+.pj-tbl th{background:#edf1f4;color:#344856;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:10px}
+.pj-tbl td{padding:11px 10px;border-bottom:1px solid #edf0f3;vertical-align:middle}
+.pj-tbl td.n,.pj-tbl th.n{text-align:right}
+.pj-tbl tr.pj-mh td{background:#f7f9fa;font-weight:700;color:#233846;font-size:12.5px}
+.pj-dev{font-weight:700;white-space:nowrap}
+@media(max-width:1200px){.pj-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.pj-row{grid-template-columns:80px 80px minmax(0,1fr) 190px 130px}}
+@media(max-width:900px){.pj-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pj-row{grid-template-columns:1fr 1fr;}.pj-row>.pj-info,.pj-row>.pj-prog-col,.pj-row>.pj-end{grid-column:1/-1}.pj-end{align-items:flex-start;flex-direction:row;flex-wrap:wrap}.pj-big{border-right:0}.pj-seg{width:100%}.pj-seg-b{flex:1;justify-content:center;padding:0 8px;font-size:12px}.pj-f-srch input{min-width:0;width:100%}.pj-filters{width:100%}}
+</style>
+<script id="sala-projecao-js">
+// ═══════════════════════════════════════════════════════════════════════
+// ABA PROJEÇÃO (12/11/2026), previsto x realizado dos épicos.
+// Fonte única, somente leitura: allData (Data Início / Data Prevista / Data
+// Fim, editadas na aba Épicos e sincronizadas pelo caminho de sempre) e
+// allStories (base Qtd Story/Épicos; história "realizada" = isStoryDone).
+// Não grava nada e não faz chamada nova ao Apps Script.
+// ═══════════════════════════════════════════════════════════════════════
+var _pjView='prev';
+var PJ_ATTENTION_DAYS=7;
+var PJ_MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var PJ_ST={
+  venc:{t:'Vencido',bg:'#f9e1e3',fg:'#9d1f2b',dot:'#c42b3a'},
+  risco:{t:'Em risco',bg:'#f9e1e3',fg:'#9d1f2b',dot:'#c42b3a'},
+  aten:{t:'Atenção',bg:'#fbefd9',fg:'#83560a',dot:'#c98a12'},
+  ok:{t:'No prazo',bg:'#e3f1e9',fg:'#1f6544',dot:'#2f8a5e'},
+  pronto:{t:'Pronto p/ entregar',bg:'#dcebf7',fg:'#1f4e79',dot:'#3b78b0'},
+  semhist:{t:'Sem histórias na base',bg:'#eceff2',fg:'#47535e',dot:'#8795a3'},
+  semritmo:{t:'Sem ritmo ainda',bg:'#eceff2',fg:'#47535e',dot:'#8795a3'},
+  semdata:{t:'Sem Data Prevista',bg:'#eceff2',fg:'#47535e',dot:'#8795a3'},
+  noprazo:{t:'No prazo',bg:'#e3f1e9',fg:'#1f6544',dot:'#2f8a5e'},
+  atraso:{t:'Com atraso',bg:'#f9e1e3',fg:'#9d1f2b',dot:'#c42b3a'},
+  semprev:{t:'Sem previsão',bg:'#eceff2',fg:'#47535e',dot:'#8795a3'}
+};
+function pjToday(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
+function pjDate(s){ return isValidDate(s)?parseLocalDate(s):null; }
+function pjDays(a,b){ return Math.round((b-a)/864e5); }
+function pjAddDays(d,n){ var x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+function pjFmt(d){ return d?fmtShortDate(d):'-'; }
+function pjPl(n,s,p){ return n+' '+(Math.abs(n)===1?s:p); }
+function pjBadge(k){ var s=PJ_ST[k]; return '<span class="pj-bd" style="background:'+s.bg+';color:'+s.fg+'"><i style="background:'+s.dot+'"></i>'+s.t+'</span>'; }
+function pjStoryMap(){
+  var m={};
+  (allStories||[]).forEach(function(s){
+    if(!s||!s.epic) return;
+    var e=m[s.epic]||(m[s.epic]={tot:0,done:0});
+    e.tot++; if(isStoryDone(s)) e.done++;
+  });
+  return m;
+}
+function pjMatches(r,sq,q){
+  if(sq!=='all' && (r.squad||'')!==sq) return false;
+  if(q){ var h=(String(r.id||'')+' '+String(r.resumo||'')).toLowerCase(); if(h.indexOf(q)<0) return false; }
+  return true;
+}
+// Uma linha "prevista": tudo o que a tela e a exportação precisam saber.
+function pjPrevRow(r,sm,hoje){
+  var st=sm[r.id]||{tot:0,done:0};
+  var rest=Math.max(0,st.tot-st.done);
+  var prev=pjDate(r.dataPrevista), ini=pjDate(r.ini);
+  var faltam=prev?pjDays(hoje,prev):null;
+  var semanas=ini&&hoje>ini?Math.max(1,pjDays(ini,hoje)/7):null;
+  var ritmo=semanas&&st.done>0?st.done/semanas:0;
+  var termino=null;
+  if(st.tot>0) termino=rest===0?hoje:(ritmo>0?pjAddDays(hoje,Math.ceil(rest/ritmo*7)):null);
+  var folga=prev&&termino?pjDays(termino,prev):null;
+  var k;
+  if(!prev) k='semdata';
+  else if(faltam<0) k='venc';
+  else if(st.tot>0&&rest===0) k='pronto';
+  else if(st.tot===0) k='semhist';
+  else if(!ritmo) k='semritmo';
+  else if(folga<0) k='risco';
+  else if(folga<=PJ_ATTENTION_DAYS) k='aten';
+  else k='ok';
+  var hist=pjPl(rest,'história','histórias');
+  var txt;
+  if(!prev) txt='Sem Data Prevista: '+hist+' restantes'+(st.tot?' de '+st.tot:'')+'.';
+  else if(faltam<0) txt='A Data Prevista venceu em '+pjFmt(prev)+' ('+pjPl(-faltam,'dia','dias')+' atrás)'+(st.tot?' e ainda há '+hist+' a entregar.':'. Informe a Data Fim em Épicos ou ajuste a previsão.');
+  else if(st.tot>0&&rest===0) txt='Todas as '+st.tot+' histórias já estão em produção. Informe a Data Fim em Épicos para registrar o realizado.';
+  else if(faltam===0) txt='Entrega prevista para hoje'+(st.tot?', com '+hist+' restantes.':'.');
+  else txt='Em '+pjFmt(prev)+' o '+r.id+' será finalizado: faltam '+pjPl(faltam,'dia','dias')+(st.tot?' e '+hist+'.':'. Sem histórias vinculadas na base.');
+  if(k==='risco') txt+=' No ritmo atual ('+ritmo.toFixed(1).replace('.',',')+' hist./semana) termina em '+pjFmt(termino)+'.';
+  return {r:r,tot:st.tot,done:st.done,rest:rest,prev:prev,ini:ini,faltam:faltam,ritmo:ritmo,termino:termino,folga:folga,k:k,txt:txt};
+}
+function pjRealRow(r,sm){
+  var st=sm[r.id]||{tot:0,done:0};
+  var prev=pjDate(r.dataPrevista), fim=pjDate(r.fim), ini=pjDate(r.ini);
+  var desvio=prev&&fim?pjDays(prev,fim):null;
+  var k=desvio===null?'semprev':(desvio<=0?'noprazo':'atraso');
+  return {r:r,tot:st.tot,done:st.done,prev:prev,fim:fim,ini:ini,desvio:desvio,lt:ini&&fim?pjDays(ini,fim):null,k:k};
+}
+function pjPeriod(per,hoje){
+  var y=hoje.getFullYear(), q=Math.floor(hoje.getMonth()/3);
+  if(per==='tri') return {from:new Date(y,q*3,1),to:new Date(y,q*3+3,0),label:'no trimestre atual'};
+  if(per==='prev'){ var pq=q-1,py=y; if(pq<0){pq=3;py=y-1;} return {from:new Date(py,pq*3,1),to:new Date(py,pq*3+3,0),label:'no trimestre anterior'}; }
+  if(per==='ano') return {from:new Date(y,0,1),to:new Date(y,11,31),label:'em '+y};
+  return {from:null,to:null,label:'no total'};
+}
+function pjCollect(){
+  var hoje=pjToday(), sm=pjStoryMap();
+  var sq=($id('pjSq')||{}).value||'all';
+  var q=String(($id('pjSrch')||{}).value||'').trim().toLowerCase();
+  var per=pjPeriod(($id('pjPer')||{}).value||'tri',hoje);
+  var ativos=activeEpics().filter(function(r){return pjMatches(r,sq,q);}).map(function(r){return pjPrevRow(r,sm,hoje);});
+  var prev=ativos.filter(function(x){return !!x.prev;}).sort(function(a,b){return a.prev-b.prev;});
+  var sem=ativos.filter(function(x){return !x.prev;}).sort(function(a,b){return b.rest-a.rest;});
+  var realAll=measuredEpics().filter(function(r){return pjMatches(r,sq,q);}).map(function(r){return pjRealRow(r,sm);});
+  var real=realAll.filter(function(x){return x.fim&&(!per.from||(x.fim>=per.from&&x.fim<=per.to));}).sort(function(a,b){return b.fim-a.fim;});
+  return {hoje:hoje,prev:prev,sem:sem,real:real,per:per};
+}
+function pjSetView(v){
+  _pjView=(v==='real'||v==='sem')?v:'prev';
+  [['prev','pjSegPrev'],['real','pjSegReal'],['sem','pjSegSem']].forEach(function(p){
+    var b=$id(p[1]); if(!b) return; var on=p[0]===_pjView; b.classList.toggle('on',on); b.setAttribute('aria-selected',on?'true':'false');
+  });
+  renderProjecao();
+}
+function pjOpenInEpics(id){
+  var s=$id('srch'); if(s) s.value=id;
+  pg=1; goTab('ep',$id('tab-ep'));
+}
+function pjFillSquads(){
+  var sel=$id('pjSq'); if(!sel) return;
+  var cur=sel.value||'all';
+  var sqs=Array.from(new Set((allData||[]).filter(function(r){return !isCancelled(r);}).map(function(r){return r.squad;}).filter(Boolean))).sort();
+  sel.innerHTML='<option value="all">Todas</option>'+sqs.map(function(s){return '<option value="'+esc(s)+'"'+(s===cur?' selected':'')+'>'+esc(s)+'</option>';}).join('');
+}
+function pjKpi(l,v,s,cls,color){
+  return '<div class="pj-kpi"><span class="pj-kpi-l">'+l+'</span><span class="pj-kpi-v'+(cls?' '+cls:'')+'"'+(color?' style="color:'+color+'"':'')+'>'+v+'</span><span class="pj-kpi-s">'+s+'</span></div>';
+}
+function pjRowHtml(x){
+  var r=x.r, pct=x.tot?Math.round(x.done/x.tot*100):0;
+  var d1=x.faltam===null?'<b class="mute">sem data</b><small>&nbsp;</small>'
+    :(x.faltam<0?'<b class="neg">'+(-x.faltam)+'</b><small>'+(x.faltam===-1?'dia atrás':'dias atrás')+'</small>'
+    :'<b>'+x.faltam+'</b><small>'+(x.faltam===0?'hoje':(x.faltam===1?'dia':'dias'))+'</small>');
+  var d2=x.tot?'<b>'+x.rest+'</b><small>'+(x.rest===1?'história':'histórias')+'</small>':'<b class="mute">-</b><small>sem histórias</small>';
+  return '<div class="pj-row">'+
+    '<div class="pj-big" title="Dias corridos até a Data Prevista">'+d1+'</div>'+
+    '<div class="pj-big" title="Histórias restantes (não estão em produção)">'+d2+'</div>'+
+    '<div class="pj-info"><div class="pj-id"><a href="'+jiraUrl(r.id)+'" target="_blank" rel="noopener">'+esc(r.id)+'</a> · '+esc(r.squad||'Sem squad')+'</div>'+
+      '<div class="pj-nm" title="'+esc(r.resumo||'')+'">'+esc(r.resumo||'(sem resumo)')+'</div><div class="pj-txt">'+esc(x.txt)+'</div></div>'+
+    '<div class="pj-prog-col"><div class="pj-prog-l">'+(x.tot?x.done+' de '+x.tot+' histórias em produção · '+pct+'%':'Nenhuma história vinculada na base')+'</div>'+
+      '<div class="pj-prog"><div style="width:'+pct+'%"></div></div>'+
+      '<div class="pj-dates">Data Prevista <b>'+pjFmt(x.prev)+'</b>'+(x.ini?' · Início '+pjFmt(x.ini):'')+'</div></div>'+
+    '<div class="pj-end">'+pjBadge(x.k)+'<button type="button" class="pj-link" onclick="pjOpenInEpics(\''+esc(jsq(r.id))+'\')">'+(x.prev?'Editar datas em Épicos':'Definir Data Prevista')+'</button></div>'+
+  '</div>';
+}
+function pjRenderPrev(d){
+  if(!d.prev.length) return '<div class="pj-empty">Nenhum épico em andamento com Data Prevista. Preencha a Data Prevista na aba Épicos e ele aparece aqui.</div>';
+  var venc=d.prev.filter(function(x){return x.faltam<0;});
+  var fut=d.prev.filter(function(x){return x.faltam>=0;});
+  var html='';
+  if(venc.length){
+    html+='<section class="pj-group"><div class="pj-gh venc"><b>Data Prevista vencida</b><span>'+pjPl(venc.length,'épico','épicos')+' sem Data Fim · '+pjPl(venc.reduce(function(a,x){return a+x.rest;},0),'história restante','histórias restantes')+'</span></div>'+venc.map(pjRowHtml).join('')+'</section>';
+  }
+  var groups={},order=[];
+  fut.forEach(function(x){ var k=x.prev.getFullYear()+'-'+x.prev.getMonth(); if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(x); });
+  order.forEach(function(k){
+    var it=groups[k], p=k.split('-');
+    var rest=it.reduce(function(a,x){return a+x.rest;},0);
+    var risco=it.filter(function(x){return x.k==='risco';}).length;
+    html+='<section class="pj-group"><div class="pj-gh"><b>'+PJ_MESES[+p[1]]+' de '+p[0]+'</b><span>'+pjPl(it.length,'entrega prevista','entregas previstas')+' · '+pjPl(rest,'história restante','histórias restantes')+(risco?' · '+risco+' em risco':'')+'</span></div>'+it.map(pjRowHtml).join('')+'</section>';
+  });
+  return html;
+}
+function pjRenderSem(d){
+  if(!d.sem.length) return '<div class="pj-empty">Todos os épicos em andamento já têm Data Prevista.</div>';
+  return '<section class="pj-group"><div class="pj-gh"><b>Épicos em andamento sem Data Prevista</b><span>Sem a data, o épico não entra na projeção. Clique em "Definir Data Prevista" para preencher na aba Épicos.</span></div>'+d.sem.map(pjRowHtml).join('')+'</section>';
+}
+function pjRenderReal(d){
+  if(!d.real.length) return '<div class="pj-empty">Nenhum épico com Data Fim '+d.per.label+'. A Data Fim é preenchida na aba Épicos; ao preencher, o épico aparece aqui como realizado.</div>';
+  var rows='', lastM='';
+  d.real.forEach(function(x){
+    var m=PJ_MESES[x.fim.getMonth()]+' de '+x.fim.getFullYear();
+    if(m!==lastM){
+      var it=d.real.filter(function(y){return y.fim.getMonth()===x.fim.getMonth()&&y.fim.getFullYear()===x.fim.getFullYear();});
+      rows+='<tr class="pj-mh"><td colspan="9">'+m+' · '+pjPl(it.length,'entrega','entregas')+' · '+pjPl(it.reduce(function(a,y){return a+y.tot;},0),'história','histórias')+'</td></tr>';
+      lastM=m;
+    }
+    var dev=x.desvio===null?'<span class="pj-dev" style="color:#5d6a76">sem previsão</span>'
+      :(x.desvio<=0?'<span class="pj-dev" style="color:#1f6544">'+(x.desvio===0?'no dia previsto':pjPl(-x.desvio,'dia','dias')+' antes')+'</span>'
+      :'<span class="pj-dev" style="color:#b3202e">'+pjPl(x.desvio,'dia','dias')+' depois</span>');
+    rows+='<tr><td><div class="pj-id"><a href="'+jiraUrl(x.r.id)+'" target="_blank" rel="noopener">'+esc(x.r.id)+'</a></div><div style="font-weight:600;color:#172a39;margin-top:2px">'+esc(x.r.resumo||'')+'</div></td>'+
+      '<td>'+esc(x.r.squad||'-')+'</td><td class="n">'+pjFmt(x.prev)+'</td><td class="n"><b>'+pjFmt(x.fim)+'</b></td><td class="n">'+dev+'</td>'+
+      '<td class="n">'+(x.lt===null?'-':pjPl(x.lt,'dia','dias'))+'</td><td class="n">'+(x.tot?x.tot:'-')+'</td><td>'+pjBadge(x.k)+'</td>'+
+      '<td><button type="button" class="pj-link" onclick="medOpenEpic(\''+esc(jsq(x.r.id))+'\')">Abrir na Medição</button></td></tr>';
+  });
+  return '<div class="pj-tbl-wrap"><table class="pj-tbl"><thead><tr><th>Épico</th><th>Squad</th><th class="n">Previsto (Data Prevista)</th><th class="n">Realizado (Data Fim)</th><th class="n">Desvio</th><th class="n">Lead time</th><th class="n">Histórias</th><th>Resultado</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function renderProjecao(){
+  var body=$id('pjBody'); if(!body) return;
+  pjFillSquads();
+  var d=pjCollect(), hoje=d.hoje;
+  var perWrap=$id('pjPerWrap'); if(perWrap) perWrap.style.display=_pjView==='real'?'':'none';
+  $id('pjSub').textContent='Posição em '+pjFmt(hoje)+'. Previsto = Data Prevista; realizado = Data Fim, as duas preenchidas na aba Épicos. Histórias vêm da base Qtd Story/Épicos (realizada = Em Produção). A contagem de dias atualiza sozinha a cada dia.';
+  var fut=d.prev.filter(function(x){return x.faltam>=0;});
+  var venc=d.prev.filter(function(x){return x.faltam<0;});
+  var em30=fut.filter(function(x){return x.faltam<=30;});
+  var risco=d.prev.filter(function(x){return x.k==='risco';}).length;
+  var nx=fut[0];
+  var comPrev=d.real.filter(function(x){return x.desvio!==null;});
+  var noPrazo=comPrev.filter(function(x){return x.desvio<=0;}).length;
+  var ader=comPrev.length?Math.round(noPrazo/comPrev.length*100):null;
+  $id('pjKpis').innerHTML=
+    pjKpi('Previstos em andamento',d.prev.length,pjPl(d.prev.reduce(function(a,x){return a+x.rest;},0),'história restante','histórias restantes')+(d.sem.length?' · '+d.sem.length+' sem Data Prevista':''))+
+    pjKpi('Próxima entrega',nx?esc(nx.r.id):'-',nx?pjFmt(nx.prev)+' · '+(nx.faltam===0?'hoje':'faltam '+pjPl(nx.faltam,'dia','dias'))+' · '+(nx.tot&&nx.rest===0?'histórias concluídas':pjPl(nx.rest,'história','histórias')):'nenhuma data futura','sm')+
+    pjKpi('Entregas em 30 dias',em30.length,pjPl(em30.reduce(function(a,x){return a+x.rest;},0),'história restante','histórias restantes')+(risco?' · '+risco+' em risco no ritmo atual':''))+
+    pjKpi('Data Prevista vencida',venc.length,'sem Data Fim informada','',venc.length?'#b3202e':'')+
+    pjKpi('Realizado '+d.per.label,d.real.length,ader===null?'sem Data Prevista para comparar':ader+'% no prazo ('+noPrazo+' de '+comPrev.length+' com previsão)','',d.real.length?'#1f6544':'');
+  $id('pjCtPrev').textContent=d.prev.length; $id('pjCtReal').textContent=d.real.length; $id('pjCtSem').textContent=d.sem.length;
+  body.innerHTML=_pjView==='real'?pjRenderReal(d):(_pjView==='sem'?pjRenderSem(d):pjRenderPrev(d));
+  $id('pjFoot').textContent=_pjView==='real'
+    ?'Desvio = Data Fim − Data Prevista (negativo = entregue antes do previsto). Lead time = Data Fim − Data Início. A Data Prevista usada é a que está registrada hoje no épico.'
+    :'Ritmo atual = histórias em produção ÷ semanas desde a Data Início. "Em risco" = no ritmo atual o épico termina depois da Data Prevista; "Atenção" = folga de até '+PJ_ATTENTION_DAYS+' dias. Ao preencher a Data Fim em Épicos, o épico sai daqui e vai para Realizado.';
+}
+function updatePjCount(){
+  var el=$id('tabCtPj'); if(!el) return;
+  try{ el.textContent=activeEpics().filter(function(r){return isValidDate(r.dataPrevista);}).length||''; }catch(e){}
+}
+// Mantém a aba atual quando a base muda (edição em Épicos, sync de outra pessoa).
+(function(){
+  if(typeof window.renderTbl==='function'){
+    var _pjRenderTblPrev=window.renderTbl;
+    window.renderTbl=function(){
+      _pjRenderTblPrev.apply(this,arguments);
+      try{ updatePjCount(); if(curTab==='pj') renderProjecao(); }catch(e){ console.warn('renderProjecao',e); }
+    };
+  }
+})();
+
+// ── Exportação (.xlsx com fórmulas) ─────────────────────────────────────
+// Os dias, situação e frases são FÓRMULAS (TODAY()): ao abrir o arquivo em
+// outro dia, a contagem já está atualizada sem exportar de novo.
+function pjSerial(d){ return d?(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/864e5:null; }
+function pjExportXlsx(){
+  if(typeof XLSX==='undefined'){ toast('Carregando biblioteca…','A exportação começa em instantes.'); loadXlsxLib(pjExportXlsx); return; }
+  try{
+    var d=pjCollect(), DT='dd/mm/yyyy';
+    var dc=function(v){ return v?{t:'n',v:pjSerial(v),z:DT}:{t:'s',v:''}; };
+    var nc=function(v){ return {t:'n',v:v}; };
+    var sc=function(v){ return {t:'s',v:String(v==null?'':v)}; };
+    var fc=function(f,z){ var c={t:'n',f:f}; if(z) c.z=z; return c; };
+    var fs=function(f){ return {t:'s',f:f}; };
+    var mk=function(rows,cols){ var ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=cols.map(function(w){return {wch:w};}); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{c:0,r:0},e:{c:rows[0].length-1,r:Math.max(1,rows.length-1)}})}; return ws; };
+    // Previsto
+    var hp=['Épico','Resumo','Squad','Data Início','Data Prevista','Histórias (total)','Em produção','Restantes','Faltam (dias)','Dias úteis','% concluído','Ritmo (hist./semana)','Término no ritmo atual','Situação','Leitura'];
+    var rp=[hp];
+    d.prev.concat(d.sem).forEach(function(x,i){
+      var n=i+2;
+      var dt='TEXT(DAY(E'+n+'),"00")&"/"&TEXT(MONTH(E'+n+'),"00")&"/"&YEAR(E'+n+')';
+      rp.push([sc(x.r.id),sc(x.r.resumo||''),sc(x.r.squad||''),dc(x.ini),dc(x.prev),nc(x.tot),nc(x.done),
+        fc('MAX(0,F'+n+'-G'+n+')'),
+        fc('IF(E'+n+'="","",E'+n+'-TODAY())'),
+        fc('IF(E'+n+'="","",IF(E'+n+'>TODAY(),NETWORKDAYS(TODAY()+1,E'+n+'),IF(E'+n+'=TODAY(),0,-NETWORKDAYS(E'+n+',TODAY()-1))))'),
+        fc('IF(F'+n+'=0,"",G'+n+'/F'+n+')','0%'),
+        fc('IF(OR(D'+n+'="",TODAY()<=D'+n+',G'+n+'=0),0,G'+n+'/MAX(1,(TODAY()-D'+n+')/7))','0.0'),
+        fc('IF(F'+n+'=0,"",IF(H'+n+'=0,TODAY(),IF(L'+n+'>0,TODAY()+ROUNDUP(H'+n+'/L'+n+'*7,0),"")))',DT),
+        fs('IF(E'+n+'="","Sem Data Prevista",IF(I'+n+'<0,"Vencido",IF(AND(F'+n+'>0,H'+n+'=0),"Pronto p/ entregar",IF(F'+n+'=0,"Sem histórias na base",IF(L'+n+'=0,"Sem ritmo ainda",IF(M'+n+'>E'+n+',"Em risco",IF(E'+n+'-M'+n+'<='+PJ_ATTENTION_DAYS+',"Atenção","No prazo")))))))'),
+        fs('IF(E'+n+'="",A'+n+'&": sem Data Prevista, "&H'+n+'&" histórias restantes",IF(I'+n+'<0,A'+n+'&": venceu em "&'+dt+'&" ("&-I'+n+'&" dias atrás) e ainda tem "&H'+n+'&" histórias",IF(AND(F'+n+'>0,H'+n+'=0),A'+n+'&": histórias concluídas, falta informar a Data Fim","Em "&'+dt+'&" o "&A'+n+'&" será finalizado: faltam "&I'+n+'&" dias e "&H'+n+'&" histórias")))')]);
+    });
+    // Realizado
+    var hr=['Épico','Resumo','Squad','Data Início','Data Prevista (previsto)','Data Fim (realizado)','Desvio (dias)','Lead time (dias)','Histórias','Resultado'];
+    var rr=[hr];
+    d.real.forEach(function(x,i){
+      var n=i+2;
+      rr.push([sc(x.r.id),sc(x.r.resumo||''),sc(x.r.squad||''),dc(x.ini),dc(x.prev),dc(x.fim),
+        fc('IF(OR(E'+n+'="",F'+n+'=""),"",F'+n+'-E'+n+')'),fc('IF(OR(D'+n+'="",F'+n+'=""),"",F'+n+'-D'+n+')'),nc(x.tot),
+        fs('IF(E'+n+'="","Sem previsão",IF(G'+n+'<=0,"No prazo","Com atraso"))')]);
+    });
+    var np=rp.length, nr=rr.length;
+    var rs=[[sc('Projeção de entregas dos épicos'),sc('')],
+      [sc('Exportado em'),dc(d.hoje)],[sc('Contagem calculada em'),fc('TODAY()',DT)],[sc(''),sc('')],
+      [sc('Previstos em andamento'),fc('COUNTIF(Previsto!N2:N'+Math.max(2,np)+',"<>Sem Data Prevista")')],
+      [sc('Data Prevista vencida'),fc('COUNTIF(Previsto!N2:N'+Math.max(2,np)+',"Vencido")')],
+      [sc('Em risco no ritmo atual'),fc('COUNTIF(Previsto!N2:N'+Math.max(2,np)+',"Em risco")')],
+      [sc('Entregas nos próximos 30 dias'),fc('COUNTIFS(Previsto!I2:I'+Math.max(2,np)+',">=0",Previsto!I2:I'+Math.max(2,np)+',"<=30")')],
+      [sc('Histórias restantes'),fc('SUM(Previsto!H2:H'+Math.max(2,np)+')')],
+      [sc('Realizado ('+d.per.label+')'),fc('COUNTA(Realizado!A2:A'+Math.max(2,nr)+')')],
+      [sc('Aderência ao previsto'),fc('IFERROR(COUNTIF(Realizado!J2:J'+Math.max(2,nr)+',"No prazo")/(COUNTA(Realizado!A2:A'+Math.max(2,nr)+')-COUNTIF(Realizado!J2:J'+Math.max(2,nr)+',"Sem previsão")),0)','0%')],
+      [sc(''),sc('')],
+      [sc('Como ler'),sc('Previsto = Data Prevista; realizado = Data Fim (aba Épicos do SALA). Faltam (dias) usa TODAY(): ao abrir o arquivo amanhã a contagem já está atualizada. Ritmo = histórias em produção ÷ semanas desde a Data Início.')]];
+    var wb=XLSX.utils.book_new();
+    var wsR=XLSX.utils.aoa_to_sheet(rs); wsR['!cols']=[{wch:30},{wch:110}];
+    XLSX.utils.book_append_sheet(wb,wsR,'Resumo');
+    XLSX.utils.book_append_sheet(wb,mk(rp,[14,40,12,12,12,10,10,10,10,9,10,10,13,20,90]),'Previsto');
+    XLSX.utils.book_append_sheet(wb,mk(rr,[14,40,12,12,14,14,10,10,9,14]),'Realizado');
+    var h=d.hoje, stamp=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0')+'-'+String(h.getDate()).padStart(2,'0');
+    XLSX.writeFile(wb,'Projecao_Entregas_'+stamp+'.xlsx');
+    toast('Planilha exportada',(np-1)+' épicos em Previsto e '+(nr-1)+' em Realizado, com fórmulas.');
+  }catch(e){
+    console.error('pjExportXlsx',e);
+    toast('Não foi possível exportar','Tente novamente em instantes.','err');
+  }
+}
+</script>
 <script id="sala-shell-nav">
 // Menu lateral recolhível — preferência por pessoa/navegador (localStorage só
 // para conveniência visual; sem dado compartilhado). Nome sem "Key" (GitLeaks).
