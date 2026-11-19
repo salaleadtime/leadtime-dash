@@ -2943,13 +2943,14 @@ function ojDateError(r, v){
 // de gravação da edição normal (fc): Sheets + fila de pendentes + histórico.
 function concludeOutsideEpic(r, v){
   var rec=r;
+  var _before=_pendingSnapshot(rec);
   rec.fim=v; rec.fimAntes=null;
   normalizeWorkflowRecord(rec);
   rec.lt=calcLT(rec.ini,rec.fim);
   delete _epicsOutsideJira[rec.id];
   if(!(allData||[]).some(function(x){ return x&&x.id===rec.id; })) allData.push(rec);
   logFimChange(rec.id,'',rec.fim,'ENTREGUE');
-  queuePendingWrite(rec);
+  queuePendingWrite(rec, _before);
   return rec;
 }
 function outsideJiraConfirm(){
@@ -3134,6 +3135,10 @@ function replaceFromSharedSource(rows){
   }catch(e){}
 
   var incoming=rows.filter(function(r){return r&&r.id;}).map(makeRow);
+  // Foto do que o Sheets tem DE FATO (antes de aplicar a fila local): é contra
+  // ela que _guardSheetsItems confere qualquer gravação.
+  _setSheetsServerSnap(incoming);
+  var _readStartedAt=_sheetsLastReadAt||0;
   // Uma importação Jira recente é autoritativa para a carteira ATUAL. Entregas
   // e cancelamentos fora dela continuam no histórico e na aba Medição.
   var jiraEpicSnapshot=loadJiraEpicSnapshot();
@@ -3196,8 +3201,19 @@ function replaceFromSharedSource(rows){
       // o Sheets devolve esse mesmo vazio, removendo o campo da fila abaixo.
       if((pendingIsFresh||hasPendingDateWrite(pend.fields)) && pend.fields){
         Object.keys(pend.fields).forEach(function(field){
-          if((r[field]||'') === (pend.fields[field]||'')){
+          var srvVal=r[field]||'', locVal=pend.fields[field]||'';
+          if(srvVal === locVal){
             delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
+          } else if(srvVal && (pend.legacy ||
+                    (pend.sentOkAt && _readStartedAt > pend.sentOkAt))){
+            // O Sheets tem um valor PREENCHIDO e diferente, e (a) esta entrada é
+            // da fila antiga (retrato da linha, não edição real) ou (b) a nossa
+            // gravação já foi aceita e esta leitura começou depois dela: então
+            // outra pessoa alterou o campo depois de nós. O valor mais novo do
+            // Sheets vence — antes, a fila local o revertia para sempre.
+            console.info('[Épicos] Valor mais novo no Sheets prevaleceu sobre edição local antiga — id:', r.id,
+              'campo:', field, '| local descartado:', locVal||'(vazio)', '| Sheets:', srvVal);
+            delete pend.fields[field]; _pendChanged=true;
           } else {
             // Diagnóstico: se isto aparecer repetidamente pro MESMO id/campo em
             // sincronizações sucessivas (em vez de confirmar e sumir), é sinal de
@@ -3528,16 +3544,139 @@ function loadDeletedWarned(){
 function saveDeletedWarned(m){
   try{ storageSet(DELETED_WARN_KEY, JSON.stringify(m||{})); }catch(e){}
 }
-// Registra os campos editáveis de um épico como pendentes de confirmação.
-// Chamado em TODA edição local antes de enviar ao Sheets.
-function queuePendingWrite(rec){
+// Registra como pendentes SÓ os campos que esta edição realmente mudou.
+//
+// Bug corrigido em 19/11/2026 ("preenchi a Data Início e no outro dia sumiu"):
+// antes, qualquer edição (CHG, Impedimento, Data Prevista…) enfileirava os 8
+// campos editáveis do épico, inclusive os VAZIOS. Como uma entrada com
+// 'ini'/'fim'/'dataPrevista' nunca expirava (hasPendingDateWrite olha só a
+// existência da chave), um navegador que editou o Impedimento quando a Data
+// Início ainda estava vazia guardava "ini = vazio" para sempre e, a cada poll
+// (flushPendingWrites), regravava a linha inteira no Sheets — apagando a data
+// que outra pessoa tinha preenchido depois. Agora:
+//  - só entram os campos alterados (fieldsOrBefore = lista de campos OU o
+//    retrato do registro antes da edição, via _pendingSnapshot);
+//  - um valor vazio na fila significa "a pessoa apagou de propósito";
+//  - toda gravação passa por _guardSheetsItems, que nunca deixa um vazio que
+//    ninguém apagou de propósito sobrescrever um valor que já está no Sheets.
+function _pendingSnapshot(rec){
+  var o={}; EDITABLE_FIELDS.forEach(function(f){ o[f]=(rec&&rec[f])||''; }); return o;
+}
+function queuePendingWrite(rec, fieldsOrBefore){
   if(!rec||!rec.id) return;
+  var fields=[];
+  if(Array.isArray(fieldsOrBefore)){
+    fields=fieldsOrBefore.filter(function(f){ return EDITABLE_FIELDS.indexOf(f)!==-1; });
+  } else if(fieldsOrBefore && typeof fieldsOrBefore==='object'){
+    EDITABLE_FIELDS.forEach(function(f){ if((fieldsOrBefore[f]||'')!==(rec[f]||'')) fields.push(f); });
+  } else {
+    // Chamador sem informação do que mudou: enfileira só os campos preenchidos.
+    // Vazio nunca entra aqui — não dá pra saber se foi apagado de propósito.
+    EDITABLE_FIELDS.forEach(function(f){ if(rec[f]) fields.push(f); });
+  }
+  if(!fields.length) return;
   var p=loadPending();
   var ent=p[rec.id]||{fields:{}};
-  EDITABLE_FIELDS.forEach(function(f){ ent.fields[f]=rec[f]||''; });
+  if(!ent.fields) ent.fields={};
+  fields.forEach(function(f){ ent.fields[f]=rec[f]||''; });
+  ent.v=2;
   ent.ts=Date.now();
+  ent.sentOkAt=0;            // nova edição: ainda não confirmada pelo Sheets
   p[rec.id]=ent;
   savePending(p);
+}
+// Entradas gravadas antes de 19/11/2026 guardavam TODOS os campos, inclusive
+// vazios que ninguém apagou. Remove esses vazios (eram só retrato da linha) e
+// marca a entrada como legada: ela só protege contra o Sheets devolver vazio,
+// nunca sobrescreve um valor diferente que já esteja lá.
+function migrateLegacyPendingWrites(){
+  try{
+    var p=loadPending(), changed=false;
+    Object.keys(p).forEach(function(id){
+      var ent=p[id];
+      if(!ent||!ent.fields){ delete p[id]; changed=true; return; }
+      if(ent.v===2) return;
+      Object.keys(ent.fields).forEach(function(f){
+        if(!ent.fields[f] || f==='status' || f==='statusAntes'){ delete ent.fields[f]; }
+      });
+      ent.v=2; ent.legacy=true; changed=true;
+      if(!Object.keys(ent.fields).length) delete p[id];
+    });
+    if(changed) savePending(p);
+  }catch(e){}
+}
+// Campos que um vazio "acidental" (cópia local desatualizada) nunca pode apagar
+// no Sheets. status/statusAntes/fimAntes ficam de fora de propósito: vazio é
+// um valor legítimo deles e é recalculado por normalizeWorkflowRecord.
+var SHEETS_GUARDED_FIELDS=['ini','fim','dataPrevista','chg','impedimento'];
+var _sheetsServerSnap=null;  // {at, map:{id:{ini,fim,dataPrevista,chg,impedimento}}} — última leitura do Sheets, sem a fila local
+function _serverFieldsOf(row){
+  var o={}; SHEETS_GUARDED_FIELDS.forEach(function(f){ o[f]=(row&&row[f])||''; }); return o;
+}
+function _setSheetsServerSnap(rows){
+  var map={};
+  (rows||[]).forEach(function(r){ if(r&&r.id) map[r.id]=_serverFieldsOf(r); });
+  _sheetsServerSnap={at:Date.now(), map:map};
+}
+// Leitura direta do Sheets só para conferir antes de gravar (não aplica na tela,
+// não mexe em _sheetsSyncing). 2 tentativas, 20s cada. Sempre lê de novo:
+// reaproveitar uma foto de segundos atrás deixava exatamente a janela em que a
+// data de outra pessoa entra. Rajadas (ex.: digitar Impedimento) já são
+// agrupadas pela fila de saveToSheets enquanto uma gravação está em voo.
+function _freshSheetsServerSnap(cb){
+  var tries=0;
+  function attempt(){
+    tries++;
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var timer=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} },20000):null;
+    fetch(SHEETS_WEBAPP+'?t='+Date.now(), ctrl?{signal:ctrl.signal}:undefined)
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(json){
+        if(timer) clearTimeout(timer);
+        if(!json||!json.ok||!Array.isArray(json.data)||!json.data.length) throw new Error('resposta vazia');
+        _setSheetsServerSnap(json.data.filter(function(r){return r&&r.id;}).map(makeRow));
+        cb(_sheetsServerSnap);
+      })
+      .catch(function(){
+        if(timer) clearTimeout(timer);
+        if(tries<2){ setTimeout(attempt, SHEETS_RETRY_DELAY_MS); return; }
+        cb(_sheetsServerSnap);   // sem leitura nova: usa a última conhecida (pode ser null)
+      });
+  }
+  attempt();
+}
+// Nunca deixa um campo vazio sobrescrever valor que já está no Sheets, a menos
+// que alguém tenha apagado aquele campo de propósito (item.__clear ou valor
+// vazio na fila de pendentes desta aba). Devolve itens limpos para envio e
+// devolve o valor ao registro em memória, para a tela não mostrar o vazio.
+function _guardSheetsItems(items, snap){
+  var pend=loadPending(), restored=[];
+  var out=items.map(function(it){
+    var clean={}; Object.keys(it).forEach(function(k){ if(k!=='__clear') clean[k]=it[k]; });
+    var srv=snap&&snap.map&&snap.map[it.id];
+    if(!srv) return clean;
+    var ent=pend[it.id], explicit=(it.__clear||[]).slice();
+    if(ent&&ent.fields) Object.keys(ent.fields).forEach(function(f){ if(ent.fields[f]==='') explicit.push(f); });
+    SHEETS_GUARDED_FIELDS.forEach(function(f){
+      if(!Object.prototype.hasOwnProperty.call(clean,f)) return;
+      if(clean[f] || !srv[f] || explicit.indexOf(f)!==-1) return;
+      clean[f]=srv[f];
+      restored.push(it.id+'.'+f);
+      var rec=(allData||[]).find(function(x){ return x&&x.id===it.id; });
+      if(rec && !rec[f]){ rec[f]=srv[f]; if(f==='ini'||f==='fim') rec.lt=calcLT(rec.ini,rec.fim); }
+    });
+    return clean;
+  });
+  if(restored.length){
+    console.warn('[Épicos] Gravação bloqueada de apagar valores que já estavam no Sheets (cópia local desatualizada):', restored);
+    try{ saveLocal(); }catch(e){}
+  }
+  return out;
+}
+function _markPendingSent(items){
+  var p=loadPending(), now=Date.now(), changed=false;
+  (items||[]).forEach(function(it){ var ent=it&&p[it.id]; if(ent){ ent.sentOkAt=now; changed=true; } });
+  if(changed) savePending(p);
 }
 // Monta o payload padrão enviado ao Sheets a partir de um conjunto de campos.
 function _sheetsItem(id, f){
@@ -3553,7 +3692,12 @@ function flushPendingWrites(){
   Object.keys(p).forEach(function(id){
     var ent=p[id];
     if(!ent||!ent.fields||((now-(ent.ts||0))>PENDING_EDIT_TTL&&!hasPendingDateWrite(ent.fields))){ delete p[id]; changed=true; return; }
-    items.push(_sheetsItem(id, ent.fields));
+    // Monta a partir do registro ATUAL (valores do Sheets nos campos sem
+    // edição pendente), nunca de um retrato antigo da linha inteira.
+    var cur=(allData||[]).find(function(x){ return x&&x.id===id; });
+    var base=cur?_pendingSnapshot(cur):{};
+    Object.keys(ent.fields).forEach(function(f){ base[f]=ent.fields[f]; });
+    items.push(_sheetsItem(id, base));
   });
   if(changed) savePending(p);
   if(items.length) saveToSheets(items);   // saveToSheets re-lê e confirma em 500ms
@@ -3627,6 +3771,12 @@ function saveToSheets(items){
   _sheetsLastWritePayload=payload;
 
   setSyncLabel('🔄 Salvando no Google Sheets…');
+  // Confere com o Sheets antes de gravar: um vazio desta cópia local nunca
+  // apaga um valor que outra pessoa já gravou (ver queuePendingWrite).
+  _freshSheetsServerSnap(function(snap){ _sendToSheets(_guardSheetsItems(items, snap)); });
+}
+function _sendToSheets(items){
+  var payload=JSON.stringify(items);
 
   // Correção crítica:
   // POST com mode:no-cors para Apps Script é opaco e pode falhar sem avisar.
@@ -3643,6 +3793,8 @@ function saveToSheets(items){
       if(!json || json.ok!==true){
         throw new Error((json&&json.error) ? json.error : 'Apps Script retornou erro ao salvar');
       }
+      _markPendingSent(items);
+      _sheetsServerSnap=null;   // a foto anterior ficou velha com esta gravação
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
       // Confirma a gravação lendo novamente a fonte oficial.
       setTimeout(function(){ _trySheets(true); }, 500);
@@ -3663,6 +3815,14 @@ function saveToSheets(items){
 // Divide em grupos pequenos para não estourar o limite de URL do GET.
 function saveToSheetsBatch(items){
   if(!SHEETS_WEBAPP || !items || !items.length) return;
+  // Importação/Admin gravam dezenas de épicos com base na cópia LOCAL. Se essa
+  // cópia estava desatualizada (ex.: aba aberta desde ontem, leitura do Sheets
+  // falhou), a gravação apagava Data Início/CHG/etc. preenchidos por outras
+  // pessoas para todo mundo. Agora confere com o Sheets antes do 1º lote.
+  setSyncLabel('🔄 Conferindo dados do Google Sheets antes de salvar…');
+  _freshSheetsServerSnap(function(snap){ _saveToSheetsBatchGuarded(_guardSheetsItems(items, snap)); });
+}
+function _saveToSheetsBatchGuarded(items){
   var BATCH=3, batches=[], total=0;
   for(var i=0;i<items.length;i+=BATCH) batches.push(items.slice(i,i+BATCH));
   total=batches.length;
@@ -3679,12 +3839,13 @@ function saveToSheetsBatch(items){
       }
       return;
     }
-    var payload=JSON.stringify(batches[idx]);
+    var sentBatch=batches[idx];
+    var payload=JSON.stringify(sentBatch);
     var url=SHEETS_WEBAPP+'?action=update&t='+Date.now()+'&payload='+encodeURIComponent(payload);
     setSyncLabel('🔄 Salvando no Sheets… (lote '+(idx+1)+'/'+total+')');
     fetch(url)
       .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-      .then(function(j){ if(!j||j.ok!==true) throw new Error((j&&j.error)||'Erro'); ok++; })
+      .then(function(j){ if(!j||j.ok!==true) throw new Error((j&&j.error)||'Erro'); ok++; _markPendingSent(sentBatch); })
       .catch(function(e){ fail++; console.error('Lote '+(idx+1)+' falhou:',e); })
       .finally(function(){ idx++; setTimeout(sendNext,1500); });
   }
@@ -4795,6 +4956,7 @@ function restaurarFim(epicId,fimAntes){
   var rec=allData.find(function(r){ return r.id===epicId; });
   if(!rec){ toast('Épico não encontrado','<strong>'+esc(epicId)+'</strong> não está mais na lista de ativos.','err'); return; }
   if(isValidDate(rec.fim)){ toast('Épico já está em Medição','<strong>'+esc(epicId)+'</strong> já tem Data Fim registrada.','warn'); return; }
+  var _before=_pendingSnapshot(rec);
   rec.fim=fimAntes;
   rec.fimAntes=null;
   if(rec.status&&rec.status!=='Concluído'&&!rec.statusAntes) rec.statusAntes=rec.status;
@@ -4802,7 +4964,7 @@ function restaurarFim(epicId,fimAntes){
   rec.lt=calcLT(rec.ini,rec.fim);
   logFimChange(epicId,'',fimAntes,'RESTAURADO');
   saveLocal();
-  queuePendingWrite(rec);
+  queuePendingWrite(rec, _before);
   saveToSheets([_sheetsItem(rec.id, rec)]);
   renderTbl(); renderMed(); renderDash(); updateTabCounts(); activateTab('me');
   toast('✓ Data Fim restaurada','<strong>'+esc(epicId)+'</strong> voltou para Medição com Data Fim <strong>'+fimAntes+'</strong>.');
@@ -4932,10 +5094,12 @@ function saveImpedimentoDraft(el){
     if(!rec) return;
     rec.impedimento=el.value||'';
     saveLocal();
-    queuePendingWrite(rec);
+    queuePendingWrite(rec, ['impedimento']);
     clearTimeout(_jbSaveTimer);
     jbSave();
-    saveToSheets([_sheetsItem(rec.id, rec)]);
+    var _it=_sheetsItem(rec.id, rec);
+    if(!rec.impedimento) _it.__clear=['impedimento'];
+    saveToSheets([_it]);
   },700);
 }
 function fc(el){
@@ -4949,6 +5113,7 @@ function fc(el){
   // saveLocal() abaixo) ou por um redraw concorrente antes do evento chegar aqui.
   var rec=allData[gi];
   var oldVal=rec[f];
+  var _before=_pendingSnapshot(rec);   // para enfileirar só o que esta edição mudou
   var rawVal=(el.value||'').trim();
   var targetTab=tabToRestore;
 
@@ -5030,8 +5195,10 @@ function fc(el){
     // Enfileira TODOS os campos editáveis como pendentes até o Sheets confirmar.
     // Protege qualquer edição (inclusive apagar um campo) contra ser sobrescrita
     // por uma releitura antecipada ou perdida por uma gravação que falhou.
-    queuePendingWrite(r);
-    saveToSheets([_sheetsItem(r.id, r)]);
+    queuePendingWrite(r, _before);
+    var _it=_sheetsItem(r.id, r);
+    if(!(r[f]||'')) _it.__clear=[f];   // a própria pessoa apagou este campo
+    saveToSheets([_it]);
   }
 }
 
@@ -8857,6 +9024,7 @@ function loadXlsx(file){
 
       var merged=[], seenIds={};
       var stats={newCount:0,updatedCount:0,preservedIni:0,preservedFim:0,preservedPrev:0,preservedChg:0,preservedImp:0,skipped:0,reactivatedCount:0};
+      var _reactivatedIds={}; // épicos cuja Data Fim o Jira reabriu (apagar é intencional)
       var skippedRows=[]; // {id, motivo} — linhas de ÉPICO descartadas por ID inválido (não conta o filtro normal de "não é épico")
 
       for(var x=det.hrow+1;x<rows.length;x++){
@@ -8913,6 +9081,7 @@ function loadXlsx(file){
         };
         rec.lt = calcLT(rec.ini, rec.fim);
         if(shouldReactivate){
+          _reactivatedIds[id] = true;   // Jira reabriu: apagar Data Fim é intencional
           stats.reactivatedCount++;
           logFimChange(id, old.fim, '', 'REVERTIDO_IMPORT');
         }
@@ -9011,9 +9180,11 @@ function loadXlsx(file){
       // Envia os dados importados ao Google Sheets em lotes para sincronizar com o time
       if(SHEETS_WEBAPP){
         saveToSheetsBatch(merged.map(function(r){
-          return {id:r.id, squad:r.squad||'', resumo:r.resumo||'', status:r.status||'',
+          var it={id:r.id, squad:r.squad||'', resumo:r.resumo||'', status:r.status||'',
             statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
             ini:r.ini||'', fim:r.fim||'', dataPrevista:r.dataPrevista||''};
+          if(_reactivatedIds[r.id]) it.__clear=['fim'];
+          return it;
         }));
       }
 
@@ -9878,6 +10049,7 @@ function _trySheets(silent){
 // Isola a fila criada nesse intervalo antes que valores vazios sejam reenviados
 // para a fonte oficial restaurada. A cópia fica recuperável no cache local.
 quarantinePendingWritesAfterEndpointCorrection();
+migrateLegacyPendingWrites();
 setInterval(function(){
   if(document.hidden || !SHEETS_WEBAPP || _sheetsSyncing || _sheetsWriteSyncing) return;
   flushPendingWrites();   // rede de segurança: reenvia edições que não foram confirmadas
@@ -10965,7 +11137,7 @@ function calSeedExample(){
         saveLocal();
         var altered=Object.keys(admDirtyEpics).map(function(id){ return admDirtyEpics[id]; });
         if(altered.length){
-          altered.forEach(function(rec){ queuePendingWrite(rec); });
+          altered.forEach(function(rec){ queuePendingWrite(rec, ['status','statusAntes']); });
           saveToSheetsBatch(altered.map(function(rec){ return _sheetsItem(rec.id, rec); }));
           admDirtyEpics={};
         }
