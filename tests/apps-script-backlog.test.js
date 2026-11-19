@@ -589,8 +589,9 @@ console.log('\n═══ 22. Épicos v33: vazio não apaga, versão por campo, c
 
   // Painel antigo (sem manual) continua conseguindo preencher.
   let c = seed([row({})]);
-  let r = U(c, [row({ ini:'2026-11-17' })]);
-  t('painel antigo preenche Data Início', [r.ok, get(c).ini], [true, '2026-11-17']);
+  const edit = (o) => { const x = row(o); delete x.squad; delete x.resumo; return x; };   // formato do _sheetsItem do painel antigo
+  let r = U(c, [edit({ ini:'2026-11-17' })]);
+  t('painel antigo preenche Data Início (edição isolada)', [r.ok, get(c).ini], [true, '2026-11-17']);
   t('leitura devolve a versão do campo', get(c).rev.ini, 1);
 
   // Cópia velha / importação com linha inteira vazia não apaga nada.
@@ -676,7 +677,7 @@ console.log('\n═══ 23. Épicos v33: cenários do parecer externo ═══
   c = seed({ dataPrevista:'2026-12-01' }); U(c, row({ dataPrevista:'2026-12-20' }));
   t('painel antigo continua trocando Data Prevista (como hoje)', g(c).dataPrevista, '2026-12-20');
   U(c, row({ ini:'2026-01-01', authoritative:['ini'] }));
-  t('authoritative não vale para Data Início', g(c).ini, '2026-01-01');
+  t('authoritative não vale para Data Início (importação antiga não preenche)', g(c).ini, '');
   r = U(c, row({ ini:'2026-02-02' }));
   t('reenvio sem mudança real não grava', r.unchanged, true);
   // migração: base com iniRevision do protocolo alternativo
@@ -735,6 +736,37 @@ console.log('\n═══ 25. Épicos v33: reenvio antigo com Data Início recusa
   c = seed({ ini:'2026-11-18', chg:'CHG1' });
   r = U(c, row({ ini:'2026-11-18', chg:'' }));
   t('com Data Início em dia, painel antigo apaga CHG normalmente', g(c).chg, '');
+}
+
+console.log('\n═══ 26. Épicos v33: reenvio parcial do painel antigo (quarto parecer) ═══');
+{
+  const base = { id:'SLOPC-1', squad:'S', resumo:'R', status:'Concluído', statusAntes:'Em Execução', ini:'', fim:'2026-11-18', fimAntes:'', dataPrevista:'2026-11-20', chg:'CHG1', impedimento:'' };
+  const U = (ctx, it) => parse(ctx.doGet(post({ action:'update', payload: JSON.stringify([it]) })));
+  const seed = (o) => { const c = novoAmbiente().ctx; c.writeJsonToSheet_(c.LEADTIME_EPICS_SHEET, [Object.assign({}, base, o)]); return c; };
+  const g = (c) => c.getLeadtimeEpics_()[0];
+  // _sheetsItem(id, ent.fields) do index.html atual com só o Impedimento pendente
+  const flush = (fields) => { const f = fields; return { id:'SLOPC-1', status:f.status||'', statusAntes:f.statusAntes||'', chg:f.chg||'', impedimento:f.impedimento||'', ini:f.ini||'', fim:f.fim||'', fimAntes:f.fimAntes||'', dataPrevista:f.dataPrevista||'' }; };
+  let c = seed({}), r = U(c, flush({ impedimento:'bloqueio' }));
+  let x = g(c);
+  t('reenvio parcial grava o Impedimento', x.impedimento, 'bloqueio');
+  t('e NÃO apaga Data Fim, Data Prevista, CHG nem status', [x.fim, x.dataPrevista, x.chg, x.status, r.ok], ['2026-11-18','2026-11-20','CHG1','Concluído', true]);
+  c = seed({ ini:'2026-10-01' }); U(c, flush({ chg:'CHG2' }));
+  t('reenvio parcial com Data Início gravada: preserva tudo e grava o CHG', [g(c).ini, g(c).fim, g(c).chg], ['2026-10-01','2026-11-18','CHG2']);
+  c = seed({}); U(c, flush({ ini:'2026-11-17' }));
+  t('reenvio parcial não preenche Data Início', g(c).ini, '');
+  // Data apagada ANTES da v33 (sem marca clr): importação/cópia velha não restaura
+  c = seed({});
+  U(c, Object.assign({}, base, { ini:'2026-09-01', status:'Concluído' }));
+  t('importação antiga não restaura Data Início apagada antes da v33', g(c).ini, '');
+  const edit = { id:'SLOPC-1', status:'Concluído', statusAntes:'Em Execução', chg:'CHG9', impedimento:'', ini:'2026-09-01', fim:'2026-11-18', fimAntes:'', dataPrevista:'2026-11-20' };
+  U(c, edit);
+  t('cópia velha editando outro campo não restaura Data Início', [g(c).ini, g(c).chg], ['', 'CHG9']);
+  U(c, Object.assign({}, edit, { chg:'CHG9', ini:'2026-11-17' }));
+  t('edição isolada da Data Início no painel antigo preenche', g(c).ini, '2026-11-17');
+  // Painel antigo com registro completo continua apagando CHG de propósito
+  c = seed({ ini:'2026-10-01' });
+  U(c, { id:'SLOPC-1', status:'Concluído', statusAntes:'Em Execução', chg:'', impedimento:'', ini:'2026-10-01', fim:'2026-11-18', fimAntes:'', dataPrevista:'2026-11-20' });
+  t('edição completa do painel antigo apaga CHG normalmente', g(c).chg, '');
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);

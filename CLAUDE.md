@@ -107,6 +107,16 @@ ele não mexe em status): o `flushPendingWrites` do painel antigo reenvia
 vazio nos campos já confirmados e, com a Data Início recusada para sempre,
 apagaria CHG/Impedimento em loop. Backend 193/193; Playwright: painel novo
 16/16, painel antigo protegido (só não troca/apaga Data Início existente).
+**Quarto parecer (19/11/2026), bug PRÉ-EXISTENTE em produção:** o
+`flushPendingWrites` do `index.html` antigo monta `_sheetsItem(id, ent.fields)`
+só com os campos ainda pendentes e manda VAZIO em todo o resto (inclusive
+status). Com o backend v32 isso apaga Data Início, Data Fim, Data Prevista,
+CHG e status de uma vez (reproduzido). O `index.html` novo não tem esse bug
+(reenvio parte do registro atual + valor do Sheets). No servidor: item sem
+`proto:2` com status vazio = reenvio parcial, seus vazios não apagam nada; e o
+painel antigo só PREENCHE Data Início numa edição isolada (sem resumo/squad e
+demais campos iguais ao gravado), o que cobre data apagada antes da v33 (sem
+marca `clr`). Backend 201/201; Playwright painel novo 18/18.
 **Atenção ao publicar:** o painel lê/grava Épicos em `SHEETS_WEBAPP`, que hoje
 é uma implantação diferente de `BK_GAS_URL` (ver commit "Restaura fonte
 oficial das datas dos epicos"). A v33 só tem efeito se for publicada na
