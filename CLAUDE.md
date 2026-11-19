@@ -117,6 +117,14 @@ CHG e status de uma vez (reproduzido). O `index.html` novo não tem esse bug
 painel antigo só PREENCHE Data Início numa edição isolada (sem resumo/squad e
 demais campos iguais ao gravado), o que cobre data apagada antes da v33 (sem
 marca `clr`). Backend 201/201; Playwright painel novo 18/18.
+**Quinto parecer (19/11/2026), corrigido no `index.html`:** `_guardSheetsItems`
+"rebaseava" a edição pendente para a revisão ATUAL quando o valor do Sheets
+voltava a ser igual ao que a pessoa viu (A-B-A: alguém apagou e preencheu de
+novo a mesma data), e a exclusão antiga passava por cima. Agora a edição
+mantém a revisão original durante todo o reenvio (única exceção: o Sheets já
+tem exatamente o valor desta edição) e o servidor devolve conflito. E
+`flushPendingWrites` reenvia SÓ os campos pendentes (`{id, campos}`), sem
+linha inteira; vazio ali é exclusão intencional. Playwright painel novo 21/21.
 **Atenção ao publicar:** o painel lê/grava Épicos em `SHEETS_WEBAPP`, que hoje
 é uma implantação diferente de `BK_GAS_URL` (ver commit "Restaura fonte
 oficial das datas dos epicos"). A v33 só tem efeito se for publicada na

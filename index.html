@@ -3681,11 +3681,12 @@ function _guardSheetsItems(items, snap){
     var ent=pend[it.id], explicit=(it.__clear||[]).slice();
     if(ent&&ent.fields) Object.keys(ent.fields).forEach(function(f){ if(ent.fields[f]==='') explicit.push(f); });
     // v33 do backend: campos apagados de propósito vão em `clear`; campos
-    // editados à mão vão em `manual` com a versão em que a pessoa se baseou.
-    // Se o Sheets ainda tem o mesmo valor que a pessoa viu (ou já tem o valor
-    // dela), a base é a versão ATUAL — o servidor só recusa se alguém gravar
-    // entre esta leitura e a gravação. Se tem outro valor, vai a versão antiga
-    // e o servidor devolve conflito com o valor atual (backend antigo ignora).
+    // editados à mão vão em `manual` com a versão EM QUE A PESSOA SE BASEOU,
+    // mantida durante todo o reenvio. Nunca "rebaseia" para a versão atual só
+    // porque o valor voltou a ser igual ao que a pessoa viu: alguém pode ter
+    // apagado e preenchido de novo (revisão mudou) e a edição antiga não pode
+    // passar por cima disso. Única exceção: o Sheets já tem exatamente o valor
+    // desta edição (gravação já aplicada; servidor trata como sem mudança).
     var clearList=explicit.filter(function(f){ return SHEETS_GUARDED_FIELDS.indexOf(f)!==-1; });
     if(clearList.length) clean.clear=clearList;
     if(ent&&ent.fields){
@@ -3694,8 +3695,7 @@ function _guardSheetsItems(items, snap){
         if(SHEETS_GUARDED_FIELDS.indexOf(f)===-1) return;
         var b=(ent.baseRev&&typeof ent.baseRev[f]==='number')?ent.baseRev[f]:0;
         if(srv&&srv.rev&&typeof srv.rev[f]==='number'){
-          var seen=(ent.before&&Object.prototype.hasOwnProperty.call(ent.before,f))?ent.before[f]:null;
-          if((srv[f]||'')===(ent.fields[f]||'') || (seen!==null && (srv[f]||'')===seen)) b=srv.rev[f];
+          if((srv[f]||'')===(ent.fields[f]||'')) b=srv.rev[f];
         }
         manual.push(f); baseRev[f]=b;
       });
@@ -3815,12 +3815,11 @@ function flushPendingWrites(){
   Object.keys(p).forEach(function(id){
     var ent=p[id];
     if(!ent||!ent.fields||((now-(ent.ts||0))>PENDING_EDIT_TTL&&!hasPendingDateWrite(ent.fields))){ delete p[id]; changed=true; return; }
-    // Monta a partir do registro ATUAL (valores do Sheets nos campos sem
-    // edição pendente), nunca de um retrato antigo da linha inteira.
-    var cur=(allData||[]).find(function(x){ return x&&x.id===id; });
-    var base=cur?_pendingSnapshot(cur):{};
-    Object.keys(ent.fields).forEach(function(f){ base[f]=ent.fields[f]; });
-    items.push(_sheetsItem(id, base));
+    // Reenvia SÓ os campos ainda pendentes (um vazio aqui é exclusão
+    // intencional). Nada de linha inteira: campo ausente não é campo vazio.
+    var it={id:id};
+    Object.keys(ent.fields).forEach(function(f){ it[f]=ent.fields[f]||''; });
+    items.push(it);
   });
   if(changed) savePending(p);
   if(items.length) saveToSheets(items);   // saveToSheets re-lê e confirma em 500ms
