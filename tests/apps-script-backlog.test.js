@@ -311,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-11-19-v33-epicos-campo-protegido');
+  t('versão correta', h.version, '2026-11-19-v33-epicos-confirmacao-por-campo');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -591,7 +591,8 @@ console.log('\n═══ 22. Épicos v33: vazio não apaga, versão por campo, c
   let c = seed([row({})]);
   const edit = (o) => { const x = row(o); delete x.squad; delete x.resumo; return x; };   // formato do _sheetsItem do painel antigo
   let r = U(c, [edit({ ini:'2026-11-17' })]);
-  t('painel antigo preenche Data Início (edição isolada)', [r.ok, get(c).ini], [true, '2026-11-17']);
+  t('painel antigo não informa Data Início em épico existente (só na criação)', [r.ok, get(c).ini, r.preserved.length], [true, '', 1]);
+  r = U(c, [{ id:'SLOPC-1', ini:'2026-11-17', manual:['ini'], baseRev:{ ini:0 }, proto:2 }]);
   t('leitura devolve a versão do campo', get(c).rev.ini, 1);
 
   // Cópia velha / importação com linha inteira vazia não apaga nada.
@@ -762,7 +763,9 @@ console.log('\n═══ 26. Épicos v33: reenvio parcial do painel antigo (quar
   U(c, edit);
   t('cópia velha editando outro campo não restaura Data Início', [g(c).ini, g(c).chg], ['', 'CHG9']);
   U(c, Object.assign({}, edit, { chg:'CHG9', ini:'2026-11-17' }));
-  t('edição isolada da Data Início no painel antigo preenche', g(c).ini, '2026-11-17');
+  t('painel antigo não informa Data Início em épico existente', g(c).ini, '');
+  U(c, { id:'SLOPC-1', ini:'2026-11-17', iniManual:true, iniBaseRevision:g(c).rev.ini });
+  t('com versão (iniManual) a Data Início é informada', g(c).ini, '2026-11-17');
   // Painel antigo com registro completo continua apagando CHG de propósito
   c = seed({ ini:'2026-10-01' });
   U(c, { id:'SLOPC-1', status:'Concluído', statusAntes:'Em Execução', chg:'', impedimento:'', ini:'2026-10-01', fim:'2026-11-18', fimAntes:'', dataPrevista:'2026-11-20' });

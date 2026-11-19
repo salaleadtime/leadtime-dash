@@ -31,16 +31,13 @@
  *           (`proto:2`). Item SEM `proto:2` (painel antigo ou protocolo
  *           alternativo) mantém TODO o comportamento da v32 — reabrir épico,
  *           trocar Data Prevista, apagar CHG/Impedimento — EXCETO a Data
- *           Início: sem versão ela só é preenchida quando está vazia e não foi
- *           apagada de propósito; nunca é trocada nem apagada (com
- *           `iniManual`+`iniBaseRevision` pode, com controle de versão). Nada
+ *           Início: sem versão, a data só pode ser informada na criação do
+ *           épico. Campos existentes exigem edição manual com revisão. Nada
  *           de erro parcial: a resposta é ok:true e lista o que foi preservado.
  *           Item antigo com status VAZIO é reenvio parcial do painel antigo
  *           (flushPendingWrites manda vazio em tudo que já foi confirmado):
  *           seus vazios não apagam nada. Na v32 esse reenvio apagava Data
  *           Início, Data Fim, Data Prevista, CHG e status de uma vez.
- *           Painel antigo só PREENCHE Data Início numa edição isolada (sem
- *           resumo/squad e com os demais campos iguais ao gravado).
  *           Item antigo cuja Data Início foi recusada é cópia desatualizada:
  *           seus vazios não apagam nada e status/statusAntes/fimAntes ficam
  *           (o flushPendingWrites do painel antigo reenvia vazio nos campos
@@ -181,7 +178,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-11-19-v33-epicos-campo-protegido';
+var BACKLOG_SCRIPT_VERSION = '2026-11-19-v33-epicos-confirmacao-por-campo';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -1289,18 +1286,6 @@ function applyLeadtimeChange_(current, change, report, isNew) {
   // os campos ainda pendentes e manda VAZIO em todo o resto, inclusive o
   // status). Registro real sempre tem status: status vazio = reenvio parcial.
   var staleLegacy = isLegacy && !String(change.status == null ? '' : change.status).trim();
-  // Painel antigo só PREENCHE Data Início numa edição isolada dela: não é
-  // importação (sem resumo/squad) e todo outro campo protegido enviado bate
-  // com o que está gravado. Cobre data apagada antes da v33 (sem marca clr)
-  // que uma importação ou cópia velha traria de volta.
-  var legacyIniFillOk = isLegacy && !isNew && !has('resumo') && !has('squad') && !staleLegacy &&
-    LEADTIME_GUARDED_FIELDS.every(function(f) {
-      if (f === 'ini' || !has(f)) return true;
-      var inc = change[f] == null ? '' : String(change[f]).trim();
-      if (LEADTIME_DATE_FIELDS.indexOf(f) !== -1 && inc) inc = leadtimeDate_(inc);
-      return inc === (current[f] || '');
-    });
-  if (isLegacy && isNew) legacyIniFillOk = true;
 
   function has(field) { return Object.prototype.hasOwnProperty.call(change, field); }
 
@@ -1353,8 +1338,8 @@ function applyLeadtimeChange_(current, change, report, isNew) {
       if (current.clr[field]) { hold(); return; }
       // Fotografia nunca apaga.
       if (next === '') { hold(); return; }
-      // Painel antigo: Data Início só numa edição isolada dela (ver acima).
-      if (field === 'ini' && isLegacy && !legacyIniFillOk) { hold(); return; }
+      // Campo manual: importações só informam Data Início na criação.
+      if (field === 'ini' && !isNew) { hold(); return; }
       // (1) datas: só preenche vazio (Jira pode trocar Data Prevista).
       // (8) CHG/Impedimento: texto preenchido pode trocar.
       if (cur !== '' && !isText && authoritative.indexOf(field) === -1) { hold(); return; }

@@ -125,6 +125,17 @@ mantém a revisão original durante todo o reenvio (única exceção: o Sheets j
 tem exatamente o valor desta edição) e o servidor devolve conflito. E
 `flushPendingWrites` reenvia SÓ os campos pendentes (`{id, campos}`), sem
 linha inteira; vazio ali é exclusão intencional. Playwright painel novo 21/21.
+**Versão combinada com o par externo (19/11/2026, vale sobre o acima):**
+servidor = o `.gs` do par externo (`v33-epicos-confirmacao-por-campo`): sem
+versão, a Data Início só é informada na CRIAÇÃO do épico (painel antigo não
+preenche Data Início de épico existente; a heurística de "edição isolada"
+saiu). Painel = `index.html` do par externo (confirmação por campo em
+`ent.sentFields`; conflito só desfaz a edição se `_matchesPendingWrite`
+confere com o que foi enviado) + a aplicação de `revs` devolvida: gravação
+manual aceita a partir da nossa `baseRev` avança `ent.baseRev[f]`, senão a
+segunda correção do mesmo campo antes da releitura (ou com a releitura
+falhando) virava "conflito consigo mesma" e era perdida (cenários C11/C12,
+reproduzidos no par externo puro). Backend 202/202.
 **Atenção ao publicar:** o painel lê/grava Épicos em `SHEETS_WEBAPP`, que hoje
 é uma implantação diferente de `BK_GAS_URL` (ver commit "Restaura fonte
 oficial das datas dos epicos"). A v33 só tem efeito se for publicada na
