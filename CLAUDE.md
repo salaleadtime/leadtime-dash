@@ -23,6 +23,34 @@
   tela não quebra: guarda localmente (`sala_imp_log_pending_v1`) e reenvia
   sozinho quando a v32 estiver no ar.
 
+## Correção: Data Início "sumindo no dia seguinte" (19/11/2026)
+
+Relato: usuários preenchiam a Data Início em Épicos e no outro dia o campo
+estava vazio para todo mundo. Causa: três caminhos regravavam a linha INTEIRA
+no Sheets (`SHEETS_WEBAPP`) a partir da cópia local, levando um `ini` vazio
+por cima da data que outra pessoa já tinha gravado:
+
+1. `queuePendingWrite` enfileirava os 8 campos editáveis (inclusive vazios) em
+   qualquer edição, e entrada com chave de data nunca expirava
+   (`hasPendingDateWrite`). `flushPendingWrites` (a cada poll) regravava o
+   retrato antigo para sempre.
+2. Importação de Épicos / Admin (`saveToSheetsBatch`) gravava todos os épicos
+   com a cópia local, sem conferir o Sheets (aba aberta desde ontem = cópia velha).
+3. A fila local revertia valor mais novo gravado por outra pessoa.
+
+Correção (só `index.html`): a fila guarda só os campos que a edição mudou
+(vazio na fila = apagado de propósito); entradas antigas são migradas
+(`migrateLegacyPendingWrites`); toda gravação lê o Sheets antes
+(`_freshSheetsServerSnap`, sempre leitura nova) e `_guardSheetsItems` impede
+um vazio não intencional de apagar `ini/fim/dataPrevista/chg/impedimento`
+(apagar de propósito usa `item.__clear`, ex.: `fc` e reabertura pelo Jira na
+importação); na leitura, valor preenchido diferente no Sheets vence a fila
+quando a nossa gravação já foi aceita antes da leitura (`sentOkAt`) ou a
+entrada é legada. Teste Playwright com Sheets simulado: 8/8 no novo, 3/8 no
+código anterior (reproduz o relato). **Datas que já sumiram não voltam
+sozinhas**, precisam ser preenchidas de novo (ou recuperadas do histórico de
+versões da planilha).
+
 ## Status atual: menu Demandas Emergenciais removido (09/11/2026)
 
 A aba **Demandas Emergenciais** saiu do menu de `index.html` a pedido da
