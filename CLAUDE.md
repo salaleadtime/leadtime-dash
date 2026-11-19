@@ -78,6 +78,17 @@ mudança real não grava. Consequência na transição: painel antigo + v33
 preenche campos vazios, mas não troca nem apaga valor existente (inclusive
 reabrir épico), precisa do index.html novo. Backend 178/178; Playwright com o
 `.gs` real: 16/16.
+**Segundo parecer externo (19/11/2026), corrigido:** (a) importação com
+cópia velha restaurava Data Início apagada de propósito: o servidor marca o
+campo apagado (`clr`) e nenhuma gravação sem versão o preenche de novo; (b) o
+painel antigo tinha alterações recusadas com resposta "ok": agora item sem
+`proto:2` com algo preservado recebe `ok:false, partial:true` e a mensagem
+"Painel desatualizado… Recarregue com Ctrl+F5" (o painel antigo mostra como
+erro); CHG/Impedimento voltaram a aceitar troca (não apagar) vinda do painel
+antigo. No painel novo, `_guardSheetsItems` manda todo campo NÃO editado com o
+valor atual do Sheets (não só os vazios) e, se a Data Fim veio do Sheets,
+`status/statusAntes/fimAntes` acompanham: protege também na janela painel
+novo + backend v32. Backend 187/187.
 **Atenção ao publicar:** o painel lê/grava Épicos em `SHEETS_WEBAPP`, que hoje
 é uma implantação diferente de `BK_GAS_URL` (ver commit "Restaura fonte
 oficial das datas dos epicos"). A v33 só tem efeito se for publicada na

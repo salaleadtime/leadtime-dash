@@ -680,5 +680,40 @@ console.log('\n═══ 23. Épicos v33: cenários do parecer externo ═══
   t('base com iniRevision antigo é respeitada', g(c).rev.ini, 4);
 }
 
+console.log('\n═══ 24. Épicos v33: segundo parecer (apagado de propósito, sem recusa silenciosa) ═══');
+{
+  const row = (o) => Object.assign({ id:'SLOPC-1', squad:'S', resumo:'R', status:'Em Execução', statusAntes:'', ini:'', fim:'', fimAntes:'', dataPrevista:'', chg:'', impedimento:'' }, o);
+  const U = (ctx, it) => parse(ctx.doGet(post({ action:'update', payload: JSON.stringify([it]) })));
+  const seed = (o) => { const c = novoAmbiente().ctx; c.writeJsonToSheet_(c.LEADTIME_EPICS_SHEET, [row(o)]); return c; };
+  const g = (c) => c.getLeadtimeEpics_()[0];
+  let c, r;
+  c = seed({ ini:'2026-11-18' });
+  U(c, { id:'SLOPC-1', ini:'', clear:['ini'], manual:['ini'], baseRev:{ ini:0 }, proto:2 });
+  r = U(c, row({ ini:'2026-11-18' }));
+  t('importação com cópia velha NÃO restaura Data Início apagada', g(c).ini, '');
+  t('e o painel antigo é avisado (ok:false)', [r.ok, /Painel desatualizado/.test(r.error)], [false, true]);
+  r = U(c, row({ ini:'2026-11-18', proto:2 }));
+  t('importação do painel novo também não restaura (sem erro: lê preserved)', [g(c).ini, r.ok, r.preserved.length], ['', true, 1]);
+  r = U(c, { id:'SLOPC-1', ini:'2026-11-25', manual:['ini'], baseRev:{ ini:1 }, proto:2 });
+  t('edição manual preenche de novo e tira a marca', [g(c).ini, !!g(c).clr.ini], ['2026-11-25', false]);
+
+  c = seed({ chg:'CHG1', impedimento:'a' });
+  r = U(c, row({ chg:'CHG2', impedimento:'b' }));
+  t('painel antigo troca CHG e Impedimento', [g(c).chg, g(c).impedimento, r.ok], ['CHG2', 'b', true]);
+  r = U(c, row({ chg:'', impedimento:'' }));
+  t('painel antigo não apaga CHG/Impedimento e é avisado', [g(c).chg, g(c).impedimento, r.ok], ['CHG2', 'b', false]);
+
+  c = seed({ fim:'2026-11-18', status:'Concluído' });
+  r = U(c, row({ fim:'', fimAntes:'2026-11-18', status:'Em Execução' }));
+  t('painel antigo reabrindo épico recebe erro explicativo (não "ok")', [g(c).fim, r.ok, /Ctrl\+F5/.test(r.error)], ['2026-11-18', false, true]);
+
+  c = seed({ ini:'2026-11-18' });
+  r = U(c, row({ chg:'X' }));
+  t('cópia velha com campo vazio: grava o CHG e avisa', [g(c).chg, g(c).ini, r.ok, r.partial], ['X', '2026-11-18', false, true]);
+  c = seed({ ini:'2026-11-18', chg:'' });
+  r = U(c, row({ ini:'2026-11-18', chg:'Y' }));
+  t('painel antigo com cópia em dia: ok normal', [g(c).chg, r.ok], ['Y', true]);
+}
+
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
 process.exit(fail ? 1 : 0);

@@ -3633,6 +3633,7 @@ var _sheetsServerSnap=null;  // {at, map:{id:{ini,fim,dataPrevista,chg,impedimen
 function _serverFieldsOf(row){
   var o={}; SHEETS_GUARDED_FIELDS.forEach(function(f){ o[f]=(row&&row[f])||''; });
   o.rev=(row&&row.rev&&typeof row.rev==='object')?row.rev:null;
+  o.coupled={status:(row&&row.status)||'', statusAntes:(row&&row.statusAntes)||'', fimAntes:(row&&row.fimAntes)||''};
   return o;
 }
 function _setSheetsServerSnap(rows){
@@ -3675,6 +3676,7 @@ function _guardSheetsItems(items, snap){
   var pend=loadPending(), restored=[];
   var out=items.map(function(it){
     var clean={}; Object.keys(it).forEach(function(k){ if(k!=='__clear') clean[k]=it[k]; });
+    clean.proto=2;   // backend v33: este painel lê `preserved/conflicts` (sem erro de "painel desatualizado")
     var srv=snap&&snap.map&&snap.map[it.id];
     var ent=pend[it.id], explicit=(it.__clear||[]).slice();
     if(ent&&ent.fields) Object.keys(ent.fields).forEach(function(f){ if(ent.fields[f]==='') explicit.push(f); });
@@ -3708,18 +3710,38 @@ function _guardSheetsItems(items, snap){
       clean.baseRev=Object.assign({}, clean.baseRev||{}); clean.baseRev[f]=srv.rev[f];
     });
     if(!srv) return clean;
+    // Campo que esta pessoa NÃO editou vai com o valor que está no Sheets
+    // agora, nunca com a cópia local (que pode estar velha, vazia ou com uma
+    // data antiga preenchida). Exceções: apagado de propósito, valor oficial
+    // do Jira (`authoritative`) e preenchimento de campo vazio no Sheets.
+    // Vale com qualquer backend (v32 grava o que recebe).
+    var edited=(ent&&ent.fields)?ent.fields:{};
+    var auth=it.authoritative||[];
+    var rec=(allData||[]).find(function(x){ return x&&x.id===it.id; });
+    var fimFromServer=false;
     SHEETS_GUARDED_FIELDS.forEach(function(f){
       if(!Object.prototype.hasOwnProperty.call(clean,f)) return;
-      if(clean[f] || !srv[f] || explicit.indexOf(f)!==-1) return;
+      if(Object.prototype.hasOwnProperty.call(edited,f) || explicit.indexOf(f)!==-1 || auth.indexOf(f)!==-1) return;
+      if(!srv[f] || clean[f]===srv[f]) return;
+      restored.push(it.id+'.'+f+' ('+(clean[f]||'vazio')+' → '+srv[f]+')');
       clean[f]=srv[f];
-      restored.push(it.id+'.'+f);
-      var rec=(allData||[]).find(function(x){ return x&&x.id===it.id; });
-      if(rec && !rec[f]){ rec[f]=srv[f]; if(f==='ini'||f==='fim') rec.lt=calcLT(rec.ini,rec.fim); }
+      if(f==='fim') fimFromServer=true;
+      if(rec){ rec[f]=srv[f]; if(f==='ini'||f==='fim') rec.lt=calcLT(rec.ini,rec.fim); }
     });
+    // Se a Data Fim veio do Sheets, status/statusAntes/fimAntes acompanham,
+    // para não gravar "Em Execução" num épico que outra pessoa concluiu.
+    if(fimFromServer && srv.coupled){
+      ['status','statusAntes','fimAntes'].forEach(function(f){
+        if(Object.prototype.hasOwnProperty.call(edited,f) || auth.indexOf(f)!==-1) return;
+        if(!Object.prototype.hasOwnProperty.call(clean,f)) return;
+        clean[f]=srv.coupled[f]||'';
+        if(rec) rec[f]=srv.coupled[f]||null;
+      });
+    }
     return clean;
   });
   if(restored.length){
-    console.warn('[Épicos] Gravação bloqueada de apagar valores que já estavam no Sheets (cópia local desatualizada):', restored);
+    console.warn('[Épicos] Campos não editados foram enviados com o valor atual do Sheets (cópia local desatualizada):', restored);
     try{ saveLocal(); }catch(e){}
   }
   return out;
@@ -9185,6 +9207,7 @@ function loadXlsx(file){
         rec.lt = calcLT(rec.ini, rec.fim);
         var _auth=[];
         if(impPrev) _auth.push('dataPrevista');
+        if(impStatusNorm) _auth.push('status');
         if(impImp.trim() || jimp[id]) _auth.push('impedimento');
         if(_auth.length) _jiraAuth[id]=_auth;
         if(shouldReactivate){

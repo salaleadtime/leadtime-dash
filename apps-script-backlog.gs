@@ -24,9 +24,17 @@
  *       (5) também aceita o protocolo alternativo `iniManual` +
  *           `iniBaseRevision` (ini vazio = apagar) e devolve `iniRevision` na
  *           leitura e `startConflicts` na resposta;
- *       (6) gravação que não muda nada não grava (sem auditoria/revisão à toa).
- *       Painel antigo: preenche campos vazios normalmente; para TROCAR ou
- *       APAGAR um valor existente é preciso o index.html novo.
+ *       (6) gravação que não muda nada não grava (sem auditoria/revisão à toa);
+ *       (7) campo APAGADO de propósito fica marcado (`clr`): nenhuma gravação
+ *           sem versão o preenche de novo (ex.: importação com cópia velha);
+ *       (8) CHG/Impedimento: gravação sem versão pode TROCAR o texto (painel
+ *           antigo continua editando), nunca apagar; datas seguem estritas;
+ *       (9) nada é recusado em silêncio: se um item SEM `proto:2` (painel
+ *           antigo) teve algo preservado, a resposta é ok:false com a
+ *           explicação ("painel desatualizado, recarregue"), mesmo que o
+ *           restante do item tenha sido gravado (`partial:true`).
+ *       Painel antigo: preenche datas vazias e edita CHG/Impedimento; para
+ *       TROCAR/APAGAR datas ou reabrir épico é preciso o index.html novo.
  * v32 — nova chave epicImpedimentoLog (VP_SHEET_MAP + MERGE_MAP_KEYS): trilha
  *       de eventos do Impedimento dos Épicos (registrado/editado/excluído, com
  *       data e texto anterior) para index.html. O texto do impedimento em si
@@ -1197,8 +1205,14 @@ function normalizeLeadtimeEpic_(row) {
     dataPrevista: leadtimeDate_(row.dataPrevista),
     chg: String(row.chg || ''),
     impedimento: String(row.impedimento || ''),
-    rev: normalizeLeadtimeEpicRev_(row)
+    rev: normalizeLeadtimeEpicRev_(row),
+    clr: normalizeLeadtimeClr_(row && row.clr)
   };
+}
+function normalizeLeadtimeClr_(clr) {
+  var out = {};
+  if (clr && typeof clr === 'object') LEADTIME_GUARDED_FIELDS.forEach(function(f) { if (clr[f] === true) out[f] = true; });
+  return out;
 }
 function normalizeLeadtimeEpicRev_(row) {
   var rev = normalizeLeadtimeRev_(row && row.rev);
@@ -1256,6 +1270,7 @@ function applyLeadtimeChange_(current, change, report) {
     if ((change.ini === null || change.ini === undefined || String(change.ini).trim() === '') && clear.indexOf('ini') === -1) clear.push('ini');
   }
   var fimHeld = false;
+  var isProto2 = change.proto === 2;
 
   function has(field) { return Object.prototype.hasOwnProperty.call(change, field); }
 
@@ -1285,12 +1300,19 @@ function applyLeadtimeChange_(current, change, report) {
       return;
     }
     if (next === cur) return;
-    // (1) Fotografia (não manual) só preenche campo vazio. Trocar valor
-    //     existente só com `authoritative` (Jira) e nunca para apagar.
-    if (!isManual && cur !== '' && !(next !== '' && authoritative.indexOf(field) !== -1)) {
-      report.preserved.push({ id: id, field: field, kept: cur, attempted: next });
+    var isText = (field === 'chg' || field === 'impedimento');
+    function hold() {
+      report.preserved.push({ id: id, field: field, kept: cur, attempted: next, legacy: !isProto2 });
       if (field === 'fim') fimHeld = true;
-      return;
+    }
+    if (!isManual) {
+      // (7) apagado de propósito: só edição manual preenche de novo.
+      if (current.clr[field]) { hold(); return; }
+      // Fotografia nunca apaga.
+      if (next === '') { hold(); return; }
+      // (1) datas: só preenche vazio (Jira pode trocar Data Prevista).
+      // (8) CHG/Impedimento: texto preenchido pode trocar.
+      if (cur !== '' && !isText && authoritative.indexOf(field) === -1) { hold(); return; }
     }
     // Apagar exige edição manual com versão E pedido explícito em `clear`.
     if (isManual && next === '' && cur !== '' && clear.indexOf(field) === -1) {
@@ -1306,6 +1328,7 @@ function applyLeadtimeChange_(current, change, report) {
     }
     current[field] = next;
     current.rev[field]++;
+    if (next === '') current.clr[field] = true; else delete current.clr[field];
   });
 
   ['squad', 'resumo', 'status', 'statusAntes', 'fimAntes'].forEach(function(field) {
@@ -1352,14 +1375,26 @@ function updateLeadtimeEpics_(changes, payloadChars) {
       var startConflicts = report.conflicts.filter(function(c) { return c.field === 'ini'; }).map(function(c) { return c.id; });
       var common = { version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revs: revs,
         conflicts: report.conflicts, preserved: report.preserved, itemErrors: report.itemErrors, startConflicts: startConflicts };
+      // (9) Painel antigo não lê `preserved`: avisa por erro, nunca em silêncio.
+      var legacyHeld = report.preserved.filter(function(p) { return p.legacy; });
+      var legacyMsg = legacyHeld.length
+        ? 'Painel desatualizado: ' + legacyHeld.length + ' alteração(ões) não aplicada(s) para não apagar dado de outra pessoa (' +
+          legacyHeld.slice(0, 3).map(function(p) { return p.id + ' ' + p.field; }).join(', ') + (legacyHeld.length > 3 ? '…' : '') +
+          '). Recarregue a página com Ctrl+F5 e refaça a alteração.'
+        : '';
+      function finish(base) {
+        var out = Object.assign(base, common);
+        if (legacyMsg) { out.ok = false; out.partial = true; out.error = legacyMsg; }
+        return out;
+      }
       // Nada mudou (ex.: painel antigo reenviando a mesma fotografia): não grava.
       if (JSON.stringify(next) === JSON.stringify(before.map(function(row) { return normalizeLeadtimeEpic_(row); }))) {
-        return Object.assign({ ok: true, unchanged: true, revision: getRevision_(LEADTIME_EPICS_SHEET) }, common);
+        return finish({ ok: true, unchanged: true, revision: getRevision_(LEADTIME_EPICS_SHEET) });
       }
       var chunks = readChunks_(LEADTIME_EPICS_SHEET);
       var write = commitWrite_(LEADTIME_EPICS_SHEET, 'updateLeadtimeEpics', chunks, before, next, payloadChars || 0);
       if (!write.ok) return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: write.error, conflict: !!write.conflict, currentRevision: write.currentRevision };
-      return Object.assign({ ok: true, revision: write.revision }, common);
+      return finish({ ok: true, revision: write.revision });
     });
   } catch (err) {
     return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.message || err) };
