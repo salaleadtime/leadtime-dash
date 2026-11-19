@@ -89,6 +89,24 @@ antigo. No painel novo, `_guardSheetsItems` manda todo campo NÃO editado com o
 valor atual do Sheets (não só os vazios) e, se a Data Fim veio do Sheets,
 `status/statusAntes/fimAntes` acompanham: protege também na janela painel
 novo + backend v32. Backend 187/187.
+**Modelo FINAL após o terceiro parecer (19/11/2026), vale sobre os
+parágrafos acima:** o servidor separa os clientes por `proto:2` (enviado em
+todo item pelo `index.html` novo, em `_guardSheetsItems`).
+- **Painel novo (`proto:2`)**: proteção completa nos 5 campos (só edição
+  manual com versão troca/apaga; fotografia só preenche vazio não marcado
+  como apagado; conflito por campo; Data Fim segura status).
+- **Painel antigo / protocolo alternativo (sem `proto:2`)**: comportamento da
+  v32 em tudo (reabrir épico, trocar Data Prevista, trocar/apagar CHG e
+  Impedimento), EXCETO a Data Início: sem versão só preenche vazio não
+  apagado; nunca troca nem apaga. `iniManual`+`iniBaseRevision` troca/apaga
+  com versão. Resposta sempre `ok:true` com `preserved` (sem erro parcial).
+Motivo: o parecer exigia que o servidor novo não tirasse do painel atual
+nenhuma capacidade além da Data Início. Item antigo cuja Data Início foi
+recusada é tratado como cópia desatualizada (seus vazios não apagam nada e
+ele não mexe em status): o `flushPendingWrites` do painel antigo reenvia
+vazio nos campos já confirmados e, com a Data Início recusada para sempre,
+apagaria CHG/Impedimento em loop. Backend 193/193; Playwright: painel novo
+16/16, painel antigo protegido (só não troca/apaga Data Início existente).
 **Atenção ao publicar:** o painel lê/grava Épicos em `SHEETS_WEBAPP`, que hoje
 é uma implantação diferente de `BK_GAS_URL` (ver commit "Restaura fonte
 oficial das datas dos epicos"). A v33 só tem efeito se for publicada na

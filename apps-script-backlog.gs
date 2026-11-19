@@ -27,14 +27,18 @@
  *       (6) gravação que não muda nada não grava (sem auditoria/revisão à toa);
  *       (7) campo APAGADO de propósito fica marcado (`clr`): nenhuma gravação
  *           sem versão o preenche de novo (ex.: importação com cópia velha);
- *       (8) CHG/Impedimento: gravação sem versão pode TROCAR o texto (painel
- *           antigo continua editando), nunca apagar; datas seguem estritas;
- *       (9) nada é recusado em silêncio: se um item SEM `proto:2` (painel
- *           antigo) teve algo preservado, a resposta é ok:false com a
- *           explicação ("painel desatualizado, recarregue"), mesmo que o
- *           restante do item tenha sido gravado (`partial:true`).
- *       Painel antigo: preenche datas vazias e edita CHG/Impedimento; para
- *       TROCAR/APAGAR datas ou reabrir épico é preciso o index.html novo.
+ *       (8) Regras (1)-(4) e (7) completas valem para itens do painel novo
+ *           (`proto:2`). Item SEM `proto:2` (painel antigo ou protocolo
+ *           alternativo) mantém TODO o comportamento da v32 — reabrir épico,
+ *           trocar Data Prevista, apagar CHG/Impedimento — EXCETO a Data
+ *           Início: sem versão ela só é preenchida quando está vazia e não foi
+ *           apagada de propósito; nunca é trocada nem apagada (com
+ *           `iniManual`+`iniBaseRevision` pode, com controle de versão). Nada
+ *           de erro parcial: a resposta é ok:true e lista o que foi preservado.
+ *           Item antigo cuja Data Início foi recusada é cópia desatualizada:
+ *           seus vazios não apagam nada e status/statusAntes/fimAntes ficam
+ *           (o flushPendingWrites do painel antigo reenvia vazio nos campos
+ *           já confirmados; sem isto apagaria CHG/Impedimento em loop).
  * v32 — nova chave epicImpedimentoLog (VP_SHEET_MAP + MERGE_MAP_KEYS): trilha
  *       de eventos do Impedimento dos Épicos (registrado/editado/excluído, com
  *       data e texto anterior) para index.html. O texto do impedimento em si
@@ -1271,6 +1275,10 @@ function applyLeadtimeChange_(current, change, report) {
   }
   var fimHeld = false;
   var isProto2 = change.proto === 2;
+  // Item do painel antigo cuja Data Início foi recusada é cópia desatualizada
+  // (ex.: flushPendingWrites antigo reenvia vazio nos campos já confirmados):
+  // seus vazios não apagam nada e ele não mexe em status/statusAntes/fimAntes.
+  var staleLegacy = false;
 
   function has(field) { return Object.prototype.hasOwnProperty.call(change, field); }
 
@@ -1300,10 +1308,23 @@ function applyLeadtimeChange_(current, change, report) {
       return;
     }
     if (next === cur) return;
+    // (8) Painel antigo / protocolo alternativo: v32 para tudo, menos ini.
+    if (!isProto2 && !isManual && field !== 'ini') {
+      if (staleLegacy && next === '') {
+        report.preserved.push({ id: id, field: field, kept: cur, attempted: '', legacy: true, staleCopy: true });
+        if (field === 'fim') fimHeld = true;
+        return;
+      }
+      current[field] = next;
+      current.rev[field]++;
+      if (next === '') current.clr[field] = true; else delete current.clr[field];
+      return;
+    }
     var isText = (field === 'chg' || field === 'impedimento');
     function hold() {
       report.preserved.push({ id: id, field: field, kept: cur, attempted: next, legacy: !isProto2 });
       if (field === 'fim') fimHeld = true;
+      if (field === 'ini' && !isProto2) staleLegacy = true;
     }
     if (!isManual) {
       // (7) apagado de propósito: só edição manual preenche de novo.
@@ -1333,7 +1354,7 @@ function applyLeadtimeChange_(current, change, report) {
 
   ['squad', 'resumo', 'status', 'statusAntes', 'fimAntes'].forEach(function(field) {
     if (!has(field)) return;
-    if (fimHeld && LEADTIME_FIM_COUPLED.indexOf(field) !== -1) return;
+    if ((fimHeld || staleLegacy) && LEADTIME_FIM_COUPLED.indexOf(field) !== -1) return;
     var inc = incoming(field);
     if (!inc.ok) return;
     // Resumo/Squad vêm do Jira; edições pontuais os mandam vazios.
@@ -1375,18 +1396,7 @@ function updateLeadtimeEpics_(changes, payloadChars) {
       var startConflicts = report.conflicts.filter(function(c) { return c.field === 'ini'; }).map(function(c) { return c.id; });
       var common = { version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revs: revs,
         conflicts: report.conflicts, preserved: report.preserved, itemErrors: report.itemErrors, startConflicts: startConflicts };
-      // (9) Painel antigo não lê `preserved`: avisa por erro, nunca em silêncio.
-      var legacyHeld = report.preserved.filter(function(p) { return p.legacy; });
-      var legacyMsg = legacyHeld.length
-        ? 'Painel desatualizado: ' + legacyHeld.length + ' alteração(ões) não aplicada(s) para não apagar dado de outra pessoa (' +
-          legacyHeld.slice(0, 3).map(function(p) { return p.id + ' ' + p.field; }).join(', ') + (legacyHeld.length > 3 ? '…' : '') +
-          '). Recarregue a página com Ctrl+F5 e refaça a alteração.'
-        : '';
-      function finish(base) {
-        var out = Object.assign(base, common);
-        if (legacyMsg) { out.ok = false; out.partial = true; out.error = legacyMsg; }
-        return out;
-      }
+      function finish(base) { return Object.assign(base, common); }
       // Nada mudou (ex.: painel antigo reenviando a mesma fotografia): não grava.
       if (JSON.stringify(next) === JSON.stringify(before.map(function(row) { return normalizeLeadtimeEpic_(row); }))) {
         return finish({ ok: true, unchanged: true, revision: getRevision_(LEADTIME_EPICS_SHEET) });

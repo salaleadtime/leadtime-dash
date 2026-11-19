@@ -595,9 +595,9 @@ console.log('\n═══ 22. Épicos v33: vazio não apaga, versão por campo, c
 
   // Cópia velha / importação com linha inteira vazia não apaga nada.
   c = seed([row({ ini:'2026-11-17', fim:'2026-11-18', dataPrevista:'2026-12-01', chg:'CHG1', impedimento:'bloqueio', status:'Concluído', statusAntes:'Em Execução' })]);
-  r = U(c, [row({ status:'Em Execução', statusAntes:'' })]);
+  r = U(c, [row({ status:'Em Execução', statusAntes:'', proto:2 })]);
   let g = get(c);
-  t('vazio não apaga ini/fim/prevista/chg/impedimento', [g.ini, g.fim, g.dataPrevista, g.chg, g.impedimento], ['2026-11-17','2026-11-18','2026-12-01','CHG1','bloqueio']);
+  t('painel novo: vazio não apaga ini/fim/prevista/chg/impedimento', [g.ini, g.fim, g.dataPrevista, g.chg, g.impedimento], ['2026-11-17','2026-11-18','2026-12-01','CHG1','bloqueio']);
   t('Data Fim preservada mantém status coerente (não volta a Em Execução)', [g.status, g.statusAntes], ['Concluído','Em Execução']);
   t('preservações são reportadas', r.preserved.length, 5);
   t('resumo/squad vazios não apagam', [g.resumo, g.squad], ['R','S']);
@@ -651,8 +651,10 @@ console.log('\n═══ 23. Épicos v33: cenários do parecer externo ═══
   t('apagar sem revisão é recusado', g(c).ini, '2026-11-18');
   c = seed({ ini:'2026-11-18', rev:{ ini:2 } }); r = U(c, { id:'SLOPC-1', ini:'', clear:['ini'], manual:['ini'], baseRev:{ ini:1 } });
   t('apagar com revisão antiga vira conflito', [g(c).ini, r.conflicts.length], ['2026-11-18', 1]);
-  c = seed({ fim:'2026-11-18', status:'Concluído' }); U(c, row({ fim:'', fimAntes:'2026-11-18', status:'Em Execução' }));
-  t('painel antigo não reabre épico (precisa do painel novo)', [g(c).fim, g(c).status], ['2026-11-18', 'Concluído']);
+  c = seed({ fim:'2026-11-18', status:'Concluído' }); r = U(c, row({ fim:'', fimAntes:'2026-11-18', status:'Em Execução' }));
+  t('painel antigo continua reabrindo épico (como hoje)', [g(c).fim, g(c).status, r.ok], ['', 'Em Execução', true]);
+  c = seed({ fim:'2026-11-18', status:'Concluído' }); U(c, row({ fim:'', fimAntes:'2026-11-18', status:'Em Execução', proto:2 }));
+  t('painel novo: cópia velha com Data Fim vazia não reabre', [g(c).fim, g(c).status], ['2026-11-18', 'Concluído']);
   c = seed({ fim:'2026-11-18', status:'Concluído' }); U(c, { id:'SLOPC-1', fim:'', clear:['fim'], manual:['fim'], baseRev:{ fim:0 }, fimAntes:'2026-11-18', status:'Em Execução' });
   t('painel novo reabre épico com versão', [g(c).fim, g(c).fimAntes, g(c).status], ['', '2026-11-18', 'Em Execução']);
   // Protocolo alternativo (iniManual/iniBaseRevision)
@@ -665,12 +667,14 @@ console.log('\n═══ 23. Épicos v33: cenários do parecer externo ═══
   r = U(c, { id:'SLOPC-1', ini:'', iniManual:true, iniBaseRevision:1 });
   t('protocolo alternativo: apagar com revisão certa apaga', g(c).ini, '');
   // Jira (importação nova) atualiza Data Prevista existente; snapshot comum não.
-  c = seed({ dataPrevista:'2026-12-01' }); U(c, row({ dataPrevista:'2026-12-15' }));
-  t('fotografia comum não troca Data Prevista', g(c).dataPrevista, '2026-12-01');
-  U(c, row({ dataPrevista:'2026-12-15', authoritative:['dataPrevista'] }));
+  c = seed({ dataPrevista:'2026-12-01' }); U(c, row({ dataPrevista:'2026-12-15', proto:2 }));
+  t('painel novo: fotografia comum não troca Data Prevista', g(c).dataPrevista, '2026-12-01');
+  U(c, row({ dataPrevista:'2026-12-15', authoritative:['dataPrevista'], proto:2 }));
   t('importação do Jira (authoritative) troca Data Prevista', g(c).dataPrevista, '2026-12-15');
-  U(c, row({ dataPrevista:'', authoritative:['dataPrevista'] }));
+  U(c, row({ dataPrevista:'', authoritative:['dataPrevista'], proto:2 }));
   t('authoritative nunca apaga', g(c).dataPrevista, '2026-12-15');
+  c = seed({ dataPrevista:'2026-12-01' }); U(c, row({ dataPrevista:'2026-12-20' }));
+  t('painel antigo continua trocando Data Prevista (como hoje)', g(c).dataPrevista, '2026-12-20');
   U(c, row({ ini:'2026-01-01', authoritative:['ini'] }));
   t('authoritative não vale para Data Início', g(c).ini, '2026-01-01');
   r = U(c, row({ ini:'2026-02-02' }));
@@ -691,7 +695,7 @@ console.log('\n═══ 24. Épicos v33: segundo parecer (apagado de propósito
   U(c, { id:'SLOPC-1', ini:'', clear:['ini'], manual:['ini'], baseRev:{ ini:0 }, proto:2 });
   r = U(c, row({ ini:'2026-11-18' }));
   t('importação com cópia velha NÃO restaura Data Início apagada', g(c).ini, '');
-  t('e o painel antigo é avisado (ok:false)', [r.ok, /Painel desatualizado/.test(r.error)], [false, true]);
+  t('sem erro parcial: ok:true e a preservação é listada', [r.ok, r.preserved.map(x => x.field)], [true, ['ini']]);
   r = U(c, row({ ini:'2026-11-18', proto:2 }));
   t('importação do painel novo também não restaura (sem erro: lê preserved)', [g(c).ini, r.ok, r.preserved.length], ['', true, 1]);
   r = U(c, { id:'SLOPC-1', ini:'2026-11-25', manual:['ini'], baseRev:{ ini:1 }, proto:2 });
@@ -701,18 +705,36 @@ console.log('\n═══ 24. Épicos v33: segundo parecer (apagado de propósito
   r = U(c, row({ chg:'CHG2', impedimento:'b' }));
   t('painel antigo troca CHG e Impedimento', [g(c).chg, g(c).impedimento, r.ok], ['CHG2', 'b', true]);
   r = U(c, row({ chg:'', impedimento:'' }));
-  t('painel antigo não apaga CHG/Impedimento e é avisado', [g(c).chg, g(c).impedimento, r.ok], ['CHG2', 'b', false]);
-
-  c = seed({ fim:'2026-11-18', status:'Concluído' });
-  r = U(c, row({ fim:'', fimAntes:'2026-11-18', status:'Em Execução' }));
-  t('painel antigo reabrindo épico recebe erro explicativo (não "ok")', [g(c).fim, r.ok, /Ctrl\+F5/.test(r.error)], ['2026-11-18', false, true]);
+  t('painel antigo continua apagando CHG/Impedimento (como hoje)', [g(c).chg, g(c).impedimento, r.ok], ['', '', true]);
 
   c = seed({ ini:'2026-11-18' });
   r = U(c, row({ chg:'X' }));
-  t('cópia velha com campo vazio: grava o CHG e avisa', [g(c).chg, g(c).ini, r.ok, r.partial], ['X', '2026-11-18', false, true]);
+  t('cópia velha com Data Início vazia: grava o CHG, preserva a data, ok:true', [g(c).chg, g(c).ini, r.ok], ['X', '2026-11-18', true]);
+  c = seed({ ini:'2026-11-18' });
+  r = U(c, row({ ini:'2026-11-10' }));
+  t('painel antigo nunca troca Data Início existente', [g(c).ini, r.ok], ['2026-11-18', true]);
   c = seed({ ini:'2026-11-18', chg:'' });
   r = U(c, row({ ini:'2026-11-18', chg:'Y' }));
   t('painel antigo com cópia em dia: ok normal', [g(c).chg, r.ok], ['Y', true]);
+}
+
+console.log('\n═══ 25. Épicos v33: reenvio antigo com Data Início recusada não apaga nada ═══');
+{
+  const row = (o) => Object.assign({ id:'SLOPC-1', squad:'S', resumo:'R', status:'Em Execução', statusAntes:'', ini:'', fim:'', fimAntes:'', dataPrevista:'', chg:'', impedimento:'' }, o);
+  const U = (ctx, it) => parse(ctx.doGet(post({ action:'update', payload: JSON.stringify([it]) })));
+  const seed = (o) => { const c = novoAmbiente().ctx; c.writeJsonToSheet_(c.LEADTIME_EPICS_SHEET, [row(o)]); return c; };
+  const g = (c) => c.getLeadtimeEpics_()[0];
+  let c, r;
+  c = seed({ ini:'2026-11-18', chg:'CHG777', impedimento:'bloq', fim:'2026-11-19', status:'Concluído' });
+  r = U(c, row({ ini:'2026-11-10' }));   // flush antigo: ini velho + vazios
+  t('reenvio antigo não apaga CHG/Impedimento/Data Fim nem reabre', [g(c).ini, g(c).chg, g(c).impedimento, g(c).fim, g(c).status, r.ok], ['2026-11-18','CHG777','bloq','2026-11-19','Concluído', true]);
+  r = U(c, row({ ini:'2026-11-10' }));
+  t('repetição não grava nada', r.unchanged, true);
+  r = U(c, row({ ini:'2026-11-10', chg:'CHG888' }));
+  t('valor preenchido do mesmo item ainda grava', g(c).chg, 'CHG888');
+  c = seed({ ini:'2026-11-18', chg:'CHG1' });
+  r = U(c, row({ ini:'2026-11-18', chg:'' }));
+  t('com Data Início em dia, painel antigo apaga CHG normalmente', g(c).chg, '');
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
