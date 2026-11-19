@@ -547,7 +547,7 @@ console.log('\n═══ 20. leadtimeDate_: datas do board de Épicos (v31) ═�
   ]);
   // action=update roda sob doGet (chamado via JSONP pelo cliente), não doPost.
   const upd = parse(ctx.doGet(post({ action:'update', payload: JSON.stringify([
-    { id:'SLOPC-1', dataPrevista:'20/06/2026' }
+    { id:'SLOPC-1', dataPrevista:'20/06/2026', manual:['dataPrevista'], baseRev:{ dataPrevista:0 } }
   ]) })));
   t('action=update aceita a edição', upd.ok, true);
   const after = ctx.getLeadtimeEpics_();
@@ -634,6 +634,50 @@ console.log('\n═══ 22. Épicos v33: vazio não apaga, versão por campo, c
   c = seed([row({})]);
   U(c, [row({ id:'SLOPC-9', ini:'2026-11-01', squad:'X', resumo:'Novo' })]);
   t('épico novo é criado com a data', [get(c, 'SLOPC-9').ini, get(c, 'SLOPC-9').rev.ini], ['2026-11-01', 1]);
+}
+
+console.log('\n═══ 23. Épicos v33: cenários do parecer externo ═══');
+{
+  const row = (o) => Object.assign({ id:'SLOPC-1', squad:'S', resumo:'R', status:'Em Execução', statusAntes:'', ini:'', fim:'', fimAntes:'', dataPrevista:'', chg:'', impedimento:'' }, o);
+  const U = (ctx, it) => parse(ctx.doGet(post({ action:'update', payload: JSON.stringify([it]) })));
+  const seed = (o) => { const c = novoAmbiente().ctx; c.writeJsonToSheet_(c.LEADTIME_EPICS_SHEET, [row(o)]); return c; };
+  const g = (c) => c.getLeadtimeEpics_()[0];
+  let c, r;
+  c = seed({ ini:'2026-11-18' }); U(c, row({ chg:'X' }));
+  t('aba antiga com Data Início vazia preserva', g(c).ini, '2026-11-18');
+  c = seed({ ini:'2026-11-18' }); r = U(c, row({ chg:'X', ini:'2026-11-10' }));
+  t('aba antiga com Data Início desatualizada PRESERVA (não troca)', [g(c).ini, g(c).chg], ['2026-11-18', 'X']);
+  c = seed({ ini:'2026-11-18' }); U(c, { id:'SLOPC-1', ini:'', clear:['ini'] });
+  t('apagar sem revisão é recusado', g(c).ini, '2026-11-18');
+  c = seed({ ini:'2026-11-18', rev:{ ini:2 } }); r = U(c, { id:'SLOPC-1', ini:'', clear:['ini'], manual:['ini'], baseRev:{ ini:1 } });
+  t('apagar com revisão antiga vira conflito', [g(c).ini, r.conflicts.length], ['2026-11-18', 1]);
+  c = seed({ fim:'2026-11-18', status:'Concluído' }); U(c, row({ fim:'', fimAntes:'2026-11-18', status:'Em Execução' }));
+  t('painel antigo não reabre épico (precisa do painel novo)', [g(c).fim, g(c).status], ['2026-11-18', 'Concluído']);
+  c = seed({ fim:'2026-11-18', status:'Concluído' }); U(c, { id:'SLOPC-1', fim:'', clear:['fim'], manual:['fim'], baseRev:{ fim:0 }, fimAntes:'2026-11-18', status:'Em Execução' });
+  t('painel novo reabre épico com versão', [g(c).fim, g(c).fimAntes, g(c).status], ['', '2026-11-18', 'Em Execução']);
+  // Protocolo alternativo (iniManual/iniBaseRevision)
+  c = seed({ ini:'2026-11-18' });
+  t('leitura expõe iniRevision', g(c).iniRevision, 0);
+  r = U(c, { id:'SLOPC-1', ini:'2026-11-20', iniManual:true, iniBaseRevision:0 });
+  t('protocolo alternativo: edição grava', [g(c).ini, g(c).iniRevision, r.startConflicts], ['2026-11-20', 1, []]);
+  r = U(c, { id:'SLOPC-1', ini:'2026-11-25', iniManual:true, iniBaseRevision:0 });
+  t('protocolo alternativo: revisão velha vira startConflicts', [g(c).ini, r.startConflicts], ['2026-11-20', ['SLOPC-1']]);
+  r = U(c, { id:'SLOPC-1', ini:'', iniManual:true, iniBaseRevision:1 });
+  t('protocolo alternativo: apagar com revisão certa apaga', g(c).ini, '');
+  // Jira (importação nova) atualiza Data Prevista existente; snapshot comum não.
+  c = seed({ dataPrevista:'2026-12-01' }); U(c, row({ dataPrevista:'2026-12-15' }));
+  t('fotografia comum não troca Data Prevista', g(c).dataPrevista, '2026-12-01');
+  U(c, row({ dataPrevista:'2026-12-15', authoritative:['dataPrevista'] }));
+  t('importação do Jira (authoritative) troca Data Prevista', g(c).dataPrevista, '2026-12-15');
+  U(c, row({ dataPrevista:'', authoritative:['dataPrevista'] }));
+  t('authoritative nunca apaga', g(c).dataPrevista, '2026-12-15');
+  U(c, row({ ini:'2026-01-01', authoritative:['ini'] }));
+  t('authoritative não vale para Data Início', g(c).ini, '2026-01-01');
+  r = U(c, row({ ini:'2026-02-02' }));
+  t('reenvio sem mudança real não grava', r.unchanged, true);
+  // migração: base com iniRevision do protocolo alternativo
+  c = seed({ ini:'2026-11-18', iniRevision:4 });
+  t('base com iniRevision antigo é respeitada', g(c).rev.ini, 4);
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);

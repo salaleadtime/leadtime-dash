@@ -6,19 +6,27 @@
  *       mandam a linha INTEIRA, inclusive campos vazios, e o servidor gravava
  *       o vazio por cima da data que outra pessoa já tinha preenchido. Agora,
  *       para ini, fim, dataPrevista, chg e impedimento:
- *       (1) vazio NUNCA sobrescreve valor preenchido, a menos que o campo
- *           venha em `clear` (a pessoa apagou de propósito);
- *       (2) cada campo tem versão própria (`rev`, devolvida na leitura); uma
- *           edição manual manda `manual:[campos]` + `baseRev:{campo:n}` e é
- *           recusada como CONFLITO (devolvido em `conflicts`, com o valor
- *           atual) se outra pessoa gravou aquele campo depois da leitura;
+ *       (1) só uma EDIÇÃO MANUAL com versão (`manual:[campos]` +
+ *           `baseRev:{campo:n}`) muda ou apaga um campo já preenchido; apagar
+ *           exige também o campo em `clear`. Fotografia da linha (painel
+ *           antigo, importação, cópia velha) só PREENCHE campo vazio — nunca
+ *           troca nem apaga valor existente, nem com data antiga preenchida;
+ *       (2) cada campo tem versão própria (`rev`, devolvida na leitura); a
+ *           edição manual é recusada como CONFLITO (`conflicts`, com o valor
+ *           atual) se outra pessoa gravou aquele campo depois da leitura.
+ *           Exceção: `authoritative:[campos]` (importação do Jira, só para
+ *           dataPrevista/impedimento) pode trocar valor preenchido;
  *       (3) se a Data Fim foi preservada/recusada, status/statusAntes/fimAntes
  *           da mesma linha também não mudam (evita épico "Em Execução" com
  *           Data Fim);
  *       (4) item inválido cai sozinho (`itemErrors`), sem derrubar o lote;
  *           data preenchida em formato irreconhecível não vira "apagar".
- *       Compatível com o index.html antigo: grava normalmente, só não
- *       consegue mais apagar campo protegido.
+ *       (5) também aceita o protocolo alternativo `iniManual` +
+ *           `iniBaseRevision` (ini vazio = apagar) e devolve `iniRevision` na
+ *           leitura e `startConflicts` na resposta;
+ *       (6) gravação que não muda nada não grava (sem auditoria/revisão à toa).
+ *       Painel antigo: preenche campos vazios normalmente; para TROCAR ou
+ *       APAGAR um valor existente é preciso o index.html novo.
  * v32 — nova chave epicImpedimentoLog (VP_SHEET_MAP + MERGE_MAP_KEYS): trilha
  *       de eventos do Impedimento dos Épicos (registrado/editado/excluído, com
  *       data e texto anterior) para index.html. O texto do impedimento em si
@@ -1189,8 +1197,21 @@ function normalizeLeadtimeEpic_(row) {
     dataPrevista: leadtimeDate_(row.dataPrevista),
     chg: String(row.chg || ''),
     impedimento: String(row.impedimento || ''),
-    rev: normalizeLeadtimeRev_(row.rev)
+    rev: normalizeLeadtimeEpicRev_(row)
   };
+}
+function normalizeLeadtimeEpicRev_(row) {
+  var rev = normalizeLeadtimeRev_(row && row.rev);
+  // Base gravada pelo protocolo alternativo (só Data Início versionada).
+  if (!(row && row.rev) && row && typeof row.iniRevision === 'number' && row.iniRevision >= 0) rev.ini = Math.floor(row.iniRevision);
+  return rev;
+}
+// Leitura pública: inclui iniRevision para clientes do protocolo alternativo.
+function leadtimeEpicForRead_(row) {
+  var out = {};
+  Object.keys(row).forEach(function(k) { out[k] = row[k]; });
+  out.iniRevision = row.rev ? row.rev.ini : 0;
+  return out;
 }
 
 function readLeadtimeEpicsInsideLock_() {
@@ -1212,7 +1233,7 @@ function readLeadtimeEpicsInsideLock_() {
 }
 
 function getLeadtimeEpics_() {
-  return withLock_(function() { return readLeadtimeEpicsInsideLock_(); });
+  return withLock_(function() { return readLeadtimeEpicsInsideLock_().map(leadtimeEpicForRead_); });
 }
 
 function leadtimeList_(value) {
@@ -1225,7 +1246,15 @@ function applyLeadtimeChange_(current, change, report) {
   var id = current.id;
   var clear = leadtimeList_(change.clear);
   var manual = leadtimeList_(change.manual);
-  var baseRev = (change.baseRev && typeof change.baseRev === 'object') ? change.baseRev : {};
+  var authoritative = leadtimeList_(change.authoritative).filter(function(f) { return f === 'dataPrevista' || f === 'impedimento'; });
+  var baseRev = {};
+  if (change.baseRev && typeof change.baseRev === 'object') Object.keys(change.baseRev).forEach(function(k) { baseRev[k] = change.baseRev[k]; });
+  // Protocolo alternativo (só Data Início): iniManual + iniBaseRevision.
+  if (change.iniManual === true) {
+    if (manual.indexOf('ini') === -1) manual.push('ini');
+    if (baseRev.ini === undefined) baseRev.ini = change.iniBaseRevision;
+    if ((change.ini === null || change.ini === undefined || String(change.ini).trim() === '') && clear.indexOf('ini') === -1) clear.push('ini');
+  }
   var fimHeld = false;
 
   function has(field) { return Object.prototype.hasOwnProperty.call(change, field); }
@@ -1256,9 +1285,16 @@ function applyLeadtimeChange_(current, change, report) {
       return;
     }
     if (next === cur) return;
-    // (1) vazio nunca apaga valor preenchido sem pedido explícito.
-    if (next === '' && cur !== '' && clear.indexOf(field) === -1) {
-      report.preserved.push({ id: id, field: field, kept: cur });
+    // (1) Fotografia (não manual) só preenche campo vazio. Trocar valor
+    //     existente só com `authoritative` (Jira) e nunca para apagar.
+    if (!isManual && cur !== '' && !(next !== '' && authoritative.indexOf(field) !== -1)) {
+      report.preserved.push({ id: id, field: field, kept: cur, attempted: next });
+      if (field === 'fim') fimHeld = true;
+      return;
+    }
+    // Apagar exige edição manual com versão E pedido explícito em `clear`.
+    if (isManual && next === '' && cur !== '' && clear.indexOf(field) === -1) {
+      report.preserved.push({ id: id, field: field, kept: cur, attempted: '' });
       if (field === 'fim') fimHeld = true;
       return;
     }
@@ -1313,13 +1349,17 @@ function updateLeadtimeEpics_(changes, payloadChars) {
 
       var revs = {};
       Object.keys(touched).forEach(function(id) { revs[id] = next[byId[id]].rev; });
+      var startConflicts = report.conflicts.filter(function(c) { return c.field === 'ini'; }).map(function(c) { return c.id; });
+      var common = { version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revs: revs,
+        conflicts: report.conflicts, preserved: report.preserved, itemErrors: report.itemErrors, startConflicts: startConflicts };
+      // Nada mudou (ex.: painel antigo reenviando a mesma fotografia): não grava.
+      if (JSON.stringify(next) === JSON.stringify(before.map(function(row) { return normalizeLeadtimeEpic_(row); }))) {
+        return Object.assign({ ok: true, unchanged: true, revision: getRevision_(LEADTIME_EPICS_SHEET) }, common);
+      }
       var chunks = readChunks_(LEADTIME_EPICS_SHEET);
       var write = commitWrite_(LEADTIME_EPICS_SHEET, 'updateLeadtimeEpics', chunks, before, next, payloadChars || 0);
       if (!write.ok) return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: write.error, conflict: !!write.conflict, currentRevision: write.currentRevision };
-      return {
-        ok: true, version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revision: write.revision,
-        revs: revs, conflicts: report.conflicts, preserved: report.preserved, itemErrors: report.itemErrors
-      };
+      return Object.assign({ ok: true, revision: write.revision }, common);
     });
   } catch (err) {
     return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.message || err) };

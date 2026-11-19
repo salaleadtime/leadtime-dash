@@ -3699,6 +3699,14 @@ function _guardSheetsItems(items, snap){
       });
       if(manual.length){ clean.manual=manual; clean.baseRev=baseRev; }
     }
+    // Apagar pedido fora da fila (ex.: Jira reabriu o épico na importação):
+    // o v33 exige versão, então usa a da leitura feita agora há pouco.
+    (clean.clear||[]).forEach(function(f){
+      if(clean.manual && clean.manual.indexOf(f)!==-1) return;
+      if(!(srv&&srv.rev&&typeof srv.rev[f]==='number')) return;
+      clean.manual=(clean.manual||[]).concat([f]);
+      clean.baseRev=Object.assign({}, clean.baseRev||{}); clean.baseRev[f]=srv.rev[f];
+    });
     if(!srv) return clean;
     SHEETS_GUARDED_FIELDS.forEach(function(f){
       if(!Object.prototype.hasOwnProperty.call(clean,f)) return;
@@ -9119,6 +9127,7 @@ function loadXlsx(file){
       var merged=[], seenIds={};
       var stats={newCount:0,updatedCount:0,preservedIni:0,preservedFim:0,preservedPrev:0,preservedChg:0,preservedImp:0,skipped:0,reactivatedCount:0};
       var _reactivatedIds={}; // épicos cuja Data Fim o Jira reabriu (apagar é intencional)
+      var _jiraAuth={};       // campos que vieram preenchidos do arquivo (Jira é a fonte oficial deles)
       var skippedRows=[]; // {id, motivo} — linhas de ÉPICO descartadas por ID inválido (não conta o filtro normal de "não é épico")
 
       for(var x=det.hrow+1;x<rows.length;x++){
@@ -9174,6 +9183,10 @@ function loadXlsx(file){
           impedimento: (impImp.trim() ? impImp : '') || (jimp[id]||'') || (old?old.impedimento:'') || ''
         };
         rec.lt = calcLT(rec.ini, rec.fim);
+        var _auth=[];
+        if(impPrev) _auth.push('dataPrevista');
+        if(impImp.trim() || jimp[id]) _auth.push('impedimento');
+        if(_auth.length) _jiraAuth[id]=_auth;
         if(shouldReactivate){
           _reactivatedIds[id] = true;   // Jira reabriu: apagar Data Fim é intencional
           stats.reactivatedCount++;
@@ -9278,6 +9291,9 @@ function loadXlsx(file){
             statusAntes:r.statusAntes||'', chg:r.chg||'', impedimento:r.impedimento||'',
             ini:r.ini||'', fim:r.fim||'', dataPrevista:r.dataPrevista||''};
           if(_reactivatedIds[r.id]) it.__clear=['fim'];
+          // Backend v33: só a edição manual ou o próprio Jira trocam valor já
+          // preenchido. Data Prevista/Impedimento do arquivo são oficiais.
+          if(_jiraAuth[r.id]) it.authoritative=_jiraAuth[r.id];
           return it;
         }));
       }

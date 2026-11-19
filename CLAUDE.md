@@ -66,6 +66,18 @@ conflito e avisa ("Outra pessoa alterou antes de você"). Compatibilidade
 testada nas quatro combinações: painel antigo + v33 grava, só não consegue
 apagar campo protegido; painel novo + v32 funciona, sem aviso de conflito.
 Ordem segura de publicação: `index.html` antes ou junto do servidor.
+**Revisão após parecer externo (19/11/2026):** regra endurecida, só edição
+manual com versão (`manual`+`baseRev`) TROCA ou APAGA campo preenchido;
+fotografia da linha (painel antigo, importação, cópia velha) só PREENCHE campo
+vazio, mesmo com data antiga preenchida; apagar exige `manual`+`baseRev`+`clear`.
+Exceção: `authoritative:['dataPrevista','impedimento']` enviado pela importação
+nova para valores vindos do arquivo do Jira (nunca apaga, nunca vale para
+datas manuais). Aceita também o protocolo alternativo `iniManual`/
+`iniBaseRevision` (devolve `iniRevision` e `startConflicts`). Gravação sem
+mudança real não grava. Consequência na transição: painel antigo + v33
+preenche campos vazios, mas não troca nem apaga valor existente (inclusive
+reabrir épico), precisa do index.html novo. Backend 178/178; Playwright com o
+`.gs` real: 16/16.
 **Atenção ao publicar:** o painel lê/grava Épicos em `SHEETS_WEBAPP`, que hoje
 é uma implantação diferente de `BK_GAS_URL` (ver commit "Restaura fonte
 oficial das datas dos epicos"). A v33 só tem efeito se for publicada na
