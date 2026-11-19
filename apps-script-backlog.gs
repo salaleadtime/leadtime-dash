@@ -1,6 +1,24 @@
 /************************************************************************
  * Lead Time SALA — Backlog & Stories Store (Google Apps Script / backend)
  *
+ * v33 — Épicos (action=update): fim do "preenchi a Data Início e no outro dia
+ *       sumiu". Painel antigo, importação e cópias locais desatualizadas
+ *       mandam a linha INTEIRA, inclusive campos vazios, e o servidor gravava
+ *       o vazio por cima da data que outra pessoa já tinha preenchido. Agora,
+ *       para ini, fim, dataPrevista, chg e impedimento:
+ *       (1) vazio NUNCA sobrescreve valor preenchido, a menos que o campo
+ *           venha em `clear` (a pessoa apagou de propósito);
+ *       (2) cada campo tem versão própria (`rev`, devolvida na leitura); uma
+ *           edição manual manda `manual:[campos]` + `baseRev:{campo:n}` e é
+ *           recusada como CONFLITO (devolvido em `conflicts`, com o valor
+ *           atual) se outra pessoa gravou aquele campo depois da leitura;
+ *       (3) se a Data Fim foi preservada/recusada, status/statusAntes/fimAntes
+ *           da mesma linha também não mudam (evita épico "Em Execução" com
+ *           Data Fim);
+ *       (4) item inválido cai sozinho (`itemErrors`), sem derrubar o lote;
+ *           data preenchida em formato irreconhecível não vira "apagar".
+ *       Compatível com o index.html antigo: grava normalmente, só não
+ *       consegue mais apagar campo protegido.
  * v32 — nova chave epicImpedimentoLog (VP_SHEET_MAP + MERGE_MAP_KEYS): trilha
  *       de eventos do Impedimento dos Épicos (registrado/editado/excluído, com
  *       data e texto anterior) para index.html. O texto do impedimento em si
@@ -137,7 +155,7 @@
  * daquela chave, sem merge.
  ************************************************************************/
 
-var BACKLOG_SCRIPT_VERSION = '2026-11-06-v32-impedimento-log';
+var BACKLOG_SCRIPT_VERSION = '2026-11-19-v33-epicos-campo-protegido';
 
 var BACKLOG_SHEET = '_backlog_chunks';
 var STORIES_SHEET = '_stories_chunks';
@@ -1142,6 +1160,21 @@ function leadtimeDate_(value) {
   return '';
 }
 
+// v33 — campos manuais protegidos contra vazio acidental e com versão própria.
+var LEADTIME_GUARDED_FIELDS = ['ini', 'fim', 'dataPrevista', 'chg', 'impedimento'];
+var LEADTIME_DATE_FIELDS = ['ini', 'fim', 'dataPrevista', 'fimAntes'];
+// Mudam junto com a Data Fim: se ela foi preservada, estes também ficam.
+var LEADTIME_FIM_COUPLED = ['status', 'statusAntes', 'fimAntes'];
+
+function normalizeLeadtimeRev_(rev) {
+  var out = {};
+  LEADTIME_GUARDED_FIELDS.forEach(function(f) {
+    var n = rev && rev[f];
+    out[f] = (typeof n === 'number' && isFinite(n) && n >= 0 && Math.floor(n) === n) ? n : 0;
+  });
+  return out;
+}
+
 function normalizeLeadtimeEpic_(row) {
   row = row || {};
   return {
@@ -1155,7 +1188,8 @@ function normalizeLeadtimeEpic_(row) {
     fimAntes: leadtimeDate_(row.fimAntes),
     dataPrevista: leadtimeDate_(row.dataPrevista),
     chg: String(row.chg || ''),
-    impedimento: String(row.impedimento || '')
+    impedimento: String(row.impedimento || ''),
+    rev: normalizeLeadtimeRev_(row.rev)
   };
 }
 
@@ -1181,6 +1215,74 @@ function getLeadtimeEpics_() {
   return withLock_(function() { return readLeadtimeEpicsInsideLock_(); });
 }
 
+function leadtimeList_(value) {
+  return Array.isArray(value) ? value.map(function(v) { return String(v); }) : [];
+}
+
+// Aplica UMA alteração recebida sobre a linha atual (já normalizada). Devolve
+// nada; registra conflitos/preservações/erros nas listas do relatório.
+function applyLeadtimeChange_(current, change, report) {
+  var id = current.id;
+  var clear = leadtimeList_(change.clear);
+  var manual = leadtimeList_(change.manual);
+  var baseRev = (change.baseRev && typeof change.baseRev === 'object') ? change.baseRev : {};
+  var fimHeld = false;
+
+  function has(field) { return Object.prototype.hasOwnProperty.call(change, field); }
+
+  // Valor recebido já normalizado. null/undefined/'' = vazio. Data preenchida
+  // que não é reconhecida NÃO vira vazio: o campo é ignorado e reportado.
+  function incoming(field) {
+    var raw = change[field];
+    if (raw === null || raw === undefined || String(raw).trim() === '') return { ok: true, value: '' };
+    if (LEADTIME_DATE_FIELDS.indexOf(field) !== -1) {
+      var d = leadtimeDate_(raw);
+      if (!d) { report.itemErrors.push({ id: id, field: field, error: 'data em formato não reconhecido: ' + String(raw) }); return { ok: false }; }
+      return { ok: true, value: d };
+    }
+    return { ok: true, value: String(raw) };
+  }
+
+  LEADTIME_GUARDED_FIELDS.forEach(function(field) {
+    if (!has(field)) return;
+    var inc = incoming(field);
+    if (!inc.ok) { if (field === 'fim') fimHeld = true; return; }
+    var next = inc.value, cur = current[field] || '';
+    var isManual = manual.indexOf(field) !== -1;
+    var base = baseRev[field];
+    if (isManual && (typeof base !== 'number' || !isFinite(base) || base < 0)) {
+      report.itemErrors.push({ id: id, field: field, error: 'edição manual sem baseRev' });
+      if (field === 'fim') fimHeld = true;
+      return;
+    }
+    if (next === cur) return;
+    // (1) vazio nunca apaga valor preenchido sem pedido explícito.
+    if (next === '' && cur !== '' && clear.indexOf(field) === -1) {
+      report.preserved.push({ id: id, field: field, kept: cur });
+      if (field === 'fim') fimHeld = true;
+      return;
+    }
+    // (2) edição manual só grava se ninguém mudou o campo desde a leitura.
+    if (isManual && current.rev[field] !== base) {
+      report.conflicts.push({ id: id, field: field, current: cur, currentRev: current.rev[field], attempted: next });
+      if (field === 'fim') fimHeld = true;
+      return;
+    }
+    current[field] = next;
+    current.rev[field]++;
+  });
+
+  ['squad', 'resumo', 'status', 'statusAntes', 'fimAntes'].forEach(function(field) {
+    if (!has(field)) return;
+    if (fimHeld && LEADTIME_FIM_COUPLED.indexOf(field) !== -1) return;
+    var inc = incoming(field);
+    if (!inc.ok) return;
+    // Resumo/Squad vêm do Jira; edições pontuais os mandam vazios.
+    if ((field === 'squad' || field === 'resumo') && !inc.value) return;
+    current[field] = inc.value;
+  });
+}
+
 function updateLeadtimeEpics_(changes, payloadChars) {
   try {
     if (!Array.isArray(changes) || !changes.length) return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: 'payload deve conter ao menos um Épico' };
@@ -1189,29 +1291,35 @@ function updateLeadtimeEpics_(changes, payloadChars) {
       var byId = {};
       before.forEach(function(row, index) { byId[row.id] = index; });
       var next = before.map(function(row) { return normalizeLeadtimeEpic_(row); });
+      var report = { conflicts: [], preserved: [], itemErrors: [] };
+      var touched = {};
 
       changes.forEach(function(change) {
-        var normalized = normalizeLeadtimeEpic_(change);
-        if (!normalized.id) throw new Error('Épico sem id');
-        var index = byId[normalized.id];
+        if (!change || typeof change !== 'object') { report.itemErrors.push({ id: '', error: 'item inválido' }); return; }
+        var id = String(change.id || '').trim();
+        if (!id) { report.itemErrors.push({ id: '', error: 'Épico sem id' }); return; }
+        var index = byId[id];
         if (index === undefined) {
-          byId[normalized.id] = next.length;
-          next.push(normalized);
-          return;
+          // Épico novo: entra como veio (sem versão anterior para conferir).
+          var created = normalizeLeadtimeEpic_({ id: id });
+          applyLeadtimeChange_(created, Object.assign({}, change, { manual: [] }), report);
+          byId[id] = next.length;
+          next.push(created);
+        } else {
+          applyLeadtimeChange_(next[index], change, report);
         }
-        // O payload do painel traz todos os campos editáveis. Atualizamos só
-        // esses campos, preservando resumo/squad quando uma edição pontual não
-        // os envia e impedindo perda de dados por uma atualização concorrente.
-        var current = next[index];
-        ['squad','resumo','status','statusAntes','ini','fim','fimAntes','dataPrevista','chg','impedimento'].forEach(function(field) {
-          if (Object.prototype.hasOwnProperty.call(change, field)) current[field] = normalized[field];
-        });
+        touched[id] = true;
       });
 
+      var revs = {};
+      Object.keys(touched).forEach(function(id) { revs[id] = next[byId[id]].rev; });
       var chunks = readChunks_(LEADTIME_EPICS_SHEET);
       var write = commitWrite_(LEADTIME_EPICS_SHEET, 'updateLeadtimeEpics', chunks, before, next, payloadChars || 0);
       if (!write.ok) return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: write.error, conflict: !!write.conflict, currentRevision: write.currentRevision };
-      return { ok: true, version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revision: write.revision };
+      return {
+        ok: true, version: BACKLOG_SCRIPT_VERSION, updated: changes.length, count: next.length, revision: write.revision,
+        revs: revs, conflicts: report.conflicts, preserved: report.preserved, itemErrors: report.itemErrors
+      };
     });
   } catch (err) {
     return { ok: false, version: BACKLOG_SCRIPT_VERSION, error: String(err && err.message || err) };

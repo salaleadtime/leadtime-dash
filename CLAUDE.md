@@ -51,6 +51,27 @@ código anterior (reproduz o relato). **Datas que já sumiram não voltam
 sozinhas**, precisam ser preenchidas de novo (ou recuperadas do histórico de
 versões da planilha).
 
+**Etapa 2, servidor (v33 do `apps-script-backlog.gs`, 19/11/2026):** a
+mesma proteção na gravação dos Épicos (`action=update`,
+`updateLeadtimeEpics_`/`applyLeadtimeChange_`), para não depender de cada
+navegador estar na versão nova. Para `ini/fim/dataPrevista/chg/impedimento`:
+vazio nunca sobrescreve valor preenchido sem o campo em `clear`; cada campo
+tem versão (`rev`, devolvida na leitura) e a edição manual manda
+`manual:[campos]` + `baseRev`, recusada como conflito (`conflicts`, com o
+valor atual) se outra pessoa gravou antes; Data Fim preservada/recusada segura
+também `status/statusAntes/fimAntes`; item inválido cai sozinho
+(`itemErrors`). O painel (`_guardSheetsItems`) preenche `manual/baseRev/clear`
+a partir da fila e `_handleSheetsWriteResult` aplica `revs`, desfaz o campo em
+conflito e avisa ("Outra pessoa alterou antes de você"). Compatibilidade
+testada nas quatro combinações: painel antigo + v33 grava, só não consegue
+apagar campo protegido; painel novo + v32 funciona, sem aviso de conflito.
+Ordem segura de publicação: `index.html` antes ou junto do servidor.
+**Atenção ao publicar:** o painel lê/grava Épicos em `SHEETS_WEBAPP`, que hoje
+é uma implantação diferente de `BK_GAS_URL` (ver commit "Restaura fonte
+oficial das datas dos epicos"). A v33 só tem efeito se for publicada na
+implantação que atende `SHEETS_WEBAPP`. Teste: Playwright com o `.gs` real em
+vm (`doGet`), 14/14.
+
 ## Status atual: menu Demandas Emergenciais removido (09/11/2026)
 
 A aba **Demandas Emergenciais** saiu do menu de `index.html` a pedido da

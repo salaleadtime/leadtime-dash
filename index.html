@@ -3112,6 +3112,9 @@ function makeRow(r){
     dataPrevista:sPrev,
     chg:(_SEED_CHG_CORRECTIONS[r.id] && r.chg===_SEED_CHG_CORRECTIONS[r.id]) ? '' : (r.chg||''),
     impedimento:r.impedimento||'',
+    // v33 do backend: versão de cada campo manual (ini/fim/dataPrevista/chg/
+    // impedimento). Usada para o servidor recusar edição baseada em leitura velha.
+    rev:(r.rev&&typeof r.rev==='object')?r.rev:null,
     lt:calcLT(sIni,sFim)
   });
 }
@@ -3204,6 +3207,8 @@ function replaceFromSharedSource(rows){
           var srvVal=r[field]||'', locVal=pend.fields[field]||'';
           if(srvVal === locVal){
             delete pend.fields[field]; _pendChanged=true;            // Sheets confirmou
+            if(pend.before) delete pend.before[field];
+            if(pend.baseRev) delete pend.baseRev[field];
           } else if(srvVal && (pend.legacy ||
                     (pend.sentOkAt && _readStartedAt > pend.sentOkAt))){
             // O Sheets tem um valor PREENCHIDO e diferente, e (a) esta entrada é
@@ -3214,6 +3219,8 @@ function replaceFromSharedSource(rows){
             console.info('[Épicos] Valor mais novo no Sheets prevaleceu sobre edição local antiga — id:', r.id,
               'campo:', field, '| local descartado:', locVal||'(vazio)', '| Sheets:', srvVal);
             delete pend.fields[field]; _pendChanged=true;
+            if(pend.before) delete pend.before[field];
+            if(pend.baseRev) delete pend.baseRev[field];
           } else {
             // Diagnóstico: se isto aparecer repetidamente pro MESMO id/campo em
             // sincronizações sucessivas (em vez de confirmar e sumir), é sinal de
@@ -3578,7 +3585,20 @@ function queuePendingWrite(rec, fieldsOrBefore){
   var p=loadPending();
   var ent=p[rec.id]||{fields:{}};
   if(!ent.fields) ent.fields={};
-  fields.forEach(function(f){ ent.fields[f]=rec[f]||''; });
+  if(!ent.before) ent.before={};
+  if(!ent.baseRev) ent.baseRev={};
+  var srvRow=_sheetsServerSnap&&_sheetsServerSnap.map&&_sheetsServerSnap.map[rec.id];
+  fields.forEach(function(f){
+    // Valor que a pessoa VIU antes de editar e a versão dele: guardados só na
+    // primeira edição ainda não confirmada (base do controle de conflito, v33).
+    if(!Object.prototype.hasOwnProperty.call(ent.fields,f)){
+      var seen = (fieldsOrBefore && !Array.isArray(fieldsOrBefore) && typeof fieldsOrBefore==='object')
+        ? (fieldsOrBefore[f]||'') : (srvRow ? (srvRow[f]||'') : '');
+      ent.before[f]=seen;
+      ent.baseRev[f]=(rec.rev&&typeof rec.rev[f]==='number')?rec.rev[f]:((srvRow&&srvRow.rev&&srvRow.rev[f])||0);
+    }
+    ent.fields[f]=rec[f]||'';
+  });
   ent.v=2;
   ent.ts=Date.now();
   ent.sentOkAt=0;            // nova edição: ainda não confirmada pelo Sheets
@@ -3611,7 +3631,9 @@ function migrateLegacyPendingWrites(){
 var SHEETS_GUARDED_FIELDS=['ini','fim','dataPrevista','chg','impedimento'];
 var _sheetsServerSnap=null;  // {at, map:{id:{ini,fim,dataPrevista,chg,impedimento}}} — última leitura do Sheets, sem a fila local
 function _serverFieldsOf(row){
-  var o={}; SHEETS_GUARDED_FIELDS.forEach(function(f){ o[f]=(row&&row[f])||''; }); return o;
+  var o={}; SHEETS_GUARDED_FIELDS.forEach(function(f){ o[f]=(row&&row[f])||''; });
+  o.rev=(row&&row.rev&&typeof row.rev==='object')?row.rev:null;
+  return o;
 }
 function _setSheetsServerSnap(rows){
   var map={};
@@ -3654,9 +3676,30 @@ function _guardSheetsItems(items, snap){
   var out=items.map(function(it){
     var clean={}; Object.keys(it).forEach(function(k){ if(k!=='__clear') clean[k]=it[k]; });
     var srv=snap&&snap.map&&snap.map[it.id];
-    if(!srv) return clean;
     var ent=pend[it.id], explicit=(it.__clear||[]).slice();
     if(ent&&ent.fields) Object.keys(ent.fields).forEach(function(f){ if(ent.fields[f]==='') explicit.push(f); });
+    // v33 do backend: campos apagados de propósito vão em `clear`; campos
+    // editados à mão vão em `manual` com a versão em que a pessoa se baseou.
+    // Se o Sheets ainda tem o mesmo valor que a pessoa viu (ou já tem o valor
+    // dela), a base é a versão ATUAL — o servidor só recusa se alguém gravar
+    // entre esta leitura e a gravação. Se tem outro valor, vai a versão antiga
+    // e o servidor devolve conflito com o valor atual (backend antigo ignora).
+    var clearList=explicit.filter(function(f){ return SHEETS_GUARDED_FIELDS.indexOf(f)!==-1; });
+    if(clearList.length) clean.clear=clearList;
+    if(ent&&ent.fields){
+      var manual=[], baseRev={};
+      Object.keys(ent.fields).forEach(function(f){
+        if(SHEETS_GUARDED_FIELDS.indexOf(f)===-1) return;
+        var b=(ent.baseRev&&typeof ent.baseRev[f]==='number')?ent.baseRev[f]:0;
+        if(srv&&srv.rev&&typeof srv.rev[f]==='number'){
+          var seen=(ent.before&&Object.prototype.hasOwnProperty.call(ent.before,f))?ent.before[f]:null;
+          if((srv[f]||'')===(ent.fields[f]||'') || (seen!==null && (srv[f]||'')===seen)) b=srv.rev[f];
+        }
+        manual.push(f); baseRev[f]=b;
+      });
+      if(manual.length){ clean.manual=manual; clean.baseRev=baseRev; }
+    }
+    if(!srv) return clean;
     SHEETS_GUARDED_FIELDS.forEach(function(f){
       if(!Object.prototype.hasOwnProperty.call(clean,f)) return;
       if(clean[f] || !srv[f] || explicit.indexOf(f)!==-1) return;
@@ -3672,6 +3715,56 @@ function _guardSheetsItems(items, snap){
     try{ saveLocal(); }catch(e){}
   }
   return out;
+}
+// Resposta do backend v33: aplica versões novas, desfaz localmente as edições
+// recusadas por conflito (outra pessoa gravou antes) e avisa quem editou.
+function _handleSheetsWriteResult(json){
+  if(!json) return;
+  var p=loadPending(), changed=false;
+  var findRec=function(id){ return (allData||[]).find(function(x){ return x&&x.id===id; }); };
+  if(json.revs && typeof json.revs==='object'){
+    Object.keys(json.revs).forEach(function(id){
+      var rec=findRec(id), rv=json.revs[id];
+      if(rec) rec.rev=rv;
+      var ent=p[id];
+      if(ent&&ent.fields&&rv){
+        if(!ent.baseRev) ent.baseRev={};
+        // Nossa gravação foi aceita: próximas edições partem desta versão.
+        Object.keys(ent.fields).forEach(function(f){ if(typeof rv[f]==='number'){ ent.baseRev[f]=rv[f]; if(ent.before) ent.before[f]=ent.fields[f]; } });
+        changed=true;
+      }
+    });
+  }
+  var labels={ini:'Data Início',fim:'Data Fim',dataPrevista:'Data Prevista',chg:'CHG',impedimento:'Impedimento'};
+  var msgs=[];
+  (json.conflicts||[]).forEach(function(cf){
+    if(!cf||!cf.id||!cf.field) return;
+    var rec=findRec(cf.id);
+    if(rec){
+      rec[cf.field]=cf.current||(['ini','fim','dataPrevista'].indexOf(cf.field)!==-1?null:'');
+      if(!rec.rev) rec.rev={};
+      rec.rev[cf.field]=cf.currentRev;
+      if(cf.field==='ini'||cf.field==='fim'){ rec.lt=calcLT(rec.ini,rec.fim); try{ normalizeWorkflowRecord(rec); }catch(e){} }
+    }
+    var ent=p[cf.id];
+    if(ent&&ent.fields){
+      delete ent.fields[cf.field];
+      if(ent.before) delete ent.before[cf.field];
+      if(ent.baseRev) delete ent.baseRev[cf.field];
+      if(!Object.keys(ent.fields).length) delete p[cf.id];
+      changed=true;
+    }
+    var shown=function(v,f){ return v ? (['ini','fim','dataPrevista'].indexOf(f)!==-1 ? fmtShortDate(new Date(v+'T00:00:00')) : String(v).slice(0,60)) : '(vazio)'; };
+    msgs.push('<strong>'+esc(cf.id)+'</strong> · '+esc(labels[cf.field]||cf.field)+': ficou <strong>'+esc(shown(cf.current,cf.field))+'</strong> (sua alteração: '+esc(shown(cf.attempted,cf.field))+')');
+  });
+  if(changed) savePending(p);
+  if(msgs.length){
+    try{ saveLocal(); renderAll(rememberTab()); }catch(e){}
+    toast('⚠ Outra pessoa alterou antes de você',
+      msgs.slice(0,6).join('<br>')+(msgs.length>6?'<br>…':'')+'<br>O valor mais recente foi mantido. Se o seu estiver certo, edite de novo.','warn');
+  }
+  if(json.preserved&&json.preserved.length) console.info('[Épicos] Servidor preservou valores que uma gravação tentou apagar sem querer:', json.preserved);
+  if(json.itemErrors&&json.itemErrors.length) console.warn('[Épicos] Itens recusados pelo servidor:', json.itemErrors);
 }
 function _markPendingSent(items){
   var p=loadPending(), now=Date.now(), changed=false;
@@ -3794,6 +3887,7 @@ function _sendToSheets(items){
         throw new Error((json&&json.error) ? json.error : 'Apps Script retornou erro ao salvar');
       }
       _markPendingSent(items);
+      _handleSheetsWriteResult(json);
       _sheetsServerSnap=null;   // a foto anterior ficou velha com esta gravação
       setSyncLabel('✅ Google Sheets sincronizado · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
       // Confirma a gravação lendo novamente a fonte oficial.
@@ -3845,7 +3939,7 @@ function _saveToSheetsBatchGuarded(items){
     setSyncLabel('🔄 Salvando no Sheets… (lote '+(idx+1)+'/'+total+')');
     fetch(url)
       .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-      .then(function(j){ if(!j||j.ok!==true) throw new Error((j&&j.error)||'Erro'); ok++; _markPendingSent(sentBatch); })
+      .then(function(j){ if(!j||j.ok!==true) throw new Error((j&&j.error)||'Erro'); ok++; _markPendingSent(sentBatch); _handleSheetsWriteResult(j); })
       .catch(function(e){ fail++; console.error('Lote '+(idx+1)+' falhou:',e); })
       .finally(function(){ idx++; setTimeout(sendNext,1500); });
   }

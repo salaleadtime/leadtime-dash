@@ -311,7 +311,7 @@ console.log('\n═══ 12. health e chaves inválidas ═══');
   const { ctx } = novoAmbiente();
   const h = parse(ctx.doGet(post({ action:'health' })));
   t('health responde ok', h.ok, true);
-  t('versão correta', h.version, '2026-11-06-v32-impedimento-log');
+  t('versão correta', h.version, '2026-11-19-v33-epicos-campo-protegido');
   t('expõe estado da guarda', [h.writesEnabled, h.guardDryRun], [true, false]);
   t('chave inválida continua rejeitada',
     parse(ctx.doPost(post({ action:'saveVpData', key:'inventada', payload:'{}' }))).ok, false);
@@ -577,7 +577,63 @@ console.log('\n═══ 21. epicImpedimentoLog: histórico do Impedimento (v32)
   t('texto anterior fica guardado no evento de edição', g.data['SLOPC-1'].entries[1].previous, 'Aguardando ambiente');
   const rv = parse(ctx.doGet(post({ action:'getRevisions' })));
   t('getRevisions inclui epicImpedimentoLog (sem polling novo no cliente)', rv.revisions.epicImpedimentoLog, 2);
-  t('versão do script identifica a v32', /v32/.test(ctx.BACKLOG_SCRIPT_VERSION), true);
+  t('versão do script é a v32 ou posterior', /v3[2-9]/.test(ctx.BACKLOG_SCRIPT_VERSION), true);
+}
+
+console.log('\n═══ 22. Épicos v33: vazio não apaga, versão por campo, conflito ═══');
+{
+  const row = (o) => Object.assign({ id:'SLOPC-1', squad:'S', resumo:'R', status:'Em Execução', statusAntes:'', ini:'', fim:'', fimAntes:'', dataPrevista:'', chg:'', impedimento:'' }, o);
+  const U = (ctx, items) => parse(ctx.doGet(post({ action:'update', payload: JSON.stringify(items) })));
+  const get = (ctx, id) => ctx.getLeadtimeEpics_().find(r => r.id === (id || 'SLOPC-1'));
+  const seed = (rows) => { const env = novoAmbiente(); env.ctx.writeJsonToSheet_(env.ctx.LEADTIME_EPICS_SHEET, rows); return env.ctx; };
+
+  // Painel antigo (sem manual) continua conseguindo preencher.
+  let c = seed([row({})]);
+  let r = U(c, [row({ ini:'2026-11-17' })]);
+  t('painel antigo preenche Data Início', [r.ok, get(c).ini], [true, '2026-11-17']);
+  t('leitura devolve a versão do campo', get(c).rev.ini, 1);
+
+  // Cópia velha / importação com linha inteira vazia não apaga nada.
+  c = seed([row({ ini:'2026-11-17', fim:'2026-11-18', dataPrevista:'2026-12-01', chg:'CHG1', impedimento:'bloqueio', status:'Concluído', statusAntes:'Em Execução' })]);
+  r = U(c, [row({ status:'Em Execução', statusAntes:'' })]);
+  let g = get(c);
+  t('vazio não apaga ini/fim/prevista/chg/impedimento', [g.ini, g.fim, g.dataPrevista, g.chg, g.impedimento], ['2026-11-17','2026-11-18','2026-12-01','CHG1','bloqueio']);
+  t('Data Fim preservada mantém status coerente (não volta a Em Execução)', [g.status, g.statusAntes], ['Concluído','Em Execução']);
+  t('preservações são reportadas', r.preserved.length, 5);
+  t('resumo/squad vazios não apagam', [g.resumo, g.squad], ['R','S']);
+
+  // Apagar de propósito funciona (clear), inclusive com null.
+  c = seed([row({ ini:'2026-11-17' })]);
+  r = U(c, [{ id:'SLOPC-1', ini:null, clear:['ini'], manual:['ini'], baseRev:{ ini:0 } }]);
+  t('apagar de propósito (clear + null) apaga', [r.ok, get(c).ini, get(c).rev.ini], [true, '', 1]);
+
+  // Conflito: duas pessoas com a mesma versão lida.
+  c = seed([row({})]);
+  U(c, [{ id:'SLOPC-1', ini:'2026-11-17', manual:['ini'], baseRev:{ ini:0 } }]);
+  r = U(c, [{ id:'SLOPC-1', ini:'2026-11-10', manual:['ini'], baseRev:{ ini:0 } }]);
+  t('segunda edição com versão velha vira conflito', r.conflicts.map(x => [x.field, x.current, x.attempted]), [['ini','2026-11-17','2026-11-10']]);
+  t('valor da primeira pessoa permanece', get(c).ini, '2026-11-17');
+  r = U(c, [{ id:'SLOPC-1', ini:'2026-11-10', manual:['ini'], baseRev:{ ini:r.conflicts[0].currentRev } }]);
+  t('com a versão atual a edição grava', [get(c).ini, get(c).rev.ini, r.conflicts.length], ['2026-11-10', 2, 0]);
+  t('resposta traz as versões novas', r.revs['SLOPC-1'].ini, 2);
+
+  // Conflito na Data Fim também segura status.
+  c = seed([row({ fim:'2026-11-18', status:'Concluído', rev:{ fim:3 } })]);
+  r = U(c, [{ id:'SLOPC-1', fim:'', clear:['fim'], manual:['fim'], baseRev:{ fim:1 }, status:'Em Execução', fimAntes:'2026-11-18' }]);
+  g = get(c);
+  t('conflito na Data Fim não reverte status/fimAntes', [g.fim, g.status, g.fimAntes, r.conflicts.length], ['2026-11-18','Concluído','',1]);
+
+  // Item ruim não derruba o lote; data irreconhecível não vira "apagar".
+  c = seed([row({}), row({ id:'SLOPC-2', ini:'2026-11-17' })]);
+  r = U(c, [row({ dataPrevista:'2026-12-01' }), { id:'SLOPC-2', ini:'2026-11-20', manual:['ini'] }, { id:'' }, { id:'SLOPC-2', ini:'amanhã' }]);
+  t('lote com itens ruins ainda grava os bons', [r.ok, get(c).dataPrevista], [true, '2026-12-01']);
+  t('itens ruins são reportados', r.itemErrors.length, 3);
+  t('data irreconhecível não apaga a existente', get(c, 'SLOPC-2').ini, '2026-11-17');
+
+  // Épico novo entra normalmente.
+  c = seed([row({})]);
+  U(c, [row({ id:'SLOPC-9', ini:'2026-11-01', squad:'X', resumo:'Novo' })]);
+  t('épico novo é criado com a data', [get(c, 'SLOPC-9').ini, get(c, 'SLOPC-9').rev.ini], ['2026-11-01', 1]);
 }
 
 console.log(`\n═══ RESULTADO E2E: ${pass} passaram, ${fail} falharam ═══`);
